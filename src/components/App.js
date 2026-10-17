@@ -1383,6 +1383,9 @@ const App = () => {
      });
    };
 
+  // Ref al árbol del vault (también usado por useConnectionManagement más abajo)
+  const connectionTreeRef = useRef([]);
+
   // Usar el hook de gestión de pestañas
   const {
     sshTabs, setSshTabs, rdpTabs, setRdpTabs, guacamoleTabs, setGuacamoleTabs,
@@ -1395,7 +1398,8 @@ const App = () => {
     selectedGroupColor, setSelectedGroupColor, tabContextMenu, setTabContextMenu,
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
-    handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, groupTabsBySection, cleanupTabDistro,
+    handleLoadGroupFromFavorites: handleLoadGroupFromFavoritesRaw,
+    createNewGroup, deleteGroup, moveTabToGroup, groupTabsBySection, cleanupTabDistro,
     handleTabContextMenu, handleTabClose, handleToggleBroadcast, handleToggleBroadcastTarget
   } = useTabManagement(toast, {
     cleanupTabDistro,
@@ -1403,6 +1407,15 @@ const App = () => {
     terminalRefs,
     GROUP_KEYS
   });
+
+  // Home llama onLoadGroup sin nodes; inyectar el árbol del vault
+  const handleLoadGroupFromFavorites = useCallback(
+    (groupConnection, nodesArg) => handleLoadGroupFromFavoritesRaw(
+      groupConnection,
+      (Array.isArray(nodesArg) && nodesArg.length > 0) ? nodesArg : connectionTreeRef.current
+    ),
+    [handleLoadGroupFromFavoritesRaw]
+  );
 
   const filteredTabs = useMemo(() => {
     return getFilteredTabs();
@@ -1453,7 +1466,8 @@ const App = () => {
   } = useConnectionManagement({
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
     setGroupActiveIndices, setLastOpenedTabKey, setOnCreateActivateTabKey,
-    setOpenTabOrder, sshTabs, setSshTabs, rdpTabs, setRdpTabs, toast
+    setOpenTabOrder, sshTabs, setSshTabs, rdpTabs, setRdpTabs, toast,
+    getConnectionTree: () => connectionTreeRef.current
   });
 
   // Usar el hook de gestión de temas
@@ -1646,6 +1660,9 @@ const App = () => {
     getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection,
     homeTabs, fileExplorerTabs, sshTabs
   });
+
+  // Mantener el árbol disponible para reconectar desde Home/recientes (credenciales del vault)
+  connectionTreeRef.current = nodes || [];
 
   const [connectionSearchPaletteOpen, setConnectionSearchPaletteOpen] = React.useState(false);
   const connectionSearchPaletteOpenRef = useRef(false);

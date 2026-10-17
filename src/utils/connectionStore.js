@@ -5,6 +5,20 @@ import favoriteGroupsStore from './favoriteGroupsStore.js';
 
 const SECRET_OR_DOC_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
 
+/** Campos que no deben persistirse en historial/favoritos (el vault/árbol cifrado es la fuente de verdad). */
+const SENSITIVE_HISTORY_FIELDS = [
+  'password',
+  'privateKey',
+  'sshPassword',
+  'passphrase',
+  'notes',
+  'content',
+  'seedPhrase',
+  'apiKey',
+  'apiSecret',
+  'privateKeyPath'
+];
+
 const FAVORITES_KEY = 'nodeterm_favorite_connections';
 const RECENTS_KEY = 'nodeterm_connection_history';
 const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
@@ -18,6 +32,7 @@ const UPDATED_EVENT = 'connections-updated';
 
 // Suscriptores directos para recents (respaldo al evento, por si falla en algún entorno)
 const recentsListeners = new Set();
+let historyScrubMigrated = false;
 
 function safeParse(json, fallback) {
   try {
@@ -45,6 +60,9 @@ export function invalidateConnectionStoreCache(key = null) {
   if (!key || key === RECENT_PASSWORDS_KEY) {
     cachedRecentPasswords = null;
   }
+  if (!key) {
+    historyScrubMigrated = false;
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -55,7 +73,55 @@ if (typeof window !== 'undefined') {
   });
 }
 
+function redactSensitiveFields(item) {
+  if (!item || typeof item !== 'object') return item;
+  const scrubbed = { ...item };
+  for (const field of SENSITIVE_HISTORY_FIELDS) {
+    if (field in scrubbed) {
+      scrubbed[field] = '';
+    }
+  }
+  return scrubbed;
+}
+
+function itemHasSensitiveData(item) {
+  if (!item || typeof item !== 'object') return false;
+  return SENSITIVE_HISTORY_FIELDS.some((field) => {
+    const value = item[field];
+    return typeof value === 'string' ? value.length > 0 : !!value;
+  });
+}
+
+function scrubListInPlace(key, list) {
+  if (!Array.isArray(list) || list.length === 0) return list;
+  let changed = false;
+  const scrubbed = list.map((item) => {
+    if (!itemHasSensitiveData(item)) return item;
+    changed = true;
+    return redactSensitiveFields(item);
+  });
+  if (changed) {
+    saveList(key, scrubbed);
+    return scrubbed;
+  }
+  return list;
+}
+
+function migrateHistoryScrubOnce() {
+  if (historyScrubMigrated || typeof localStorage === 'undefined') return;
+  historyScrubMigrated = true;
+  try {
+    scrubListInPlace(FAVORITES_KEY, safeParse(localStorage.getItem(FAVORITES_KEY), []));
+    scrubListInPlace(RECENTS_KEY, safeParse(localStorage.getItem(RECENTS_KEY), []));
+    scrubListInPlace(RECENT_PASSWORDS_KEY, safeParse(localStorage.getItem(RECENT_PASSWORDS_KEY), []));
+  } catch (_) {
+    /* noop */
+  }
+}
+
 function loadList(key) {
+  migrateHistoryScrubOnce();
+
   if (key === FAVORITES_KEY && cachedFavorites !== null) {
     return cachedFavorites;
   }
@@ -145,18 +211,18 @@ function toSerializable(connection) {
     };
   }
 
-  // Si es un secreto o documento (password, wallet, api_key, etc.), usar estructura especial
+  // Si es un secreto o documento: solo metadatos (el vault es la fuente de verdad)
   if (SECRET_OR_DOC_TYPES.includes(type)) {
     return {
       id: connection.id || `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: type,
       name: connection.name || connection.label || 'Secreto',
       username: connection.username || '',
-      password: connection.password || '',
+      password: '',
       url: connection.url || '',
       group: connection.group || '',
-      notes: connection.notes || '',
-      content: connection.content || '',
+      notes: '',
+      content: '',
       icon: connection.icon || (['document', 'quick-note'].includes(type) ? 'pi-file' : 'pi-key'),
       lastConnected: new Date().toISOString(),
       lastAccessed: connection.lastAccessed || new Date().toISOString()
@@ -175,6 +241,9 @@ function toSerializable(connection) {
 
   return {
     id,
+    // Clave del nodo en el árbol/vault para reconectar sin secretos en historial
+    originalKey: connection.originalKey || connection.key || connection.connectionId || undefined,
+    connectionId: connection.connectionId || connection.originalKey || connection.key || undefined,
     type,
     name: connection.name || connection.label || (type === 'ssh-tunnel'
       ? `Tunnel ${connection.localPort || '?'}\u2192${host}:${connection.remotePort || '?'}`
@@ -184,9 +253,9 @@ function toSerializable(connection) {
     port,
     // Timestamp de última conexión (se actualiza cada vez que se registra como reciente)
     lastConnected: new Date().toISOString(),
-    // Guardar credenciales y configuración importante
-    password: connection.password || '',
-    privateKey: connection.privateKey || '',
+    // No persistir secretos aquí: se resuelven desde el árbol/vault al reconectar
+    password: '',
+    privateKey: '',
     authMethod: connection.authMethod || undefined,
     clientType: connection.clientType || (type === 'rdp-guacamole' ? 'web-rdp' : (type === 'vnc-guacamole' ? 'web-vnc' : 'native')),
     // Campos adicionales para RDP
@@ -234,10 +303,10 @@ function toSerializable(connection) {
     sshHost: connection.sshHost || undefined,
     sshPort: connection.sshPort || undefined,
     sshUser: connection.sshUser || undefined,
-    sshPassword: connection.sshPassword || undefined,
+    sshPassword: undefined,
     authType: connection.authType || undefined,
-    privateKeyPath: connection.privateKeyPath || undefined,
-    passphrase: connection.passphrase || undefined,
+    privateKeyPath: undefined,
+    passphrase: undefined,
     localHost: connection.localHost || undefined,
     localPort: connection.localPort || undefined,
     remoteHost: connection.remoteHost || undefined,
@@ -261,6 +330,8 @@ function fromSidebarNode(node, typeOverride = null) {
   const isSecretOrDoc = SECRET_OR_DOC_TYPES.includes(type);
   const base = {
     ...(isSecretOrDoc ? { id: node.key || node.id || node.data?.id } : {}),
+    originalKey: node.key || node.id || undefined,
+    connectionId: node.key || node.id || undefined,
     type,
     name: node.label,
     url: node.data?.url || '',
@@ -272,9 +343,9 @@ function fromSidebarNode(node, typeOverride = null) {
     hostname: node.data?.hostname || node.data?.server || node.data?.host,
     username: node.data?.user || node.data?.username,
     port: node.data?.port,
-    // Incluir credenciales y configuración completa
-    password: node.data?.password || '',
-    privateKey: node.data?.privateKey || '',
+    // Las credenciales viven en el árbol/vault; no se copian al historial/favoritos
+    password: '',
+    privateKey: '',
     authMethod: node.data?.authMethod || undefined,
     clientType: node.data?.clientType || (isRDP ? 'web-rdp' : (isVNC ? 'web-vnc' : 'native')),
     // Campos adicionales para RDP
@@ -324,10 +395,10 @@ function fromSidebarNode(node, typeOverride = null) {
     sshHost: node.data?.sshHost || undefined,
     sshPort: node.data?.sshPort || undefined,
     sshUser: node.data?.sshUser || undefined,
-    sshPassword: node.data?.sshPassword || undefined,
+    sshPassword: undefined,
     authType: node.data?.authType || undefined,
-    privateKeyPath: node.data?.privateKeyPath || undefined,
-    passphrase: node.data?.passphrase || undefined,
+    privateKeyPath: undefined,
+    passphrase: undefined,
     localHost: node.data?.localHost || undefined,
     localPort: node.data?.localPort || undefined,
     remoteHost: node.data?.remoteHost || undefined,
@@ -554,17 +625,15 @@ export function recordRecentPassword(passwordData, limit = 5) {
     id: passwordData.id || `pwd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     name: passwordData.name || passwordData.label || 'Password',
     username: passwordData.username || '',
-    password: passwordData.password || '',
+    password: '',
     url: passwordData.url || '',
     group: passwordData.group || '',
-    notes: passwordData.notes || '',
+    notes: '',
     type: passwordData.type || 'password', // password, crypto_wallet, api_key, secure_note, etc.
     lastAccessed: new Date().toISOString(),
     lastConnected: new Date().toISOString(), // Para sincronizar con recientes generales
     icon: passwordData.icon || 'pi-key'
   };
-
-  console.log('🔐 [recordRecentPassword] Registrando secreto:', passwordRecord.type, passwordRecord.name);
 
   // Guardar en RECENT_PASSWORDS_KEY (para compatibilidad con código existente)
   const list = loadList(RECENT_PASSWORDS_KEY);
@@ -574,7 +643,6 @@ export function recordRecentPassword(passwordData, limit = 5) {
   saveList(RECENT_PASSWORDS_KEY, trimmed);
 
   // TAMBIÉN guardar en RECENTS_KEY para que aparezca en la lista unificada de recientes
-  console.log('🔐 [recordRecentPassword] Registrando en lista unificada de recientes');
   recordRecent(passwordRecord, DEFAULT_RECENTS_LIMIT);
 
   return trimmed;
@@ -622,7 +690,9 @@ export const helpers = {
   fromSidebarNode,
   explorerFromSSHNode,
   fromExplorerConfig,
-  buildId
+  buildId,
+  redactSensitiveFields,
+  SENSITIVE_HISTORY_FIELDS
 };
 
 export const constants = {

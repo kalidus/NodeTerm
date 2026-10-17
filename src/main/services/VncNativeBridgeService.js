@@ -57,7 +57,7 @@ class VncNativeBridgeService extends EventEmitter {
           debugLog(`🌐 [VncNativeBridgeService] Solicitud WebSocket Upgrade para URL: ${request.url}`);
 
           if (!token || !this.sessionTokens.has(token)) {
-            console.warn(`⚠️ [VncNativeBridgeService] Token inválido o ausente: token="${token}"`);
+            console.warn('⚠️ [VncNativeBridgeService] Token inválido o ausente');
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
             return;

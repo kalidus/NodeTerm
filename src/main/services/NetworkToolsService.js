@@ -9,7 +9,7 @@
  * - WHOIS, Subnet Calculator, Wake on LAN
  */
 
-const { exec, spawn } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 const dns = require('dns').promises;
@@ -2340,8 +2340,13 @@ class NetworkToolsService {
       return { name: null, group: null, mac: null };
     }
 
+    const cleanIp = typeof ip === 'string' ? ip.trim() : '';
+    if (!this._isValidIp(cleanIp)) {
+      return { name: null, group: null, mac: null };
+    }
+
     return new Promise((resolve) => {
-      exec(`nbtstat -A ${ip}`, { timeout: 25000, maxBuffer: 1024 * 1024, encoding: 'buffer' }, (err, stdoutBuf) => {
+      execFile('nbtstat', ['-A', cleanIp], { timeout: 25000, maxBuffer: 1024 * 1024, encoding: 'buffer', windowsHide: true }, (err, stdoutBuf) => {
         const stdout = stdoutBuf
           ? stdoutBuf.toString('latin1')
           : '';

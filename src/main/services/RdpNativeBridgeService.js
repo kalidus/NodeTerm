@@ -472,7 +472,7 @@ class RdpNativeBridgeService extends EventEmitter {
           debugLog(`🌐 [RdpNativeBridgeService] Solicitud WebSocket Upgrade recibida para URL: ${request.url}`);
 
           if (!token || !this.sessionTokens.has(token)) {
-            console.warn(`⚠️ [RdpNativeBridgeService] Token inválido o ausente: token="${token}". Conexiones activas:`, Array.from(this.sessionTokens.keys()));
+            console.warn(`⚠️ [RdpNativeBridgeService] Token inválido o ausente. Sesiones pendientes: ${this.sessionTokens.size}`);
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
             return;

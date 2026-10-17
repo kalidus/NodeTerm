@@ -56,8 +56,31 @@ function registerSecurityHandlers(dependencies) {
         }
       }
 
-      // Prioridad 2: Fallback retrocompatible para configuraciones guardadas anteriormente
-      return config.masterKey || null;
+      // Prioridad 2: Legado en claro — migrar a safeStorage si es posible (sin romper unlock)
+      if (config.masterKey) {
+        if (safeStorage && safeStorage.isEncryptionAvailable()) {
+          try {
+            const payloadStr = typeof config.masterKey === 'string'
+              ? config.masterKey
+              : JSON.stringify(config.masterKey);
+            const encryptedBuffer = safeStorage.encryptString(payloadStr);
+            config.masterKeyEncrypted = encryptedBuffer.toString('base64');
+            const legacy = config.masterKey;
+            delete config.masterKey;
+            writeSecurityConfig(config);
+            try {
+              return JSON.parse(payloadStr);
+            } catch (_) {
+              return legacy;
+            }
+          } catch (migErr) {
+            console.warn('⚠️ [Security] No se pudo migrar masterKey legado:', migErr.message);
+          }
+        }
+        return config.masterKey;
+      }
+
+      return null;
     } catch (error) {
       console.warn('⚠️ [Security] Error leyendo seguridad:', error.message);
       return null;
@@ -100,19 +123,24 @@ function registerSecurityHandlers(dependencies) {
         delete config.masterKey;
         delete config.masterKeyEncrypted;
       } else if (masterKey) {
-        // ✅ SEGURIDAD: Cifrar usando safeStorage del SO (DPAPI en Windows, Keychain en macOS, Secret Service en Linux)
+        // ✅ SEGURIDAD: solo persistir vía safeStorage (nunca masterKey en claro)
         const payloadStr = typeof masterKey === 'string' ? masterKey : JSON.stringify(masterKey);
-        if (safeStorage && safeStorage.isEncryptionAvailable()) {
-          try {
-            const encryptedBuffer = safeStorage.encryptString(payloadStr);
-            config.masterKeyEncrypted = encryptedBuffer.toString('base64');
-            delete config.masterKey;
-          } catch (encErr) {
-            console.warn('⚠️ [Security] Fallback a almacenamiento protegido por archivo:', encErr.message);
-            config.masterKey = masterKey;
-          }
-        } else {
-          config.masterKey = masterKey;
+        if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
+          return {
+            success: false,
+            error: 'El sistema no permite cifrar la clave maestra (safeStorage no disponible). El vault sigue usable introduciendo la clave manualmente.'
+          };
+        }
+        try {
+          const encryptedBuffer = safeStorage.encryptString(payloadStr);
+          config.masterKeyEncrypted = encryptedBuffer.toString('base64');
+          delete config.masterKey;
+        } catch (encErr) {
+          console.warn('⚠️ [Security] No se pudo cifrar la clave maestra:', encErr.message);
+          return {
+            success: false,
+            error: 'No se pudo cifrar la clave maestra para recordarla en este dispositivo.'
+          };
         }
       }
 

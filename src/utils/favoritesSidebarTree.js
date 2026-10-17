@@ -100,6 +100,22 @@ export function findNodeByKey(nodes, key) {
   return null;
 }
 
+/** Resuelve un secreto del vault en memoria por key/id (sin leer historial en claro). */
+export function findPasswordNodeByKey(key) {
+  if (key === null || key === undefined) return null;
+  const wanted = String(key);
+  const fromCache = findNodeByKey(cachedPasswordNodes, wanted);
+  if (fromCache) return fromCache;
+
+  const localNodes = loadLocalSourceTree('passwordManagerNodes');
+  const fromLocal = findNodeByKey(localNodes, wanted);
+  if (fromLocal) return fromLocal;
+
+  // También aceptar ids serializados de favoritos/recientes
+  const byFavoriteId = indexNodesByFavoriteId(cachedPasswordNodes.length ? cachedPasswordNodes : localNodes);
+  return byFavoriteId.get(wanted) || null;
+}
+
 function indexNodesByFavoriteId(nodes, map = new Map()) {
   for (const node of nodes || []) {
     if (node?.key) {

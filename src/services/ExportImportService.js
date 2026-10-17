@@ -9,11 +9,19 @@
  */
 
 import { getVersionInfo } from '../version-info';
+import { helpers as connectionHelpers } from '../utils/connectionStore';
 
 class ExportImportService {
   constructor() {
     this.supportedVersion = '1.0';
     this.fileExtension = '.nodeterm';
+  }
+
+  /** Quita secretos de listas de favoritos/historial antes de exportar. */
+  redactConnectionList(list) {
+    if (!Array.isArray(list)) return list;
+    const redact = connectionHelpers.redactSensitiveFields || ((item) => item);
+    return list.map((item) => redact(item));
   }
 
   /**
@@ -134,7 +142,7 @@ class ExportImportService {
           tree: treeData,
           encrypted: encryptedConnections,
           importSources: importSources,
-          favorites: favorites,
+          favorites: this.redactConnectionList(favorites),
           favoriteGroups: favoriteGroups,
           favoriteGroupAssignments: favoriteGroupAssignments,
           favoriteMemberOrder: favoriteMemberOrder,
@@ -157,7 +165,8 @@ class ExportImportService {
         
         exportData.data.passwords = {
           encrypted: encryptedPasswords,
-          nodes: passwordNodes, // Fallback sin encriptar
+          // Si hay vault cifrado, no exportar nodos en claro
+          nodes: encryptedPasswords ? null : passwordNodes,
           expandedKeys: this.safeGetItem('passwords_expanded_keys'),
           allExpanded: this.safeGetItem('passwords_all_expanded'),
           count: this.safeGetItem('passwords_count')
@@ -277,7 +286,7 @@ class ExportImportService {
           
           // Sync & History
           nodeterm_sync_config: this.safeGetItem('nodeterm_sync_config'),
-          nodeterm_connection_history: this.safeGetItem('nodeterm_connection_history')
+          nodeterm_connection_history: this.redactConnectionList(this.safeGetItem('nodeterm_connection_history'))
         };
         
         console.log('[ExportImportService] Exportando configuraciones:', {

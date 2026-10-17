@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { TAB_TYPES } from '../utils/constants';
 import connectionStore, { recordRecentPassword } from '../utils/connectionStore';
+import { findPasswordNodeByKey } from '../utils/favoritesSidebarTree';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import i18n from '../i18n';
 
@@ -350,27 +351,34 @@ export const useGlobalAppEvents = ({
   // 9. Crear y activar pestaña de info de secreto
   const PASSWORD_PREVIEW_TAB_KEY = 'password-preview-view';
   useEffect(() => {
-    const buildPasswordData = (info, secretType) => ({
-      id: info.key,
-      title: info.label || info.title,
-      type: secretType,
-      notes: info.notes || info.data?.notes || '',
-      username: info.username || info.data?.username || '',
-      password: info.password || info.data?.password || '',
-      url: info.url || info.data?.url || '',
-      group: info.group || info.data?.group || '',
-      network: info.network || info.data?.network || '',
-      address: info.address || info.data?.address || '',
-      seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
-      seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
-      privateKey: info.privateKey || info.data?.privateKey || '',
-      passphrase: info.passphrase || info.data?.passphrase || '',
-      apiKey: info.apiKey || info.data?.apiKey || '',
-      apiSecret: info.apiSecret || info.data?.apiSecret || '',
-      endpoint: info.endpoint || info.data?.endpoint || '',
-      serviceName: info.serviceName || info.data?.serviceName || '',
-      noteContent: info.noteContent || info.data?.noteContent || ''
-    });
+    const pick = (info, vaultData, field) =>
+      info[field] || info.data?.[field] || vaultData?.[field] || '';
+
+    const buildPasswordData = (info, secretType) => {
+      const vaultNode = findPasswordNodeByKey(info.key || info.id || info.data?.id);
+      const vaultData = vaultNode?.data || {};
+      return {
+        id: info.key || vaultNode?.key,
+        title: info.label || info.title || vaultNode?.label,
+        type: secretType || vaultData.type || 'password',
+        notes: pick(info, vaultData, 'notes'),
+        username: pick(info, vaultData, 'username'),
+        password: pick(info, vaultData, 'password'),
+        url: pick(info, vaultData, 'url'),
+        group: pick(info, vaultData, 'group'),
+        network: pick(info, vaultData, 'network'),
+        address: pick(info, vaultData, 'address'),
+        seedPhrase: pick(info, vaultData, 'seedPhrase'),
+        seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || vaultData.seedWordsCount || 24,
+        privateKey: pick(info, vaultData, 'privateKey'),
+        passphrase: pick(info, vaultData, 'passphrase'),
+        apiKey: pick(info, vaultData, 'apiKey'),
+        apiSecret: pick(info, vaultData, 'apiSecret'),
+        endpoint: pick(info, vaultData, 'endpoint'),
+        serviceName: pick(info, vaultData, 'serviceName'),
+        noteContent: pick(info, vaultData, 'noteContent') || pick(info, vaultData, 'content')
+      };
+    };
 
     const getTabIcon = (secretType) => {
       switch (secretType) {
@@ -893,13 +901,13 @@ export const useGlobalAppEvents = ({
       openEditSSHDialog(node);
     };
     sidebarCallbacksRef.current.connectRDP = (node) => {
-      onOpenRdpConnection(node);
+      onOpenRdpConnection(node, nodes);
     };
     sidebarCallbacksRef.current.editVNC = (node) => {
       openEditVncDialog(node);
     };
     sidebarCallbacksRef.current.connectVNC = (node) => {
-      onOpenVncConnection(node);
+      onOpenVncConnection(node, nodes);
     };
     sidebarCallbacksRef.current.openFileConnection = (node, nodesList) => {
       onOpenFileConnection(node, nodesList);

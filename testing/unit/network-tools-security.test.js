@@ -53,4 +53,9 @@ describe('Seguridad en NetworkToolsService (H-15)', () => {
     const res = await service._nmapEnrichHost("192.168.1.1; whoami");
     assert.strictEqual(res, null);
   });
+
+  it('descarta IPs maliciosas en _getNetbiosInfo sin ejecutar nbtstat', async () => {
+    const res = await service._getNetbiosInfo("127.0.0.1 & calc.exe");
+    assert.deepStrictEqual(res, { name: null, group: null, mac: null });
+  });
 });

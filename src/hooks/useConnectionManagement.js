@@ -1,7 +1,17 @@
 import { useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
+import { findConnectionInTree } from '../utils/findConnectionInTree';
 import { normalizeRdpColorDepth, resolveRdpScreenDimensions } from '../utils/rdpScreenConfig';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+
+const SSH_LIKE_TYPES = ['ssh', 'sftp', 'ftp', 'scp', 'explorer'];
+
+function showConnectionWarn(toast, summary, detail) {
+  try {
+    toast?.current?.show?.({ severity: 'warn', summary, detail, life: 5000 });
+    window.toast?.current?.show?.({ severity: 'warn', summary, detail, life: 5000 });
+  } catch (_) { /* noop */ }
+}
 
 export const useConnectionManagement = ({
   // Estados del hook de pestañas
@@ -21,8 +31,16 @@ export const useConnectionManagement = ({
   setRdpTabs,
 
   // Toast para notificaciones
-  toast
+  toast,
+
+  /** Árbol de conexiones actual (vault); Home/recientes no lo pasan como argumento */
+  getConnectionTree
 }) => {
+  const resolveTree = (nodesArg) => (
+    (Array.isArray(nodesArg) && nodesArg.length > 0)
+      ? nodesArg
+      : (typeof getConnectionTree === 'function' ? (getConnectionTree() || []) : [])
+  );
 
   // === FUNCIÓN PARA ABRIR EXPLORADOR DE ARCHIVOS ===
   const openFileExplorer = useCallback((fileNode) => {
@@ -39,7 +57,9 @@ export const useConnectionManagement = ({
         host: fileNode.data?.host,
         username: fileNode.data?.user || fileNode.data?.username,
         port: fileNode.data?.port || (protocol === 'ftp' ? 21 : 22),
-        password: fileNode.data?.password || '',
+        originalKey: fileNode.key,
+        connectionId: fileNode.key,
+        password: '',
         protocol: isFileConnection ? protocol : undefined,
         useBastionWallix: fileNode.data?.useBastionWallix || false,
         bastionHost: fileNode.data?.bastionHost || '',
@@ -104,7 +124,8 @@ export const useConnectionManagement = ({
   }, [sshTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices, setOpenTabOrder]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES DE ARCHIVOS (SFTP/FTP/SCP) ===
-  const onOpenFileConnection = useCallback((node, nodes) => {
+  const onOpenFileConnection = useCallback((node, nodesArg) => {
+    const nodes = resolveTree(nodesArg);
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -115,34 +136,69 @@ export const useConnectionManagement = ({
       setActiveGroupId(null);
     }
 
-    const protocol = node.data?.protocol || node.data?.type || 'sftp';
-    const host = node.data?.host || '';
-    const username = node.data?.user || node.data?.username || '';
-    const password = node.data?.password || '';
-    const port = node.data?.port || (protocol === 'ftp' ? 21 : 22);
+    let fileNode = node;
+    // Historial/favoritos sin .data: resolver credenciales desde el vault
+    if (!node?.data) {
+      const protocol = node.protocol || node.type || 'sftp';
+      const matched = findConnectionInTree(nodes, {
+        wantedId: node.originalKey || node.connectionId || node.key || node.id,
+        types: ['sftp', 'ftp', 'scp', 'ssh', 'explorer'],
+        host: node.host || node.hostname,
+        username: node.username || node.user,
+        port: node.port || (protocol === 'ftp' ? 21 : 22),
+        bastionHost: node.bastionHost,
+        bastionUser: node.bastionUser,
+        targetServer: node.targetServer
+      });
+      if (!matched?.data) {
+        showConnectionWarn(toast, 'Archivos', 'No se encontraron credenciales en el vault para esta conexión.');
+        return;
+      }
+      fileNode = {
+        key: matched.key,
+        label: node.name || node.label || matched.label,
+        data: {
+          ...matched.data,
+          type: matched.data.type === 'ssh' ? 'sftp' : (matched.data.type || protocol),
+          protocol: matched.data.protocol || (matched.data.type === 'ssh' ? 'sftp' : matched.data.type) || protocol
+        }
+      };
+    }
+
+    const protocol = fileNode.data?.protocol || fileNode.data?.type || 'sftp';
+    const host = fileNode.data?.host || '';
+    const username = fileNode.data?.user || fileNode.data?.username || '';
+    const port = fileNode.data?.port || (protocol === 'ftp' ? 21 : 22);
+
+    if (!fileNode.data?.password && !fileNode.data?.privateKey) {
+      showConnectionWarn(toast, 'Archivos', 'No se encontró la contraseña/clave en el vault. Ábrela desde el árbol de conexiones.');
+      return;
+    }
 
     // Registrar como reciente
     try {
       connectionStore.recordRecent({
         type: protocol,
-        name: node.label || node.name,
+        name: fileNode.label || fileNode.name,
         host: host,
         username: username,
         port: port,
-        password: password,
+        originalKey: fileNode.key,
+        connectionId: fileNode.key,
+        password: '',
         protocol: protocol,
-        remoteFolder: node.data?.remoteFolder || '',
-        targetFolder: node.data?.targetFolder || '',
-        customIcon: node.data?.customIcon || null
+        remoteFolder: fileNode.data?.remoteFolder || '',
+        targetFolder: fileNode.data?.targetFolder || '',
+        customIcon: fileNode.data?.customIcon || null
       }, 200);
     } catch (e) { /* noop */ }
 
-    // Abrir explorador de archivos
-    openFileExplorer(node);
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer]);
+    openFileExplorer(fileNode);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer, toast]);
 
   // === FUNCIÓN PARA ABRIR TÚNELES SSH ===
-  const onOpenSSHTunnel = useCallback((nodeOrConn, nodes) => {
+  const onOpenSSHTunnel = useCallback((nodeOrConn, nodesArg) => {
+    const nodes = resolveTree(nodesArg);
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -155,9 +211,36 @@ export const useConnectionManagement = ({
 
     // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
     const isSidebarNode = !!(nodeOrConn && nodeOrConn.data);
-    const data = isSidebarNode ? nodeOrConn.data : nodeOrConn;
+    let data = isSidebarNode ? nodeOrConn.data : nodeOrConn;
     const label = isSidebarNode ? nodeOrConn.label : nodeOrConn.name;
-    const key = isSidebarNode ? nodeOrConn.key : (nodeOrConn.id || `tunnel_${Date.now()}`);
+    let key = isSidebarNode
+      ? nodeOrConn.key
+      : (nodeOrConn.originalKey || nodeOrConn.connectionId || nodeOrConn.key || nodeOrConn.id || `tunnel_${Date.now()}`);
+
+    // Favoritos/recientes: siempre resolver credenciales desde el vault (como SSH)
+    if (!isSidebarNode) {
+      const matched = findConnectionInTree(nodes, {
+        wantedId: nodeOrConn.originalKey || nodeOrConn.connectionId || nodeOrConn.key || nodeOrConn.id,
+        types: ['ssh-tunnel'],
+        host: data?.sshHost || data?.host,
+        username: data?.sshUser || data?.username || data?.user,
+        port: data?.sshPort || data?.port || 22,
+        localPort: data?.localPort,
+        remotePort: data?.remotePort
+      });
+      if (matched?.data) {
+        const vault = matched.data;
+        data = {
+          ...data,
+          ...vault,
+          // Credenciales del vault ganan sobre historial vacío
+          sshPassword: vault.sshPassword || vault.password || data?.sshPassword || data?.password || '',
+          privateKeyPath: vault.privateKeyPath || vault.privateKey || data?.privateKeyPath || '',
+          passphrase: vault.passphrase || data?.passphrase || ''
+        };
+        key = matched.key || key;
+      }
+    }
 
     // Preparar configuración del túnel
     const tunnelConfig = {
@@ -166,9 +249,9 @@ export const useConnectionManagement = ({
       sshHost: data?.sshHost || '',
       sshPort: data?.sshPort || 22,
       sshUser: data?.sshUser || '',
-      sshPassword: data?.sshPassword || '',
+      sshPassword: data?.sshPassword || data?.password || '',
       authType: data?.authType || 'password',
-      privateKeyPath: data?.privateKeyPath || '',
+      privateKeyPath: data?.privateKeyPath || data?.privateKey || '',
       passphrase: data?.passphrase || '',
       localHost: data?.localHost || '127.0.0.1',
       localPort: data?.localPort || 0,
@@ -178,7 +261,13 @@ export const useConnectionManagement = ({
       nodeKey: key
     };
 
-    // Registrar como reciente (SSH Tunnel)
+    const authByKey = tunnelConfig.authType === 'key' || !!String(tunnelConfig.privateKeyPath || '').trim();
+    if (!String(tunnelConfig.sshPassword || '').trim() && !authByKey) {
+      showConnectionWarn(toast, 'Túnel SSH', 'No se encontró la contraseña del túnel en el vault. Ábrelo desde el árbol de conexiones.');
+      return;
+    }
+
+    // Registrar como reciente (SSH Tunnel) sin secretos
     try {
       connectionStore.recordRecent({
         type: 'ssh-tunnel',
@@ -187,10 +276,9 @@ export const useConnectionManagement = ({
         sshHost: tunnelConfig.sshHost,
         sshPort: tunnelConfig.sshPort,
         sshUser: tunnelConfig.sshUser,
-        sshPassword: tunnelConfig.sshPassword,
+        originalKey: key,
+        connectionId: key,
         authType: tunnelConfig.authType,
-        privateKeyPath: tunnelConfig.privateKeyPath,
-        passphrase: tunnelConfig.passphrase,
         localHost: tunnelConfig.localHost,
         localPort: tunnelConfig.localPort,
         remoteHost: tunnelConfig.remoteHost,
@@ -220,17 +308,18 @@ export const useConnectionManagement = ({
     setActiveTabIndex(1);
     setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
     setOpenTabOrder(prev => [tunnelTabId, ...prev.filter(k => k !== tunnelTabId)]);
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder]);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES SSH ===
-  const onOpenSSHConnection = useCallback((nodeOrConn, nodes) => {
+  const onOpenSSHConnection = useCallback((nodeOrConn, nodesArg) => {
+    const nodes = resolveTree(nodesArg);
     // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
     const isSidebarNode = !!(nodeOrConn && nodeOrConn.data);
     const conn = isSidebarNode ? {
       type: nodeOrConn.data?.type || 'ssh',
       name: nodeOrConn.label,
       host: nodeOrConn.data?.useBastionWallix ? nodeOrConn.data?.targetServer : nodeOrConn.data?.host,
-      username: nodeOrConn.data?.user,
+      username: nodeOrConn.data?.user || nodeOrConn.data?.username,
       port: nodeOrConn.data?.port || 22,
       originalKey: nodeOrConn.key,
       iconId: nodeOrConn.data?.iconId || nodeOrConn.data?.customIcon || nodeOrConn.data?.sshIcon
@@ -238,85 +327,101 @@ export const useConnectionManagement = ({
       type: nodeOrConn?.type || 'ssh',
       name: nodeOrConn?.name,
       host: nodeOrConn?.host,
-      username: nodeOrConn?.username,
+      username: nodeOrConn?.username || nodeOrConn?.user,
       port: nodeOrConn?.port || 22,
-      originalKey: nodeOrConn?.id || `manual_${Date.now()}`,
+      originalKey: nodeOrConn?.originalKey || nodeOrConn?.connectionId || nodeOrConn?.key || nodeOrConn?.id || `manual_${Date.now()}`,
       iconId: nodeOrConn?.iconId || nodeOrConn?.customIcon || nodeOrConn?.sshIcon
     };
 
-    // Si viene desde Favoritos/Recientes (sin .data), usar la información guardada como primera opción
-    let matchedSidebarNode = null;
-    if (!isSidebarNode && conn && conn.host && conn.username) {
-      // Para conexiones de favoritos, usar la información guardada directamente
-      const favoriteData = {
-        password: nodeOrConn.password || '',
-        privateKey: nodeOrConn.privateKey || '',
-        authMethod: nodeOrConn.authMethod || '',
-        useBastionWallix: nodeOrConn.useBastionWallix || false,
-        bastionHost: nodeOrConn.bastionHost || '',
-        bastionUser: nodeOrConn.bastionUser || '',
-        targetServer: nodeOrConn.targetServer || '',
-        remoteFolder: nodeOrConn.remoteFolder || ''
-      };
-
-      // Solo si no hay información completa guardada, buscar en la sidebar como fallback
-      if (!favoriteData.password && !favoriteData.privateKey && !favoriteData.useBastionWallix) {
-        const matchesConn = (node) => {
-          if (!node || !node.data || node.data.type !== 'ssh') return false;
-          const hostMatches = (node.data.host === conn.host) || (node.data.targetServer === conn.host) || (node.data.hostname === conn.host);
-          const userMatches = (node.data.user === conn.username) || (node.data.username === conn.username);
-          const portMatches = (node.data.port || 22) === (conn.port || 22);
-          return hostMatches && userMatches && portMatches;
-        };
-        const dfs = (list) => {
-          if (!Array.isArray(list)) return;
-          for (const n of list) {
-            if (matchesConn(n)) {
-              matchedSidebarNode = n;
-              return;
-            }
-            if (n.children && n.children.length > 0) dfs(n.children);
-            if (matchedSidebarNode) return;
-          }
-        };
-        dfs(nodes);
+    // Favoritos/recientes: resolver siempre desde el vault (password/privateKey/Jump/Wallix)
+    let matchedSidebarNode = isSidebarNode ? nodeOrConn : null;
+    if (!isSidebarNode) {
+      matchedSidebarNode = findConnectionInTree(nodes, {
+        wantedId: nodeOrConn.originalKey || nodeOrConn.connectionId || nodeOrConn.key || nodeOrConn.id,
+        types: SSH_LIKE_TYPES,
+        host: conn.host,
+        username: conn.username,
+        port: conn.port,
+        bastionHost: nodeOrConn.bastionHost,
+        bastionUser: nodeOrConn.bastionUser,
+        targetServer: nodeOrConn.targetServer
+      });
+      if (matchedSidebarNode?.key) {
+        conn.originalKey = matchedSidebarNode.key;
       }
     }
 
-
-    // Obtener password y verificar si debe copiarse automáticamente
-    // MOVED UP to be available for SFTP block
-    const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
-    const privateKey = isSidebarNode ? (nodeOrConn.data.privateKey || '') : (nodeOrConn.privateKey || matchedSidebarNode?.data?.privateKey || '');
+    const vault = matchedSidebarNode?.data || {};
+    const password = isSidebarNode
+      ? (nodeOrConn.data.password || '')
+      : (vault.password || nodeOrConn.password || '');
+    const privateKey = isSidebarNode
+      ? (nodeOrConn.data.privateKey || '')
+      : (vault.privateKey || nodeOrConn.privateKey || '');
     const authMethod = isSidebarNode
       ? (nodeOrConn.data.authMethod || (nodeOrConn.data.privateKey?.trim() ? 'key' : 'password'))
-      : (nodeOrConn.authMethod || matchedSidebarNode?.data?.authMethod || (privateKey?.trim() ? 'key' : 'password'));
-    const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
+      : (vault.authMethod || nodeOrConn.authMethod || (privateKey?.trim() ? 'key' : 'password'));
+    const autoCopyPassword = isSidebarNode
+      ? (nodeOrConn.data.autoCopyPassword || false)
+      : (vault.autoCopyPassword || false);
+
+    const pick = (sidebarKey, histKey) => (
+      isSidebarNode
+        ? (nodeOrConn.data?.[sidebarKey] ?? '')
+        : (vault[sidebarKey] ?? nodeOrConn[histKey || sidebarKey] ?? '')
+    );
+    const useBastionWallix = !!(isSidebarNode ? nodeOrConn.data.useBastionWallix : (vault.useBastionWallix || nodeOrConn.useBastionWallix));
+    const bastionHost = pick('bastionHost');
+    const bastionUser = pick('bastionUser');
+    const targetServer = pick('targetServer');
+    const remoteFolder = pick('remoteFolder');
+    const customIcon = isSidebarNode
+      ? (nodeOrConn.data?.customIcon || null)
+      : (vault.customIcon || nodeOrConn.customIcon || null);
+    const jumpPassword = isSidebarNode
+      ? (nodeOrConn.data.jumpPassword || '')
+      : (vault.jumpPassword || '');
+    const jumpPrivateKey = isSidebarNode
+      ? (nodeOrConn.data.jumpPrivateKey || '')
+      : (vault.jumpPrivateKey || '');
 
     // Si es un favorito de tipo Explorer o de transferencia de archivos, abrir explorador
     if (['explorer', 'sftp', 'ftp', 'scp'].includes(conn.type)) {
-      // Prepare comprehensive data merging matched sidebar node if available (fallback) and the favorite data
+      if (!password && !privateKey) {
+        showConnectionWarn(toast, 'Archivos', 'No se encontró la contraseña/clave en el vault. Ábrela desde el árbol de conexiones.');
+        return;
+      }
       const sourceData = isSidebarNode ? nodeOrConn.data : nodeOrConn;
       const fallbackData = (!isSidebarNode && matchedSidebarNode) ? matchedSidebarNode.data : {};
 
       const pseudoNode = {
         label: conn.name,
         data: {
-          ...fallbackData, // Base data from sidebar if matched
-          ...sourceData,   // Overrides from favorite
-          host: conn.host,
-          user: conn.username,
-          port: conn.port,
+          ...fallbackData,
+          ...sourceData,
+          host: vault.host || conn.host,
+          user: vault.user || vault.username || conn.username,
+          port: vault.port || conn.port,
           type: conn.type === 'explorer' ? 'ssh' : conn.type,
           protocol: conn.type === 'explorer' ? 'sftp' : conn.type,
-          password: password,
-          privateKey: privateKey,
+          password,
+          privateKey,
           authMethod,
-          ...conn // Include processed properties
+          useBastionWallix,
+          bastionHost,
+          bastionUser,
+          targetServer,
+          remoteFolder
         },
         key: conn.originalKey
       };
       openFileExplorer(pseudoNode);
+      return;
+    }
+
+    // Auth por password sin credencial del vault → abortar (no enviar vacío)
+    if (authMethod !== 'key' && !password && !privateKey) {
+      showConnectionWarn(toast, 'SSH', 'No se encontró la contraseña en el vault. Ábrela desde el árbol de conexiones o edita la entrada.');
       return;
     }
 
@@ -339,7 +444,7 @@ export const useConnectionManagement = ({
       }
     }
 
-    // Registrar como reciente (SSH) - incluir todas las credenciales y configuración
+    // Registrar como reciente (SSH) sin secretos; originalKey apunta al vault
     try {
       connectionStore.recordRecent({
         type: 'ssh',
@@ -347,15 +452,17 @@ export const useConnectionManagement = ({
         host: conn.host,
         username: conn.username,
         port: conn.port,
-        password: password,
-        privateKey: privateKey,
+        originalKey: conn.originalKey,
+        connectionId: conn.originalKey,
+        password: '',
+        privateKey: '',
         authMethod,
-        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
-        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
-        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
-        targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
-        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
-        customIcon: isSidebarNode ? (nodeOrConn.data?.customIcon || null) : (nodeOrConn.customIcon || matchedSidebarNode?.data?.customIcon || null)
+        useBastionWallix,
+        bastionHost,
+        bastionUser,
+        targetServer,
+        remoteFolder,
+        customIcon
       }, 200);
     } catch (e) { /* noop */ }
 
@@ -373,28 +480,28 @@ export const useConnectionManagement = ({
       const sshConfig = {
         host: conn.host,
         username: conn.username,
-        password: password,
-        privateKey: privateKey,
+        password,
+        privateKey,
         authMethod,
         port: conn.port,
         originalKey: conn.originalKey,
         name: conn.name,
-        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
-        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
-        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
-        targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
-        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
-        x11Forwarding: isSidebarNode ? (nodeOrConn.data.x11Forwarding || false) : (nodeOrConn.x11Forwarding || matchedSidebarNode?.data?.x11Forwarding || false),
-        agentForwarding: isSidebarNode ? (nodeOrConn.data.agentForwarding || false) : (nodeOrConn.agentForwarding || matchedSidebarNode?.data?.agentForwarding || false),
-        autoRecording: isSidebarNode ? (nodeOrConn.data.autoRecording || false) : (nodeOrConn.autoRecording || matchedSidebarNode?.data?.autoRecording || false),
-        proxyJumpEnabled: isSidebarNode ? (nodeOrConn.data.proxyJumpEnabled || false) : (nodeOrConn.proxyJumpEnabled || matchedSidebarNode?.data?.proxyJumpEnabled || false),
-        jumpHost: isSidebarNode ? (nodeOrConn.data.jumpHost || '') : (nodeOrConn.jumpHost || matchedSidebarNode?.data?.jumpHost || ''),
-        jumpPort: isSidebarNode ? (nodeOrConn.data.jumpPort || 22) : (nodeOrConn.jumpPort || matchedSidebarNode?.data?.jumpPort || 22),
-        jumpUser: isSidebarNode ? (nodeOrConn.data.jumpUser || '') : (nodeOrConn.jumpUser || matchedSidebarNode?.data?.jumpUser || ''),
-        jumpAuthMethod: isSidebarNode ? (nodeOrConn.data.jumpAuthMethod || 'password') : (nodeOrConn.jumpAuthMethod || matchedSidebarNode?.data?.jumpAuthMethod || 'password'),
-        jumpPassword: isSidebarNode ? (nodeOrConn.data.jumpPassword || '') : (nodeOrConn.jumpPassword || matchedSidebarNode?.data?.jumpPassword || ''),
-        jumpPrivateKey: isSidebarNode ? (nodeOrConn.data.jumpPrivateKey || '') : (nodeOrConn.jumpPrivateKey || matchedSidebarNode?.data?.jumpPrivateKey || ''),
-        hostKeyPolicy: isSidebarNode ? (nodeOrConn.data.hostKeyPolicy || 'warn_new') : (nodeOrConn.hostKeyPolicy || matchedSidebarNode?.data?.hostKeyPolicy || 'warn_new')
+        useBastionWallix,
+        bastionHost,
+        bastionUser,
+        targetServer,
+        remoteFolder,
+        x11Forwarding: !!(isSidebarNode ? nodeOrConn.data.x11Forwarding : vault.x11Forwarding),
+        agentForwarding: !!(isSidebarNode ? nodeOrConn.data.agentForwarding : vault.agentForwarding),
+        autoRecording: !!(isSidebarNode ? nodeOrConn.data.autoRecording : vault.autoRecording),
+        proxyJumpEnabled: !!(isSidebarNode ? nodeOrConn.data.proxyJumpEnabled : vault.proxyJumpEnabled),
+        jumpHost: isSidebarNode ? (nodeOrConn.data.jumpHost || '') : (vault.jumpHost || ''),
+        jumpPort: isSidebarNode ? (nodeOrConn.data.jumpPort || 22) : (vault.jumpPort || 22),
+        jumpUser: isSidebarNode ? (nodeOrConn.data.jumpUser || '') : (vault.jumpUser || ''),
+        jumpAuthMethod: isSidebarNode ? (nodeOrConn.data.jumpAuthMethod || 'password') : (vault.jumpAuthMethod || 'password'),
+        jumpPassword,
+        jumpPrivateKey,
+        hostKeyPolicy: isSidebarNode ? (nodeOrConn.data.hostKeyPolicy || 'warn_new') : (vault.hostKeyPolicy || nodeOrConn.hostKeyPolicy || 'warn_new')
       };
       const newTab = {
         key: tabId,
@@ -454,10 +561,11 @@ export const useConnectionManagement = ({
       setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
       return [newTab, ...prevTabs];
     });
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, openFileExplorer]);
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, openFileExplorer, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES RDP ===
-  const onOpenRdpConnection = useCallback((node, nodes) => {
+  const onOpenRdpConnection = useCallback((node, nodesArg) => {
+    const nodes = resolveTree(nodesArg);
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -517,66 +625,34 @@ export const useConnectionManagement = ({
         span: node.span || false,
         admin: node.admin || false
       };
+    }
 
-      // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
-      if (!baseRdp.password) {
-        const matchesRdp = (n) => {
-          if (!n || !n.data) return false;
-          const isRdp = n.data.type === 'rdp' || n.data.type === 'rdp-guacamole';
-          if (!isRdp) return false;
-          const hostA = (n.data.server || n.data.host || n.data.hostname || '').toLowerCase();
-          const hostB = (baseRdp.server || baseRdp.host || baseRdp.hostname || '').toLowerCase();
-          const userA = (n.data.username || n.data.user || '').toLowerCase();
-          const userB = (baseRdp.username || baseRdp.user || '').toLowerCase();
-          const portA = n.data.port || 3389;
-          const portB = baseRdp.port || 3389;
-          return hostA === hostB && userA === userB && portA === portB;
+    // Sin password en historial/favoritos: resolver siempre desde el árbol/vault
+    if (!baseRdp.password) {
+      const matched = findConnectionInTree(nodes, {
+        wantedId: node.originalKey || node.connectionId || node.key || node.id,
+        types: ['rdp', 'rdp-guacamole'],
+        host: baseRdp.server || baseRdp.host || baseRdp.hostname,
+        username: baseRdp.username || baseRdp.user,
+        port: baseRdp.port || 3389,
+        bastionHost: baseRdp.bastionHost,
+        bastionUser: baseRdp.bastionUser,
+        targetServer: baseRdp.targetServer
+      });
+      if (matched?.data) {
+        const vault = matched.data;
+        baseRdp = {
+          ...baseRdp,
+          ...vault,
+          password: vault.password || baseRdp.password || '',
+          username: vault.username || vault.user || baseRdp.username,
+          user: vault.user || vault.username || baseRdp.user,
+          domain: vault.domain || baseRdp.domain,
+          clientType: vault.clientType || baseRdp.clientType,
+          server: vault.server || vault.host || vault.hostname || baseRdp.server,
+          host: vault.host || vault.server || vault.hostname || baseRdp.host,
+          hostname: vault.hostname || vault.server || vault.host || baseRdp.hostname
         };
-        const dfs = (list) => {
-          if (!Array.isArray(list)) return;
-          for (const n of list) {
-            if (matchesRdp(n)) {
-              // Usar la información de la sidebar para completar los campos faltantes
-              baseRdp.password = n.data.password || baseRdp.password;
-              baseRdp.clientType = n.data.clientType || baseRdp.clientType;
-              baseRdp.domain = n.data.domain || baseRdp.domain;
-              baseRdp.resolution = n.data.resolution || baseRdp.resolution;
-              baseRdp.colors = n.data.colors || baseRdp.colors;
-              // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
-              baseRdp.guacEnableWallpaper = n.data.guacEnableWallpaper !== undefined ? n.data.guacEnableWallpaper : (n.data.enableWallpaper !== undefined ? n.data.enableWallpaper : baseRdp.guacEnableWallpaper);
-              baseRdp.guacEnableDesktopComposition = n.data.guacEnableDesktopComposition !== undefined ? n.data.guacEnableDesktopComposition : (n.data.enableDesktopComposition !== undefined ? n.data.enableDesktopComposition : baseRdp.guacEnableDesktopComposition);
-              baseRdp.guacEnableFontSmoothing = n.data.guacEnableFontSmoothing !== undefined ? n.data.guacEnableFontSmoothing : (n.data.enableFontSmoothing !== undefined ? n.data.enableFontSmoothing : baseRdp.guacEnableFontSmoothing);
-              baseRdp.guacEnableTheming = n.data.guacEnableTheming !== undefined ? n.data.guacEnableTheming : (n.data.enableTheming !== undefined ? n.data.enableTheming : baseRdp.guacEnableTheming);
-              baseRdp.guacEnableFullWindowDrag = n.data.guacEnableFullWindowDrag !== undefined ? n.data.guacEnableFullWindowDrag : (n.data.enableFullWindowDrag !== undefined ? n.data.enableFullWindowDrag : baseRdp.guacEnableFullWindowDrag);
-              baseRdp.guacEnableMenuAnimations = n.data.guacEnableMenuAnimations !== undefined ? n.data.guacEnableMenuAnimations : (n.data.enableMenuAnimations !== undefined ? n.data.enableMenuAnimations : baseRdp.guacEnableMenuAnimations);
-              baseRdp.guacEnableGfx = n.data.guacEnableGfx !== undefined ? n.data.guacEnableGfx : (n.data.enableGfx !== undefined ? n.data.enableGfx : baseRdp.guacEnableGfx);
-              if (n.data.ironRdpGraphics === 'egfx' || n.data.ironRdpGraphics === 'bitmap') {
-                baseRdp.ironRdpGraphics = n.data.ironRdpGraphics;
-              }
-              if (n.data.bastionLogicalDesktop !== undefined) {
-                baseRdp.bastionLogicalDesktop = n.data.bastionLogicalDesktop !== false;
-              }
-              baseRdp.guacDisableGlyphCaching = n.data.guacDisableGlyphCaching !== undefined ? n.data.guacDisableGlyphCaching : (n.data.disableGlyphCaching !== undefined ? n.data.disableGlyphCaching : baseRdp.guacDisableGlyphCaching);
-              baseRdp.guacDisableOffscreenCaching = n.data.guacDisableOffscreenCaching !== undefined ? n.data.guacDisableOffscreenCaching : (n.data.disableOffscreenCaching !== undefined ? n.data.disableOffscreenCaching : baseRdp.guacDisableOffscreenCaching);
-              baseRdp.guacDisableBitmapCaching = n.data.guacDisableBitmapCaching !== undefined ? n.data.guacDisableBitmapCaching : (n.data.disableBitmapCaching !== undefined ? n.data.disableBitmapCaching : baseRdp.guacDisableBitmapCaching);
-              baseRdp.guacDisableCopyRect = n.data.guacDisableCopyRect !== undefined ? n.data.guacDisableCopyRect : (n.data.disableCopyRect !== undefined ? n.data.disableCopyRect : baseRdp.guacDisableCopyRect);
-              baseRdp.autoResize = n.data.autoResize !== undefined ? n.data.autoResize : baseRdp.autoResize;
-              baseRdp.guacDpi = n.data.guacDpi || baseRdp.guacDpi;
-              baseRdp.guacSecurity = n.data.guacSecurity || baseRdp.guacSecurity;
-              baseRdp.redirectFolders = n.data.redirectFolders !== undefined ? n.data.redirectFolders : baseRdp.redirectFolders;
-              baseRdp.redirectClipboard = n.data.redirectClipboard !== undefined ? n.data.redirectClipboard : baseRdp.redirectClipboard;
-              baseRdp.redirectPrinters = n.data.redirectPrinters !== undefined ? n.data.redirectPrinters : baseRdp.redirectPrinters;
-              baseRdp.redirectAudio = n.data.redirectAudio !== undefined ? n.data.redirectAudio : baseRdp.redirectAudio;
-              baseRdp.fullscreen = n.data.fullscreen !== undefined ? n.data.fullscreen : baseRdp.fullscreen;
-              baseRdp.smartSizing = n.data.smartSizing !== undefined ? n.data.smartSizing : baseRdp.smartSizing;
-              baseRdp.span = n.data.span !== undefined ? n.data.span : baseRdp.span;
-              baseRdp.admin = n.data.admin !== undefined ? n.data.admin : baseRdp.admin;
-              return;
-            }
-            if (n.children && n.children.length > 0) dfs(n.children);
-          }
-        };
-        dfs(nodes);
       }
     }
     // Detectar si es RDP integrado (IronRDP / Guacamole) o RDP nativo externo (mstsc)
@@ -590,11 +666,17 @@ export const useConnectionManagement = ({
         host: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
         port: baseRdp.port || 3389,
-        password: baseRdp.password || '',
+        originalKey: node.key || node.originalKey || node.connectionId || node.id,
+        connectionId: node.key || node.originalKey || node.connectionId || node.id,
+        password: '',
         clientType: baseRdp.clientType || 'web-rdp',
         domain: baseRdp.domain || '',
         resolution: baseRdp.resolution || '1024x768',
         colors: baseRdp.colors || '32',
+        useBastionWallix: baseRdp.useBastionWallix === true,
+        bastionHost: baseRdp.bastionHost || '',
+        bastionUser: baseRdp.bastionUser || '',
+        targetServer: baseRdp.targetServer || '',
         // Opciones avanzadas de RDP
         guacEnableWallpaper: baseRdp.guacEnableWallpaper || false,
         guacEnableDesktopComposition: baseRdp.guacEnableDesktopComposition || false,
@@ -611,7 +693,7 @@ export const useConnectionManagement = ({
         guacDisableCopyRect: baseRdp.guacDisableCopyRect || false,
         autoResize: baseRdp.autoResize !== false,
         guacDpi: baseRdp.guacDpi || 96,
-        customIcon: node.data?.customIcon || null,
+        customIcon: node.data?.customIcon || baseRdp.customIcon || null,
         guacSecurity: baseRdp.guacSecurity || 'any',
         redirectFolders: baseRdp.redirectFolders !== false,
         redirectClipboard: baseRdp.redirectClipboard !== false,
@@ -620,8 +702,7 @@ export const useConnectionManagement = ({
         fullscreen: baseRdp.fullscreen || false,
         smartSizing: baseRdp.smartSizing !== false,
         span: baseRdp.span || false,
-        admin: baseRdp.admin || false,
-        customIcon: node.data?.customIcon || null
+        admin: baseRdp.admin || false
       }, 200);
     } catch (e) { /* noop */ }
 
@@ -634,12 +715,19 @@ export const useConnectionManagement = ({
       const isIronRdp = (baseRdp.clientType === 'web-rdp') || (!baseRdp.clientType && baseRdp.type !== 'mstsc');
       const engineLabel = isIronRdp ? 'IronRDP' : (baseRdp.clientType === 'guacamole' ? 'Guacamole' : 'RDP');
 
+      if (!baseRdp.password) {
+        const msg = 'No se encontró la contraseña RDP en el vault. Ábrela desde el árbol de conexiones o edita la entrada.';
+        console.warn(`[RDP Connect][${engineLabel}] ${msg}`);
+        showConnectionWarn(toast, 'RDP', msg);
+        return;
+      }
+
       const rdpConfig = {
         clientType: baseRdp.clientType || 'web-rdp',
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
         domain: baseRdp.domain || baseRdp.serverDomain,
-        password: baseRdp.password || 'password', // En producción desde vault
+        password: baseRdp.password,
         port: baseRdp.port || 3389,
         // Campos de Bastión Wallix
         useBastionWallix: baseRdp.useBastionWallix === true,
@@ -850,7 +938,8 @@ export const useConnectionManagement = ({
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, rdpTabs, sshTabs, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES VNC ===
-  const onOpenVncConnection = useCallback((node, nodes) => {
+  const onOpenVncConnection = useCallback((node, nodesArg) => {
+    const nodes = resolveTree(nodesArg);
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -890,49 +979,46 @@ export const useConnectionManagement = ({
         guacDpi: node.guacDpi || 96
       };
 
-      // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
-      if (!baseVnc.password) {
-        const matchesVnc = (n) => {
-          if (!n || !n.data) return false;
-          const isVnc = n.data.type === 'vnc' || n.data.type === 'vnc-guacamole';
-          if (!isVnc) return false;
-          const hostA = (n.data.server || n.data.host || n.data.hostname || '').toLowerCase();
-          const hostB = (baseVnc.server || baseVnc.host || baseVnc.hostname || '').toLowerCase();
-          const portA = n.data.port || 5900;
-          const portB = baseVnc.port || 5900;
-          return hostA === hostB && portA === portB;
+    }
+
+    // Sin password en historial/favoritos: resolver desde el árbol/vault
+    if (!baseVnc.password) {
+      const matchedVnc = findConnectionInTree(nodes, {
+        wantedId: node.originalKey || node.connectionId || node.key || node.id,
+        types: ['vnc', 'vnc-guacamole'],
+        host: baseVnc.server || baseVnc.host || baseVnc.hostname,
+        username: baseVnc.username || baseVnc.user || '',
+        port: baseVnc.port || 5900
+      });
+      if (matchedVnc?.data) {
+        const vault = matchedVnc.data;
+        baseVnc = {
+          ...baseVnc,
+          ...vault,
+          password: vault.password || baseVnc.password || '',
+          username: vault.username || vault.user || baseVnc.username || '',
+          clientType: (vault.clientType === 'guacamole' && vault.explicitGuacamole === true)
+            ? 'guacamole'
+            : (vault.clientType === 'guacamole' ? 'web-vnc' : (vault.clientType || baseVnc.clientType || 'web-vnc')),
+          explicitGuacamole: vault.explicitGuacamole === true
         };
-        const dfs = (list) => {
-          if (!Array.isArray(list)) return;
-          for (const n of list) {
-            if (matchesVnc(n)) {
-              // Usar la información de la sidebar para completar los campos faltantes
-              baseVnc.password = n.data.password || baseVnc.password;
-              baseVnc.username = n.data.username || n.data.user || baseVnc.username || '';
-              baseVnc.clientType = (n.data.clientType === 'guacamole' && n.data.explicitGuacamole === true) ? 'guacamole' : (n.data.clientType === 'guacamole' ? 'web-vnc' : (n.data.clientType || 'web-vnc'));
-              baseVnc.explicitGuacamole = n.data.explicitGuacamole === true;
-              baseVnc.resolution = n.data.resolution || baseVnc.resolution;
-              baseVnc.colors = n.data.colors || baseVnc.colors;
-              baseVnc.readOnly = n.data.readOnly !== undefined ? n.data.readOnly : baseVnc.readOnly;
-              baseVnc.enableCompression = n.data.enableCompression !== undefined ? n.data.enableCompression : baseVnc.enableCompression;
-              baseVnc.imageQuality = n.data.imageQuality || baseVnc.imageQuality;
-              baseVnc.autoReconnect = n.data.autoReconnect !== undefined ? n.data.autoReconnect : baseVnc.autoReconnect;
-              baseVnc.autoResize = n.data.autoResize !== undefined ? n.data.autoResize : baseVnc.autoResize;
-              baseVnc.redirectClipboard = n.data.redirectClipboard !== undefined ? n.data.redirectClipboard : baseVnc.redirectClipboard;
-              baseVnc.guacDpi = n.data.guacDpi || baseVnc.guacDpi;
-              return;
-            }
-            if (n.children && n.children.length > 0) dfs(n.children);
-          }
-        };
-        dfs(nodes);
       }
     }
+
+    // VNC sin password: avisar (algunos servidores lo permiten; no inventamos uno)
+    if (!baseVnc.password) {
+      showConnectionWarn(
+        toast,
+        'VNC',
+        'No se encontró contraseña VNC en el vault. Si el servidor la requiere, ábrela desde el árbol de conexiones.'
+      );
+    }
+
     const isExplicitGuac = (baseVnc.clientType === 'guacamole' && baseVnc.explicitGuacamole === true);
     const clientType = isExplicitGuac ? 'guacamole' : 'web-vnc';
     const isGuacamoleVNC = isExplicitGuac;
 
-    // Registrar como reciente (VNC) - incluir todas las credenciales y configuración
+    // Registrar como reciente (VNC) sin secretos
     try {
       connectionStore.recordRecent({
         type: 'vnc-guacamole',
@@ -940,7 +1026,9 @@ export const useConnectionManagement = ({
         host: baseVnc.server || baseVnc.host || baseVnc.hostname,
         username: baseVnc.username || baseVnc.user || '',
         port: baseVnc.port || 5900,
-        password: baseVnc.password || '',
+        originalKey: node.key || node.originalKey || node.connectionId || node.id,
+        connectionId: node.key || node.originalKey || node.connectionId || node.id,
+        password: '',
         clientType: clientType,
         resolution: baseVnc.resolution || '1024x768',
         colors: baseVnc.colors || '32',

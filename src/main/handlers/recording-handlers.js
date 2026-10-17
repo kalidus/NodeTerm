@@ -58,6 +58,29 @@ async function getRecordingsDirectory() {
   }
 }
 
+/**
+ * Resuelve rutas de grabación bajo recordingsDir (evita path traversal con recordingId).
+ * @returns {{ castPath: string, metaPath: string } | null}
+ */
+function resolveRecordingPaths(recordingsDir, recordingId) {
+  if (!recordingId || typeof recordingId !== 'string') return null;
+  const safeId = path.basename(recordingId.trim());
+  if (!safeId || safeId === '.' || safeId === '..') return null;
+
+  const root = path.resolve(recordingsDir);
+  const castPath = path.resolve(root, `${safeId}.cast`);
+  const metaPath = path.resolve(root, `${safeId}.meta.json`);
+  const relCast = path.relative(root, castPath);
+  const relMeta = path.relative(root, metaPath);
+  if (
+    relCast.startsWith('..') || path.isAbsolute(relCast) ||
+    relMeta.startsWith('..') || path.isAbsolute(relMeta)
+  ) {
+    return null;
+  }
+  return { castPath, metaPath, recordingId: safeId };
+}
+
 async function stopAndPersistRecording(tabId) {
   if (!sessionRecorder) {
     return { success: false, error: 'SessionRecorder no inicializado' };
@@ -382,15 +405,14 @@ function registerRecordingHandlers() {
   ipcMain.handle('recording:load', async (event, { recordingId }) => {
     try {
       const recordingsDir = await getRecordingsDirectory();
-      
-      // Leer metadata
-      const metaPath = path.join(recordingsDir, `${recordingId}.meta.json`);
-      const metaContent = await fs.readFile(metaPath, 'utf-8');
+      const paths = resolveRecordingPaths(recordingsDir, recordingId);
+      if (!paths) {
+        return { success: false, error: 'recordingId inválido' };
+      }
+
+      const metaContent = await fs.readFile(paths.metaPath, 'utf-8');
       const metadata = JSON.parse(metaContent);
-      
-      // Leer archivo de grabación
-      const castPath = path.join(recordingsDir, `${recordingId}.cast`);
-      const castContent = await fs.readFile(castPath, 'utf-8');
+      const castContent = await fs.readFile(paths.castPath, 'utf-8');
       
       return {
         success: true,
@@ -412,17 +434,17 @@ function registerRecordingHandlers() {
   ipcMain.handle('recording:delete', async (event, { recordingId }) => {
     try {
       const recordingsDir = await getRecordingsDirectory();
-      
-      // Eliminar archivos
-      const castPath = path.join(recordingsDir, `${recordingId}.cast`);
-      const metaPath = path.join(recordingsDir, `${recordingId}.meta.json`);
+      const paths = resolveRecordingPaths(recordingsDir, recordingId);
+      if (!paths) {
+        return { success: false, error: 'recordingId inválido' };
+      }
       
       await Promise.all([
-        fs.unlink(castPath).catch(() => {}), // Ignorar si no existe
-        fs.unlink(metaPath).catch(() => {})
+        fs.unlink(paths.castPath).catch(() => {}), // Ignorar si no existe
+        fs.unlink(paths.metaPath).catch(() => {})
       ]);
       
-      console.log(`🗑️ Grabación eliminada: ${recordingId}`);
+      console.log(`🗑️ Grabación eliminada: ${paths.recordingId}`);
       
       return {
         success: true,
@@ -441,9 +463,15 @@ function registerRecordingHandlers() {
   ipcMain.handle('recording:export', async (event, { recordingId, exportPath }) => {
     try {
       const recordingsDir = await getRecordingsDirectory();
+      const paths = resolveRecordingPaths(recordingsDir, recordingId);
+      if (!paths) {
+        return { success: false, error: 'recordingId inválido' };
+      }
+      if (!exportPath || typeof exportPath !== 'string' || !exportPath.trim()) {
+        return { success: false, error: 'exportPath inválido' };
+      }
       
-      const castPath = path.join(recordingsDir, `${recordingId}.cast`);
-      const castContent = await fs.readFile(castPath, 'utf-8');
+      const castContent = await fs.readFile(paths.castPath, 'utf-8');
       
       // Copiar a la ruta de exportación
       await fs.writeFile(exportPath, castContent, 'utf-8');
@@ -759,6 +787,7 @@ function registerRecordingHandlers() {
 module.exports = {
   registerRecordingHandlers,
   setSessionRecorder,
-  stopAndPersistRecording
+  stopAndPersistRecording,
+  resolveRecordingPaths
 };
 

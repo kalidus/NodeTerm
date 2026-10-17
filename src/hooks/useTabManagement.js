@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import connectionStore from '../utils/connectionStore';
+import { findConnectionInTree } from '../utils/findConnectionInTree';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import {
   themeManager,
@@ -188,166 +189,143 @@ export const useTabManagement = (toast, {
 
     setTabGroups(prev => [...prev, newGroup]);
 
-    // Cargar cada sesión del grupo
+    // Cargar cada sesión del grupo (credenciales siempre desde el vault/árbol)
     groupConnection.sessions.forEach(session => {
       if (session.type === 'terminal' || session.type === 'ssh') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'ssh') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 22) === (session.port || 22);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
+        const matchedSidebarNode = findConnectionInTree(nodes, {
+          wantedId: session.key || session.originalKey || session.id,
+          types: ['ssh'],
+          host: session.host,
+          username: session.username,
+          port: session.port || 22,
+          bastionHost: session.bastionHost,
+          bastionUser: session.bastionUser,
+          targetServer: session.targetServer
+        });
+        const vault = matchedSidebarNode?.data || {};
 
-        // Crear pestaña SSH con configuración completa
         const nowTs = Date.now();
         const tabId = `${session.key}_${nowTs}`;
         const sshConfig = {
           host: session.host,
           username: session.username,
-          password: matchedSidebarNode?.data?.password || '',
+          password: vault.password || '',
+          privateKey: vault.privateKey || '',
+          authMethod: vault.authMethod || (vault.privateKey?.trim() ? 'key' : 'password'),
           port: session.port,
-          originalKey: session.key,
+          originalKey: matchedSidebarNode?.key || session.key,
           name: session.label,
-          useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
-          bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
-          bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || '',
-          x11Forwarding: matchedSidebarNode?.data?.x11Forwarding || false,
-          agentForwarding: matchedSidebarNode?.data?.agentForwarding || false,
-          autoRecording: matchedSidebarNode?.data?.autoRecording || false,
-          proxyJumpEnabled: matchedSidebarNode?.data?.proxyJumpEnabled || false,
-          jumpHost: matchedSidebarNode?.data?.jumpHost || '',
-          jumpPort: matchedSidebarNode?.data?.jumpPort || 22,
-          jumpUser: matchedSidebarNode?.data?.jumpUser || '',
-          jumpAuthMethod: matchedSidebarNode?.data?.jumpAuthMethod || 'password',
-          jumpPassword: matchedSidebarNode?.data?.jumpPassword || '',
-          jumpPrivateKey: matchedSidebarNode?.data?.jumpPrivateKey || '',
-          hostKeyPolicy: matchedSidebarNode?.data?.hostKeyPolicy || 'warn_new'
+          useBastionWallix: session.useBastionWallix || vault.useBastionWallix || false,
+          bastionHost: session.bastionHost || vault.bastionHost || '',
+          bastionUser: session.bastionUser || vault.bastionUser || '',
+          targetServer: session.targetServer || vault.targetServer || '',
+          x11Forwarding: vault.x11Forwarding || false,
+          agentForwarding: vault.agentForwarding || false,
+          autoRecording: vault.autoRecording || false,
+          proxyJumpEnabled: vault.proxyJumpEnabled || false,
+          jumpHost: vault.jumpHost || '',
+          jumpPort: vault.jumpPort || 22,
+          jumpUser: vault.jumpUser || '',
+          jumpAuthMethod: vault.jumpAuthMethod || 'password',
+          jumpPassword: vault.jumpPassword || '',
+          jumpPrivateKey: vault.jumpPrivateKey || '',
+          hostKeyPolicy: vault.hostKeyPolicy || 'warn_new'
         };
 
         const sshTab = {
           key: tabId,
           label: session.label,
-          originalKey: session.key,
+          originalKey: matchedSidebarNode?.key || session.key,
           sshConfig: sshConfig,
           type: 'terminal',
           createdAt: nowTs,
           groupId: newGroup.id
         };
         setSshTabs(prev => [...prev, sshTab]);
-      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole' || session.type === 'vnc' || session.type === 'vnc-guacamole') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'rdp') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 3389) === (session.port || 3389);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
+      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
+        const matchedSidebarNode = findConnectionInTree(nodes, {
+          wantedId: session.key || session.originalKey || session.id,
+          types: ['rdp', 'rdp-guacamole'],
+          host: session.host,
+          username: session.username,
+          port: session.port || 3389,
+          bastionHost: session.bastionHost,
+          bastionUser: session.bastionUser,
+          targetServer: session.targetServer
+        });
+        const vault = matchedSidebarNode?.data || {};
 
-        // Crear pestaña RDP con configuración completa
         const rdpTab = {
           key: session.key,
           label: session.label,
           type: 'rdp',
           groupId: newGroup.id,
           rdpConfig: {
-            server: session.host,
-            username: session.username,
-            password: matchedSidebarNode?.data?.password || '',
-            port: session.port,
-            clientType: session.clientType || matchedSidebarNode?.data?.clientType || 'web-rdp'
+            ...vault,
+            server: vault.server || vault.host || session.host,
+            hostname: vault.server || vault.host || session.host,
+            username: vault.username || vault.user || session.username,
+            password: vault.password || '',
+            port: vault.port || session.port,
+            clientType: session.clientType || vault.clientType || 'web-rdp'
           }
         };
         setRdpTabs(prev => [...prev, rdpTab]);
-      } else if (session.type === 'explorer') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'ssh') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 22) === (session.port || 22);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
-      } else if (session.type === 'sftp' || session.type === 'ftp' || session.type === 'scp') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const protocol = session.protocol || session.type;
-          const matchesConn = (node) => {
-            if (!node || !node.data || (node.data.type !== protocol && node.data.type !== session.type)) return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const defaultPort = protocol === 'ftp' ? 21 : 22;
-            const portMatches = (node.data.port || defaultPort) === (session.port || defaultPort);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
+      } else if (session.type === 'vnc' || session.type === 'vnc-guacamole') {
+        const matchedSidebarNode = findConnectionInTree(nodes, {
+          wantedId: session.key || session.originalKey || session.id,
+          types: ['vnc', 'vnc-guacamole'],
+          host: session.host,
+          username: session.username || '',
+          port: session.port || 5900
+        });
+        const vault = matchedSidebarNode?.data || {};
+        const rdpTab = {
+          key: session.key,
+          label: session.label,
+          type: 'rdp',
+          groupId: newGroup.id,
+          rdpConfig: {
+            connectionType: 'vnc',
+            server: session.host,
+            username: session.username || vault.username || '',
+            password: vault.password || '',
+            port: session.port || 5900,
+            clientType: session.clientType || vault.clientType || 'web-vnc'
+          }
+        };
+        setRdpTabs(prev => [...prev, rdpTab]);
+      } else if (session.type === 'explorer' || session.type === 'sftp' || session.type === 'ftp' || session.type === 'scp') {
+        const protocol = session.protocol || (session.type === 'explorer' ? 'sftp' : session.type);
+        const matchedSidebarNode = findConnectionInTree(nodes, {
+          wantedId: session.key || session.originalKey || session.id,
+          types: ['sftp', 'ftp', 'scp', 'ssh', 'explorer'],
+          host: session.host,
+          username: session.username,
+          port: session.port || (protocol === 'ftp' ? 21 : 22),
+          bastionHost: session.bastionHost,
+          bastionUser: session.bastionUser,
+          targetServer: session.targetServer
+        });
+        const vault = matchedSidebarNode?.data || {};
 
-        // Crear pestaña de explorador de archivos
         const nowTs = Date.now();
         const tabId = `explorer_${session.key}_${nowTs}`;
-        const protocol = session.protocol || session.type;
         const config = {
           host: session.host,
           username: session.username,
-          password: matchedSidebarNode?.data?.password || session.password || '',
+          password: vault.password || '',
+          privateKey: vault.privateKey || '',
           port: session.port || (protocol === 'ftp' ? 21 : 22),
-          originalKey: session.key,
+          originalKey: matchedSidebarNode?.key || session.key,
           protocol: protocol
         };
 
         const explorerTab = {
           key: tabId,
           label: session.label,
-          originalKey: session.key,
-          sshConfig: config, // Mantener nombre sshConfig para compatibilidad
+          originalKey: matchedSidebarNode?.key || session.key,
+          sshConfig: config,
           type: 'explorer',
           createdAt: nowTs,
           needsOwnConnection: false,

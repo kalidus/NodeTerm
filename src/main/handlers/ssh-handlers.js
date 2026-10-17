@@ -1095,7 +1095,16 @@ function registerSSHHandlers(dependencies = {}) {
       const safeDest = escapeShellPath(destPath.trim());
       const command = `cp -r "${safeSrc}" "${safeDest}" && echo __OK__ || echo __FAIL__`;
 
-      const ssh = new SSH2Promise(sshConfig);
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
+      const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
+        const result = await existingConn.ssh.exec(command);
+        return String(result || '').includes('__OK__')
+          ? { success: true }
+          : { success: false, error: 'cp falló en el servidor' };
+      }
+
+      const ssh = new SSH2Promise(secureConfig);
       await ssh.connect();
       const result = await ssh.exec(command);
       await ssh.close();
