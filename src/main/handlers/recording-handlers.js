@@ -291,30 +291,6 @@ function registerRecordingHandlers() {
     }
   });
 
-  // RECORDING: Verificar si hay grabación activa
-  ipcMain.handle('recording:is-active', async (event, { tabId }) => {
-    try {
-      if (!sessionRecorder) {
-        return { success: true, isRecording: false };
-      }
-
-      const isRecording = sessionRecorder.isRecording(tabId);
-      const info = sessionRecorder.getRecordingInfo(tabId);
-      
-      return {
-        success: true,
-        isRecording,
-        info
-      };
-    } catch (error) {
-      console.error('Error verificando grabación:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  });
-
   // RECORDING: Listar todas las grabaciones
   ipcMain.handle('recording:list', async (event, filters = {}) => {
     try {

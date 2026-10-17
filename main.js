@@ -3945,18 +3945,12 @@ function getPty() {
   return _pty;
 }
 
-// Start PowerShell session
-ipcMain.on('powershell:start', (event, { cols, rows }) => {
-  const tabId = 'default'; // Fallback para compatibilidad
-  PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
-});
-
 // Start PowerShell session with specific tab ID - Global listener with auto-registration
 ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   const channel = event.senderFrame ? event.channel : arguments[1];
   const tabId = channel.split(':')[2];
 
-  // ✅ REFACTORIZADO: Registrar eventos para este tab si no están registrados
+  // ✅ REFACTORIZADO: Registrar eventos para este tab si no estan registrados
   if (!isTabRegistered(tabId)) {
     registerTabEventsWrapper(tabId);
   }
@@ -3965,37 +3959,7 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
 });
 
 // === WSL Terminal Support ===
-
-// Start WSL session
-ipcMain.on('wsl:start', (event, { cols, rows }) => {
-  const tabId = 'default';
-  WSL.WSLHandlers.start(tabId, { cols, rows });
-});
-
-// Send data to WSL
-ipcMain.on('wsl:data', (event, data) => {
-  const tabId = 'default';
-  WSL.WSLHandlers.data(tabId, data);
-});
-
-// Resize WSL terminal
-ipcMain.on('wsl:resize', (event, { cols, rows }) => {
-  const tabId = 'default';
-  WSL.WSLHandlers.resize(tabId, { cols, rows });
-});
-
-// Stop WSL session
-ipcMain.on('wsl:stop', () => {
-  const tabId = 'default';
-  WSL.WSLHandlers.stop(tabId);
-});
-
-// Funciones de manejo para WSL
-// Función handleWSLStart movida a src/main/services/WSLService.js
-
-// Función startWSLSession movida a src/main/services/WSLService.js
-
-// Función handleWSLData movida a src/main/services/WSLService.js
+// Canales bare wsl:* / powershell:start (sin tabId) eliminados: la UI usa *:${tabId}
 
 // Función handleWSLResize movida a src/main/services/WSLService.js
 

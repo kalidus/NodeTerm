@@ -176,22 +176,6 @@ function registerGuacamoleHandlers({
     }
   });
 
-  // Handler para establecer si Guacamole está habilitado
-  ipcMain.handle('guacamole:set-enabled', async (event, enabled) => {
-    try {
-      const willEnable = !!enabled;
-      await saveGuacamoleEnabled(willEnable);
-      if (willEnable) {
-        if (initializeGuacamoleServices) await initializeGuacamoleServices();
-      } else {
-        if (stopGuacamoleServices) await stopGuacamoleServices();
-      }
-      return { success: true, enabled: willEnable };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
   // IPC handlers for Guacamole RDP connections
   // Cache para evitar logs repetidos
   let guacamoleStatusWarningLogged = false;

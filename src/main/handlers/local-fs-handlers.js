@@ -295,7 +295,6 @@ function registerLocalFsHandlers() {
     ipcMain.handle('local-fs:create-directory', async (event, path) => createDirectory(path));
     ipcMain.handle('local-fs:delete-file', async (event, { path, isDirectory }) => deleteFile(path, isDirectory));
     ipcMain.handle('local-fs:rename-file', async (event, { oldPath, newPath }) => renameFile(oldPath, newPath));
-    ipcMain.handle('local-fs:copy-file', async (event, { srcPath, destPath }) => copyFile(srcPath, destPath));
 }
 
 module.exports = {
