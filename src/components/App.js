@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
@@ -40,15 +40,6 @@ import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
 
 
-// 🚀 OPTIMIZACIÓN: Lazy loading de componentes pesados
-// Estos componentes se cargan bajo demanda, no al inicio
-const SettingsDialog = lazy(() => import('./SettingsDialog'));
-const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
-const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
-const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
-const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
-const FileExplorer = lazy(() => import('./FileExplorer'));
-
 // Componentes modulares de la aplicación
 import { AppHeader, AppModals } from './app/index';
 import MinimalModeExitButton from './MinimalModeExitButton';
@@ -77,7 +68,6 @@ import {
   handleUnblockForms,
   handleGuacamoleCreateTab
 } from '../utils/tabEventHandlers';
-import DistroIcon from './DistroIcon';
 import DialogsManager from './DialogsManager';
 import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
