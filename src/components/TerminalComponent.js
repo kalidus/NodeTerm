@@ -6,10 +6,22 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import {
+    attachVisibleTerminalRenderer,
+    getTerminalScrollback,
+    syncTerminalRenderer,
+    useTerminalMemoryGuards
+} from '../utils/xtermRenderer';
 import { useLogColorizer } from '../hooks/useLogColorizer';
+import {
+    colorizeLogLine,
+    looksLikeRestorableLogLine,
+    looksLikeTuiChrome,
+    looksLikeTuiSnapshot
+} from '../utils/logColorizer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
+import { sendSshUserInput, deferNonCritical } from '../utils/terminalInputSend';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -36,8 +48,14 @@ const TerminalComponent = forwardRef(({
     onShowFileExplorer,
     onToggleBroadcast,
     onToggleBroadcastTarget,
-    isSplit = false
+    isSplit = false,
+    /** Si true, al desmontar no se programa ssh:disconnect (hibernación / splits) */
+    preserveSessionOnUnmount = false
 }, ref) => {
+    const preserveSessionRef = useRef(preserveSessionOnUnmount);
+    useEffect(() => {
+        preserveSessionRef.current = preserveSessionOnUnmount;
+    }, [preserveSessionOnUnmount]);
     const storeStats = useSshTabStats(tabId);
     const effectiveStats = propsStats !== undefined ? propsStats : storeStats;
     const sessionHistory = useStatusBarSessionHistory(effectiveStats);
@@ -119,7 +137,7 @@ const TerminalComponent = forwardRef(({
     }, [active, flushPending]);
 
     useEffect(() => {
-      if (xtermLib) return undefined;
+      if (xtermLib && typeof xtermLib.SerializeAddon === 'function') return undefined;
       let cancelled = false;
       loadXtermModules().then((lib) => {
         if (!cancelled) setXtermLib(lib);
@@ -241,7 +259,7 @@ const TerminalComponent = forwardRef(({
 
     useEffect(() => {
         if (!tabId || !xtermLib) return;
-        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SerializeAddon } = xtermLib;
 
         // Cancelar timer de desconexi??n pendiente si existe
         // Esto evita desconectar la sesi??n SSH cuando el componente se remonta r??pidamente
@@ -249,6 +267,9 @@ const TerminalComponent = forwardRef(({
             clearTimeout(window.__sshDisconnectTimers[tabId]);
             delete window.__sshDisconnectTimers[tabId];
         }
+
+        // Importante: NO quitar hibernación aquí. Si se hace antes de registrar
+        // ssh:data:*, el stdout se pierde (ni ring ni listener) y el terminal queda en blanco.
 
         // Detectar si es terminal local (inicio) de forma robusta
         let defaultFont = fontFamily || 'monospace';
@@ -308,14 +329,27 @@ const TerminalComponent = forwardRef(({
         term.current.loadAddon(new Unicode11Addon());
         term.current.unicode.activeVersion = '11';
 
+        // SerializeAddon: snapshot con ANSI/SGR (imprescindible para htop al hibernar pestañas)
+        let serializeAddon = null;
+        if (typeof SerializeAddon === 'function') {
+            try {
+                serializeAddon = new SerializeAddon();
+                term.current.loadAddon(serializeAddon);
+            } catch (_) {
+                serializeAddon = null;
+            }
+        }
+
         // Load image addon - Comentado temporalmente por errores de require
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
 
-        // Load and activate the WebGL renderer with Canvas 2D fallback
-        rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
-
+        // Abrir el DOM primero; el renderer GPU después (evita canvas en blanco al remount)
         term.current.open(terminalRef.current);
-        fitAddon.current.fit();
+        try {
+            fitAddon.current.fit();
+        } catch (_) { /* noop */ }
+
+        rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
 
         if (activeRef.current) {
             try {
@@ -324,24 +358,43 @@ const TerminalComponent = forwardRef(({
         }
 
         // Restaurar el buffer preservado si existe (cuando el componente se remonta)
+        let restoredTuiSnapshot = false;
         if (window.__terminalBuffers && window.__terminalBuffers[tabId]) {
             try {
                 const savedBuffer = window.__terminalBuffers[tabId];
                 const timeSinceSaved = Date.now() - savedBuffer.timestamp;
+                const allowLongRestore = !!savedBuffer.hibernated || preserveSessionRef.current;
 
-                // Solo restaurar si fue guardado recientemente (menos de 3 segundos)
-                if (timeSinceSaved < 3000) {
-                    // Restaurar cada l??nea con salto de l??nea entre ellas
-                    // NO agregar \r\n al final de la ??ltima l??nea para evitar prompt desplazado
-                    savedBuffer.lines.forEach((line, index) => {
-                        term.current.write(line);
-                        if (index < savedBuffer.lines.length - 1) {
-                            term.current.write('\r\n');
+                // Hibernación: restaurar siempre; splits: solo si < 3s
+                if (allowLongRestore || timeSinceSaved < 3000) {
+                    if (savedBuffer.serialized) {
+                        // Snapshot ANSI real (SerializeAddon) — conserva reverse-video / layout htop
+                        if (savedBuffer.cols > 0 && savedBuffer.rows > 0) {
+                            try {
+                                term.current.resize(savedBuffer.cols, savedBuffer.rows);
+                            } catch (_) { /* noop */ }
                         }
-                    });
+                        term.current.write(savedBuffer.serialized);
+                        restoredTuiSnapshot = !!savedBuffer.wasTui;
+                    } else if (Array.isArray(savedBuffer.lines) && savedBuffer.lines.length > 0) {
+                        // Fallback legacy: translateToString pierde ANSI.
+                        // No volcar pantallas TUI (htop) como líneas \r\n — se destroza el layout.
+                        if (looksLikeTuiSnapshot(savedBuffer.lines) || savedBuffer.wasTui) {
+                            restoredTuiSnapshot = true;
+                        } else {
+                            savedBuffer.lines.forEach((line, index) => {
+                                const out = looksLikeRestorableLogLine(line)
+                                  ? colorizeLogLine(line)
+                                  : line;
+                                term.current.write(out);
+                                if (index < savedBuffer.lines.length - 1) {
+                                    term.current.write('\r\n');
+                                }
+                            });
+                        }
+                    }
                 }
 
-                // Siempre limpiar el buffer guardado
                 delete window.__terminalBuffers[tabId];
             } catch (error) {
                 if (window.__terminalBuffers) {
@@ -349,6 +402,11 @@ const TerminalComponent = forwardRef(({
                 }
             }
         }
+
+        // Refresco de pintura tras restaurar (WebGL a veces queda vacío tras remount)
+        try {
+            term.current.refresh(0, Math.max(0, term.current.rows - 1));
+        } catch (_) { /* noop */ }
 
         term.current.focus();
 
@@ -448,11 +506,63 @@ const TerminalComponent = forwardRef(({
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`ssh:ready:${tabId}`, onReady);
 
+            // Tras remount de htop/TUI: bypass colorizer hasta alt-screen leave
+            let tuiPassthrough = restoredTuiSnapshot;
+
             // Listen for incoming data (60 FPS write batching)
             const dataListener = (data) => {
+                if (tuiPassthrough) {
+                    if (typeof data === 'string' && /\x1b\[\?(?:1049|1048|1047|47)l/.test(data)) {
+                        tuiPassthrough = false;
+                    }
+                    if (writeBufferRef.current) writeBufferRef.current.write(data);
+                    else term.current?.write(data);
+                    return;
+                }
                 pushColored(data);
             };
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`ssh:data:${tabId}`, dataListener);
+
+            // Despertar hibernación SOLO tras tener listener: drenar ring (con colorizer) y pintar
+            const wakeFromHibernation = async () => {
+                try {
+                    const drained = await window.electron.ipcRenderer.invoke('terminal:drain-stdout-ring', tabId);
+                    if (drained) {
+                        // Si volvemos a un TUI (htop), no pasar el ring por el colorizer de logs
+                        if (restoredTuiSnapshot) {
+                            writeBufferRef.current?.write(drained);
+                            writeBufferRef.current?.flushSync();
+                        } else {
+                            pushColored(drained);
+                            flushPending();
+                            writeBufferRef.current?.flushSync();
+                        }
+                    } else {
+                        window.electron.ipcRenderer.send('terminal:set-hibernated', {
+                            tabId,
+                            hibernated: false
+                        });
+                    }
+                    try {
+                        fitAddon.current?.fit();
+                        term.current?.refresh(0, Math.max(0, (term.current?.rows || 1) - 1));
+                        // SIGWINCH → htop/vim redibujan; crítico si el snapshot era TUI o solo había ring
+                        window.electron.ipcRenderer.send('ssh:resize', {
+                            tabId,
+                            cols: term.current.cols,
+                            rows: term.current.rows
+                        });
+                    } catch (_) { /* noop */ }
+                } catch (_) {
+                    try {
+                        window.electron.ipcRenderer.send('terminal:set-hibernated', {
+                            tabId,
+                            hibernated: false
+                        });
+                    } catch (__) { /* noop */ }
+                }
+            };
+            wakeFromHibernation();
 
             // Listen for connection error
             const errorListener = (error) => {
@@ -496,40 +606,35 @@ const TerminalComponent = forwardRef(({
 
             checkExistingConnection();
 
-            // Handle user input
+            // Handle user input (estilo clientes modernos: IPC inmediato, broadcast diferido)
             const dataHandler = term.current.onData(data => {
                 if (shouldBlockHumanInput(tabId)) {
                     return;
                 }
                 const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
 
-                // Local echo SSH: mostrar el car??cter localmente ANTES del round-trip al servidor
-                // Solo para terminales SSH, solo si est?? habilitado, y solo para caracteres imprimibles
+                // Local echo SSH: solo caracteres imprimibles de 1 byte
                 const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
                 if (isSSH && sshLocalEchoRef.current) {
-                    // Solo hacer echo de caracteres imprimibles (no secuencias de escape, no control chars)
-                    // - Excluir: ESC (\x1b), caracteres de control (< 0x20), DEL (0x7f), backspace (0x08)
-                    // - Excluir: secuencias de m??s de 1 car??cter (teclas especiales como flechas, F1..)
                     const code = data.charCodeAt(0);
                     const isPrintable =
                         data.length === 1 &&
-                        code >= 0x20 &&   // >= SPACE
-                        code !== 0x7f &&  // no DEL
-                        code < 0x80;     // no bytes multibyte (UTF-8 extendido)
+                        code >= 0x20 &&
+                        code !== 0x7f &&
+                        code < 0x80;
                     if (isPrintable) {
                         term.current?.write(data);
                     }
                 }
 
-                // ✅ FIX: Siempre enviamos al backend propio para que no se "congele" el terminal
-                // si está excluido del broadcast o si el broadcast está activo pero el usuario escribe aquí.
-                window.electron.ipcRenderer.send('ssh:data', { tabId, data });
+                sendSshUserInput(
+                    (payload) => window.electron.ipcRenderer.send('ssh:data', payload),
+                    tabId,
+                    data
+                );
 
-                // ✅ FIX: Si el broadcast está activo, notificamos al gestor global
-                // Pasamos el tabId de origen para que handleBroadcastData pueda filtrarlo
-                // y evitar el eco (enviar dos veces al mismo terminal)
                 if (currentBroadcast && currentBroadcastFn) {
-                    currentBroadcastFn(tabId, data);
+                    deferNonCritical(() => currentBroadcastFn(tabId, data));
                 }
             });
 
@@ -551,64 +656,91 @@ const TerminalComponent = forwardRef(({
                 if (resizeTimeout) clearTimeout(resizeTimeout);
                 if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
 
+                // Marcar hibernación ANTES de dispose para no perder stdout del gap
+                if (preserveSessionRef.current) {
+                    try {
+                        window.electron.ipcRenderer.send('terminal:set-hibernated', { tabId, hibernated: true });
+                    } catch (_) { /* noop */ }
+                }
+
                 // Preservar el buffer del terminal antes de desmontarlo
-                // Guardar las ??ltimas 500 l??neas del buffer (o todo si hay menos)
-                // Esto asegura preservar suficiente historial sin el scrollback antiguo completo
                 if (term.current) {
                     try {
                         const buffer = term.current.buffer.active;
+                        let serialized = '';
+                        try {
+                            if (serializeAddon) {
+                                serialized = serializeAddon.serialize() || '';
+                            }
+                        } catch (_) {
+                            serialized = '';
+                        }
+
                         const lines = [];
+                        // Solo volcar líneas planas si no hay snapshot ANSI (legacy / fallback)
+                        if (!serialized) {
+                            const linesToSave = 1500;
+                            const startLine = Math.max(0, buffer.length - linesToSave);
+                            const endLine = buffer.length;
 
-                        // Guardar las ??ltimas 1500 l??neas (historial extenso)
-                        const linesToSave = 1500;
-                        const startLine = Math.max(0, buffer.length - linesToSave);
-                        const endLine = buffer.length;
+                            for (let i = startLine; i < endLine; i++) {
+                                const line = buffer.getLine(i);
+                                if (line) {
+                                    lines.push(line.translateToString(true));
+                                }
+                            }
 
-                        for (let i = startLine; i < endLine; i++) {
-                            const line = buffer.getLine(i);
-                            if (line) {
-                                lines.push(line.translateToString(true));
+                            while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+                                lines.pop();
                             }
                         }
 
-                        // Eliminar l??neas vac??as al final para evitar espaciado extra
-                        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
-                            lines.pop();
-                        }
+                        const wasTui = !!(
+                            serialized
+                              ? (/\x1b\[\?(?:1049|1048|1047|47)h/.test(serialized) ||
+                                 looksLikeTuiChrome(serialized) ||
+                                 /\x1b\[(?:\d+;)*7(?:;\d+)*m/.test(serialized) ||
+                                 /F1Help|F10Quit|\bPID\s+USER\s+(?:PRI|NI|VIRT)\b/.test(serialized))
+                              : looksLikeTuiSnapshot(lines)
+                        );
 
                         if (!window.__terminalBuffers) window.__terminalBuffers = {};
                         window.__terminalBuffers[tabId] = {
+                            serialized: serialized || undefined,
                             lines,
+                            cols: term.current.cols,
+                            rows: term.current.rows,
                             cursorX: buffer.cursorX,
                             cursorY: buffer.cursorY,
                             viewportY: buffer.viewportY,
                             baseY: buffer.baseY,
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            hibernated: !!preserveSessionRef.current,
+                            wasTui
                         };
                     } catch (error) {
                         // Silenciar error
                     }
                 }
 
-                // Delay para desconectar SSH: evita desconexi??n innecesaria cuando el componente
-                // se desmonta temporalmente (ej: al convertir un terminal en split)
-                // Si el componente se vuelve a montar r??pidamente, no se desconectar??
-                const disconnectTimer = setTimeout(() => {
-                    window.electron.ipcRenderer.send('ssh:disconnect', tabId);
-                    // Limpiar el timer del registro despu??s de ejecutar
-                    if (window.__sshDisconnectTimers) {
-                        delete window.__sshDisconnectTimers[tabId];
-                    }
-                    // Limpiar el buffer guardado despu??s de desconectar
-                    if (window.__terminalBuffers) {
-                        delete window.__terminalBuffers[tabId];
-                    }
-                }, 2000); // Aumentado a 2000ms para dar m??s margen en splits complejos
+                // Hibernación / preserveSession: no desconectar
+                if (preserveSessionRef.current) {
+                    // ya marcado hibernated arriba
+                } else {
+                    // Delay para desconectar SSH en unmount temporal (splits legacy)
+                    const disconnectTimer = setTimeout(() => {
+                        window.electron.ipcRenderer.send('ssh:disconnect', tabId);
+                        if (window.__sshDisconnectTimers) {
+                            delete window.__sshDisconnectTimers[tabId];
+                        }
+                        if (window.__terminalBuffers) {
+                            delete window.__terminalBuffers[tabId];
+                        }
+                    }, 2000);
 
-                // Guardar el timer en una variable global para poder cancelarlo si se remonta
-                if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
-                window.__sshDisconnectTimers[tabId] = disconnectTimer;
-
+                    if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
+                    window.__sshDisconnectTimers[tabId] = disconnectTimer;
+                }
 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
@@ -674,28 +806,55 @@ const TerminalComponent = forwardRef(({
         }
     }, [effectiveTheme, isIntegrated]);
 
-    // Focus automático cuando la pestaña está activa y el terminal (o xterm) queda listo
+    // Al activar pestaña: re-fit + re-attach GPU + refresh (evita canvas en blanco)
     useEffect(() => {
-        if (!active || !xtermLib) return;
+        if (!active || !xtermLib || !term.current) return;
 
-        const ensureFocus = () => {
-            if (term.current) {
-                try {
-                    term.current.focus();
-                } catch (_) { /* noop */ }
-            }
+        const repaint = () => {
+            if (!term.current) return;
+            try {
+                if (writeBufferRef.current?.setActive) {
+                    writeBufferRef.current.setActive(true);
+                }
+                if (xtermLib) {
+                    rendererRef.current = syncTerminalRenderer(
+                        term.current,
+                        { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
+                        true,
+                        rendererRef.current
+                    );
+                }
+                fitAddon.current?.fit();
+                term.current.refresh(0, Math.max(0, term.current.rows - 1));
+                term.current.focus();
+            } catch (_) { /* noop */ }
         };
 
-        ensureFocus();
-        const timer = setTimeout(ensureFocus, 50);
-        return () => clearTimeout(timer);
+        let raf1 = 0;
+        let raf2 = 0;
+        raf1 = requestAnimationFrame(() => {
+            repaint();
+            raf2 = requestAnimationFrame(repaint);
+        });
+        const t1 = setTimeout(repaint, 50);
+        const t2 = setTimeout(repaint, 160);
+
+        return () => {
+            cancelAnimationFrame(raf1);
+            cancelAnimationFrame(raf2);
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
     }, [active, xtermLib]);
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)
     useEffect(() => {
         if (fitAddon.current) {
             const timer = setTimeout(() => {
-                try { fitAddon.current.fit(); } catch (e) { }
+                try {
+                    fitAddon.current.fit();
+                    term.current?.refresh(0, Math.max(0, (term.current?.rows || 1) - 1));
+                } catch (e) { /* noop */ }
             }, 100);
             return () => clearTimeout(timer);
         }

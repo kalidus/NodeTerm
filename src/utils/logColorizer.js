@@ -164,7 +164,7 @@ function peelWraps(text) {
   return { prefix, mid, suffix };
 }
 
-function shouldHighlight(text) {
+export function shouldHighlight(text) {
   if (looksLikeLog(text)) return true;
   RE_EMAIL.lastIndex = 0;
   if (RE_EMAIL.test(text)) return true;
@@ -175,6 +175,56 @@ function shouldHighlight(text) {
   RE_IPV4.lastIndex = 0;
   if (RE_IPV4.test(text)) return true;
   return !!RE_GIT_STATUS.exec(text);
+}
+
+/** Reverse video como atributo discreto (7), no colores 17/27/37/47. */
+const RE_SGR_REVERSE = /\x1b\[(?:\d+;)*7(?:;\d+)*m/;
+const RE_HTOP_FOOTER = /\bF1Help\b|\bF10Quit\b|F1HelpF2|F9Kill|F10Quit/;
+const RE_HTOP_HEADER = /\bPID\s+USER\s+(?:PRI|NI|VIRT)\b/;
+const RE_HTOP_FKEY_RUN = /^F\d(?:Help|Setup|Search|Filter|Tree|Sort|Nice|Kill|Quit)/;
+
+/**
+ * Chrome TUI (htop/top) que no debe pasar por highlight ni recoloreo en remount.
+ */
+export function looksLikeTuiChrome(text) {
+  if (!text) return false;
+  const sample = text.length > 256 ? text.slice(0, 256) : text;
+  if (RE_SGR_REVERSE.test(sample)) return true;
+  if (RE_HTOP_HEADER.test(sample)) return true;
+  if (RE_HTOP_FOOTER.test(sample)) return true;
+  if (RE_HTOP_FKEY_RUN.test(sample.trim())) return true;
+  return false;
+}
+
+/**
+ * ¿Tiene sentido recolorear una línea restaurada del buffer xterm?
+ * (translateToString ya perdió ANSI; solo logs, no chrome htop)
+ */
+export function looksLikeRestorableLogLine(text) {
+  if (!text || looksLikeTuiChrome(text)) return false;
+  if (looksLikeProcessRow(text)) return false;
+  return shouldHighlight(text);
+}
+
+/**
+ * Snapshot plano (translateToString) que parece pantalla TUI (htop/top).
+ * Restaurar esas líneas con \r\n destroza el layout al cambiar de pestaña.
+ */
+export function looksLikeTuiSnapshot(lines) {
+  if (!Array.isArray(lines) || lines.length === 0) return false;
+  let chromeHits = 0;
+  let processHits = 0;
+  const sampleN = Math.min(lines.length, 80);
+  for (let i = 0; i < sampleN; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    if (looksLikeTuiChrome(line)) chromeHits += 1;
+    if (looksLikeProcessRow(line)) processHits += 1;
+  }
+  if (chromeHits >= 1) return true;
+  // Varias filas de procesos = vista tipo htop/top
+  if (processHits >= 4) return true;
+  return false;
 }
 
 function looksLikeLog(text) {
@@ -329,26 +379,31 @@ function indexOfHardTuiEscape(text) {
     const params = m[1];
     const final = m[2];
     if (final === 'm' || isHarmlessPrivateMode(params, final)) continue;
+    // Alt leave no cuenta como "hard enter" (evitar re-entrar en tuiMode al salir de htop)
+    if (isAltScreenMode(params, final) && final === 'l') continue;
     if (TUI_CSI_FINALS.indexOf(final) !== -1) return m.index;
     if (isAltScreenMode(params, final)) return m.index;
   }
   return -1;
 }
 
-const RE_CLEAR_SCREEN = /\x1b\[2J/;
-const RE_CURSOR_HIDE = /\x1b\[\?25l/;
-const RE_CURSOR_SHOW = /\x1b\[\?25h/;
+const RE_FULL_RESET = /\x1bc|\x1b\[!p/;
 
 function indexOfTuiEnterSignal(text) {
+  if (!text) return -1;
+  // Solo alt-screen enter. clear/2J, ?25l o CUP dejan tuiMode pegado y matan cat/logs.
+  // htop/vim usan 1049h; filas/footer se protegen con looksLikeProcessRow / looksLikeTuiChrome.
+  return text.search(RE_ALT_ENTER);
+}
+
+function indexOfTuiLeaveSignal(text) {
   if (!text) return -1;
   let earliest = -1;
   const consider = (idx) => {
     if (idx !== -1 && (earliest === -1 || idx < earliest)) earliest = idx;
   };
-  consider(text.search(RE_ALT_ENTER));
-  consider(text.search(RE_CLEAR_SCREEN));
-  consider(text.search(RE_CURSOR_HIDE));
-  consider(indexOfHardTuiEscape(text));
+  consider(text.search(RE_ALT_LEAVE));
+  consider(text.search(RE_FULL_RESET));
   return earliest;
 }
 
@@ -374,9 +429,12 @@ export function colorizeLogLine(line) {
   }
   if (!body || body.length > MAX_LINE_LEN) return line;
   if (hasHardTuiEscapes(body)) return line;
+  // Passthrough chrome htop / reverse-video (aunque tuiMode falle un frame)
+  if (looksLikeTuiChrome(body)) return line;
 
   const peeled = peelWraps(body);
   if (hasHardTuiEscapes(peeled.mid)) return line;
+  if (looksLikeTuiChrome(peeled.mid)) return line;
 
   let visible = peeled.mid;
   if (visible.indexOf(ESC) !== -1) {
@@ -390,6 +448,7 @@ export function colorizeLogLine(line) {
   }
 
   if (looksLikeProcessRow(visible)) return line;
+  if (looksLikeTuiChrome(visible)) return line;
 
   const ranges = collectLogRanges(visible);
   if (ranges.length === 0) return line;
@@ -453,10 +512,17 @@ export function createLogColorizer(options = {}) {
     }
     pending += data;
     if (tuiMode) {
-      if (RE_ALT_LEAVE.test(pending)) {
+      // Salir con alt-screen leave o reset completo — NO con ?25h (htop lo usa dentro de TUI).
+      const leaveAt = indexOfTuiLeaveSignal(pending);
+      if (leaveAt !== -1) {
         tuiMode = false;
-      } else if (RE_CURSOR_SHOW.test(pending) && !RE_ALT_ENTER.test(pending)) {
-        tuiMode = false;
+        const before = pending.slice(0, leaveAt);
+        const rest = pending.slice(leaveAt);
+        pending = '';
+        clearTimer();
+        // Tras leave, recolorear el resto (p. ej. prompt / cat) si hay líneas completas
+        const after = rest ? colorizeCompleteText(rest) : '';
+        return before + after;
       }
       const out = pending;
       pending = '';

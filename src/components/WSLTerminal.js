@@ -10,6 +10,7 @@ import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
+import { sendPtyUserInput } from '../utils/terminalInputSend';
 
 const WSLTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -316,7 +317,11 @@ const WSLTerminal = forwardRef(({
             // Handle user input - send to WSL
             const dataHandler = term.current.onData(data => {
                 if (shouldBlockHumanInput(tabId)) return;
-                window.electron.ipcRenderer.send(`wsl:data:${tabId}`, data);
+                sendPtyUserInput(
+                    (ch, payload) => window.electron.ipcRenderer.send(ch, payload),
+                    `wsl:data:${tabId}`,
+                    data
+                );
             });
 
             // Handle terminal resize

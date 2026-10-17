@@ -2528,6 +2528,29 @@ ipcMain.handle('ssh:check-connection', async (event, tabId) => {
     !sshConnections[tabId].stream.destroyed;
 });
 
+// Hibernación de UI SSH: ring de stdout en main mientras xterm está desmontado
+const { terminalStdoutRingBuffer } = require('./src/main/services/TerminalStdoutRingBuffer');
+const { terminalIpcBatcher } = require('./src/main/services/TerminalIpcBatcher');
+
+ipcMain.on('terminal:set-hibernated', (event, { tabId, hibernated } = {}) => {
+  if (!tabId) return;
+  if (hibernated) {
+    terminalIpcBatcher.divertPendingToRing(`ssh:data:${tabId}`, tabId);
+    terminalStdoutRingBuffer.setHibernating(tabId, true);
+  } else {
+    terminalStdoutRingBuffer.setHibernating(tabId, false);
+  }
+});
+
+ipcMain.handle('terminal:drain-stdout-ring', async (event, tabId) => {
+  if (!tabId) return '';
+  // divertPendingToRing por si quedan bytes en el batcher al despertar
+  try {
+    terminalIpcBatcher.divertPendingToRing(`ssh:data:${tabId}`, tabId);
+  } catch (_) { /* noop */ }
+  return terminalStdoutRingBuffer.drain(tabId) || '';
+});
+
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   // Mostrar mensaje de conexión al inicio
@@ -3349,6 +3372,11 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 
       conn.stream.write(data);
     }
+
+    // Fast-path interactivo: no retener eco/redraw en el batcher de salida tras tipar
+    try {
+      terminalIpcBatcher.flush(`ssh:data:${tabId}`);
+    } catch (_) { /* noop */ }
   }
 });
 
@@ -3373,6 +3401,10 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
 
 // ✅ REFACTORIZADO: Handler de desconexión SSH usando SSHConnectionCleanupService
 ipcMain.on('ssh:disconnect', (event, tabId) => {
+  try {
+    terminalIpcBatcher.clear(`ssh:data:${tabId}`);
+    terminalStdoutRingBuffer.clear(tabId);
+  } catch (_) { /* noop */ }
   const conn = sshConnections[tabId];
   if (conn) {
     sshCleanupService.cleanupConnection(

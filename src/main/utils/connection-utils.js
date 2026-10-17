@@ -42,6 +42,21 @@ function isRendererSendable(sender) {
  */
 function sendToRenderer(sender, eventName, ...args) {
   try {
+    // Tabs SSH hibernadas: acumular stdout en ring (sin listener en renderer)
+    if (typeof eventName === 'string' && eventName.startsWith('ssh:data:') && args.length > 0) {
+      try {
+        const { terminalStdoutRingBuffer } = require('../services/TerminalStdoutRingBuffer');
+        const tabId = eventName.slice('ssh:data:'.length);
+        if (tabId && terminalStdoutRingBuffer.isHibernating(tabId)) {
+          const data = args[0];
+          if (data != null) {
+            terminalStdoutRingBuffer.push(tabId, typeof data === 'string' ? data : String(data));
+          }
+          return;
+        }
+      } catch (_) { /* ring no disponible */ }
+    }
+
     const wc = isRendererSendable(sender);
     if (!wc) return;
     wc.send(eventName, ...args);

@@ -91,7 +91,10 @@ export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, cu
     return { rendererType: 'suspended', addon: null };
   }
 
-  if (current?.rendererType === 'webgl' && current.addon) return current;
+  if (current?.rendererType === 'webgl' && current.addon) {
+    // Re-fit implícito: el caller debe llamar fit/refresh tras volver a visible
+    return current;
+  }
 
   try {
     current?.addon?.dispose();

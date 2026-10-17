@@ -38,6 +38,11 @@ import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from '../utils/presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
+import {
+  HIBERNATION_MRU_EXTRA,
+  shouldKeepTabMounted,
+  touchMruKeys
+} from '../utils/tabHibernation';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
@@ -287,6 +292,14 @@ const MainContentArea = ({
 
   // Estado para el panel SSH File Explorer
   const [sshFileExplorerTabId, setSshFileExplorerTabId] = useState(null);
+
+  // MRU de pestañas montadas (activa + N): hibernación SSH sin matar sesión
+  const [mruTabKeys, setMruTabKeys] = useState([]);
+  useEffect(() => {
+    const active = filteredTabs?.[activeTabIndex];
+    if (!active?.key) return;
+    setMruTabKeys((prev) => touchMruKeys(prev, active.key, HIBERNATION_MRU_EXTRA + 1));
+  }, [activeTabIndex, filteredTabs]);
 
   // Función para obtener el terminal por defecto desde configuración
   const getDefaultTerminalFromConfig = () => {
@@ -3541,13 +3554,23 @@ const MainContentArea = ({
                     </div>
                   )}
 
-                  {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
+                  {/* Montar pestañas activas/MRU; SSH fuera del MRU hibernan (sesión viva en main) */}
                   {(() => {
-                    const terminalTheme = memoizedContentRendererProps?.terminalTheme;
                     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
                       const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                      const keepMounted = shouldKeepTabMounted(tab, {
+                        mruKeys: mruTabKeys,
+                        isActiveTab,
+                        isRecording: typeof isRecordingTab === 'function' ? !!isRecordingTab(tab.key) : false,
+                        hasFileExplorer: sshFileExplorerTabId === tab.key,
+                        hasSystemMonitor: sshSystemMonitorTabId === tab.key
+                      });
+
+                      if (!keepMounted) {
+                        return null;
+                      }
 
                       return (
                         <div

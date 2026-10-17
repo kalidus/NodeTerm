@@ -10,6 +10,7 @@ import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
+import { sendPtyUserInput } from '../utils/terminalInputSend';
 
 const PowerShellTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -343,7 +344,11 @@ const PowerShellTerminal = forwardRef(({
             // Handle user input - send to PowerShell
             const dataHandler = term.current.onData(data => {
                 if (shouldBlockHumanInput(tabId)) return;
-                window.electron.ipcRenderer.send(`powershell:data:${tabId}`, data);
+                sendPtyUserInput(
+                    (ch, payload) => window.electron.ipcRenderer.send(ch, payload),
+                    `powershell:data:${tabId}`,
+                    data
+                );
             });
 
             // Handle terminal resize

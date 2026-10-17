@@ -11,6 +11,13 @@
  */
 
 const { sendToRenderer } = require('../utils/connection-utils');
+const { terminalStdoutRingBuffer } = require('./TerminalStdoutRingBuffer');
+
+function sshTabIdFromChannel(channel) {
+  if (!channel || typeof channel !== 'string') return null;
+  if (!channel.startsWith('ssh:data:')) return null;
+  return channel.slice('ssh:data:'.length) || null;
+}
 
 class TerminalIpcBatcher {
   constructor(options = {}) {
@@ -29,6 +36,12 @@ class TerminalIpcBatcher {
     if (!data || !channel) return;
     const str = typeof data === 'string' ? data : data.toString('utf-8');
     if (!str) return;
+
+    const hibernateTabId = sshTabIdFromChannel(channel);
+    if (hibernateTabId && terminalStdoutRingBuffer.isHibernating(hibernateTabId)) {
+      terminalStdoutRingBuffer.push(hibernateTabId, str);
+      return;
+    }
 
     let entry = this.channels.get(channel);
     if (!entry) {
@@ -103,6 +116,23 @@ class TerminalIpcBatcher {
         clearTimeout(entry.timer);
       }
       this.channels.delete(channel);
+    }
+  }
+
+  /**
+   * Mueve datos pendientes del batcher al ring de hibernación (sin IPC al renderer).
+   */
+  divertPendingToRing(channel, tabId) {
+    const entry = this.channels.get(channel);
+    if (!entry) return;
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+    const payload = entry.chunks.length === 1 ? entry.chunks[0] : entry.chunks.join('');
+    this.channels.delete(channel);
+    if (payload && tabId) {
+      terminalStdoutRingBuffer.push(tabId, payload);
     }
   }
 

@@ -4,7 +4,10 @@ import { createLogColorizer, isSshLogHighlightEnabled } from '../utils/logColori
 /**
  * @param {React.MutableRefObject} termRef
  * @param {React.MutableRefObject} writeBufferRef
- * @param {React.MutableRefObject<boolean>} [activeRef] - si false, no coloriza ni pinta (solo ring del write-buffer)
+ * @param {React.MutableRefObject<boolean>} [activeRef] - reservado; el paint lo controla writeBuffer.setActive
+ *
+ * Siempre coloriza al encolar. Las tabs ocultas no pintan GPU (writeBuffer inactive),
+ * pero el texto ya lleva SGR para cuando se reactive o se drenen buffers.
  */
 export function useLogColorizer(termRef, writeBufferRef, activeRef) {
   const colorizerRef = useRef(null);
@@ -42,14 +45,6 @@ export function useLogColorizer(termRef, writeBufferRef, activeRef) {
   const push = useCallback((data) => {
     if (!data) return;
 
-    // Tab oculta: encolar raw sin colorizer (ahorra CPU del hilo UI)
-    if (activeRef && !activeRef.current) {
-      if (writeBufferRef.current) {
-        writeBufferRef.current.write(data);
-      }
-      return;
-    }
-
     if (!colorizerRef.current) {
       colorizerRef.current = createLogColorizer({
         enabled: isSshLogHighlightEnabled(),
@@ -67,7 +62,7 @@ export function useLogColorizer(termRef, writeBufferRef, activeRef) {
     } else {
       termRef.current?.write(out);
     }
-  }, [termRef, writeBufferRef, activeRef]);
+  }, [termRef, writeBufferRef]);
 
   const flushPending = useCallback(() => {
     const rest = colorizerRef.current?.flush();

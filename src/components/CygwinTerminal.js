@@ -10,6 +10,7 @@ import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
+import { sendPtyUserInput } from '../utils/terminalInputSend';
 
 const CygwinTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -280,7 +281,11 @@ const CygwinTerminal = forwardRef(({
 
             const dataHandler = term.current.onData(data => {
                 if (shouldBlockHumanInput(tabId)) return;
-                window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, data);
+                sendPtyUserInput(
+                    (ch, payload) => window.electron.ipcRenderer.send(ch, payload),
+                    `cygwin:data:${tabId}`,
+                    data
+                );
             });
 
             const resizeHandler = term.current.onResize(({ cols, rows }) => {

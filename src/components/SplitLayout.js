@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+﻿import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import TerminalComponent from './TerminalComponent';
 import { setUiDragging } from '../utils/uiDragPerformance';
@@ -344,6 +344,7 @@ const SplitLayout = ({
               onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
             isSplit={true}
+            preserveSessionOnUnmount
           />
         </div>
       );
@@ -598,6 +599,7 @@ const SplitLayout = ({
               onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
             isSplit={true}
+            preserveSessionOnUnmount
             onDrop={(e) => {
               // Manejador de Drop para split
               const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
@@ -1359,6 +1361,7 @@ const SplitLayout = ({
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
+            preserveSessionOnUnmount
             />
           )}
         </div>
@@ -1424,6 +1427,7 @@ const SplitLayout = ({
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
+            preserveSessionOnUnmount
             />
           )}
         </div>
@@ -1558,6 +1562,7 @@ const SplitLayout = ({
               broadcastExcludedTargets={broadcastExcludedTargets}
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
+              preserveSessionOnUnmount
             />
           )}
         </div>
@@ -1628,6 +1633,7 @@ const SplitLayout = ({
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
               broadcastExcludedTargets={broadcastExcludedTargets}
+            preserveSessionOnUnmount
             />
           )}
         </div>
@@ -1717,6 +1723,7 @@ const SplitLayout = ({
               broadcastExcludedTargets={broadcastExcludedTargets}
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
+              preserveSessionOnUnmount
             />
           )}
         </div>
@@ -1776,6 +1783,7 @@ const SplitLayout = ({
               broadcastExcludedTargets={broadcastExcludedTargets}
               onToggleBroadcast={onToggleBroadcast}
               onToggleBroadcastTarget={onToggleBroadcastTarget}
+              preserveSessionOnUnmount
             />
           )}
         </div>

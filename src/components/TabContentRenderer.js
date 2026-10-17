@@ -1726,6 +1726,7 @@ const TabContentRendererInner = React.memo(({
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
         active={isActiveTab}
         statusBarIconTheme={statusBarIconTheme}
+        preserveSessionOnUnmount
         // Quick Actions props
         onStartRecording={onStartRecording}
         onStopRecording={onStopRecording}
