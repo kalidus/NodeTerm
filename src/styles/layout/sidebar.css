@@ -1,4 +1,4 @@
-/* Transición suave y coordinada para todo el layout únicamente durante el cambio de tema */
+﻿/* Transición suave y coordinada para todo el layout únicamente durante el cambio de tema */
 body.theme-transitioning,
 body.theme-transitioning .workspace-container,
 body.theme-transitioning .main-splitter,
@@ -646,7 +646,7 @@ body.theme-transitioning .content-main {
   box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
   white-space: nowrap !important;
   pointer-events: none !important; /* Evitar interferencia con clicks */
-  transition: all 0.2s ease !important;
+  transition: opacity 0.2s ease !important;
 }
 
 /* Hover effect para el tag SSH - Solo para tema Nodeterm Basic */
@@ -681,7 +681,7 @@ body.theme-transitioning .content-main {
   box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
   white-space: nowrap !important;
   pointer-events: none !important; /* Evitar interferencia con clicks */
-  transition: all 0.2s ease !important;
+  transition: opacity 0.2s ease !important;
 }
 
 /* Hover effect para el tag RDP - Solo para tema Nodeterm Basic */
@@ -1009,7 +1009,7 @@ body.theme-transitioning .content-main {
 }
 /* Estilos para el botón de menú en el sidebar footer */
 .sidebar-footer .sidebar-action-button.p-button-text {
-  transition: all 0.2s ease !important;
+  transition: opacity 0.2s ease !important;
 }
 
 .sidebar-footer .sidebar-action-button.p-button-text:hover {
@@ -1264,7 +1264,7 @@ body.theme-transitioning .content-main {
   border: 1px solid rgba(255, 255, 255, 0.10) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
   border-radius: 8px !important;
-  transition: all 0.18s ease !important;
+  transition: opacity 0.18s ease !important;
 }
 
 .sidebar-unified-header .sidebar-action-glass-group .p-button.sidebar-action-button.glass-button:hover {
@@ -1339,7 +1339,7 @@ body.theme-transitioning .content-main {
   background: transparent;
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
   outline: none;
   opacity: 0.55;
@@ -1369,7 +1369,7 @@ body.theme-transitioning .content-main {
   border-radius: 0 3px 3px 0;
   background: var(--rail-item-color, #4fc3f7);
   box-shadow: 0 0 8px var(--rail-item-color, #4fc3f7);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-icon-rail-separator {
@@ -1509,7 +1509,7 @@ body.theme-transitioning .content-main {
   background: transparent;
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.6));
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
   outline: none;
   opacity: 0.6;

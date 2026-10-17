@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tree Themes CSS
  * Estilos visuales para los diferentes temas del árbol de sesiones
  */
@@ -405,7 +405,7 @@
 
 .sidebar-tree.tree-theme-modern .p-treenode-content {
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-modern .p-treenode-children {
@@ -721,7 +721,7 @@
 }
 
 .tree-preview-container.tree-theme-modern .tree-preview-node {
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
   border-radius: 6px;
   padding: 2px 6px;
   margin: -2px -6px;
@@ -838,7 +838,7 @@
   min-height: 20px !important;
   line-height: 20px !important;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-modern-compact .p-treenode-children {
@@ -910,7 +910,7 @@
 
 .sidebar-tree.tree-theme-neon .p-treenode-content {
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-neon .p-treenode-children {
@@ -961,7 +961,7 @@
   color: var(--tree-line-color) !important;
   opacity: 0.95;
   filter: drop-shadow(0 0 4px var(--tree-line-color));
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-neon .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -988,7 +988,7 @@
 .sidebar-tree.tree-theme-cyber .p-treenode-content {
   border-radius: 0;
   border-left: 2px solid transparent;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-tree.tree-theme-cyber .p-treenode-children {
@@ -1040,7 +1040,7 @@
   color: var(--tree-line-color) !important;
   opacity: 0.9;
   filter: drop-shadow(0 0 5px var(--tree-line-color));
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-tree.tree-theme-cyber .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1074,7 +1074,7 @@
   line-height: 20px !important;
   border-radius: 0;
   font-family: 'Consolas', 'Monaco', monospace;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-tree.tree-theme-matrix .p-treenode-children {
@@ -1126,7 +1126,7 @@
   color: var(--tree-line-color) !important;
   opacity: 0.95;
   filter: drop-shadow(0 0 4px var(--tree-line-color));
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-tree.tree-theme-matrix .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1152,7 +1152,7 @@
 .sidebar-tree.tree-theme-hologram .p-treenode-content {
   border-radius: 8px;
   backdrop-filter: blur(4px);
-  transition: all 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .sidebar-tree.tree-theme-hologram .p-treenode-children {
@@ -1204,7 +1204,7 @@
   color: var(--tree-line-color) !important;
   opacity: 0.9;
   filter: drop-shadow(0 0 5px var(--tree-line-color));
-  transition: all 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .sidebar-tree.tree-theme-hologram .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1228,7 +1228,7 @@
 
 .sidebar-tree.tree-theme-gradient .p-treenode-content {
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-gradient .p-treenode-children {
@@ -1281,7 +1281,7 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   opacity: 0.9;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-gradient .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1311,7 +1311,7 @@
 
 .sidebar-tree.tree-theme-aurora .p-treenode-content {
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .sidebar-tree.tree-theme-aurora .p-treenode-children {
@@ -1367,7 +1367,7 @@
   background-clip: text;
   opacity: 0.9;
   filter: drop-shadow(0 0 5px var(--tree-line-color));
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .sidebar-tree.tree-theme-aurora .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1394,7 +1394,7 @@
 .sidebar-tree.tree-theme-frost .p-treenode-content {
   border-radius: 6px;
   backdrop-filter: blur(2px);
-  transition: all 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .sidebar-tree.tree-theme-frost .p-treenode-children {
@@ -1446,7 +1446,7 @@
   color: var(--tree-line-color) !important;
   opacity: 0.9;
   filter: drop-shadow(0 0 5px var(--tree-line-color));
-  transition: all 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .sidebar-tree.tree-theme-frost .p-tree-toggler:hover .p-tree-toggler-icon {
@@ -1471,7 +1471,7 @@
 
 .sidebar-tree.tree-theme-double .p-treenode-content {
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-tree.tree-theme-double .p-treenode-children {
@@ -1993,7 +1993,7 @@
   background: transparent;
   cursor: pointer;
   opacity: 0.7;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-tree.tree-theme-explorer .p-tree-toggler:hover {
@@ -2153,7 +2153,7 @@
   background: transparent !important;
   cursor: pointer;
   opacity: 0.8;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease;
   padding: 0 !important;
   position: relative;
   flex-shrink: 0;

@@ -35,6 +35,12 @@ html, body, #root {
   line-height: var(--ui-line-height, 1.3);
 }
 
+/* Drag de splits/paneles: apagar blur caro vía CSS vars (multiplataforma) */
+body.nodeterm-ui-dragging {
+  --home-backdrop-filter: none !important;
+  --home-backdrop-filter-glass: none !important;
+}
+
 input, button, select, textarea {
   font-family: inherit;
   font-size: inherit;

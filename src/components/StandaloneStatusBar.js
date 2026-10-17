@@ -1,13 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 import { systemStatsService } from '../services/SystemStatsService';
 
+function statsSignature(stats) {
+  if (!stats) return '';
+  return [
+    stats.cpu,
+    stats.mem?.used,
+    stats.mem?.total,
+    stats.network?.rx_speed,
+    stats.network?.tx_speed,
+    stats.hostname,
+    stats.ip
+  ].join('|');
+}
+
 const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [gpuStats, setGpuStats] = useState(null);
+    const lastStatsSigRef = useRef('');
+    const lastGpuAtRef = useRef(0);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
@@ -19,6 +34,12 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     });
 
     const sessionHistory = useStatusBarSessionHistory(statusStats, { gpuStats });
+
+    const statusBarStats = useMemo(() => ({
+        ...(statusStats || {}),
+        cpuHistory: sessionHistory.map(s => s.cpu),
+        sessionHistory
+    }), [statusStats, sessionHistory]);
 
     const getScopedStatusBarCssVars = () => {
         const theme = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -38,23 +59,38 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     };
 
     useEffect(() => {
+        systemStatsService.setIntervalMs(pollingInterval);
+    }, [pollingInterval]);
+
+    useEffect(() => {
         if (!visible) return;
 
         let unsubscribe = () => {};
         let cancelled = false;
+        const gpuMinInterval = Math.max(5000, pollingInterval * 2);
 
         const start = () => {
             if (cancelled) return;
             unsubscribe = systemStatsService.subscribe(async (stats) => {
-                if (stats) {
+                if (!stats || cancelled) return;
+
+                const sig = statsSignature(stats);
+                if (sig !== lastStatsSigRef.current) {
+                    lastStatsSigRef.current = sig;
                     setStatusStats(stats);
                     setIsLoadingStats(false);
-                    try {
-                        const gpuData = await window.electron.system?.getGPUStats();
+                }
+
+                const now = Date.now();
+                if (now - lastGpuAtRef.current < gpuMinInterval) return;
+                lastGpuAtRef.current = now;
+                try {
+                    const gpuData = await window.electron.system?.getGPUStats();
+                    if (!cancelled) {
                         setGpuStats(gpuData && gpuData.ok ? gpuData : null);
-                    } catch {
-                        setGpuStats(null);
                     }
+                } catch {
+                    if (!cancelled) setGpuStats(null);
                 }
             });
         };
@@ -73,7 +109,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
             cancelIdle();
             unsubscribe();
         };
-    }, [visible]);
+    }, [visible, pollingInterval]);
 
     useEffect(() => {
         const handleStorageChange = (e) => {
@@ -113,7 +149,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
             ...style
         }}>
             <StatusBar
-                stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
+                stats={statusBarStats}
                 gpuStats={gpuStats}
                 active={true}
                 statusBarIconTheme={statusBarIconTheme}

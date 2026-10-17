@@ -2,11 +2,14 @@
  * Utility for batching data writes to Xterm.js instances.
  * Prevents UI thread freezing during high-frequency stdout data bursts (e.g., cat large_file, docker logs).
  * Uses an O(N) array-based chunk queue with backpressure protection.
+ *
+ * When inactive (hidden tab): keep a ring buffer only — no term.write / rAF paint.
+ * On activate: flush pending chunks to the terminal.
  */
 
 const DEFAULT_MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60/120 FPS
 const ACTIVE_MAX_BUFFER_BACKLOG_BYTES = 2 * 1024 * 1024; // 2 MB en pestana visible
-const INACTIVE_MAX_BUFFER_BACKLOG_BYTES = 512 * 1024; // 512 KB en pestana oculta
+const INACTIVE_MAX_BUFFER_BACKLOG_BYTES = 256 * 1024; // 256 KB ring en pestana oculta
 
 function resolveTerm(termOrRef) {
   if (!termOrRef) return null;
@@ -32,6 +35,10 @@ export function createXtermWriteBuffer(termRef, options = {}) {
 
   const flush = () => {
     rafId = null;
+    if (!isActive) {
+      return;
+    }
+
     const term = resolveTerm(termRef);
     if (!term || chunks.length === 0) {
       chunks = [];
@@ -68,9 +75,14 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       pendingBytes = 0;
     }
 
-    if (chunks.length > 0 && resolveTerm(termRef)) {
+    if (chunks.length > 0 && isActive && resolveTerm(termRef)) {
       rafId = requestAnimationFrame(flush);
     }
+  };
+
+  const scheduleFlush = () => {
+    if (!isActive || rafId) return;
+    rafId = requestAnimationFrame(flush);
   };
 
   const write = (data) => {
@@ -85,9 +97,13 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     chunks.push(dataStr);
     pendingBytes += dataLen;
 
-    if (!rafId) {
-      rafId = requestAnimationFrame(flush);
+    // Pestana oculta: solo ring buffer, sin pintar xterm
+    if (!isActive) {
+      trimBacklog();
+      return;
     }
+
+    scheduleFlush();
   };
 
   const clear = () => {
@@ -104,6 +120,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    if (!isActive) return;
     const term = resolveTerm(termRef);
     if (chunks.length > 0 && term) {
       try {
@@ -115,9 +132,22 @@ export function createXtermWriteBuffer(termRef, options = {}) {
   };
 
   const setActive = (nextActive) => {
+    const wasActive = isActive;
     isActive = !!nextActive;
     maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
     trimBacklog();
+
+    if (!isActive) {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      return;
+    }
+
+    if (!wasActive && chunks.length > 0) {
+      scheduleFlush();
+    }
   };
 
   return {

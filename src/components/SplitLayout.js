@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import TerminalComponent from './TerminalComponent';
+import { setUiDragging } from '../utils/uiDragPerformance';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -431,10 +432,13 @@ const SplitLayout = ({
     const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
     const [verticalSplitBottom, setVerticalSplitBottom] = useState(50); // % para división vertical inferior (T3/T4)
     const [isDragging, setIsDragging] = useState(null); // 'v-top', 'h', 'v-bottom'
+    const gridDragRafRef = useRef(0);
+    const latestGridDragRef = useRef({ type: null, value: 50 });
 
     const handleMouseDown = (splitterType) => (e) => {
       e.preventDefault();
       setIsDragging(splitterType);
+      setUiDragging(true);
       document.body.style.userSelect = 'none';
       document.body.style.cursor = splitterType === 'h' ? 'row-resize' : 'col-resize';
     };
@@ -446,21 +450,38 @@ const SplitLayout = ({
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
+      let nextValue = 50;
 
       if (isDragging === 'h') {
-        const newSplit = ((e.clientY - rect.top) / rect.height) * 100;
-        setHorizontalSplit(Math.max(20, Math.min(80, newSplit)));
-      } else if (isDragging === 'v-top') {
-        const newSplit = ((e.clientX - rect.left) / rect.width) * 100;
-        setVerticalSplit(Math.max(20, Math.min(80, newSplit)));
-      } else if (isDragging === 'v-bottom') {
-        const newSplit = ((e.clientX - rect.left) / rect.width) * 100;
-        setVerticalSplitBottom(Math.max(20, Math.min(80, newSplit)));
+        nextValue = Math.max(20, Math.min(80, ((e.clientY - rect.top) / rect.height) * 100));
+      } else if (isDragging === 'v-top' || isDragging === 'v-bottom') {
+        nextValue = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
+      } else {
+        return;
       }
+
+      latestGridDragRef.current = { type: isDragging, value: nextValue };
+      if (gridDragRafRef.current) return;
+      gridDragRafRef.current = requestAnimationFrame(() => {
+        gridDragRafRef.current = 0;
+        const { type, value } = latestGridDragRef.current;
+        if (type === 'h') setHorizontalSplit(value);
+        else if (type === 'v-top') setVerticalSplit(value);
+        else if (type === 'v-bottom') setVerticalSplitBottom(value);
+      });
     }, [isDragging]);
 
     const handleMouseUp = useCallback(() => {
+      if (gridDragRafRef.current) {
+        cancelAnimationFrame(gridDragRafRef.current);
+        gridDragRafRef.current = 0;
+        const { type, value } = latestGridDragRef.current;
+        if (type === 'h') setHorizontalSplit(value);
+        else if (type === 'v-top') setVerticalSplit(value);
+        else if (type === 'v-bottom') setVerticalSplitBottom(value);
+      }
       setIsDragging(null);
+      setUiDragging(false);
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     }, []);
@@ -969,9 +990,13 @@ const SplitLayout = ({
       backgroundSize: '100% 100%',
     };
 
+    const nestedDragRafRef = useRef(0);
+    const latestNestedSizeRef = useRef(50);
+
     const handleMouseDown = (e) => {
       e.preventDefault();
       setIsDragging(true);
+      setUiDragging(true);
       document.body.style.cursor = isVertical ? 'col-resize' : 'row-resize';
       document.body.style.userSelect = 'none';
     };
@@ -979,7 +1004,7 @@ const SplitLayout = ({
     const handleMouseMove = useCallback((e) => {
       if (!isDragging) return;
 
-      const container = e.currentTarget.closest('[data-split-container]');
+      const container = document.querySelector('[data-split-container]');
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
@@ -987,11 +1012,22 @@ const SplitLayout = ({
         ? ((e.clientX - rect.left) / rect.width) * 100
         : ((e.clientY - rect.top) / rect.height) * 100;
 
-      setLeftSize(Math.max(10, Math.min(90, newSize)));
+      latestNestedSizeRef.current = Math.max(10, Math.min(90, newSize));
+      if (nestedDragRafRef.current) return;
+      nestedDragRafRef.current = requestAnimationFrame(() => {
+        nestedDragRafRef.current = 0;
+        setLeftSize(latestNestedSizeRef.current);
+      });
     }, [isDragging, isVertical]);
 
     const handleMouseUp = useCallback(() => {
+      if (nestedDragRafRef.current) {
+        cancelAnimationFrame(nestedDragRafRef.current);
+        nestedDragRafRef.current = 0;
+        setLeftSize(latestNestedSizeRef.current);
+      }
       setIsDragging(false);
+      setUiDragging(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }, []);
@@ -1236,6 +1272,7 @@ const SplitLayout = ({
     const handleMouseUp = useCallback(() => {
       if (isDragging) {
         setIsDragging(false);
+        setUiDragging(false);
         // Cancelar RAF pendiente si lo hay
         if (dragRafRef.current) {
           cancelAnimationFrame(dragRafRef.current);
@@ -1251,6 +1288,7 @@ const SplitLayout = ({
     // Event listeners para el drag horizontal
     React.useEffect(() => {
       if (isDragging) {
+        setUiDragging(true);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'row-resize';
@@ -1261,6 +1299,7 @@ const SplitLayout = ({
           document.removeEventListener('mouseup', handleMouseUp);
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          setUiDragging(false);
         };
       }
     }, [isDragging, handleMouseMove, handleMouseUp]);
@@ -1450,6 +1489,7 @@ const SplitLayout = ({
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      setUiDragging(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       if (verticalDragRafRef.current) {
@@ -1460,11 +1500,13 @@ const SplitLayout = ({
 
     useEffect(() => {
       if (isDragging) {
+        setUiDragging(true);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         return () => {
           document.removeEventListener('mousemove', handleMouseMove);
           document.removeEventListener('mouseup', handleMouseUp);
+          setUiDragging(false);
         };
       }
     }, [isDragging]);

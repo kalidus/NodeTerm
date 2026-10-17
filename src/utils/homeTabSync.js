@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from './constants';
 import { persistSyncedSetting } from './persistSyncedSetting';
 
 export const HOME_BACKDROP_BLUR_KEY = 'nodeterm_home_backdrop_blur';
-export const HOME_BACKDROP_BLUR_DEFAULT = 8;
+export const HOME_BACKDROP_BLUR_DEFAULT = 4;
 export const HOME_BACKDROP_BLUR_MAX = 40;
 
 /** Claves de opciones del panel Home sincronizadas entre instancias. */

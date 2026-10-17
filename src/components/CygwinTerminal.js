@@ -24,11 +24,17 @@ const CygwinTerminal = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
-    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
+    const activeRef = useRef(active);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
+
+    useEffect(() => {
+        activeRef.current = active;
+        if (active) flushPending();
+    }, [active, flushPending]);
 
     useEffect(() => {
         if (xtermLib) return undefined;

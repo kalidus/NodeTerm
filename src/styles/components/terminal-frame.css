@@ -1,4 +1,4 @@
-/* --- Component: TerminalFrame --- */
+﻿/* --- Component: TerminalFrame --- */
 
 .terminal-frame {
     /* Ancla el headerExtra flotante (tema) al marco; sin esto, position:absolute usa el viewport
@@ -127,7 +127,7 @@
     color: var(--ui-sidebar-text, #e5e9f0);
     cursor: pointer;
     border-radius: 4px;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .kde-dot:hover {
@@ -219,7 +219,7 @@
     justify-content: center;
     color: var(--ui-sidebar-text, #e5e9f0);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: opacity 0.15s ease;
 }
 
 .win-dot:hover {
@@ -249,7 +249,7 @@
     cursor: pointer;
     text-shadow: 0 0 5px #00f2ff;
     transform: skew(-15deg);
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .cyber-dot.close:hover {
@@ -282,7 +282,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-dot.close:hover {
@@ -464,7 +464,7 @@
     justify-content: center;
     cursor: pointer;
     transform: skew(-12deg);
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
     user-select: none;
 }
 
@@ -559,7 +559,7 @@
     justify-content: center;
     cursor: pointer;
     font-size: 9px;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .holo-btn:hover {
@@ -909,7 +909,7 @@
     height: 12px;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .synth-dot.min {
@@ -966,7 +966,7 @@
     padding: 1px 4px;
     border-radius: 2px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: opacity 0.15s ease;
     user-select: none;
 }
 
@@ -1022,7 +1022,7 @@
     justify-content: center;
     cursor: pointer;
     font-size: 10px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .aurora-pill:hover {
@@ -1075,7 +1075,7 @@
     cursor: pointer;
     font-size: 9px;
     border-radius: 2px;
-    transition: all 0.15s ease;
+    transition: opacity 0.15s ease;
 }
 
 .stealth-btn:hover {
@@ -1368,7 +1368,7 @@
     margin-right: 4px !important;
     padding: 4px 10px !important;
     font-size: 0.76rem !important;
-    transition: all 0.2s ease !important;
+    transition: opacity 0.2s ease !important;
     box-shadow: none !important;
     height: 25px !important;
     min-height: 25px !important;

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { createLogColorizer, isSshLogHighlightEnabled } from '../utils/logColorizer';
 
-export function useLogColorizer(termRef, writeBufferRef) {
+/**
+ * @param {React.MutableRefObject} termRef
+ * @param {React.MutableRefObject} writeBufferRef
+ * @param {React.MutableRefObject<boolean>} [activeRef] - si false, no coloriza ni pinta (solo ring del write-buffer)
+ */
+export function useLogColorizer(termRef, writeBufferRef, activeRef) {
   const colorizerRef = useRef(null);
 
   useEffect(() => {
@@ -9,7 +14,7 @@ export function useLogColorizer(termRef, writeBufferRef) {
       if (!data) return;
       if (writeBufferRef.current) {
         writeBufferRef.current.write(data);
-      } else {
+      } else if (!activeRef || activeRef.current) {
         termRef.current?.write(data);
       }
     };
@@ -32,9 +37,19 @@ export function useLogColorizer(termRef, writeBufferRef) {
         colorizerRef.current = null;
       }
     };
-  }, [termRef, writeBufferRef]);
+  }, [termRef, writeBufferRef, activeRef]);
 
   const push = useCallback((data) => {
+    if (!data) return;
+
+    // Tab oculta: encolar raw sin colorizer (ahorra CPU del hilo UI)
+    if (activeRef && !activeRef.current) {
+      if (writeBufferRef.current) {
+        writeBufferRef.current.write(data);
+      }
+      return;
+    }
+
     if (!colorizerRef.current) {
       colorizerRef.current = createLogColorizer({
         enabled: isSshLogHighlightEnabled(),
@@ -52,7 +67,7 @@ export function useLogColorizer(termRef, writeBufferRef) {
     } else {
       termRef.current?.write(out);
     }
-  }, [termRef, writeBufferRef]);
+  }, [termRef, writeBufferRef, activeRef]);
 
   const flushPending = useCallback(() => {
     const rest = colorizerRef.current?.flush();

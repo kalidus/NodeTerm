@@ -2172,6 +2172,14 @@ const HomeTab = ({
           .p-overlaypanel-content {
             padding: 0 !important;
           }
+
+          /* Durante drag de splits/paneles: sin blur (más FPS en cualquier SO) */
+          body.nodeterm-ui-dragging .bottom-terminal-frame.modern,
+          body.nodeterm-ui-dragging .bottom-terminal-frame.fluent,
+          body.nodeterm-ui-dragging .premium-overlay {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
         `}
       </style>
       <div style={{

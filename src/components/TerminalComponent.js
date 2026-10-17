@@ -107,15 +107,16 @@ const TerminalComponent = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
-    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
     const fitAddon = useRef(null);
     const activeRef = useRef(active);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
 
     useEffect(() => {
         activeRef.current = active;
-    }, [active]);
+        if (active) flushPending();
+    }, [active, flushPending]);
 
     useEffect(() => {
       if (xtermLib) return undefined;

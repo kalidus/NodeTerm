@@ -35,7 +35,8 @@ class TerminalIpcBatcher {
       entry = {
         sender,
         channel,
-        buffer: '',
+        chunks: [],
+        pendingBytes: 0,
         timer: null
       };
       this.channels.set(channel, entry);
@@ -43,10 +44,11 @@ class TerminalIpcBatcher {
       entry.sender = sender;
     }
 
-    entry.buffer += str;
+    entry.chunks.push(str);
+    entry.pendingBytes += str.length;
 
     // Si alcanzamos el tamaño máximo por lote, enviar de inmediato
-    if (entry.buffer.length >= this.maxBufferSize) {
+    if (entry.pendingBytes >= this.maxBufferSize) {
       this.flush(channel);
       return;
     }
@@ -72,7 +74,7 @@ class TerminalIpcBatcher {
       entry.timer = null;
     }
 
-    const payload = entry.buffer;
+    const payload = entry.chunks.length === 1 ? entry.chunks[0] : entry.chunks.join('');
     const sender = entry.sender;
     this.channels.delete(channel);
 
@@ -111,7 +113,7 @@ class TerminalIpcBatcher {
    */
   hasPending(channel) {
     const entry = this.channels.get(channel);
-    return !!(entry && entry.buffer.length > 0);
+    return !!(entry && entry.pendingBytes > 0);
   }
 }
 
