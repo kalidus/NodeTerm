@@ -140,13 +140,6 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('connection-search:toggle', listener);
     }
   },
-  // pdfProcessor: DESHABILITADO - pdf-parse eliminado
-  // pdfProcessor: {
-  //   processPDF: (filePath) => ipcRenderer.invoke('process-pdf', filePath),
-  //   processPDFBuffer: (base64Data) => ipcRenderer.invoke('process-pdf-buffer', base64Data),
-  //   createTempFile: (fileName, arrayBuffer) => ipcRenderer.invoke('create-temp-file', fileName, arrayBuffer),
-  //   cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
-  // },
   system: {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats'),
@@ -317,10 +310,6 @@ contextBridge.exposeInMainWorld('electron', {
   /^codexcli:.*$/,
         /^antigravitycli:.*$/,
         /^hermescli:.*$/,
-        // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
-        // 'process-pdf-buffer', // DESHABILITADO
-        // 'create-temp-file', // DESHABILITADO
-        // 'cleanup-temp-file', // DESHABILITADO
         /^recording:.*$/,
         /^network-tools:.*$/,
         /^ssh-tunnel:.*$/,

@@ -129,9 +129,6 @@ logTiming('SSHWriteBufferService cargado');
 const { registerTabEvents, isTabRegistered, clearAllRegisteredTabs } = require('./src/main/handlers/tab-events-handler');
 logTiming('Tab events handler cargado');
 
-// Importar procesador de PDFs
-// const pdfProcessor = require('./src/services/PDFProcessor'); // DESHABILITADO: pdf-parse eliminado
-
 try {
   // Importar configuraciones de terminal desde archivo externo
   ({ alternativePtyConfig } = require('./src/main/config/terminal-configs'));
