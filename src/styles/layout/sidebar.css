@@ -1397,27 +1397,52 @@ body.theme-transitioning .content-main {
   height: 100%;
   overflow: hidden;
   background: var(--ui-sidebar-bg) !important;
-  will-change: opacity;
   backface-visibility: hidden;
-  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-              flex 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: flex 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sidebar-panel-collapsed {
-  flex: 0 0 0px !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  opacity: 0 !important;
+/* Colapsado: fuera del flujo, layout real preservado (sin width:0 ni opacity:0) */
+.sidebar-panel-hidden-layout {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 280px !important;
+  min-width: 280px !important;
+  max-width: 280px !important;
+  height: 100% !important;
+  visibility: hidden !important;
+  opacity: 1 !important;
   pointer-events: none !important;
   overflow: hidden !important;
   border: none !important;
   padding: 0 !important;
+  z-index: -1 !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+/* Legacy alias por si queda alguna referencia */
+.sidebar-panel-collapsed {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 280px !important;
+  min-width: 280px !important;
+  max-width: 280px !important;
+  height: 100% !important;
+  visibility: hidden !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  border: none !important;
+  padding: 0 !important;
+  z-index: -1 !important;
+  transition: none !important;
 }
 
 /* Subtle border between rail and panel only when panel is open */
-.sidebar-icon-rail + .sidebar-panel:not(.sidebar-panel-collapsed) {
+.sidebar-icon-rail + .sidebar-panel:not(.sidebar-panel-hidden-layout):not(.sidebar-panel-collapsed) {
   border-left: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.06));
 }
 
@@ -1446,10 +1471,7 @@ body.theme-transitioning .content-main {
   }
 }
 
-/* Panel content fade-in when switching sections */
-.sidebar-panel > * {
-  transition: opacity 0.15s ease;
-}
+/* Sin fade de opacity en hijos: evita flash al expandir/colapsar el panel */
 
 /* ═══════════════════════════════════════════════════════
    SIDEBAR PANEL TOOLBAR (Header with contextual actions)

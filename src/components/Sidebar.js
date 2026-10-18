@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import ReactDOM from 'react-dom';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
@@ -415,63 +415,53 @@ const Sidebar = React.memo(({
   const dragAutoScrollSpeedRef = useRef(0);
   const dragAutoScrollActiveRef = useRef(false);
 
-  const [isWarmingUp, setIsWarmingUp] = useState(false);
   const hasWarmedUpRef = useRef(false);
   const hasEverExpandedRef = useRef(!sidebarCollapsed);
+  // Asentar layout en toda expansión (incluida la primera) sin animar el splitter
+  const [isLayoutSettling, setIsLayoutSettling] = useState(false);
+  const [isFirstExpandNoTransition, setIsFirstExpandNoTransition] = useState(false);
+  const firstExpandSettledRef = useRef(!sidebarCollapsed);
 
-  // Forzar layout del contenido pre-montado a tamaño completo off-screen en el inicio
+  // Al expandir: anclar minWidth y congelar compactación ~250ms (antes del paint)
+  useLayoutEffect(() => {
+    if (sidebarCollapsed) {
+      setIsLayoutSettling(false);
+      setIsFirstExpandNoTransition(false);
+      return;
+    }
+
+    const isFirstExpand = !firstExpandSettledRef.current;
+    if (isFirstExpand) {
+      firstExpandSettledRef.current = true;
+      setIsFirstExpandNoTransition(true);
+    }
+
+    setIsLayoutSettling(true);
+    const timer = setTimeout(() => {
+      setIsLayoutSettling(false);
+      setIsFirstExpandNoTransition(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [sidebarCollapsed]);
+
+  // Con panel colapsado a layout real (visibility:hidden), el warmup off-screen ya no hace falta.
+  // Solo precargar chunks lazy y marcar refs cuando hay nodos.
   useEffect(() => {
-    // Si la sidebar no está colapsada, ya está visible, no hace falta calentar
     if (!sidebarCollapsed) {
       hasWarmedUpRef.current = true;
       hasEverExpandedRef.current = true;
-      setIsWarmingUp(false); // Reset state safely
+      firstExpandSettledRef.current = true;
       return;
     }
-    // Esperar a que los nodos estén cargados y no estemos en modo de carga (skeleton)
-    if (isLoading || !nodes || nodes.length === 0) {
+    if (isLoading || !nodes || nodes.length === 0 || hasWarmedUpRef.current) {
       return;
     }
-    // Si ya se calentó, no hacer nada
-    if (hasWarmedUpRef.current) {
-      return;
-    }
-
-    // Iniciar calentamiento (render off-screen a tamaño completo para forzar layout y paint en la GPU)
-    setIsWarmingUp(true);
     hasWarmedUpRef.current = true;
-
-    // Precargar chunks de componentes lazy para que estén listos en la primera expansión
     import('./PasswordManagerSidebar').catch(() => {});
     import('./DocumentsSidebar').catch(() => {});
     import('./ToolsSidebar').catch(() => {});
     import('./LocalFileExplorerSidebar').catch(() => {});
     import('./SettingsSidebar').catch(() => {});
-
-    // Usamos un doble frame para asegurar que el navegador ha renderizado el árbol
-    let rafId1, rafId2;
-    rafId1 = requestAnimationFrame(() => {
-      // Primer frame: el componente se renderiza off-screen con ancho de 280px.
-      // Forzamos al navegador a calcular el layout (reflow) accediendo a offsetHeight.
-      const el = expandedContentRef.current;
-      if (el) {
-        try {
-          void el.offsetHeight;
-          const tree = el.querySelector('.tree-container');
-          if (tree) void tree.offsetHeight;
-        } catch (_) {}
-      }
-
-      rafId2 = requestAnimationFrame(() => {
-        // Segundo frame: volvemos a colapsar la sidebar a su estado normal.
-        setIsWarmingUp(false);
-      });
-    });
-
-    return () => {
-      if (rafId1) cancelAnimationFrame(rafId1);
-      if (rafId2) cancelAnimationFrame(rafId2);
-    };
   }, [sidebarCollapsed, isLoading, nodes]);
 
   const toggleSidebar = useCallback(() => {
@@ -1218,7 +1208,8 @@ const Sidebar = React.memo(({
     const sidebarElement = sidebarRef.current;
     const panelElement = expandedContentRef.current;
 
-    if (isTransitioningSidebar) {
+    // Pausar compactación mientras el layout se asienta (cualquier expand, incluido el primero)
+    if (isTransitioningSidebar || isLayoutSettling) {
       sidebarResizeWidthRef.current = null;
       sidebarElement.style.setProperty('--sidebar-compact', '0');
       sidebarElement.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
@@ -1290,7 +1281,7 @@ const Sidebar = React.memo(({
       sidebarElement.style.removeProperty('--sidebar-panel-width');
       sidebarElement.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
     };
-  }, [sidebarCollapsed, viewMode, isTransitioningSidebar]);
+  }, [sidebarCollapsed, viewMode, isTransitioningSidebar, isLayoutSettling]);
 
   // Helpers
   const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
@@ -3564,10 +3555,12 @@ const Sidebar = React.memo(({
     return null;
   })();
 
+  const stabilizeTreeLayout = isLayoutSettling || isTransitioningSidebar;
+
   return (
     <div
       ref={sidebarRef}
-      className="sidebar-container sidebar-root"
+      className={`sidebar-container sidebar-root${isFirstExpandNoTransition ? ' sidebar-no-transition' : ''}`}
       style={{
         padding: 0,
         height: '100%',
@@ -3601,31 +3594,28 @@ const Sidebar = React.memo(({
         onShowImportWizard={onShowImportWizard}
       />
 
-      {/* Panel - Collapsible content area */}
+      {/* Panel - Collapsible content area.
+          Colapsado: se oculta con visibility+absolute pero mantiene ancho de layout (~280px)
+          para que el Tree no rehaga reflow en el primer expand. */}
       <div
         ref={expandedContentRef}
-        className={`sidebar-panel${(sidebarCollapsed && !isWarmingUp) ? ' sidebar-panel-collapsed' : ''}`}
-        style={(isWarmingUp && sidebarCollapsed) ? {
+        className={`sidebar-panel${sidebarCollapsed ? ' sidebar-panel-hidden-layout' : ''}`}
+        style={sidebarCollapsed ? {
           position: 'absolute',
-          left: '-9999px',
+          left: 0,
+          top: 0,
           width: '280px',
           height: '100%',
-          opacity: 0,
+          visibility: 'hidden',
+          opacity: 1,
           pointerEvents: 'none',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          zIndex: -9999,
-        } : sidebarCollapsed ? {
-          flex: '0 0 0px',
-          width: 0,
-          minWidth: 0,
-          maxWidth: 0,
-          opacity: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
+          zIndex: -1,
           border: 'none',
           padding: 0,
+          transition: 'none',
         } : (() => {
           const isFirstExpand = !hasEverExpandedRef.current;
           if (isFirstExpand) hasEverExpandedRef.current = true;
@@ -3636,11 +3626,12 @@ const Sidebar = React.memo(({
             flexDirection: 'column',
             overflow: 'hidden',
             height: '100%',
-            opacity: isFirstExpand ? 1 : undefined,
-            transition: isFirstExpand ? 'none' : 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+            visibility: 'visible',
+            opacity: 1,
+            transition: isFirstExpand ? 'none' : 'flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           };
         })()}>
-        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: isTransitioningSidebar ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: stabilizeTreeLayout ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           {fullSidebar}
 
           {/* ── Botón flotante de papelera (solo en pestaña conexiones) ── */}
