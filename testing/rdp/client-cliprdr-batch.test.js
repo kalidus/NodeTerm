@@ -784,6 +784,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
   test('APP con saludo 1001 y write path null recupera el VC cliprdr 1007', () => {
     const state = {
       wallixService: 'APP',
+      rdpDebug: true,
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
       serverCliprdrChannelId: 1001,
@@ -840,6 +841,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
   test('si el bastion entrega cliprdr por el canal de usuario 1001, no se escribe CHANNEL_PDU ahi', () => {
     const state = {
+      rdpDebug: true,
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
       serverCliprdrChannelId: 1001,

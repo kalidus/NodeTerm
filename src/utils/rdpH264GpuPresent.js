@@ -13,6 +13,16 @@
 
 'use strict';
 
+function isRdpDebugEnabled() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.__NODETERM_RDP_DEBUG__ === true) return true;
+    return window.localStorage?.getItem('NODETERM_RDP_DEBUG') === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
 const SHADER = `
 struct VsOut {
   @builtin(position) pos: vec4f,
@@ -86,7 +96,7 @@ function createH264GpuPresenter(opts) {
       if (!ctx || typeof frame?.copyTo !== 'function') return;
       if (!reported) {
         reported = true;
-        console.warn('[IronRDP WebCodecs] presenta por copia');
+        if (isRdpDebugEnabled()) console.warn('[IronRDP WebCodecs] presenta por copia');
       }
       ctx.imageSmoothingEnabled = false;
       for (const region of regions) {
@@ -223,7 +233,9 @@ function createH264GpuPresenter(opts) {
         try {
           if (!reported) {
             reported = true;
-            console.warn('[IronRDP WebCodecs] presenta en gpu', width, height);
+            if (isRdpDebugEnabled()) {
+              console.warn('[IronRDP WebCodecs] presenta en gpu', width, height);
+            }
           }
           blitRegions(canvas, regions);
         } catch (_) { /* siguiente frame */ }

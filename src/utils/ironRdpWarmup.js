@@ -28,7 +28,12 @@ export function ensureIronRdpInitialized(logLevel = 'warn') {
             ? performance.now()
             : Date.now()) - t0
         );
-        console.log(`⏱️ [IronRDP WASM] init listo (+${ms}ms)`);
+        let debug = false;
+        try {
+          debug = (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true)
+            || (typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1');
+        } catch (_) { /* noop */ }
+        if (debug) console.log(`⏱️ [IronRDP WASM] init listo (+${ms}ms)`);
       })
       .catch((err) => {
         initPromise = null;

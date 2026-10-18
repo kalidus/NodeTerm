@@ -33,12 +33,11 @@ El script genera `testing/rdp/wallix-selector-mitm.rdp`. Ábrelo con mstsc (o ap
 
 ## 2. Captura NodeTerm
 
-En `rdp-flags.json`:
+`NODETERM_RDP_TRACE` es solo para capturas A/B (no uso diario). En `rdp-flags.json` (gitignored; vacío `{}` en normal):
 
 ```json
 {
-  "NODETERM_RDP_TRACE": "1",
-  "NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR": "0"
+  "NODETERM_RDP_TRACE": "1"
 }
 ```
 

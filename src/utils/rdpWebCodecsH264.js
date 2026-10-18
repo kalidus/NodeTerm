@@ -27,6 +27,16 @@ function isWebCodecsH264Enabled() {
   }
 }
 
+function isRdpDebugEnabled() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.__NODETERM_RDP_DEBUG__ === true) return true;
+    return window.localStorage?.getItem('NODETERM_RDP_DEBUG') === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
 /** Convierte AVC (length-prefixed) a Annex B (start codes). */
 function avcToAnnexB(avcData) {
   const src = avcData instanceof Uint8Array ? avcData : new Uint8Array(avcData);
@@ -1085,7 +1095,9 @@ function createRdpWebCodecsDecoder(opts = {}) {
       }
       if (!reportedPaint) {
         reportedPaint = true;
-        console.warn('[IronRDP WebCodecs] pinta', frameW, frameH, box.right - box.left, box.bottom - box.top);
+        if (isRdpDebugEnabled()) {
+          console.warn('[IronRDP WebCodecs] pinta', frameW, frameH, box.right - box.left, box.bottom - box.top);
+        }
       }
       stats.paint420 += 1;
       paintBox(rgba, box, targets, meta);
@@ -1172,8 +1184,10 @@ function createRdpWebCodecsDecoder(opts = {}) {
       const unit = inspectAvcAccessUnit(src);
       if (!reportedFirst) {
         reportedFirst = true;
-        const hex = Array.from(raw.subarray(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join('');
-        console.warn('[IronRDP WebCodecs] primer AU', raw.length, hex, unit.codec || 'sin-sps', unit.key ? 'key' : 'delta');
+        if (isRdpDebugEnabled()) {
+          const hex = Array.from(raw.subarray(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join('');
+          console.warn('[IronRDP WebCodecs] primer AU', raw.length, hex, unit.codec || 'sin-sps', unit.key ? 'key' : 'delta');
+        }
       }
       if (unit.codec && (!configured || !decoder || decoder.state !== 'configured' || unit.codec !== activeCodec)) {
         try {

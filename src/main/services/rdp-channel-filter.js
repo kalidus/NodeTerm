@@ -2599,10 +2599,12 @@ function processServerFrame(state, buf) {
         frame = aligned.buf;
         if (!state.loggedScNetAlign) {
           state.loggedScNetAlign = true;
-          console.log(
-            `[Bridge] SC_NET alineado al WASM: [${aligned.previousIds.join(',')}]` +
-            ` -> [${aligned.newIds.join(',')}]`
-          );
+          if (state.rdpDebug === true || process.env.NODETERM_RDP_DEBUG === '1') {
+            console.log(
+              `[Bridge] SC_NET alineado al WASM: [${aligned.previousIds.join(',')}]` +
+              ` -> [${aligned.newIds.join(',')}]`
+            );
+          }
         }
         return {
           forward: frame,

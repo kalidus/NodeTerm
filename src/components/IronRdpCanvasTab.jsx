@@ -136,6 +136,16 @@ const isRdpDesyncEnabled = () => {
   }
 };
 
+/** Debug RDP: localStorage NODETERM_RDP_DEBUG=1 o window.__NODETERM_RDP_DEBUG__ */
+const isRdpDebugEnabled = () => {
+  try {
+    if (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true) return true;
+    return typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1';
+  } catch (_) {
+    return false;
+  }
+};
+
 const getOptimized2dContext = (canvas) => {
   if (!canvas) return null;
   const options = {
@@ -202,7 +212,7 @@ const sendClipboardToSession = async (session, text) => {
   const clip = new Backend.ClipboardData();
   clip.addText('text/plain', normalizedText);
   await session.onClipboardPaste(clip);
-  if (!loggedFirstClipboardPaste && rdpTimelineStartedAt) {
+  if (!loggedFirstClipboardPaste && rdpTimelineStartedAt && isRdpDebugEnabled()) {
     loggedFirstClipboardPaste = true;
     console.log(
       `⏱️ [RDP Timeline renderer +${Math.round(performance.now() - rdpTimelineStartedAt)}ms] ` +
@@ -292,13 +302,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   /** Tras 0x112f: reintentar EGFX sin H.264/WebCodecs (Progressive/ClearCodec). */
   const gfxNoAvcFallbackUsedRef = useRef(false);
   const gfxFallbackPendingRef = useRef(false);
-
-  const isRdpDebugEnabled = () => {
-    return (
-      (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true) ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1')
-    );
-  };
 
   const notifyUserClose = () => {
     userClosingRef.current = true;
@@ -627,6 +630,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   };
 
   const writeEgfxLine = (entry, bytes) => {
+    if (!egfxDiagRef.current.active) return;
     if (!window.electron?.ipcRenderer?.invoke) return;
     const payload = { line: JSON.stringify(entry) };
     if (bytes && bytes.length) payload.bytes = bytes;
@@ -1105,7 +1109,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         // 1. WASM IronRDP (no-op si preloadHeavyTabChunks ya lo compilo en idle)
         await ensureIronRdpInitialized('warn');
-        console.log(`⏱️ [RDP Timeline renderer +${Math.round(performance.now() - timelineStartedAt)}ms] initIronRdp listo`);
+        if (isRdpDebugEnabled()) {
+          console.log(`⏱️ [RDP Timeline renderer +${Math.round(performance.now() - timelineStartedAt)}ms] initIronRdp listo`);
+        }
         if (isAborted()) return;
         if (typeof setEgfxAvcThinClient === 'function') {
           // Thin-client ya no cambia caps; se deja apagado en el reintento sin AVC.
@@ -1128,9 +1134,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               cookie: btoa(binary)
             });
             writeEgfxLine({ t: 'udp', ok: !!result?.ok, error: result?.error || '' });
-            console.log(result?.ok
-              ? `🛰️ [IronRDP UDP] Canal fiable abierto hacia ${host}:${port}`
-              : `⚠️ [IronRDP UDP] Sin canal (${result?.error || 'rechazado'}); la sesion sigue por TCP`);
+            if (isRdpDebugEnabled() || !result?.ok) {
+              console.log(result?.ok
+                ? `🛰️ [IronRDP UDP] Canal fiable abierto hacia ${host}:${port}`
+                : `⚠️ [IronRDP UDP] Sin canal (${result?.error || 'rechazado'}); la sesion sigue por TCP`);
+            }
             return !!result?.ok;
           });
         }
@@ -1140,6 +1148,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           });
         }
         gfxFallbackPendingRef.current = false;
+        // Journal EGFX a disco solo con DEBUG (active se reafirma al elegir egfx/bitmap).
+        egfxDiagRef.current = {
+          active: isRdpDebugEnabled(),
+          codec: egfxDiagRef.current.codec || 'bitmap',
+          wroteSession: false
+        };
         writeEgfxLine({ t: 'gfx-advertise', mode: 'v106-dwm' });
 
         // 2. Obtener dimensiones calculadas según configuración (autoResize vs resolución fija)
@@ -1364,7 +1378,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         } catch (_) { /* noop */ }
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
-          egfxDiagRef.current = { active: true, codec: 'progressive', wroteSession: false };
+          egfxDiagRef.current = {
+            active: isRdpDebugEnabled(),
+            codec: 'progressive',
+            wroteSession: false
+          };
           setNegotiatedCodec('progressive');
           if (typeof setEgfxCapsCallback === 'function') {
             setEgfxCapsCallback((version, avc420, avc444) => {
@@ -1401,7 +1419,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
           }
         } else {
-          egfxDiagRef.current = { active: true, codec: 'bitmap', wroteSession: false };
+          egfxDiagRef.current = {
+            active: isRdpDebugEnabled(),
+            codec: 'bitmap',
+            wroteSession: false
+          };
           setNegotiatedCodec('bitmap');
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
@@ -1417,7 +1439,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           && isWebCodecsH264Available();
         if (egfxEnabled && gfxNoAvcFallbackUsedRef.current) {
           writeEgfxLine({ t: 'codec', chosen: 'no-avc-fallback' });
-          console.log('ℹ️ [IronRDP EGFX] Sesión sin H.264 (fallback tras 0x112f)');
+          if (isRdpDebugEnabled()) {
+            console.log('ℹ️ [IronRDP EGFX] Sesión sin H.264 (fallback tras 0x112f)');
+          }
         }
         if (useWebCodecs) {
           try {
@@ -1742,10 +1766,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
         if (isAborted()) return;
 
-        console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled}, drive=${isDriveEnabled})...`);
-        
+        if (isRdpDebugEnabled()) {
+          console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled}, drive=${isDriveEnabled})...`);
+        }
+
         currentSession = await builder.connect();
-        if (isBastionSession) {
+        if (isBastionSession && isRdpDebugEnabled()) {
           console.log(`⏱️ [RDP Timeline renderer +${Math.round(performance.now() - timelineStartedAt)}ms] builder.connect() resuelto`);
         }
         if (isAborted()) {
@@ -1755,7 +1781,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
         sessionRef.current = currentSession;
         flushPendingClipboardSend();
-        console.log('✅ [IronRDP WASM] Sesión RDP conectada');
+        if (isRdpDebugEnabled()) {
+          console.log('✅ [IronRDP WASM] Sesión RDP conectada');
+        }
 
         // Inicializar FileTransferProvider con la sesión activa
         if (currentFileTransferProvider) {
@@ -1870,7 +1898,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         runPromise.then((terminationInfo) => {
           if (aborted) {
-            console.log('ℹ️ [IronRDP WASM] Sesion abortada');
+            if (isRdpDebugEnabled()) console.log('ℹ️ [IronRDP WASM] Sesion abortada');
             return;
           }
           const rawReason = typeof terminationInfo?.reason === 'function'
@@ -1880,23 +1908,25 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           const clipFailed = clipboardFailedRef.current;
           finishEgfxJournal(isNormalEnd && !clipFailed ? 'ok' : 'gfx-fail');
           if (isNormalEnd && !clipFailed) {
-            console.log('ℹ️ [IronRDP WASM] Sesion terminada:', rawReason);
+            if (isRdpDebugEnabled()) console.log('ℹ️ [IronRDP WASM] Sesion terminada:', rawReason);
           } else if (clipFailed || isRdpDebugEnabled()) {
             console.warn('⚠️ [IronRDP WASM] Sesion terminada:', rawReason);
             dumpBridgeTraces('Trazas del bridge previas al fin de sesion:');
             dumpClipboardHistory('Historial de portapapeles previo al fin de sesion:');
-          } else {
+          } else if (isRdpDebugEnabled()) {
             console.log('ℹ️ [IronRDP WASM] Sesion terminada:', rawReason);
           }
           handleSessionEnded(rawReason, null);
         }).catch((err) => {
           const detail = extractErrorMessage(err);
           if (aborted) {
-            console.log('ℹ️ [IronRDP WASM] Sesion abortada:', detail);
+            if (isRdpDebugEnabled()) console.log('ℹ️ [IronRDP WASM] Sesion abortada:', detail);
             return;
           }
           if (userClosingRef.current) {
-            console.log('ℹ️ [IronRDP WASM] Sesion cerrada por el usuario:', detail);
+            if (isRdpDebugEnabled()) {
+              console.log('ℹ️ [IronRDP WASM] Sesion cerrada por el usuario:', detail);
+            }
             handleSessionEnded('user initiated disconnect', null);
             return;
           }
@@ -2423,8 +2453,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (supportsDisplayControlRef.current) {
         const { width, height } = measureAutoDesktopSize();
         requestSessionResize(width, height);
-        console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
-      } else {
+        if (isRdpDebugEnabled()) {
+          console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
+        }
+      } else if (isRdpDebugEnabled()) {
         console.log('📐 [IronRDP] Cambiando a resolución dinámica Auto (ajuste CSS)');
       }
 
@@ -2442,7 +2474,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (parsed) {
         const targetW = alignDesktop(parsed.width);
         const targetH = alignDesktop(parsed.height);
-        console.log(`[IronRDP] Cambiando resolucion a ${targetW}x${targetH}`);
+        if (isRdpDebugEnabled()) {
+          console.log(`[IronRDP] Cambiando resolucion a ${targetW}x${targetH}`);
+        }
         setDesktopDimensions({ width: targetW, height: targetH });
         rdpConfig.resolution = resKey;
         rdpConfig.autoResize = false;
@@ -2617,7 +2651,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         try {
           const dropped = await fileTransferProviderRef.current.handleDrop(e);
           if (dropped && dropped.length) {
-            console.log('📤 [IronRDP FileTransfer] Subiendo archivos arrastrados:', dropped.length);
+            if (isRdpDebugEnabled()) {
+              console.log('📤 [IronRDP FileTransfer] Subiendo archivos arrastrados:', dropped.length);
+            }
             await uploadFilesSafely(fileTransferProviderRef.current, dropped);
           }
         } catch (dropErr) {

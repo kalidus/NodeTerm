@@ -706,7 +706,7 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.virtualChannels = channelFilter.isBastion === true
       && isVirtualChannelsMode()
       && resolveInjectedChannels(session) != null;
-    if (channelFilter.virtualChannels) {
+    if (channelFilter.virtualChannels && isDebug) {
       console.log(`[Bridge] Capa de canales: virtual (${channelFilter.wallixService || 'bastion'})`);
     }
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
@@ -743,12 +743,14 @@ class RdpNativeBridgeService extends EventEmitter {
     if (normalizeBitmaps) {
       bastionSessionCounted = true;
       const n = this.syncBastionOverlapFlags();
-      const bastionSvc = channelFilter.wallixService || 'n/a';
-      const overlapNote = n > 1 ? ' (solape multi-sesion)' : '';
-      console.log(
-        `[Bridge] bastion session open: service=${bastionSvc} ` +
-        `activeBastionSessions=${n} activeConnections=${this.activeConnections.size}${overlapNote}`
-      );
+      if (isDebug) {
+        const bastionSvc = channelFilter.wallixService || 'n/a';
+        const overlapNote = n > 1 ? ' (solape multi-sesion)' : '';
+        console.log(
+          `[Bridge] bastion session open: service=${bastionSvc} ` +
+          `activeBastionSessions=${n} activeConnections=${this.activeConnections.size}${overlapNote}`
+        );
+      }
     }
     let directPostNlaDeframer = false;
     let graphicsCapsWarnTimer = null;
@@ -757,12 +759,14 @@ class RdpNativeBridgeService extends EventEmitter {
     const dvcDiag = { forward: 0, stub: 0, reject: 0, caps: 0 };
     /** Asignado tras crear backpressure; el watch post-banner lo usa para tirar la cola RLE. */
     let dropStaleBannerBitmaps = () => 0;
-    // Linea de tiempo solo-log para bastion: donde se va la espera tras los banners.
+    // Timeline bastion: marks siempre (hop/DynVC); consola solo con DEBUG.
     const timeline = new SessionTimeline({
       enabled: normalizeBitmaps,
       verboseTraffic: isDebug,
       label: channelFilter.wallixService || (normalizeBitmaps ? 'bastion' : ''),
-      log: (line) => console.log(`⏱️ [Bridge] ${line}`)
+      log: (line) => {
+        if (isDebug) console.log(`⏱️ [Bridge] ${line}`);
+      }
     });
     channelFilter.markTimeline = (name, detail) => timeline.mark(name, detail);
     const formatDvcDiagLine = (tag) => {
@@ -866,7 +870,7 @@ class RdpNativeBridgeService extends EventEmitter {
       const msg = `[Bridge Clipboard] RDP Probe: TEMPDIR-only al saludo ch=${dest}` +
         ` (${reason || 'greet'}; sin CAPS; no VC nombrado)`;
       recordCliprdrEvent(msg);
-      console.warn(msg);
+      if (isDebug) console.warn(msg);
       this.emit('diagnostic-log', { category: 'cliprdr-probe-tempdir', message: msg });
       if (timeline.enabled) {
         timeline.mark('probe-tempdir-sent', `ch=${dest} reason=${reason || 'greet'}`);
@@ -905,7 +909,7 @@ class RdpNativeBridgeService extends EventEmitter {
         const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}` +
           ` (selector→${channelFilter.wallixService || '?'}${reason ? `; ${reason}` : ''})`;
         recordCliprdrEvent(replayMsg);
-        console.log(replayMsg);
+        if (isDebug) console.log(replayMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
       }
       this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
@@ -972,10 +976,12 @@ class RdpNativeBridgeService extends EventEmitter {
         // Quitar del recuento antes de sync (delete del Map es mas tarde).
         channelFilter.isBastion = false;
         const n = this.syncBastionOverlapFlags();
-        console.log(
-          `[Bridge] bastion session close: activeBastionSessions=${n} ` +
-          `activeConnections=${this.activeConnections.size}`
-        );
+        if (isDebug) {
+          console.log(
+            `[Bridge] bastion session close: activeBastionSessions=${n} ` +
+            `activeConnections=${this.activeConnections.size}`
+          );
+        }
       }
       clearCliprdrWatch();
       if (channelFilter.appCliprdrWriteRetryTimer) {
@@ -1008,7 +1014,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
       timeline.stop();
       try { pduTrace.close(); } catch (_) { /* noop */ }
-      if (timeline.enabled) {
+      if (timeline.enabled && isDebug) {
         console.log(`⏱️ [Bridge] ${timeline.summary()}`);
         console.log(formatDvcDiagLine('sesion'));
       }
@@ -1022,7 +1028,9 @@ class RdpNativeBridgeService extends EventEmitter {
         console.warn(`⚠️ [RdpNativeBridgeService] Desconexion anomala detectada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
         console.warn(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
       }
-      console.warn(`[Bridge] ${clipSummary}`);
+      if (clipboardFailed || isDebug) {
+        console.warn(`[Bridge] ${clipSummary}`);
+      }
 
       if (dump.cliprdr && recentCliprdrEvents.length) {
         console.warn(`🔎 [Bridge] Ultimos ${recentCliprdrEvents.length} eventos de portapapeles:`);
@@ -1212,10 +1220,12 @@ class RdpNativeBridgeService extends EventEmitter {
                 || coalesceFlag === '0' || coalesceFlag === 'false');
               const tickBatcher = new WsTickBatcher(coalesceWs);
               timeline.mark('tls-ok-transparente');
-              timeline.start(() => ({
-                pending: backpressure.pendingBitmaps.length,
-                buffered: ws.bufferedAmount
-              }));
+              if (isDebug) {
+                timeline.start(() => ({
+                  pending: backpressure.pendingBitmaps.length,
+                  buffered: ws.bufferedAmount
+                }));
+              }
 
               const sendDirectToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
@@ -1602,7 +1612,7 @@ class RdpNativeBridgeService extends EventEmitter {
                     const greetCh = channelFilter.serverCliprdrChannelId;
                     const writeMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${greetCh}`;
                     recordCliprdrEvent(writeMsg);
-                    if (isDebug || wallixServiceFromSession(session) === 'APP') {
+                    if (isDebug) {
                       console.log(writeMsg);
                     }
                   }
@@ -1676,7 +1686,7 @@ class RdpNativeBridgeService extends EventEmitter {
                         : 'write path pendiente (saludo IO; no escribir 1006 hasta VC nombrado)';
                       const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, ${writeNote}`;
                       recordCliprdrEvent(inferMsg);
-                      console.log(inferMsg);
+                      if (isDebug) console.log(inferMsg);
                       this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });
                       if (typeof timeline.setLabel === 'function') {
                         timeline.setLabel(svcLabel);
@@ -1719,7 +1729,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             const waitMsg = '[Bridge Clipboard] CB_MONITOR_READY: esperando CAPS del cliente WASM' +
                               ` (wasm=${channelFilter.cliprdrChannelId} -> write ${channelFilter.cliprdrWriteChannelId})`;
                             recordCliprdrEvent(waitMsg);
-                            console.log(waitMsg);
+                            if (isDebug) console.log(waitMsg);
                           }
                           if ((isAppReady || isSelectorRdpReady || isDirectRdpReady)
                               && !channelFilter.appCliprdrCapsWaitTimer) {
@@ -1752,7 +1762,7 @@ class RdpNativeBridgeService extends EventEmitter {
                                 : '';
                               const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}${selectorNote}`;
                               recordCliprdrEvent(replayMsg);
-                              console.log(replayMsg);
+                              if (isDebug) console.log(replayMsg);
                               this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
                             }
                           } else if (writeSafe && !replay.length && !channelFilter.loggedCliprdrRehandshakeMiss
@@ -1791,7 +1801,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             : '?';
                           const lateMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${channelFilter.serverCliprdrChannelId} (reintento APP)`;
                           recordCliprdrEvent(lateMsg);
-                          console.log(lateMsg);
+                          if (isDebug) console.log(lateMsg);
                           if (!tlsSocket || !tlsSocket.writable) return;
                           channelFilter.cliprdrRehandshakePending = true;
                           const lateReplay = takeCliprdrRehandshake(channelFilter);
@@ -1820,7 +1830,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             : '?';
                           const lateMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${channelFilter.serverCliprdrChannelId} (reintento selector→RDP)`;
                           recordCliprdrEvent(lateMsg);
-                          console.log(lateMsg);
+                          if (isDebug) console.log(lateMsg);
                           if (!tlsSocket || !tlsSocket.writable) return;
                           channelFilter.cliprdrRehandshakePending = true;
                           const lateReplay = takeCliprdrRehandshake(channelFilter);
@@ -1935,10 +1945,12 @@ class RdpNativeBridgeService extends EventEmitter {
                       }
                       clearPostBannerDvcTimer();
                       timeline.mark('egfx-graphics-create', `#${framesFromRdp}`);
-                      console.log(
-                        `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
-                        ` wasm=${channelFilter.wasmDrdynvcChannelId} ${processed.note}`
-                      );
+                      if (isDebug) {
+                        console.log(
+                          `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
+                          ` wasm=${channelFilter.wasmDrdynvcChannelId} ${processed.note}`
+                        );
+                      }
                     }
                   }
 
@@ -2011,13 +2023,17 @@ class RdpNativeBridgeService extends EventEmitter {
                       if (menuPassthrough && !channelFilter.loggedBastionBitmapPassthrough) {
                         channelFilter.loggedBastionBitmapPassthrough = true;
                         if (isSelectorMenuBitmapPassthrough(channelFilter)) {
-                          console.log(
-                            '[Bridge] selector n/a: bitmaps passthrough (sin rewrite RLE) hasta promote'
-                          );
+                          if (isDebug) {
+                            console.log(
+                              '[Bridge] selector n/a: bitmaps passthrough (sin rewrite RLE) hasta promote'
+                            );
+                          }
                         } else if (isBastionOverlapHopBitmapPassthrough(channelFilter)) {
-                          console.log(
-                            '[Bridge] bastion overlap: bitmaps passthrough hasta caps/EGFX'
-                          );
+                          if (isDebug) {
+                            console.log(
+                              '[Bridge] bastion overlap: bitmaps passthrough hasta caps/EGFX'
+                            );
+                          }
                           if (typeof channelFilter.markTimeline === 'function') {
                             channelFilter.markTimeline('hop-bitmap-passthrough', 'overlap');
                           }
@@ -2540,7 +2556,7 @@ class RdpNativeBridgeService extends EventEmitter {
             channelFilter.markTimeline('cliprdr-named-pre-greet', `ch=${namedPre}`);
           }
           const preMsg = `[Bridge Clipboard] RDP EGFX: CAPS/TEMPDIR al VC nombrado ${namedPre} (pre-saludo)`;
-          console.warn(preMsg);
+          if (rdpDebug()) console.warn(preMsg);
           if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(preMsg);
           this.emit('diagnostic-log', { category: 'cliprdr-named-pre-greet', message: preMsg });
         }
@@ -2551,7 +2567,7 @@ class RdpNativeBridgeService extends EventEmitter {
         channelFilter.loggedCliprdrAwaitingGreeting = true;
         const awaitMsg = `[Bridge Clipboard] ${channelFilter.wallixService}: CLIPRDR WASM cacheado;` +
           ' sin saludo del servidor (no MCS 1001)';
-        console.warn(awaitMsg);
+        if (rdpDebug()) console.warn(awaitMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(awaitMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-await-greeting', message: awaitMsg });
       }
@@ -2578,7 +2594,7 @@ class RdpNativeBridgeService extends EventEmitter {
         : 'sin-nombre';
       const svc = channelFilter.wallixService || 'n/a';
       const misMsg = `⚠️ [Bridge Clipboard] ${svc} cliprdr no alineado; CS_NET=[${csNet}] dest=${dest} (${destName})`;
-      console.warn(misMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(misMsg);
       if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(misMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-misaligned', message: misMsg });
     }
@@ -2608,7 +2624,7 @@ class RdpNativeBridgeService extends EventEmitter {
         const deferMsg = `[Bridge Clipboard] selector n/a: CLIPRDR WASM cacheado` +
           `${serverGreeted ? ' (synthAck tras MONITOR_READY)' : ' (sin synthAck prematuro)'}` +
           `; sin wire hasta promote dest=${dest}`;
-        console.warn(deferMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(deferMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(deferMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-defer', message: deferMsg });
       }
@@ -2637,7 +2653,7 @@ class RdpNativeBridgeService extends EventEmitter {
           channelFilter.loggedCliprdrVirtualSymmetric = true;
           const symMsg = `[Bridge Clipboard] virtual: cliprdr c2s simetrico ch=${wireDest}` +
             ` (saludo servidor; no flush a VC nombrado)`;
-          console.warn(symMsg);
+          if (rdpDebug() || channelFilter.rdpDebug) console.warn(symMsg);
           if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(symMsg);
           this.emit('diagnostic-log', { category: 'cliprdr', message: symMsg });
         }
@@ -2668,7 +2684,7 @@ class RdpNativeBridgeService extends EventEmitter {
           channelFilter.loggedCliprdrEgfxNamedFlush = true;
           const namedMsg = `[Bridge Clipboard] EGFX: cliprdr al VC nombrado ${named}` +
             ` (no CHANNEL_PDU en MCS ${dest})`;
-          console.warn(namedMsg);
+          if (rdpDebug() || channelFilter.rdpDebug) console.warn(namedMsg);
           if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(namedMsg);
           this.emit('diagnostic-log', { category: 'cliprdr', message: namedMsg });
         }
@@ -2679,7 +2695,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
         const muteMsg = `⚠️ [Bridge Clipboard] EGFX: cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
-        console.warn(muteMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(muteMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       }
@@ -2732,7 +2748,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!channelFilter.loggedCliprdrRecovered) {
         channelFilter.loggedCliprdrRecovered = true;
         const recMsg = `[Bridge Clipboard] write path recuperado ch=${recoveredDest} (saludo por ${dest})`;
-        console.warn(recMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(recMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(recMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: recMsg });
       }
@@ -2746,7 +2762,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
     if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')) {
       const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${dest}): ${clipDesc}`;
-      console.warn(dropMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
       return { forward: null, inject };
@@ -2754,7 +2770,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
     if (!keepClientCaps && clipDesc && clipDesc.includes('CB_CLIP_CAPS')) {
       const dropMsg = `⚠️ [Bridge Clipboard] CB_CLIP_CAPS del cliente descartado (destino ${dest} congela el grafico): ${clipDesc}`;
-      console.warn(dropMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject };
@@ -2781,7 +2797,7 @@ class RdpNativeBridgeService extends EventEmitter {
         if (!channelFilter.loggedCliprdrFileContentsNamed) {
           channelFilter.loggedCliprdrFileContentsNamed = true;
           const fileMsg = `[Bridge Clipboard] FILECONTENTS por VC cliprdr ch=${fileDest} (no IO ${dest})`;
-          console.warn(fileMsg);
+          if (rdpDebug() || channelFilter.rdpDebug) console.warn(fileMsg);
           if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(fileMsg);
           this.emit('diagnostic-log', { category: 'cliprdr', message: fileMsg });
         }
@@ -2791,7 +2807,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!channelFilter.loggedCliprdrFileContentsHold) {
         channelFilter.loggedCliprdrFileContentsHold = true;
         const holdMsg = `[Bridge Clipboard] FILECONTENTS encolado: saludo aun en IO ${dest} (mstsc usa VC cliprdr)`;
-        console.warn(holdMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(holdMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(holdMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: holdMsg });
       }
@@ -2834,7 +2850,7 @@ class RdpNativeBridgeService extends EventEmitter {
           ? `; lista/datos tambien por ${channelFilter.cliprdrWriteChannelId}`
           : '';
         const payMsg = `[Bridge Clipboard] cliprdr datos por ch=${unsafeDest} (saludo por ${dest}${extraNote}${mirrorNote})`;
-        console.warn(payMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(payMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(payMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: payMsg });
       }
@@ -2856,7 +2872,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
         const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
-        console.warn(muteMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(muteMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       }
@@ -2868,7 +2884,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
         const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en ${negotiated} (cierra si dest=${dest})`;
-        console.warn(muteMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(muteMsg);
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       }
@@ -2903,7 +2919,7 @@ class RdpNativeBridgeService extends EventEmitter {
         channelFilter.loggedCliprdrFlushDeferredIo = true;
         const deferMsg = `[Bridge Clipboard] flush diferido: saludo aun en IO ${channelFilter.serverCliprdrChannelId} (no escribir VC nombrado ni IO)`;
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(deferMsg);
-        console.warn(deferMsg);
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(deferMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: deferMsg });
       }
       return;
@@ -3043,7 +3059,7 @@ class RdpNativeBridgeService extends EventEmitter {
     if (!cacheUntilGreeting && !channelFilter.cliprdrServerReady && !channelFilter.loggedCliprdrBeforeReady) {
       channelFilter.loggedCliprdrBeforeReady = true;
       const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
-      console.warn(guardMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(guardMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(guardMsg);
       }
@@ -3110,7 +3126,7 @@ class RdpNativeBridgeService extends EventEmitter {
     if (isClip && handshakeName === 'rdpsnd' && clipDesc && clipDesc.includes('CB_CLIP_CAPS')
         && !greetingOnHandshakeDest) {
       const dropMsg = `⚠️ [Bridge Clipboard] CB_CLIP_CAPS del cliente descartado (destino ${handshakeDest} congela el grafico): ${clipDesc}`;
-      console.warn(dropMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(dropMsg);
       }
@@ -3120,7 +3136,7 @@ class RdpNativeBridgeService extends EventEmitter {
     if (isClip && (handshakeName === 'rdpsnd' || handshakeName === 'rdpdr') &&
         clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && !greetingOnHandshakeDest) {
       const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${handshakeDest}): ${clipDesc}`;
-      console.warn(dropMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(dropMsg);
       }
@@ -3137,7 +3153,7 @@ class RdpNativeBridgeService extends EventEmitter {
         ? `${handshakeDest} sin nombre`
         : `recuperado ch=${handshakeDest}`;
       const dropMsg = `[Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${why}): ${clipDesc}`;
-      console.warn(dropMsg);
+      if (rdpDebug() || channelFilter.rdpDebug) console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(dropMsg);
       }
