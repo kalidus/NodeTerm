@@ -123,12 +123,13 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onExit((event) => {
       terminalIpcBatcher.flush(`codexcli:data:${tabId}`);
+      const intentional = !!ptyProcess._isIntentionallyStopped;
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete codexCliProcesses[tabId];
 
-      if (!isAppQuitting.value && exitCode !== 0) {
-        sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
-      }
+      if (intentional || isAppQuitting.value) return;
+      if (typeof exitCode !== 'number' || exitCode === 0) return;
+      sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
     });
 
     sendToRenderer(mainWindow, `codexcli:ready:${tabId}`);
@@ -164,9 +165,6 @@ function stopCodexCli(tabId) {
 
   try {
     processRef._isIntentionallyStopped = true;
-    if (typeof processRef.removeAllListeners === 'function') {
-      processRef.removeAllListeners();
-    }
     processRef.kill();
   } catch (error) {
     // noop

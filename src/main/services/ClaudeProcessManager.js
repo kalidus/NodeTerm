@@ -125,12 +125,13 @@ function startClaudeSession(tabId, options = {}) {
 
     ptyProcess.onExit((event) => {
       terminalIpcBatcher.flush(`claude:data:${tabId}`);
+      const intentional = !!ptyProcess._isIntentionallyStopped;
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete claudeProcesses[tabId];
 
-      if (!isAppQuitting.value && exitCode !== 0) {
-        sendToRenderer(mainWindow, `claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
-      }
+      if (intentional || isAppQuitting.value) return;
+      if (typeof exitCode !== 'number' || exitCode === 0) return;
+      sendToRenderer(mainWindow, `claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
     });
 
     sendToRenderer(mainWindow, `claude:ready:${tabId}`);
@@ -166,9 +167,6 @@ function stopClaude(tabId) {
 
   try {
     processRef._isIntentionallyStopped = true;
-    if (typeof processRef.removeAllListeners === 'function') {
-      processRef.removeAllListeners();
-    }
     processRef.kill();
   } catch (error) {
     // noop

@@ -103,6 +103,143 @@ export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, cu
   return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: true });
 }
 
+/**
+ * Opciones de xterm para un TUI a pantalla completa (AI CLI).
+ * convertEol queda apagado: un \\n solo baja de fila y no arrastra el cursor a la columna 0.
+ */
+export function createAiCliTerminalOptions({
+  fontFamily,
+  fontSize,
+  theme = {},
+  background,
+  scrollback,
+  allowTransparency = false,
+  cursor,
+  selection
+}) {
+  return {
+    cursorBlink: true,
+    fontFamily,
+    fontSize,
+    convertEol: false,
+    scrollback,
+    allowTransparency,
+    allowProposedApi: true,
+    windowsMode: false,
+    letterSpacing: 0,
+    lineHeight: 1,
+    minimumContrastRatio: 1,
+    fontWeight: '400',
+    fontWeightBold: 'bold',
+    rightClickSelectsWord: true,
+    theme: {
+      background,
+      foreground: theme?.foreground || '#e5e7eb',
+      cursor: cursor || theme?.cursor || '#e5e7eb',
+      selection: selection || theme?.selection || 'rgba(255,255,255,0.3)',
+      ...theme
+    },
+    cols: 120,
+    rows: 30
+  };
+}
+
+/** Ancho Unicode 11, el mismo que usan los CLI modernos para emoji, braille y caja. */
+export function attachUnicode11(term, Unicode11Addon) {
+  if (!term || typeof Unicode11Addon !== 'function') return;
+  try {
+    term.loadAddon(new Unicode11Addon());
+    term.unicode.activeVersion = '11';
+  } catch (_) {}
+}
+
+/**
+ * Ajusta cols/rows al contenedor.
+ * No avisa al PTY: xterm dispara onResize solo cuando el tamaño cambia de verdad.
+ */
+export function fitTerminalToContainer(term, fitAddon, container) {
+  try {
+    if (!term || !fitAddon || !container) return false;
+    if (container.offsetWidth <= 0 || container.offsetHeight <= 0) return false;
+    fitAddon.fit();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Fit que no oscila: salta si el contenedor no cambió en píxeles y marca
+ * un flag breve para que ResizeObserver ignore el eco del propio fit.
+ */
+export function createStableTerminalFit() {
+  let lastWidth = -1;
+  let lastHeight = -1;
+  let fitting = false;
+  let releaseTimer = null;
+
+  const releaseFitting = () => {
+    if (releaseTimer != null) {
+      clearTimeout(releaseTimer);
+      releaseTimer = null;
+    }
+    fitting = false;
+  };
+
+  return {
+    isFitting() {
+      return fitting;
+    },
+    fit(term, fitAddon, container) {
+      try {
+        if (!term || !fitAddon || !container) return false;
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
+        if (width <= 0 || height <= 0) return false;
+        if (width === lastWidth && height === lastHeight) return false;
+
+        fitting = true;
+        if (releaseTimer != null) clearTimeout(releaseTimer);
+        fitAddon.fit();
+        lastWidth = container.offsetWidth;
+        lastHeight = container.offsetHeight;
+        // El canvas puede notificar un frame después; ignorar ese eco.
+        releaseTimer = setTimeout(releaseFitting, 80);
+        return true;
+      } catch (_) {
+        releaseFitting();
+        return false;
+      }
+    },
+    reset() {
+      lastWidth = -1;
+      lastHeight = -1;
+      releaseFitting();
+    }
+  };
+}
+
+/** Agrupa ráfagas de resize (observer, ventana) en una sola llamada. */
+export function createDebouncedFn(fn, ms = 50) {
+  let timer = null;
+  const wrapped = () => {
+    if (timer != null) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      try {
+        fn();
+      } catch (_) {}
+    }, ms);
+  };
+  wrapped.cancel = () => {
+    if (timer != null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return wrapped;
+}
+
 /** Temporizadores de fit/resize que hay que cancelar al desmontar. */
 export function createTimerBag() {
   const ids = [];

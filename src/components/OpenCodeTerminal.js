@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } f
 import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, createTimerBag, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachUnicode11, attachVisibleTerminalRenderer, createAiCliTerminalOptions, createDebouncedFn, createStableTerminalFit, createTimerBag, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 
 const OpenCodeTerminal = forwardRef(({
@@ -17,9 +17,14 @@ const OpenCodeTerminal = forwardRef(({
   const terminalRef = useRef(null);
   const term = useRef(null);
   const fitAddon = useRef(null);
+  const stableFitRef = useRef(null);
   const hasStartedRef = useRef(false);
   const isReadyRef = useRef(false);
   const writeBufferRef = useRef(null);
+  const onContextMenuRef = useRef(onContextMenu);
+  onContextMenuRef.current = onContextMenu;
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
   const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
 
@@ -34,16 +39,9 @@ const OpenCodeTerminal = forwardRef(({
   const terminalBg = theme?.background || '#111827';
 
   const fitAndSyncSize = () => {
-    try {
-      if (!term.current || !fitAddon.current || !terminalRef.current) return;
-      if (terminalRef.current.offsetWidth <= 0 || terminalRef.current.offsetHeight <= 0) return;
-      fitAddon.current.fit();
-      window.electron?.ipcRenderer.send(`opencode:resize:${tabId}`, {
-        cols: term.current.cols,
-        rows: term.current.rows
-      });
-    } catch {
-      // noop
+    const stable = stableFitRef.current;
+    if (stable) {
+      stable.fit(term.current, fitAddon.current, terminalRef.current);
     }
   };
 
@@ -66,39 +64,36 @@ const OpenCodeTerminal = forwardRef(({
 
   useEffect(() => {
     if (!xtermLib) return;
-    const { Terminal, FitAddon, WebLinksAddon, WebglAddon, CanvasAddon } = xtermLib;
+    const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
     hasStartedRef.current = false;
     isReadyRef.current = false;
 
-    term.current = new Terminal({
-      cursorBlink: true,
+    term.current = new Terminal(createAiCliTerminalOptions({
       fontFamily,
       fontSize,
-      convertEol: true,
+      theme,
+      background: terminalBg,
       scrollback: getTerminalScrollback(),
       allowTransparency: isIntegrated,
-      theme: {
-        background: terminalBg,
-        foreground: theme?.foreground || '#e5e7eb',
-        cursor: theme?.cursor || '#6366f1',
-        selection: theme?.selection || 'rgba(99, 102, 241, 0.3)',
-        ...theme
-      },
-      cols: 120,
-      rows: 30
-    });
+      cursor: '#6366f1',
+      selection: 'rgba(99, 102, 241, 0.3)'
+    }));
 
     fitAddon.current = new FitAddon();
+    const stableFit = createStableTerminalFit();
+    stableFitRef.current = stableFit;
     term.current.loadAddon(fitAddon.current);
     term.current.loadAddon(new WebLinksAddon());
+    attachUnicode11(term.current, Unicode11Addon);
     term.current.open(terminalRef.current);
     fitAndSyncSize();
-    writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
-    rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
+    writeBufferRef.current = createXtermWriteBuffer(term, { active: !!activeRef.current });
+    rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
     const timers = createTimerBag();
-    timers.later(fitAndSyncSize, 80);
-    timers.later(fitAndSyncSize, 180);
-    timers.later(fitAndSyncSize, 320);
+    const debouncedFit = createDebouncedFn(() => {
+      if (stableFit.isFitting()) return;
+      fitAndSyncSize();
+    }, 50);
     term.current.focus();
 
     window.electron?.opencode?.validateConfig?.().then((result) => {
@@ -125,7 +120,11 @@ const OpenCodeTerminal = forwardRef(({
       term: term.current,
       container: terminalRef.current,
       tabId,
-      onContextMenu,
+      onContextMenu: (e, id) => {
+        if (typeof onContextMenuRef.current === 'function') {
+          onContextMenuRef.current(e, id);
+        }
+      },
       onSendData: (data) => {
         window.electron?.ipcRenderer.send(`opencode:data:${tabId}`, data);
       }
@@ -146,9 +145,7 @@ const OpenCodeTerminal = forwardRef(({
 
     const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`opencode:ready:${tabId}`, () => {
       isReadyRef.current = true;
-      timers.later(fitAndSyncSize, 10);
-      timers.later(fitAndSyncSize, 120);
-      timers.later(fitAndSyncSize, 280);
+      fitAndSyncSize();
     });
 
     const onErrorUnsubscribe = window.electron?.ipcRenderer.on(`opencode:error:${tabId}`, (error) => {
@@ -156,31 +153,37 @@ const OpenCodeTerminal = forwardRef(({
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      fitAndSyncSize();
+      if (stableFit.isFitting()) return;
+      debouncedFit();
     });
     if (terminalRef.current) resizeObserver.observe(terminalRef.current);
 
-    const handleWindowResize = () => fitAndSyncSize();
+    const handleWindowResize = () => {
+      if (stableFit.isFitting()) return;
+      debouncedFit();
+    };
     const handleVisibilityChange = () => {
-      if (!document.hidden && active) {
-        timers.later(fitAndSyncSize, 100);
+      if (!document.hidden && activeRef.current) {
+        debouncedFit();
       }
     };
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    [400, 700, 1100, 1700, 2600].forEach(ms => timers.later(fitAndSyncSize, ms));
-    [900, 1800, 3200].forEach((ms) => timers.later(() => {
+    timers.later(() => {
       if (!isReadyRef.current) {
         hasStartedRef.current = false;
         startOpenCodeSession();
       }
-    }, ms));
+    }, 2000);
 
     return () => {
       if (cleanupClipboard) cleanupClipboard();
       writeBufferRef.current?.clear();
       resizeObserver.disconnect();
+      debouncedFit.cancel();
+      stableFit.reset();
+      stableFitRef.current = null;
       window.removeEventListener('resize', handleWindowResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       timers.clear();
@@ -192,11 +195,23 @@ const OpenCodeTerminal = forwardRef(({
       resizeHandler.dispose();
       term.current?.dispose();
     };
-  }, [tabId, xtermLib, onContextMenu]);
+  }, [tabId, xtermLib]);
 
   useEffect(() => {
     return registerScrollbackSync(term);
   }, []);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const id = setTimeout(() => {
+      fitAndSyncSize();
+      const rows = term.current?.rows || 0;
+      if (rows > 0) {
+        try { term.current.refresh(0, rows - 1); } catch (_) {}
+      }
+    }, 50);
+    return () => clearTimeout(id);
+  }, [active]);
 
   return (
     <div style={{

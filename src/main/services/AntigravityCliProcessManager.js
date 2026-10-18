@@ -127,12 +127,13 @@ async function startAntigravityCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onExit((event) => {
       terminalIpcBatcher.flush(`antigravitycli:data:${tabId}`);
+      const intentional = !!ptyProcess._isIntentionallyStopped;
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete antigravityCliProcesses[tabId];
 
-      if (!isAppQuitting.value && exitCode !== 0) {
-        sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `Antigravity CLI finalizó con código ${exitCode}`);
-      }
+      if (intentional || isAppQuitting.value) return;
+      if (typeof exitCode !== 'number' || exitCode === 0) return;
+      sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `Antigravity CLI finalizó con código ${exitCode}`);
     });
 
     sendToRenderer(mainWindow, `antigravitycli:ready:${tabId}`);
@@ -168,9 +169,6 @@ function stopAntigravityCli(tabId) {
 
   try {
     processRef._isIntentionallyStopped = true;
-    if (typeof processRef.removeAllListeners === 'function') {
-      processRef.removeAllListeners();
-    }
     processRef.kill();
   } catch (error) {
     // noop

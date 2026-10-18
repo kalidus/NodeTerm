@@ -8,6 +8,7 @@ import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import {
     attachVisibleTerminalRenderer,
+    createStableTerminalFit,
     getTerminalScrollback,
     syncTerminalRenderer,
     useTerminalMemoryGuards
@@ -126,7 +127,23 @@ const TerminalComponent = forwardRef(({
     const term = useRef(null);
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
+    const stableFitRef = useRef(null);
     const activeRef = useRef(active);
+
+    const fitStable = () => {
+        const stable = stableFitRef.current;
+        if (stable) {
+            return stable.fit(term.current, fitAddon.current, terminalRef.current);
+        }
+        try {
+            if (!fitAddon.current || !term.current || !terminalRef.current) return false;
+            if (terminalRef.current.offsetWidth <= 0 || terminalRef.current.offsetHeight <= 0) return false;
+            fitAddon.current.fit();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    };
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
@@ -191,11 +208,7 @@ const TerminalComponent = forwardRef(({
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            try {
-                fitAddon.current?.fit();
-            } catch (e) {
-                // Elimina cualquier console.log de depuraci??n restante.
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();
@@ -290,8 +303,8 @@ const TerminalComponent = forwardRef(({
             theme: isIntegrated
                 ? { ...theme, background: 'rgba(0,0,0,0)' }
                 : theme,
-            // Configuraciones adicionales para compatibilidad con aplicaciones TUI
-            convertEol: true,
+            // PTY SSH ya manda CRLF; convertEol fuerza columna 0 y destroza TUI/CLIs
+            convertEol: false,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
@@ -324,6 +337,8 @@ const TerminalComponent = forwardRef(({
         term.current.options.bracketedPasteMode = false;
 
         fitAddon.current = new FitAddon();
+        const stableFit = createStableTerminalFit();
+        stableFitRef.current = stableFit;
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -345,9 +360,7 @@ const TerminalComponent = forwardRef(({
 
         // Abrir el DOM primero; el renderer GPU después (evita canvas en blanco al remount)
         term.current.open(terminalRef.current);
-        try {
-            fitAddon.current.fit();
-        } catch (_) { /* noop */ }
+        fitStable();
 
         rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
 
@@ -410,21 +423,20 @@ const TerminalComponent = forwardRef(({
 
         term.current.focus();
 
-        // ResizeObserver con throttling (30ms) para evitar sobrecargar el renderer WebGL/Canvas al arrastrar
+        // ResizeObserver con throttling (30ms); fit estable ignora eco del propio canvas
         let resizeTimeout = null;
         const resizeObserver = new ResizeObserver(() => {
-            if (fitAddon.current && term.current) {
-                if (!resizeTimeout) {
-                    resizeTimeout = setTimeout(() => {
-                        requestAnimationFrame(() => {
-                            try {
-                                fitAddon.current.fit();
-                            } catch (e) { /* silenciar */ }
-                            resizeTimeout = null;
-                        });
-                    }, 30);
-                }
-            }
+            if (!fitAddon.current || !term.current) return;
+            if (stableFit.isFitting()) return;
+            if (resizeTimeout) return;
+            resizeTimeout = setTimeout(() => {
+                requestAnimationFrame(() => {
+                    if (!stableFit.isFitting()) {
+                        fitStable();
+                    }
+                    resizeTimeout = null;
+                });
+            }, 30);
         });
         if (terminalRef.current) resizeObserver.observe(terminalRef.current);
 
@@ -544,7 +556,7 @@ const TerminalComponent = forwardRef(({
                         });
                     }
                     try {
-                        fitAddon.current?.fit();
+                        fitStable();
                         term.current?.refresh(0, Math.max(0, (term.current?.rows || 1) - 1));
                         // SIGWINCH → htop/vim redibujan; crítico si el snapshot era TUI o solo había ring
                         window.electron.ipcRenderer.send('ssh:resize', {
@@ -747,6 +759,10 @@ const TerminalComponent = forwardRef(({
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
+                stableFit.reset();
+                if (stableFitRef.current === stableFit) {
+                    stableFitRef.current = null;
+                }
                 if (term.current) {
                     term.current?.dispose();
                 }
@@ -756,6 +772,10 @@ const TerminalComponent = forwardRef(({
             // Cleanup only the terminal if API is not ready
             return () => {
                 resizeObserver.disconnect();
+                stableFit.reset();
+                if (stableFitRef.current === stableFit) {
+                    stableFitRef.current = null;
+                }
                 if (term.current) {
                     term.current?.dispose();
                 }
@@ -777,7 +797,8 @@ const TerminalComponent = forwardRef(({
             term.current.options.lineHeight = 1.1;
 
             // We might need to call fit again to readjust character sizes
-            fitAddon.current?.fit();
+            stableFitRef.current?.reset();
+            fitStable();
         }
     }, [fontFamily]);
 
@@ -793,7 +814,8 @@ const TerminalComponent = forwardRef(({
             term.current.options.lineHeight = 1.1;
 
             // We might need to call fit again to readjust character sizes
-            fitAddon.current?.fit();
+            stableFitRef.current?.reset();
+            fitStable();
         }
     }, [fontSize]);
 
@@ -824,7 +846,7 @@ const TerminalComponent = forwardRef(({
                         rendererRef.current
                     );
                 }
-                fitAddon.current?.fit();
+                fitStable();
                 term.current.refresh(0, Math.max(0, term.current.rows - 1));
                 term.current.focus();
             } catch (_) { /* noop */ }
@@ -849,15 +871,13 @@ const TerminalComponent = forwardRef(({
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)
     useEffect(() => {
-        if (fitAddon.current) {
-            const timer = setTimeout(() => {
-                try {
-                    fitAddon.current.fit();
-                    term.current?.refresh(0, Math.max(0, (term.current?.rows || 1) - 1));
-                } catch (e) { /* noop */ }
-            }, 100);
-            return () => clearTimeout(timer);
-        }
+        const timer = setTimeout(() => {
+            try {
+                fitStable();
+                term.current?.refresh(0, Math.max(0, (term.current?.rows || 1) - 1));
+            } catch (e) { /* noop */ }
+        }, 100);
+        return () => clearTimeout(timer);
     }, []); // Solo al montar
 
     if (!xtermLib) {

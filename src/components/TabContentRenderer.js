@@ -1511,6 +1511,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1527,6 +1528,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
@@ -1541,6 +1543,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
@@ -1555,6 +1558,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
@@ -1569,6 +1573,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
