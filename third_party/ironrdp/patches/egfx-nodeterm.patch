@@ -1778,7 +1778,7 @@ index 2df63ef..2c901ea 100644
  }
 +
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..c8683d9 100644
+index a47bd3d..209a0a0 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -1,4 +1,5 @@
@@ -1834,8 +1834,8 @@ index a47bd3d..c8683d9 100644
 +    /// `(pcm: Uint8Array, sampleRate, channels, bitsPerSample, ts) => void`
 +    static RDPSND_WAVE_CALLBACK: RefCell<Option<js_sys::Function>> =
 +        const { RefCell::new(None) };
-+    /// Conservado por el export WASM. El anuncio real es siempre V10.7 + AVC_THINCLIENT.
-+    static EGFX_AVC_THIN_CLIENT: Cell<bool> = const { Cell::new(true) };
++    /// Conservado por el export WASM. El anuncio real es V10.7 + SMALL_CACHE, sin thin-client.
++    static EGFX_AVC_THIN_CLIENT: Cell<bool> = const { Cell::new(false) };
 +    /// `(destination, requestId, cookie) => Promise<boolean>`
 +    static UDP_OPEN_CALLBACK: RefCell<Option<js_sys::Function>> = const { RefCell::new(None) };
 +    /// `(payload: Uint8Array) => void` ÔÇö PDU DRDYNVC hacia el proceso UDP.
@@ -1871,7 +1871,7 @@ index a47bd3d..c8683d9 100644
 +    });
 +}
 +
-+/// El anuncio EGFX no depende de este flag: siempre es V10.7 con AVC_THINCLIENT.
++/// El anuncio EGFX no depende de este flag: siempre V10.7 + SMALL_CACHE, sin AVC_THINCLIENT.
 +#[wasm_bindgen]
 +pub fn set_egfx_avc_thin_client(enabled: bool) {
 +    EGFX_AVC_THIN_CLIENT.with(|flag| flag.set(enabled));
@@ -2870,7 +2870,7 @@ index a47bd3d..c8683d9 100644
          connector.attach_static_channel(
              Rdpdr::new(Box::new(printer_backend), computer_name).with_printer_driver(
                  printer_device_id,
-@@ -1661,10 +2456,203 @@ async fn connect(
+@@ -1661,10 +2456,206 @@ async fn connect(
          );
      }
  
@@ -2879,10 +2879,8 @@ index a47bd3d..c8683d9 100644
 -            DrdynvcClient::new().with_dynamic_channel(DisplayControlClient::new(|_| Ok(Vec::new()))),
 -        );
 +    // EGFX siempre: ActiveStage drena el compositor a GraphicsUpdate -> canvas.
-+    // mstsc contra 192.168.10.52 confirma 0xA0600 (10.6), modo de cliente 0,
-+    // AVC disponible 1 y b├║fer en hardware. 10.7 lo confirma este host y,
-+    // con AVC_THINCLIENT, cae en 0x112f; sin ese flag pinta ClearCodec.
-+    // 10.2 tambi├®n queda en ClearCodec. El tope es 10.6, sin thin.
++    // Anunciamos hasta V10.7 + SMALL_CACHE, sin AVC_THINCLIENT (thin rompió un
++    // host con 0x112f). El servidor elige el mejor codec que ambas partes sepan.
 +    struct EgfxHandler {
 +        webcodecs: bool,
 +        prefer_v101: bool,
@@ -2890,11 +2888,10 @@ index a47bd3d..c8683d9 100644
 +    impl GraphicsPipelineHandler for EgfxHandler {
 +        fn capabilities(&self) -> Vec<ironrdp_egfx::pdu::CapabilitySet> {
 +            use ironrdp_egfx::pdu::{
-+                CapabilitiesV104Flags, CapabilitiesV103Flags, CapabilitiesV10Flags, CapabilitiesV81Flags,
-+                CapabilitiesV8Flags, CapabilitySet,
++                CapabilitiesV104Flags, CapabilitiesV103Flags, CapabilitiesV107Flags, CapabilitiesV10Flags,
++                CapabilitiesV81Flags, CapabilitiesV8Flags, CapabilitySet,
 +            };
 +            let _ = self.prefer_v101;
-+            // mstsc contra este host confirma 0xA0600 (10.6), AVC disponible.
 +            // Sin WebCodecs: AVC_DISABLED -> Progressive/ClearCodec (fallback 0x112f).
 +            if !self.webcodecs {
 +                return vec![
@@ -2909,6 +2906,9 @@ index a47bd3d..c8683d9 100644
 +                    },
 +                    CapabilitySet::V10_6 {
 +                        flags: CapabilitiesV104Flags::SMALL_CACHE | CapabilitiesV104Flags::AVC_DISABLED,
++                    },
++                    CapabilitySet::V10_7 {
++                        flags: CapabilitiesV107Flags::SMALL_CACHE | CapabilitiesV107Flags::AVC_DISABLED,
 +                    },
 +                ];
 +            }
@@ -2937,6 +2937,9 @@ index a47bd3d..c8683d9 100644
 +                },
 +                CapabilitySet::V10_6 {
 +                    flags: CapabilitiesV104Flags::SMALL_CACHE,
++                },
++                CapabilitySet::V10_7 {
++                    flags: CapabilitiesV107Flags::SMALL_CACHE,
 +                },
 +            ]
 +        }
@@ -3078,7 +3081,7 @@ index a47bd3d..c8683d9 100644
      }
  
      let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
-@@ -1693,7 +2681,13 @@ async fn connect(
+@@ -1693,7 +2684,13 @@ async fn connect(
      )
      .await?;
  
@@ -3093,7 +3096,7 @@ index a47bd3d..c8683d9 100644
          upgraded,
          connector,
          &mut framed,
-@@ -1701,6 +2695,7 @@ async fn connect(
+@@ -1701,6 +2698,7 @@ async fn connect(
          server_name,
          server_public_key,
          kerberos_config,

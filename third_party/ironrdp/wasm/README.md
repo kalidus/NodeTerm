@@ -25,7 +25,7 @@ Dependencia raíz (obligatoria):
 ## Capacidades
 
 - **Por defecto:** sin EGFX → bitmap RLE; sin audio → `NO_AUDIO_PLAYBACK`.
-- **EGFX:** opción de la conexión. Con WebCodecs se anuncia **V10.6** (como mstsc; AVC444 disponible).
+- **EGFX:** opción de la conexión. Con WebCodecs se anuncia hasta **V10.7** + `SMALL_CACHE`, **sin** `AVC_THINCLIENT`.
 - **WebCodecs:** decodifica AVC444/AVC420 → framebuffer/GPU. FrameAcknowledge inmediato. `NODETERM_RDP_WEBCODECS=0` lo apaga.
 - **Soft-Sync/UDP:** anunciado como mstsc; el socket lo abre Electron.
 - **Audio RDPSND:** `rdpsndAudio(true)` + `setRdpsndWaveCallback` → PCM a Web Audio.
@@ -36,7 +36,7 @@ Dependencia raíz (obligatoria):
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.38`
+`0.7.0-nodeterm-egfx.40`
 
 ## Regenerar (mantenimiento raro)
 
