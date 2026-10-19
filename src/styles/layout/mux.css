@@ -90,27 +90,6 @@ body.layout-mux .sidebar-container.sidebar-root {
   overflow: hidden;
 }
 
-body.layout-mux .sidebar-panel:not(.sidebar-panel-hidden-layout) {
-  display: flex;
-  flex-direction: column;
-}
-
-body.layout-mux .sidebar-panel:not(.sidebar-panel-hidden-layout)::before {
-  content: "~/";
-  display: flex;
-  align-items: center;
-  height: var(--mux-header-h);
-  min-height: var(--mux-header-h);
-  padding: 0 10px;
-  font-family: var(--mux-mono);
-  font-size: 11px;
-  color: var(--ui-fg-muted, rgba(215, 224, 216, 0.62));
-  border-bottom: 1px solid var(--mux-pane-border);
-  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, transparent);
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-}
-
 body.layout-mux .sidebar-tree .p-treenode-content.p-highlight::after {
   background: var(--ui-accent-soft, rgba(125, 206, 160, 0.14)) !important;
   box-shadow: inset 2px 0 0 var(--ui-button-primary, #7dcea0);
