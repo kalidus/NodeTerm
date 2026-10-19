@@ -1,0 +1,77 @@
+.network-tool-header-container {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--ui-border-subtle, var(--ui-dialog-border, rgba(127, 127, 127, 0.16)));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: color-mix(in srgb, var(--ui-content-bg, transparent) 92%, transparent);
+  flex-shrink: 0;
+}
+
+.network-tool-header-row,
+.network-tool-header-title-block,
+.network-tool-header-actions,
+.network-tool-header-controls {
+  display: flex;
+  align-items: center;
+}
+
+.network-tool-header-row {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.network-tool-header-title-block {
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.network-tool-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--nt-category-color, var(--ui-button-primary)) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nt-category-color, var(--ui-button-primary)) 32%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.network-tool-header-icon i {
+  color: var(--nt-category-color, var(--ui-button-primary));
+  font-size: 0.95rem;
+}
+
+.network-tool-header-copy {
+  min-width: 0;
+}
+
+.network-tool-header-copy h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ui-dialog-text, inherit);
+}
+
+.network-tool-header-copy span {
+  font-size: 0.78rem;
+  color: var(--ui-fg-muted, var(--text-color-secondary));
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.network-tool-header-actions {
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.network-tool-header-controls {
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}

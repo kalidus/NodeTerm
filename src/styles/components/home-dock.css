@@ -24,7 +24,7 @@
   min-height: 0;
   overflow: visible;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
 }
 
 .home-dock-catalog {
@@ -47,7 +47,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--home-dock-accent, #4fc3f7);
+  color: var(--home-dock-accent, var(--ui-button-primary, #3dbeb6));
   padding: 0 2px;
 }
 
@@ -62,16 +62,16 @@
 }
 
 .home-dock-tile {
-  --tile-color: #4fc3f7;
+  --tile-color: var(--ui-button-primary, #3dbeb6);
   width: 100%;
   max-width: 112px;
   aspect-ratio: 1 / 1.05;
   min-height: 76px;
   height: auto;
   box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.018) 100%);
+  background: color-mix(in srgb, var(--ui-sidebar-text, #cfd8dc) 6%, transparent);
   color: var(--ui-sidebar-text, #cfd8dc);
   cursor: pointer;
   display: flex;
@@ -209,7 +209,7 @@
   padding: 1px 3px;
   border-radius: 4px;
   background: #111;
-  color: var(--tile-color, var(--home-dock-accent, #4fc3f7));
+  color: var(--tile-color, var(--home-dock-accent, var(--ui-button-primary, #3dbeb6)));
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -318,7 +318,7 @@
 }
 
 .home-dock-stats-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
 }
 
 .home-dock-stats-title {
@@ -397,20 +397,20 @@
 .home-dock-stats-tags span {
   font-size: 0.72rem;
   opacity: 1;
-  background: rgba(79, 195, 247, 0.12);
-  color: #4fc3f7;
+  background: var(--ui-accent-soft, rgba(61, 190, 182, 0.12));
+  color: var(--ui-button-primary, #3dbeb6);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .home-dock-stats-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
   justify-content: flex-end;
 }
 
 .home-dock-stats-footer button {
   padding: 8px 18px;
-  background: var(--home-dock-accent, #4fc3f7);
+  background: var(--home-dock-accent, var(--ui-button-primary, #3dbeb6));
   color: #000;
   border: none;
   border-radius: 6px;

@@ -586,6 +586,16 @@ class ThemeManager {
         --ui-button-secondary: ${colors.buttonSecondary};
         --ui-button-secondary-text: ${colors.buttonSecondaryText};
         --ui-button-hover: ${colors.buttonHover};
+        --ui-accent-soft: ${hexToRgba(colors.buttonPrimary, 0.14)};
+        --ui-fg: ${colors.dialogText || colors.sidebarText};
+        --ui-fg-muted: ${hexToRgba(colors.dialogText || colors.sidebarText, 0.62)};
+        --ui-fg-faint: ${hexToRgba(colors.dialogText || colors.sidebarText, 0.4)};
+        --ui-border-subtle: ${hexToRgba(colors.sidebarText || '#888888', sidebarBgIsLight ? 0.12 : 0.16)};
+        --ui-success: ${palette.memoria || '#3dbe7a'};
+        --ui-warning: ${palette.disco || '#e3b341'};
+        --ui-danger: ${colors.tabCloseHover || '#e5484d'};
+        --ui-shadow-1: 0 1px 2px rgba(0, 0, 0, ${sidebarBgIsLight ? 0.06 : 0.24}), 0 8px 24px rgba(0, 0, 0, ${sidebarBgIsLight ? 0.05 : 0.18});
+        --ui-shadow-2: 0 16px 48px rgba(0, 0, 0, ${sidebarBgIsLight ? 0.14 : 0.38});
         
         --ui-sidebar-button-bg: ${hexToRgba(colors.buttonPrimary, 0.12)};
         --ui-sidebar-button-text: ${sidebarButtonText};

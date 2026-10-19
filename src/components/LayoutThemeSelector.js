@@ -34,7 +34,7 @@ const LayoutThemeSelector = () => {
       window.dispatchEvent(new CustomEvent('settings-updated', { 
         detail: { source: 'layout-sync' } 
       }));
-    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded') {
+    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded' || layoutId === 'atelier') {
       localStorage.setItem('iconTheme', 'cupertino');
       localStorage.setItem('iconThemeSidebar', 'cupertino');
       // Dispatch event to notify useThemeManagement and other components
@@ -57,6 +57,36 @@ const LayoutThemeSelector = () => {
   }, []);
 
   const layouts = [
+    {
+      id: 'atelier',
+      name: 'Atelier',
+      description: 'Consola refinada. Radios suaves, un solo acento del tema y las mismas superficies en inicio, diálogos y herramientas.',
+      icon: 'pi-star',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0e1116',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ height: '10px', backgroundColor: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '28%', backgroundColor: '#161b22', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '6px', width: '80%', borderRadius: '2px', backgroundColor: 'rgba(61,190,182,0.35)', boxShadow: 'inset 2px 0 0 #3dbeb6' }} />
+              <div style={{ height: '4px', width: '60%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+              <div style={{ height: '4px', width: '70%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+            </div>
+            <div style={{ flex: 1, padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '18px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }} />
+              <div style={{ flex: 1, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#12171e' }} />
+            </div>
+          </div>
+          <div style={{ height: '8px', backgroundColor: '#0e1116', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+        </div>
+      )
+    },
     {
       id: 'default',
       name: 'Moderno (Redondeado)',

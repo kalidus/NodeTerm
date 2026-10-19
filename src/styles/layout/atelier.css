@@ -1,0 +1,167 @@
+/* Estilo Atelier: consola refinada. Solo aplica con body.layout-atelier.
+   Los colores siguen saliendo del tema de interfaz activo. */
+
+body.layout-atelier {
+  --layout-border-radius-main: 10px;
+  --layout-border-radius-sm: 6px;
+  --layout-border-radius-lg: 14px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: var(--ui-shadow-1, 0 8px 24px rgba(0, 0, 0, 0.18));
+  --layout-font-family: var(--ui-font-family);
+}
+
+body.layout-atelier .app-container {
+  background: var(--ui-content-bg, #0e1116);
+}
+
+html[data-custom-titlebar="true"] body.layout-atelier .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-atelier .title-bar span,
+html[data-custom-titlebar="true"] body.layout-atelier .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-atelier .title-bar {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16)) !important;
+  background: var(--ui-content-bg, #0e1116) !important;
+  box-shadow: none !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+body.layout-atelier .title-bar .app-search-input {
+  height: 24px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--ui-fg, #e6edf3) 6%, transparent) !important;
+  border: 1px solid var(--ui-border-subtle, transparent) !important;
+  box-shadow: none !important;
+  font-weight: 500 !important;
+}
+
+body.layout-atelier .status-bar {
+  border-top: 1px solid var(--ui-border-subtle, transparent) !important;
+}
+
+body.layout-atelier .status-bar-section span,
+body.layout-atelier .status-group {
+  font-variant-numeric: tabular-nums;
+}
+
+body.layout-atelier .sidebar-tree .p-treenode-content.p-highlight::after {
+  background: var(--ui-accent-soft, rgba(61, 190, 182, 0.14)) !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary, #3dbeb6);
+}
+
+body.layout-atelier .terminal-frame {
+  border-radius: var(--layout-border-radius-main);
+  border: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
+  box-shadow: var(--ui-shadow-1);
+}
+
+body.layout-atelier .main-splitter .terminal-frame {
+  box-shadow: none;
+}
+
+/* Home: launcher, sin glow ni scanlines */
+body.layout-atelier .home-dock-tile-well {
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+body.layout-atelier .home-dock-group-title {
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 600 !important;
+  color: var(--ui-fg-muted, inherit) !important;
+}
+
+body.layout-atelier .home-panel-frame,
+body.layout-atelier .home-clock-card,
+body.layout-atelier .home-fav-tile,
+body.layout-atelier .home-jump-tile,
+body.layout-atelier .home-group-card {
+  background: color-mix(in srgb, var(--ui-content-bg, #161b22) 88%, transparent) !important;
+  border: 1px solid var(--ui-border-subtle, transparent) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+body.layout-atelier .hero-search-container {
+  filter: none !important;
+}
+
+body.layout-atelier .hero-search-container::before {
+  text-shadow: none !important;
+  opacity: 0.45 !important;
+}
+
+body.layout-atelier .hero-search-container::after {
+  display: none !important;
+}
+
+body.layout-atelier .cyber-sessions-title {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  color: var(--ui-fg, var(--ui-dialog-text)) !important;
+}
+
+body.layout-atelier .cyber-sessions-dot {
+  box-shadow: none !important;
+}
+
+body.layout-atelier .crc-prefix-arrow {
+  display: none !important;
+}
+
+body.layout-atelier .cyber-result-card {
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+body.layout-atelier .cyber-sessions-empty,
+body.layout-atelier .connection-history-empty {
+  font-style: normal !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--ui-fg-muted, inherit) !important;
+  text-align: center;
+  padding: 1.25rem 0.75rem !important;
+}
+
+/* Explorador, red y caja fuerte: misma superficie */
+body.layout-atelier .file-explorer-header {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-dialog-text, var(--ui-sidebar-text)) !important;
+  border-bottom: 1px solid var(--ui-border-subtle, transparent) !important;
+}
+
+body.layout-atelier .file-explorer-card {
+  border-radius: 10px !important;
+  box-shadow: var(--ui-shadow-1) !important;
+  border-color: var(--ui-border-subtle, var(--ui-content-border)) !important;
+}
+
+body.layout-atelier .network-tool-header-container {
+  background: var(--ui-content-bg) !important;
+  border-bottom: 1px solid var(--ui-border-subtle, transparent) !important;
+}
+
+body.layout-atelier .password-tab-header {
+  background: color-mix(in srgb, var(--ui-content-bg) 92%, transparent) !important;
+}
+
+body.layout-atelier .password-hero-title-input,
+body.layout-atelier .password-input-control,
+body.layout-atelier .password-textarea {
+  color: var(--ui-dialog-text) !important;
+}

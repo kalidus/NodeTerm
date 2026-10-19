@@ -159,10 +159,10 @@
 }
 
 .settings-nav-item.active {
-  background: var(--ui-button-primary) !important;
-  color: var(--ui-button-primary-text, #ffffff) !important;
-  border-color: var(--ui-button-primary) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: var(--ui-accent-soft, color-mix(in srgb, var(--ui-button-primary) 14%, transparent)) !important;
+  color: var(--ui-dialog-text) !important;
+  border-color: transparent !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary);
 }
 
 /* .settings-nav-item.active::before - ELIMINADO PORQUE GENERA LÍNEA BLANCA */

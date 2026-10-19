@@ -13,8 +13,9 @@ export const ACTIVE_PRESET_STORAGE_KEY = 'nodeterm_active_preset';
  * All localStorage keys that a preset captures and restores.
  */
 export const PRESET_SETTINGS_KEYS = [
-  // UI theme
+  // UI theme and window style
   'ui_theme',
+  'ui_layout',
   // Tab theme, layout and animation
   'nodeterm_tab_theme',
   'nodeterm_tab_layout',
@@ -82,6 +83,59 @@ export const PRESET_SETTINGS_KEYS = [
  * Users can overwrite custom presets but not built-in ones.
  */
 export const builtinPresets = [
+  {
+    id: 'atelier',
+    name: 'Atelier',
+    description: 'Consola refinada: tema Atelier, estilo de ventana Atelier, pestañas y árbol por defecto',
+    icon: '✦',
+    isBuiltin: true,
+    settings: {
+      ui_theme: 'Atelier',
+      ui_layout: 'atelier',
+      nodeterm_tab_theme: 'default',
+      nodeterm_tab_layout: 'default',
+      basicapp_terminal_theme: 'Tokyo Night',
+      localPowerShellTheme: 'Tokyo Night',
+      localLinuxTerminalTheme: 'Tokyo Night',
+      localDockerTerminalTheme: 'Tokyo Night',
+      basicapp_statusbar_theme: 'One Dark',
+      localPowerShellStatusBarTheme: 'One Dark',
+      localLinuxStatusBarTheme: 'One Dark',
+      localDockerStatusBarTheme: 'One Dark',
+      basicapp_ssh_statusbar_icon_theme: 'classic',
+      basicapp_powershell_statusbar_icon_theme: 'classic',
+      basicapp_linux_statusbar_icon_theme: 'classic',
+      basicapp_terminal_font_family: '"Cascadia Code", monospace',
+      basicapp_terminal_font_size: '14',
+      basicapp_local_terminal_font_family: '"Cascadia Code", monospace',
+      basicapp_local_terminal_font_size: '14',
+      nodeterm_linux_font_family: '"Cascadia Code", monospace',
+      nodeterm_linux_font_size: '14',
+      nodeterm_docker_font_family: '"Cascadia Code", monospace',
+      nodeterm_docker_font_size: '14',
+      uiFont: 'Segoe UI',
+      uiFontSize: '14',
+      homeTabFont: 'Segoe UI',
+      explorerFont: 'Segoe UI',
+      explorerFontSize: '15',
+      explorerColorTheme: 'Atelier',
+      sidebarFont: 'Segoe UI',
+      sidebarFontSize: '14',
+      nodeterm_cursor_style: 'bar',
+      nodeterm_cursor_blink: 'true',
+      iconTheme: 'cupertino',
+      iconThemeSidebar: 'cupertino',
+      iconSize: '20',
+      folderIconSize: '20',
+      connectionIconSize: '20',
+      nodeterm_tree_theme: 'default',
+      sessionActionIconTheme: 'original',
+      actionBarIconTheme: 'nodeterm',
+      basicapp_statusbar_height: '28',
+      nodeterm_terminal_opacity: '1',
+      nodeterm_main_frame_header_start_collapsed: 'true'
+    }
+  },
   {
     id: 'pro-ocean',
     name: 'Pro Ocean (Por defecto)',

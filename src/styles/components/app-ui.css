@@ -21,7 +21,7 @@
 
 .app-surface-lg {
   border-radius: var(--ui-radius-lg);
-  box-shadow: 0 8px 28px var(--ui-dialog-shadow);
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow));
 }
 
 .search-dropdown {
@@ -59,7 +59,7 @@
 
 .p-overlaypanel.app-surface-lg {
   border-radius: var(--ui-radius-lg) !important;
-  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow)) !important;
 }
 
 .app-search-input {
@@ -74,7 +74,7 @@
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   border: 1px solid var(--ui-dialog-border) !important;
-  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow)) !important;
   border-radius: var(--ui-radius-lg) !important;
   overflow: hidden;
 }
@@ -201,7 +201,7 @@
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   border: 1px solid var(--ui-dialog-border) !important;
-  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow)) !important;
   border-radius: var(--ui-radius-lg) !important;
 }
 
@@ -327,7 +327,36 @@
 .app-form-error {
   margin-top: var(--ui-space-1);
   font-size: 0.8rem;
-  color: var(--red-500, #ef4444);
+  color: var(--ui-danger, #e5484d);
+}
+
+/* Tres roles de botón. El color sale del tema activo. */
+.app-btn {
+  border-radius: var(--ui-radius-md);
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  font-size: var(--ui-font-size-sm, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-btn-primary {
+  background: var(--ui-button-primary);
+  border: 1px solid var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
+}
+
+.app-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--ui-border-subtle, var(--ui-dialog-border));
+  color: var(--ui-dialog-text);
+}
+
+.app-btn-danger {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--ui-danger, #e5484d) 45%, transparent);
+  color: var(--ui-danger, #e5484d);
 }
 
 .app-form-help {

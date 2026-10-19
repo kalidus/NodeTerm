@@ -9,6 +9,7 @@ import {
 } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { applyAppTypography } from './sidebarFontStack';
+import { applyUILayoutFromStorage } from './appearanceLayout';
 
 /**
  * PresetManager handles saving, loading, and applying appearance presets.
@@ -164,6 +165,8 @@ class PresetManager {
     // This ensures that keys present in a previous preset but absent in the new
     // one are cleared from localStorage (instead of staying from the old preset).
     PRESET_SETTINGS_KEYS.forEach(key => {
+      // El estilo de ventana solo cambia si el preset lo declara.
+      if (key === 'ui_layout' && !(key in preset.settings)) return;
       if (!(key in preset.settings)) {
         localStorage.removeItem(key);
       }
@@ -213,6 +216,13 @@ class PresetManager {
     const tabLayout = preset.settings['nodeterm_tab_layout'];
     if (tabLayout) {
       applyTabLayout(tabLayout);
+    }
+
+    const windowLayout = preset.settings['ui_layout'];
+    if (windowLayout) {
+      applyUILayoutFromStorage();
+      themeManager.refreshTitlebarForCurrentLayout();
+      window.dispatchEvent(new Event('layout-changed'));
     }
 
     // 6. Fire global events so all React components re-read from localStorage

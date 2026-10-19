@@ -56,15 +56,28 @@ input, button, select, textarea {
   height: 6px;
 }
 
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, #888) var(--scrollbar-track, transparent);
+}
+
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--scrollbar-track, transparent);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--scrollbar-thumb, #888);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--scrollbar-thumb-hover, #555);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-animation],
+  [data-animation]::before,
+  [data-animation]::after {
+    animation: none !important;
+  }
 }

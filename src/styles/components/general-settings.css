@@ -236,18 +236,15 @@
 
 .general-settings-section {
   margin-bottom: 1rem;
-  /* Usar color del tema con transparencia para efecto glassmorphism */
   background: var(--ui-content-bg);
-  opacity: 0.95;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--ui-content-border);
+  opacity: 1;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--ui-border-subtle, var(--ui-content-border));
   border-radius: var(--settings-radius-section);
   padding: 0;
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 var(--ui-button-primary);
-  transition: all 0.3s ease;
+  box-shadow: var(--ui-shadow-1, 0 4px 16px rgba(0, 0, 0, 0.1));
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
 }
@@ -257,9 +254,7 @@
   .general-settings-section {
     background: color-mix(in srgb, var(--ui-content-bg) 88%, transparent);
     border-color: color-mix(in srgb, var(--ui-content-border) 65%, transparent);
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 25%, transparent);
+    box-shadow: var(--ui-shadow-1, 0 8px 24px rgba(0, 0, 0, 0.1));
   }
 }
 
@@ -269,40 +264,34 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 2px;
   background: var(--ui-button-primary);
-  opacity: 0.7;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.6s ease;
+  opacity: 0.85;
+  transform: none;
 }
 
 .general-settings-section:hover::before {
-  transform: scaleX(1);
+  transform: none;
 }
 
 .general-settings-section:hover {
-  transform: translateY(-4px);
+  transform: none;
   opacity: 1;
-  box-shadow: 
-    0 16px 48px var(--ui-dialog-shadow),
-    inset 0 1px 0 var(--ui-button-primary);
+  box-shadow: var(--ui-shadow-1, 0 8px 24px var(--ui-dialog-shadow));
   border-color: var(--ui-button-primary);
 }
 
 @supports (background: color-mix(in srgb, red 50%, blue)) {
   .general-settings-section:hover {
-    box-shadow: 
-      0 16px 48px color-mix(in srgb, var(--ui-dialog-shadow) 45%, transparent),
-      inset 0 1px 0 color-mix(in srgb, var(--ui-button-primary) 35%, transparent);
-    border-color: color-mix(in srgb, var(--ui-button-primary) 55%, transparent);
+    box-shadow: var(--ui-shadow-1);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 45%, var(--ui-border-subtle, transparent));
   }
 }
 
 /* Header de sección */
 .general-section-header {
   padding: 0.5rem 0.75rem !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16));
   display: flex;
   align-items: center;
   gap: 0.5rem !important;
