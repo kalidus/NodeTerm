@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -28,6 +28,9 @@ const PowerShellTerminal = forwardRef(({
     const activeRef = useRef(active);
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
+    const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
+        createStableFitBinding(term, fitAddon, terminalRef)
+    ).current;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [isConnected, setIsConnected] = useState(false);
@@ -139,15 +142,7 @@ const PowerShellTerminal = forwardRef(({
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            // console.log(`PowerShellTerminal fit() called for tab ${tabId}`);
-            try {
-                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                    fitAddon.current?.fit();
-                    // console.log(`PowerShellTerminal fit() successful for tab ${tabId}`);
-                }
-            } catch (e) {
-                // console.error(`PowerShellTerminal fit() error for tab ${tabId}:`, e);
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();
@@ -229,7 +224,7 @@ const PowerShellTerminal = forwardRef(({
                 brightWhite: theme?.brightWhite || '#F2F2F2'
             },
             // PowerShell optimized settings
-            convertEol: true,
+            convertEol: false,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
@@ -251,6 +246,7 @@ const PowerShellTerminal = forwardRef(({
 
         // Add addons
         fitAddon.current = new FitAddon();
+        const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -262,33 +258,13 @@ const PowerShellTerminal = forwardRef(({
         // Open terminal in DOM
         term.current.open(terminalRef.current);
 
-        // Try fit with error handling for React 18
-        try {
-            fitAddon.current.fit();
-            term.current.focus();
-        } catch (e) {
-            // If fit fails, try again after a short delay
-            setTimeout(() => {
-                try {
-                    fitAddon.current?.fit();
-                    term.current?.focus();
-                } catch (err) {
-                    console.warn('Terminal fit failed:', err);
-                }
-            }, 100);
-        }
+        fitStable();
+        term.current.focus();
 
         // ResizeObserver for dynamic resizing
-        const resizeObserver = new ResizeObserver((entries) => {
-            // console.log(`PowerShellTerminal resize observer triggered for tab ${tabId}`);
-            try {
-                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                    fitAddon.current?.fit();
-                    // console.log(`PowerShellTerminal resize observer fit successful for tab ${tabId}`);
-                }
-            } catch (e) {
-                // console.error(`PowerShellTerminal resize observer error for tab ${tabId}:`, e);
-            }
+        const resizeObserver = new ResizeObserver(() => {
+            if (isFitting()) return;
+            fitStable();
         });
         if (terminalRef.current) {
             resizeObserver.observe(terminalRef.current);
@@ -297,16 +273,8 @@ const PowerShellTerminal = forwardRef(({
         // Listener para cambios de visibilidad del documento
         const handleVisibilityChange = () => {
             if (!document.hidden && active) {
-                // console.log(`PowerShellTerminal visibility change detected for tab ${tabId}`);
                 setTimeout(() => {
-                    try {
-                        if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                            fitAddon.current?.fit();
-                            // console.log(`PowerShellTerminal visibility change fit successful for tab ${tabId}`);
-                        }
-                    } catch (e) {
-                        // console.error(`PowerShellTerminal visibility change fit error for tab ${tabId}:`, e);
-                    }
+                    if (!isFitting()) fitStable();
                 }, 100);
             }
         };
@@ -395,6 +363,7 @@ const PowerShellTerminal = forwardRef(({
                 cleanupClipboard();
                 dataHandler.dispose();
                 resizeHandler.dispose();
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -406,6 +375,7 @@ const PowerShellTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -422,7 +392,8 @@ const PowerShellTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontFamily]);
 
@@ -430,7 +401,8 @@ const PowerShellTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontSize]);
 
@@ -445,40 +417,24 @@ const PowerShellTerminal = forwardRef(({
         }
     }, [theme, isIntegrated]);
 
-    // Auto-fit after render
+    // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (fitAddon.current) {
-            setTimeout(() => {
-                try {
-                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                        fitAddon.current?.fit();
-                        // console.log(`PowerShellTerminal auto-fit successful for tab ${tabId}`);
-                    }
-                } catch (e) {
-                    // console.error(`PowerShellTerminal auto-fit error for tab ${tabId}:`, e);
-                }
-            }, 0);
-        }
+        if (!fitAddon.current) return undefined;
+        const id = setTimeout(() => {
+            if (!isFitting()) fitStable();
+        }, 0);
+        return () => clearTimeout(id);
     });
 
-    // Efecto adicional para forzar redimensionamiento despu??s del montaje
+    // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
     useEffect(() => {
-        const forceResize = () => {
-            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current?.fit();
-                    // console.log(`PowerShellTerminal force resize successful for tab ${tabId}`);
-                } catch (e) {
-                    // console.error(`PowerShellTerminal force resize error for tab ${tabId}:`, e);
-                }
-            }
+        fitStable();
+        const t1 = setTimeout(fitStable, 50);
+        const t2 = setTimeout(fitStable, 150);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
         };
-
-        // Intentar m??ltiples veces despu??s del montaje
-        forceResize();
-        setTimeout(forceResize, 50);
-        setTimeout(forceResize, 150);
-        setTimeout(forceResize, 300);
     }, [tabId]);
 
     // Efecto para asegurar el focus automático al estar activa la pestaña

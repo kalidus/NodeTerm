@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -29,6 +29,9 @@ const UbuntuTerminal = forwardRef(({
     const activeRef = useRef(active);
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
+    const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
+        createStableFitBinding(term, fitAddon, terminalRef)
+    ).current;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [isConnected, setIsConnected] = useState(false);
@@ -162,17 +165,7 @@ const UbuntuTerminal = forwardRef(({
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            try {
-                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                    if (fitAddon.current) {
-                        fitAddon.current.fit();
-                    } else {
-                        console.warn(`UbuntuTerminal fitAddon not available for tab ${tabId}`);
-                    }
-                }
-            } catch (e) {
-                console.error(`UbuntuTerminal fit() error for tab ${tabId}:`, e);
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();
@@ -234,7 +227,7 @@ const UbuntuTerminal = forwardRef(({
                 brightWhite: '#EEEEEC'
             },
             // Ubuntu/Linux optimized settings
-            convertEol: true,
+            convertEol: false,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
@@ -256,6 +249,7 @@ const UbuntuTerminal = forwardRef(({
 
         // Add addons
         fitAddon.current = new FitAddon();
+        const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -266,18 +260,13 @@ const UbuntuTerminal = forwardRef(({
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);
-        fitAddon.current.fit();
+        fitStable();
         term.current.focus();
 
         // ResizeObserver for dynamic resizing
-        const resizeObserver = new ResizeObserver((entries) => {
-            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current.fit();
-                } catch (e) {
-                    console.error(`UbuntuTerminal resize observer error for tab ${tabId}:`, e);
-                }
-            }
+        const resizeObserver = new ResizeObserver(() => {
+            if (isFitting()) return;
+            fitStable();
         });
         if (terminalRef.current) {
             resizeObserver.observe(terminalRef.current);
@@ -287,13 +276,7 @@ const UbuntuTerminal = forwardRef(({
         const handleVisibilityChange = () => {
             if (!document.hidden && active) {
                 setTimeout(() => {
-                    if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                        try {
-                            fitAddon.current.fit();
-                        } catch (e) {
-                            console.error(`UbuntuTerminal visibility change fit error for tab ${tabId}:`, e);
-                        }
-                    }
+                    if (!isFitting()) fitStable();
                 }, 100);
             }
         };
@@ -396,6 +379,7 @@ const UbuntuTerminal = forwardRef(({
                 cleanupClipboard();
                 dataHandler.dispose();
                 resizeHandler.dispose();
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -406,6 +390,7 @@ const UbuntuTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -422,7 +407,8 @@ const UbuntuTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontFamily]);
 
@@ -430,7 +416,8 @@ const UbuntuTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontSize]);
 
@@ -445,38 +432,24 @@ const UbuntuTerminal = forwardRef(({
         }
     }, [theme, isIntegrated]);
 
-    // Auto-fit after render
+    // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (fitAddon.current) {
-            setTimeout(() => {
-                try {
-                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                        fitAddon.current?.fit();
-                    }
-                } catch (e) {
-                    console.error(`UbuntuTerminal auto-fit error for tab ${tabId}:`, e);
-                }
-            }, 0);
-        }
+        if (!fitAddon.current) return undefined;
+        const id = setTimeout(() => {
+            if (!isFitting()) fitStable();
+        }, 0);
+        return () => clearTimeout(id);
     });
 
-    // Efecto adicional para forzar redimensionamiento despu??s del montaje
+    // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
     useEffect(() => {
-        const forceResize = () => {
-            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current.fit();
-                } catch (e) {
-                    console.error(`UbuntuTerminal force resize error for tab ${tabId}:`, e);
-                }
-            }
+        fitStable();
+        const t1 = setTimeout(fitStable, 50);
+        const t2 = setTimeout(fitStable, 150);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
         };
-
-        // Intentar m??ltiples veces despu??s del montaje
-        forceResize();
-        setTimeout(forceResize, 50);
-        setTimeout(forceResize, 150);
-        setTimeout(forceResize, 300);
     }, [tabId]);
 
     // Efecto para asegurar el focus automático al estar activa la pestaña

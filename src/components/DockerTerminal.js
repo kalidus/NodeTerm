@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -27,6 +27,11 @@ const DockerTerminal = forwardRef(({
     const activeRef = useRef(active);
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
+    const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
+        createStableFitBinding(term, fitAddon, terminalRef)
+    ).current;
+    const onContextMenuRef = useRef(onContextMenu);
+    onContextMenuRef.current = onContextMenu;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
@@ -97,13 +102,14 @@ const DockerTerminal = forwardRef(({
             theme: isIntegrated ? { ...theme, background: 'rgba(0,0,0,0)' } : theme,
             cursorBlink: true,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
-            convertEol: true,
+            convertEol: false,
             allowProposedApi: true,
             allowTransparency: isIntegrated,
         });
 
         // Agregar addons
         fitAddon.current = new FitAddon();
+        const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -116,15 +122,7 @@ const DockerTerminal = forwardRef(({
 
         // Abrir terminal en elemento DOM
         term.current.open(terminalRef.current);
-
-        // Hacer resize inicial
-        try {
-            if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                fitAddon.current.fit();
-            }
-        } catch (e) {
-            console.error('Error en fit inicial de Docker:', e);
-        }
+        fitStable();
 
         // Definir handlers
         const handleDockerOutput = (outputData) => {
@@ -172,7 +170,9 @@ const DockerTerminal = forwardRef(({
             term: term.current,
             container: terminalRef.current,
             tabId,
-            onContextMenu,
+            onContextMenu: (e, id) => {
+                if (typeof onContextMenuRef.current === 'function') onContextMenuRef.current(e, id);
+            },
             onSendData: (data) => {
                 if (window.electron) {
                     window.electron.ipcRenderer.send(`docker:data:${tabId}`, data);
@@ -210,12 +210,13 @@ const DockerTerminal = forwardRef(({
                 if (unsubscribeExit) unsubscribeExit();
                 window.electron.ipcRenderer.send(`docker:stop:${tabId}`);
             }
+            endMount(stableFit);
             if (term.current) {
                 term.current.dispose();
                 term.current = null;
             }
         };
-    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated, xtermLib, onContextMenu]);
+    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated, xtermLib]);
 
     // Update theme dynamically
     useEffect(() => {
@@ -231,23 +232,39 @@ const DockerTerminal = forwardRef(({
     // Manejar resize de la ventana
     useEffect(() => {
         const handleResize = () => {
-            if (fitAddon.current && term.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current.fit();
-                    const { cols, rows } = term.current;
-                    if (window.electron) {
-                        window.electron.ipcRenderer.send('docker:resize', { tabId, cols, rows });
-                    }
-                } catch (e) {
-                    console.error('Error en resize de Docker:', e);
-                }
+            if (isFitting()) return;
+            fitStable();
+            if (term.current && window.electron) {
+                const { cols, rows } = term.current;
+                window.electron.ipcRenderer.send('docker:resize', { tabId, cols, rows });
             }
         };
 
         window.addEventListener('resize', handleResize);
-        setTimeout(handleResize, 100);
-        return () => window.removeEventListener('resize', handleResize);
+        const t = setTimeout(handleResize, 100);
+        return () => {
+            clearTimeout(t);
+            window.removeEventListener('resize', handleResize);
+        };
     }, [tabId]);
+
+    // Update font family dynamically
+    useEffect(() => {
+        if (term.current && fontFamily) {
+            term.current.options.fontFamily = fontFamily;
+            invalidate();
+            fitStable();
+        }
+    }, [fontFamily]);
+
+    // Update font size dynamically
+    useEffect(() => {
+        if (term.current && fontSize) {
+            term.current.options.fontSize = fontSize;
+            invalidate();
+            fitStable();
+        }
+    }, [fontSize]);
 
     // Listen for changes to icon theme and local docker status bar theme via storage updates
     useEffect(() => {
@@ -278,13 +295,7 @@ const DockerTerminal = forwardRef(({
     // Exponer métodos
     useImperativeHandle(ref, () => ({
         fit: () => {
-            try {
-                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                    fitAddon.current?.fit();
-                }
-            } catch (e) {
-                console.error('Error en fit:', e);
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();

@@ -219,6 +219,53 @@ export function createStableTerminalFit() {
   };
 }
 
+/**
+ * Binding reutilizable de fit estable para terminales locales/SSH.
+ * Las refs deben ser React refs (o { current }) de term, FitAddon y contenedor DOM.
+ */
+export function createStableFitBinding(termRef, fitAddonRef, containerRef) {
+  const stableFitRef = { current: null };
+
+  const fitStable = () => {
+    const stable = stableFitRef.current;
+    if (stable) {
+      return stable.fit(termRef.current, fitAddonRef.current, containerRef.current);
+    }
+    try {
+      const term = termRef.current;
+      const fitAddon = fitAddonRef.current;
+      const container = containerRef.current;
+      if (!term || !fitAddon || !container) return false;
+      if (container.offsetWidth <= 0 || container.offsetHeight <= 0) return false;
+      fitAddon.fit();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const beginMount = () => {
+    const stableFit = createStableTerminalFit();
+    stableFitRef.current = stableFit;
+    return stableFit;
+  };
+
+  const endMount = (stableFit) => {
+    if (stableFit) stableFit.reset();
+    if (stableFitRef.current === stableFit) {
+      stableFitRef.current = null;
+    }
+  };
+
+  const isFitting = () => !!(stableFitRef.current && stableFitRef.current.isFitting());
+
+  const invalidate = () => {
+    stableFitRef.current?.reset();
+  };
+
+  return { fitStable, beginMount, endMount, isFitting, invalidate, stableFitRef };
+}
+
 /** Agrupa ráfagas de resize (observer, ventana) en una sola llamada. */
 export function createDebouncedFn(fn, ms = 50) {
   let timer = null;

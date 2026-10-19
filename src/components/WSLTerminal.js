@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -28,6 +28,9 @@ const WSLTerminal = forwardRef(({
     const activeRef = useRef(active);
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
+    const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
+        createStableFitBinding(term, fitAddon, terminalRef)
+    ).current;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [isConnected, setIsConnected] = useState(false);
@@ -175,11 +178,7 @@ const WSLTerminal = forwardRef(({
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            try {
-                fitAddon.current?.fit();
-            } catch (e) {
-                console.error('Error fitting terminal:', e);
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();
@@ -241,7 +240,7 @@ const WSLTerminal = forwardRef(({
                 brightWhite: '#EEEEEC'
             },
             // WSL/Linux optimized settings
-            convertEol: true,
+            convertEol: false,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
@@ -263,6 +262,7 @@ const WSLTerminal = forwardRef(({
 
         // Add addons
         fitAddon.current = new FitAddon();
+        const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -273,18 +273,13 @@ const WSLTerminal = forwardRef(({
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);
-        fitAddon.current.fit();
+        fitStable();
         term.current.focus();
 
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver(() => {
-            if (fitAddon.current) {
-                try {
-                    fitAddon.current.fit();
-                } catch (e) {
-                    console.error('Error during fit:', e);
-                }
-            }
+            if (isFitting()) return;
+            fitStable();
         });
         if (terminalRef.current) {
             resizeObserver.observe(terminalRef.current);
@@ -362,6 +357,7 @@ const WSLTerminal = forwardRef(({
                 cleanupClipboard();
                 dataHandler.dispose();
                 resizeHandler.dispose();
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -371,6 +367,7 @@ const WSLTerminal = forwardRef(({
             term.current.writeln('\x1b[31mError: Electron API not available. WSL integration will not work.\x1b[0m');
             return () => {
                 resizeObserver.disconnect();
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -387,7 +384,8 @@ const WSLTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontFamily]);
 
@@ -395,7 +393,8 @@ const WSLTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontSize]);
 
@@ -410,18 +409,25 @@ const WSLTerminal = forwardRef(({
         }
     }, [theme, isIntegrated]);
 
-    // Auto-fit after render
+    // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (fitAddon.current) {
-            setTimeout(() => {
-                try {
-                    fitAddon.current.fit();
-                } catch (e) {
-                    console.error('Error in auto-fit:', e);
-                }
-            }, 0);
-        }
+        if (!fitAddon.current) return undefined;
+        const id = setTimeout(() => {
+            if (!isFitting()) fitStable();
+        }, 0);
+        return () => clearTimeout(id);
     });
+
+    // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
+    useEffect(() => {
+        fitStable();
+        const t1 = setTimeout(fitStable, 50);
+        const t2 = setTimeout(fitStable, 150);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [tabId]);
 
     // Efecto para asegurar el focus automático al estar activa la pestaña
     useEffect(() => {

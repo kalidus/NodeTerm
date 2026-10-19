@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -28,6 +28,9 @@ const CygwinTerminal = forwardRef(({
     const activeRef = useRef(active);
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const fitAddon = useRef(null);
+    const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
+        createStableFitBinding(term, fitAddon, terminalRef)
+    ).current;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
@@ -104,13 +107,7 @@ const CygwinTerminal = forwardRef(({
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
         fit: () => {
-            try {
-                if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                    fitAddon.current?.fit();
-                }
-            } catch (e) {
-                console.error('Error fitting terminal:', e);
-            }
+            fitStable();
         },
         focus: () => {
             term.current?.focus();
@@ -175,7 +172,7 @@ const CygwinTerminal = forwardRef(({
                 brightCyan: '#DFDFFE',
                 brightWhite: '#FFFFFF'
             },
-            convertEol: true,
+            convertEol: false,
             scrollback: scrollbackLines, // Configurable desde Settings (default: 1000)
             rightClickSelectsWord: true,
             macOptionIsMeta: true,
@@ -197,6 +194,7 @@ const CygwinTerminal = forwardRef(({
 
         // Add addons
         fitAddon.current = new FitAddon();
+        const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
@@ -206,29 +204,12 @@ const CygwinTerminal = forwardRef(({
         rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
 
         term.current.open(terminalRef.current);
-
-        try {
-            fitAddon.current.fit();
-            term.current.focus();
-        } catch (e) {
-            setTimeout(() => {
-                try {
-                    fitAddon.current?.fit();
-                    term.current?.focus();
-                } catch (err) {
-                    console.warn('Terminal fit failed:', err);
-                }
-            }, 100);
-        }
+        fitStable();
+        term.current.focus();
 
         const resizeObserver = new ResizeObserver(() => {
-            if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current?.fit();
-                } catch (e) {
-                    // Silently handle resize errors
-                }
-            }
+            if (isFitting()) return;
+            fitStable();
         });
 
         if (terminalRef.current) {
@@ -238,13 +219,7 @@ const CygwinTerminal = forwardRef(({
         const handleVisibilityChange = () => {
             if (!document.hidden && active) {
                 setTimeout(() => {
-                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                        try {
-                            fitAddon.current?.fit();
-                        } catch (e) {
-                            // Silently handle
-                        }
-                    }
+                    if (!isFitting()) fitStable();
                 }, 100);
             }
         };
@@ -320,6 +295,7 @@ const CygwinTerminal = forwardRef(({
                 cleanupClipboard();
                 dataHandler.dispose();
                 resizeHandler.dispose();
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -329,6 +305,7 @@ const CygwinTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
+                endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -345,14 +322,16 @@ const CygwinTerminal = forwardRef(({
     useEffect(() => {
         if (term.current && fontFamily) {
             term.current.options.fontFamily = fontFamily;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontFamily]);
 
     useEffect(() => {
         if (term.current && fontSize) {
             term.current.options.fontSize = fontSize;
-            fitAddon.current?.fit();
+            invalidate();
+            fitStable();
         }
     }, [fontSize]);
 
@@ -366,37 +345,24 @@ const CygwinTerminal = forwardRef(({
         }
     }, [theme, isIntegrated]);
 
-    // Auto-fit
+    // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (fitAddon.current) {
-            setTimeout(() => {
-                try {
-                    if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                        fitAddon.current?.fit();
-                    }
-                } catch (e) {
-                    console.error('Error en fit:', e);
-                }
-            }, 0);
-        }
+        if (!fitAddon.current) return undefined;
+        const id = setTimeout(() => {
+            if (!isFitting()) fitStable();
+        }, 0);
+        return () => clearTimeout(id);
     });
 
-    // Force resize after mount
+    // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
     useEffect(() => {
-        const forceResize = () => {
-            if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
-                try {
-                    fitAddon.current?.fit();
-                } catch (e) {
-                    // Silently handle
-                }
-            }
+        fitStable();
+        const t1 = setTimeout(fitStable, 50);
+        const t2 = setTimeout(fitStable, 150);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
         };
-
-        forceResize();
-        setTimeout(forceResize, 50);
-        setTimeout(forceResize, 150);
-        setTimeout(forceResize, 300);
     }, [tabId]);
 
     // Efecto para asegurar el focus automático al estar activa la pestaña
