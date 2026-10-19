@@ -21,6 +21,7 @@ const STYLE = {
   ip: `${ESC}[35m`,
   unit: `${ESC}[36m`,
   path: `${ESC}[2;36m`,
+  url: `${ESC}[36m`,
   string: `${ESC}[33m`,
   hex: `${ESC}[35m`,
   http2: `${ESC}[32m`,
@@ -46,7 +47,23 @@ const LEVEL_STYLE = {
 
 const RE_LEVEL = /\b(FATAL|CRITICAL|ERROR|WARNING|WARN|NOTICE|INFO|DEBUG|TRACE|SUCCESS|ERR|OK)\b/gi;
 const RE_ISO_TS = /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g;
-const RE_SYSLOG_TS = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\b/g;
+const RE_WD_EN = 'Mon|Tue|Wed|Thu|Fri|Sat|Sun';
+const RE_WD_ES = 'lun|mar|mi[eé]|jue|vie|s[aá]b|dom';
+const RE_MONTH_EN = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
+const RE_MONTH_ES = 'ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic';
+const RE_TZ_OPT = '(?:\\s+(?:UTC|GMT|[+-]\\d{2}:?\\d{2}))?';
+/** Syslog EN: [Weekday ]Month Day HH:MM:SS[ Year][ TZ]? */
+const RE_SYSLOG_TS = new RegExp(
+  `\\b(?:(?:${RE_WD_EN})\\s+)?(?:${RE_MONTH_EN})\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}(?:\\s+\\d{4})?${RE_TZ_OPT}\\b`,
+  'g'
+);
+/** Locale MOTD: [Weekday ]Day Month Year HH:MM:SS[ TZ]? (EN/ES) */
+const RE_LOCALE_TS = new RegExp(
+  `\\b(?:(?:${RE_WD_EN}|${RE_WD_ES})\\s+)?\\d{1,2}\\s+(?:${RE_MONTH_EN}|${RE_MONTH_ES})\\s+\\d{4}\\s+\\d{2}:\\d{2}:\\d{2}${RE_TZ_OPT}\\b`,
+  'gi'
+);
+/** http(s) URL; last char avoids trailing sentence punctuation */
+const RE_URL = /\bhttps?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)\]}]/gi;
 const RE_IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\b/g;
 const RE_IPV6 = /\b[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}\b/g;
 const RE_HTTP_METHOD_STATUS = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\S+\s+(?:HTTP\/[\d.]+\s+)?([1-5]\d{2})\b/g;
@@ -338,17 +355,24 @@ function collectLogRanges(body) {
   ranges.push(...collectMatches(body, RE_FAILED, () => STYLE.error));
   ranges.push(...collectMatches(body, RE_ISO_TS, () => STYLE.timestamp));
   ranges.push(...collectMatches(body, RE_SYSLOG_TS, () => STYLE.timestamp));
+  ranges.push(...collectMatches(body, RE_LOCALE_TS, () => STYLE.timestamp));
+  // URLs before IPs/paths so the whole link wins over partial path matches
+  ranges.push(...collectMatches(body, RE_URL, () => STYLE.url));
   ranges.push(...collectMatches(body, RE_UNIT_PID, () => STYLE.unit));
   const ipRanges = collectMatches(body, RE_IPV4, () => STYLE.ip);
-  ranges.push(...ipRanges);
-  ranges.push(...collectMatches(body, RE_IPV6, () => STYLE.ip));
   for (let i = 0; i < ipRanges.length; i++) {
     const r = ipRanges[i];
+    if (overlapsAny(r, ranges)) continue;
+    ranges.push(r);
     if (body.charCodeAt(r.end) !== 58) continue;
     const pm = /^:(\d{2,5})\b/.exec(body.slice(r.end));
     if (pm) {
       ranges.push({ start: r.end + 1, end: r.end + pm[0].length, style: STYLE.hex });
     }
+  }
+  const ipv6Ranges = collectMatches(body, RE_IPV6, () => STYLE.ip);
+  for (let i = 0; i < ipv6Ranges.length; i++) {
+    if (!overlapsAny(ipv6Ranges[i], ranges)) ranges.push(ipv6Ranges[i]);
   }
   ranges.push(...collectMatches(body, RE_HTTP_METHOD_STATUS, httpStyleForStatus, true));
   ranges.push(...collectMatches(body, RE_HTTP_VERSION_STATUS, httpStyleForStatus, true));
