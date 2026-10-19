@@ -2709,6 +2709,7 @@ const App = () => {
     onOpenSSHTunnel,
     openFolderDialog,
     onOpenRdpConnection,
+    onOpenVncConnection,
     handleLoadGroupFromFavorites,
     openEditRdpDialog,
     openEditSSHDialog,

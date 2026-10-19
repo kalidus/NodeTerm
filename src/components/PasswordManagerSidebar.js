@@ -730,14 +730,15 @@ const PasswordManagerSidebar = ({
 
       const updatedPasswordNodes = updatePasswordInTree(passwordNodesCopy);
       setPasswordNodes(updatedPasswordNodes);
+      // Solo metadatos en favoritos; el secreto vive en el vault cifrado
       connectionStore.updateFavoriteFields(editingPassword.key, {
         name: formData.title,
         type: selectedSecretType,
         username: secretData.username || '',
-        password: secretData.password || '',
         url: secretData.url || '',
-        notes: secretData.notes || '',
-        content: secretData.noteContent || secretData.content || ''
+        password: '',
+        notes: '',
+        content: ''
       });
 
       const typeLabel = selectedSecretType === 'password' ? 'Contraseña' : 

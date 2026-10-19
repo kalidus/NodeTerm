@@ -40,6 +40,7 @@ function usersOf(data = {}) {
     data.username,
     data.user,
     data.bastionUser,
+    data.targetUser,
     data.sshUser
   ].map(norm).filter(Boolean);
 }
@@ -51,9 +52,27 @@ function defaultPortForType(type) {
   return 22;
 }
 
-/** Puerto SSH efectivo (túneles usan sshPort). */
-function nodeSshPort(data = {}) {
-  return parseInt(data.sshPort || data.port || defaultPortForType(data.type), 10);
+/**
+ * Puerto efectivo del nodo.
+ * Solo los túneles usan sshPort; en RDP/VNC un sshPort residual no debe ganar a port.
+ */
+function nodeEffectivePort(data = {}) {
+  if (data.type === 'ssh-tunnel') {
+    return parseInt(data.sshPort || data.port || 22, 10);
+  }
+  return parseInt(data.port || defaultPortForType(data.type), 10);
+}
+
+/** Evita usar ids serializados de historial (`rdp-guacamole:host:user:port`) como key del árbol. */
+export function resolveWantedTreeId(...candidates) {
+  for (const raw of candidates) {
+    if (raw == null || raw === '') continue;
+    const s = String(raw);
+    if (s.startsWith('__fav_shortcut__')) continue;
+    if (/^(rdp-guacamole|vnc-guacamole|ssh|ssh-tunnel|sftp|ftp|scp|explorer):/i.test(s)) continue;
+    return s;
+  }
+  return '';
 }
 
 function portsEqual(a, b) {
@@ -117,7 +136,7 @@ export function findConnectionInTree(nodes, criteria = {}) {
         const data = node.data;
         const nodeHosts = hostsOf(data);
         const nodeUsers = usersOf(data);
-        const nodePort = nodeSshPort(data);
+        const nodePort = nodeEffectivePort(data);
         const portOk = portN == null || Number.isNaN(portN) || nodePort === portN;
         const tunnelPortsOk = !hasTunnelPorts
           || (portsEqual(localPort, data.localPort) && portsEqual(remotePort, data.remotePort));

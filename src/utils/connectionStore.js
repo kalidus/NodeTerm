@@ -13,10 +13,13 @@ const SENSITIVE_HISTORY_FIELDS = [
   'passphrase',
   'notes',
   'content',
+  'noteContent',
   'seedPhrase',
   'apiKey',
   'apiSecret',
-  'privateKeyPath'
+  'privateKeyPath',
+  'jumpPassword',
+  'jumpPrivateKey'
 ];
 
 const FAVORITES_KEY = 'nodeterm_favorite_connections';
@@ -564,7 +567,7 @@ export function updateFavoriteFields(id, fields) {
   const list = [...getFavorites()];
   const idx = list.findIndex(f => f.id === id);
   if (idx < 0) return list;
-  list[idx] = { ...list[idx], ...fields, id: list[idx].id };
+  list[idx] = redactSensitiveFields({ ...list[idx], ...fields, id: list[idx].id });
   saveList(FAVORITES_KEY, list);
   return list;
 }
@@ -669,8 +672,11 @@ export function removeFavorite(idOrConn) {
 }
 
 export function reorderFavorites(newOrderList) {
-  saveList(FAVORITES_KEY, newOrderList);
-  return newOrderList;
+  const scrubbed = Array.isArray(newOrderList)
+    ? newOrderList.map((item) => redactSensitiveFields(item))
+    : [];
+  saveList(FAVORITES_KEY, scrubbed);
+  return scrubbed;
 }
 
 export function onUpdate(handler) {

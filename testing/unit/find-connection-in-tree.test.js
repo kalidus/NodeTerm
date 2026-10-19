@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { findConnectionInTree } = require('../../src/utils/findConnectionInTree');
+const { findConnectionInTree, resolveWantedTreeId } = require('../../src/utils/findConnectionInTree');
 
 const tree = [
   {
@@ -142,6 +142,41 @@ describe('findConnectionInTree', () => {
     });
     assert.ok(node);
     assert.strictEqual(node.key, 'rdp_1');
+  });
+
+  it('RDP ignora sshPort residual al matchear puerto 3389', () => {
+    tree[0].children.push({
+      key: 'rdp_sshport',
+      label: 'RDP polluted',
+      data: {
+        type: 'rdp-guacamole',
+        server: '10.9.9.9',
+        username: 'rdpuser',
+        port: 3389,
+        sshPort: 22,
+        password: 'rdp-ok'
+      }
+    });
+    const node = findConnectionInTree(tree, {
+      types: ['rdp', 'rdp-guacamole'],
+      host: '10.9.9.9',
+      username: 'rdpuser',
+      port: 3389
+    });
+    assert.ok(node);
+    assert.strictEqual(node.key, 'rdp_sshport');
+    assert.strictEqual(node.data.password, 'rdp-ok');
+  });
+
+  it('resolveWantedTreeId ignora ids serializados y atajos de favoritos', () => {
+    assert.strictEqual(
+      resolveWantedTreeId('rdp-guacamole:10.0.0.1:admin:3389', 'real_tree_key'),
+      'real_tree_key'
+    );
+    assert.strictEqual(
+      resolveWantedTreeId('__fav_shortcut__abc__root', 'rdp_1'),
+      'rdp_1'
+    );
   });
 
   it('encuentra túnel ssh por sshHost/sshUser', () => {

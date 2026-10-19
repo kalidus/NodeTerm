@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
-import { findConnectionInTree } from '../utils/findConnectionInTree';
+import { findConnectionInTree, resolveWantedTreeId } from '../utils/findConnectionInTree';
 import { normalizeRdpColorDepth, resolveRdpScreenDimensions } from '../utils/rdpScreenConfig';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 
@@ -627,13 +627,23 @@ export const useConnectionManagement = ({
       };
     }
 
-    // Sin password en historial/favoritos: resolver siempre desde el árbol/vault
-    if (!baseRdp.password) {
+    // Favoritos / atajos del sidebar: .data puede existir con password vacío → siempre hidratar desde vault
+    let matchedRdpKey = resolveWantedTreeId(
+      node.sourceKey,
+      node.originalKey,
+      node.connectionId,
+      node.data?.originalKey,
+      node.data?.connectionId,
+      node.favoriteId,
+      node.key,
+      node.id
+    );
+    if (!String(baseRdp.password || '').trim()) {
       const matched = findConnectionInTree(nodes, {
-        wantedId: node.originalKey || node.connectionId || node.key || node.id,
+        wantedId: matchedRdpKey,
         types: ['rdp', 'rdp-guacamole'],
-        host: baseRdp.server || baseRdp.host || baseRdp.hostname,
-        username: baseRdp.username || baseRdp.user,
+        host: baseRdp.server || baseRdp.host || baseRdp.hostname || baseRdp.targetServer,
+        username: baseRdp.username || baseRdp.user || baseRdp.bastionUser || baseRdp.targetUser,
         port: baseRdp.port || 3389,
         bastionHost: baseRdp.bastionHost,
         bastionUser: baseRdp.bastionUser,
@@ -641,6 +651,7 @@ export const useConnectionManagement = ({
       });
       if (matched?.data) {
         const vault = matched.data;
+        matchedRdpKey = matched.key || matchedRdpKey;
         baseRdp = {
           ...baseRdp,
           ...vault,
@@ -666,8 +677,8 @@ export const useConnectionManagement = ({
         host: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
         port: baseRdp.port || 3389,
-        originalKey: node.key || node.originalKey || node.connectionId || node.id,
-        connectionId: node.key || node.originalKey || node.connectionId || node.id,
+        originalKey: matchedRdpKey || undefined,
+        connectionId: matchedRdpKey || undefined,
         password: '',
         clientType: baseRdp.clientType || 'web-rdp',
         domain: baseRdp.domain || '',
@@ -981,10 +992,19 @@ export const useConnectionManagement = ({
 
     }
 
-    // Sin password en historial/favoritos: resolver desde el árbol/vault
-    if (!baseVnc.password) {
+    // Favoritos / atajos: hidratar desde vault si falta password (aunque exista .data vacío)
+    if (!String(baseVnc.password || '').trim()) {
       const matchedVnc = findConnectionInTree(nodes, {
-        wantedId: node.originalKey || node.connectionId || node.key || node.id,
+        wantedId: resolveWantedTreeId(
+          node.sourceKey,
+          node.originalKey,
+          node.connectionId,
+          node.data?.originalKey,
+          node.data?.connectionId,
+          node.favoriteId,
+          node.key,
+          node.id
+        ),
         types: ['vnc', 'vnc-guacamole'],
         host: baseVnc.server || baseVnc.host || baseVnc.hostname,
         username: baseVnc.username || baseVnc.user || '',

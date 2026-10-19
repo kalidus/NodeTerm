@@ -27,6 +27,8 @@ const {
   getRecentPasswords,
   toggleFavorite,
   getFavorites,
+  updateFavoriteFields,
+  reorderFavorites,
   invalidateConnectionStoreCache,
   helpers
 } = connectionStore;
@@ -112,5 +114,49 @@ describe('Historial/favoritos sin secretos en claro', () => {
     });
     const fav = getFavorites()[0];
     assert.strictEqual(fav.password, '');
+  });
+
+  it('updateFavoriteFields no persiste password/notes/content', () => {
+    toggleFavorite({
+      type: 'password',
+      id: 'pwd_fav_1',
+      name: 'Bank',
+      username: 'alice',
+      password: ''
+    });
+    updateFavoriteFields('pwd_fav_1', {
+      name: 'Bank updated',
+      username: 'alice',
+      password: 'should-not-persist',
+      notes: 'secret-note',
+      content: 'secret-content',
+      jumpPassword: 'jump-secret'
+    });
+    const fav = getFavorites().find((f) => f.id === 'pwd_fav_1');
+    assert.ok(fav);
+    assert.strictEqual(fav.name, 'Bank updated');
+    assert.strictEqual(fav.password, '');
+    assert.strictEqual(fav.notes, '');
+    assert.strictEqual(fav.content, '');
+    assert.strictEqual(fav.jumpPassword, '');
+    const persisted = JSON.parse(localStorage.getItem('nodeterm_favorite_connections'));
+    const stored = persisted.find((f) => f.id === 'pwd_fav_1');
+    assert.strictEqual(stored.password, '');
+    assert.strictEqual(stored.notes, '');
+  });
+
+  it('reorderFavorites redacta secretos al guardar', () => {
+    reorderFavorites([{
+      id: 'ssh:reorder:me:22',
+      type: 'ssh',
+      host: 'reorder.local',
+      username: 'me',
+      port: 22,
+      password: 'leak',
+      jumpPrivateKey: 'JUMPKEY'
+    }]);
+    const fav = getFavorites()[0];
+    assert.strictEqual(fav.password, '');
+    assert.strictEqual(fav.jumpPrivateKey, '');
   });
 });
