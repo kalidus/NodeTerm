@@ -1,3 +1,5 @@
+import { isIntegratedBrowserEnabled, openUrlInSystemBrowser } from './browserWebview';
+
 /**
  * Carga diferida de @xterm y addons (chunk webpack async).
  */
@@ -18,16 +20,14 @@ function handleTerminalLink(event, uri) {
 
   // Si el usuario presiona Alt o Shift al hacer clic, forzar apertura en navegador externo
   if (event && (event.altKey || event.shiftKey)) {
-    if (window.electron?.system?.openWithBrowser) {
-      window.electron.system.openWithBrowser(trimmed).catch(() => {
-        window.electron?.openExternal?.(trimmed);
-      });
-      return;
-    }
-    if (window.electron?.openExternal) {
-      window.electron.openExternal(trimmed);
-      return;
-    }
+    openUrlInSystemBrowser(trimmed);
+    return;
+  }
+
+  // App Navegador desactivada → navegador del sistema
+  if (!isIntegratedBrowserEnabled()) {
+    openUrlInSystemBrowser(trimmed);
+    return;
   }
 
   // 🌐 Por defecto: abrir en una ventana emergente flotante dentro de NodeTerm
@@ -41,13 +41,7 @@ function handleTerminalLink(event, uri) {
     }));
   } catch (err) {
     console.warn('[xtermLoader] Fallo abriendo ventana emergente interna, abriendo en navegador externo:', err);
-    if (window.electron?.system?.openWithBrowser) {
-      window.electron.system.openWithBrowser(trimmed).catch(() => {
-        window.electron?.openExternal?.(trimmed);
-      });
-    } else if (window.electron?.openExternal) {
-      window.electron.openExternal(trimmed);
-    }
+    openUrlInSystemBrowser(trimmed);
   }
 }
 

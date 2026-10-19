@@ -1,9 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { railIcons } from '../themes/rail-icons';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
+import { isIntegratedBrowserEnabled } from '../utils/browserWebview';
 
 const ICON_SIZE = 22;
 const RAIL_WIDTH = 48;
@@ -32,6 +33,28 @@ const SidebarIconRail = React.memo(({
   onShowImportWizard,
 }) => {
   const { t } = useTranslation('common');
+
+  // Fuente de verdad: evento + localStorage (la prop sola no bastaba para ocultar el icono)
+  const [browserAppEnabled, setBrowserAppEnabled] = useState(() => isIntegratedBrowserEnabled());
+
+  useEffect(() => {
+    const syncBrowserFlag = (e) => {
+      const cfg = e?.detail?.config;
+      if (cfg && typeof cfg === 'object' && Object.prototype.hasOwnProperty.call(cfg, 'browser')) {
+        setBrowserAppEnabled(cfg.browser !== false);
+        return;
+      }
+      setBrowserAppEnabled(isIntegratedBrowserEnabled());
+    };
+
+    window.addEventListener('ai-clients-config-changed', syncBrowserFlag);
+    return () => window.removeEventListener('ai-clients-config-changed', syncBrowserFlag);
+  }, []);
+
+  useEffect(() => {
+    if (!Object.prototype.hasOwnProperty.call(aiClientsEnabled, 'browser')) return;
+    setBrowserAppEnabled(aiClientsEnabled.browser !== false);
+  }, [aiClientsEnabled.browser]);
 
   const handleAppMenuClick = useCallback((event) => {
     event?.preventDefault?.();
@@ -112,34 +135,36 @@ const SidebarIconRail = React.memo(({
           );
         })}
 
-        {/* Navegador Web Integrado */}
-        <button
-          className="sidebar-icon-rail-item"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('open-browser-tab', {
-              detail: {
-                url: 'about:blank',
-                title: 'Navegador'
-              }
-            }));
-          }}
-          title={t('tooltips.webBrowser', 'Navegador Web')}
-          style={{ '--rail-item-color': '#38bdf8' }}
-        >
-          <span className="sidebar-rail-svg-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="railBrowserGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#0284c7" />
-                </linearGradient>
-              </defs>
-              <circle cx="12" cy="12" r="9" stroke="url(#railBrowserGrad)" strokeWidth="1.8" />
-              <path d="M3.6 9h16.8M3.6 15h16.8" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </button>
+        {/* Navegador Web Integrado (Apps → browser; default ON) */}
+        {browserAppEnabled && (
+          <button
+            className="sidebar-icon-rail-item"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-browser-tab', {
+                detail: {
+                  url: 'about:blank',
+                  title: 'Navegador'
+                }
+              }));
+            }}
+            title={t('tooltips.webBrowser', 'Navegador Web')}
+            style={{ '--rail-item-color': '#38bdf8' }}
+          >
+            <span className="sidebar-rail-svg-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="railBrowserGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#0284c7" />
+                  </linearGradient>
+                </defs>
+                <circle cx="12" cy="12" r="9" stroke="url(#railBrowserGrad)" strokeWidth="1.8" />
+                <path d="M3.6 9h16.8M3.6 15h16.8" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Separator */}

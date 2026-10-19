@@ -4,7 +4,9 @@ import { Button } from 'primereact/button';
 import {
   BROWSER_WEBVIEW_PARTITION,
   getBrowserWebviewUserAgent,
-  isIgnorableWebviewFail
+  isIgnorableWebviewFail,
+  isIntegratedBrowserEnabled,
+  openUrlInSystemBrowser
 } from '../utils/browserWebview';
 import '../styles/components/browser-tab.css';
 
@@ -27,12 +29,30 @@ const BrowserPopupModal = () => {
     const targetUrl = detail?.url;
     if (!targetUrl || typeof targetUrl !== 'string') return;
 
+    if (!isIntegratedBrowserEnabled()) {
+      if (/^https?:\/\//i.test(targetUrl.trim())) {
+        openUrlInSystemBrowser(targetUrl.trim());
+      }
+      return;
+    }
+
     const host = targetUrl.replace(/^https?:\/\//i, '').split('/')[0];
     setUrl(targetUrl);
     setTitle(detail.title || host || 'Vista previa');
     setLoading(true);
     setHasError(false);
     setVisible(true);
+  }, []);
+
+  useEffect(() => {
+    const onConfigChange = (e) => {
+      const cfg = e?.detail?.config;
+      if (cfg?.browser === false || !isIntegratedBrowserEnabled()) {
+        setVisible(false);
+      }
+    };
+    window.addEventListener('ai-clients-config-changed', onConfigChange);
+    return () => window.removeEventListener('ai-clients-config-changed', onConfigChange);
   }, []);
 
   useEffect(() => {

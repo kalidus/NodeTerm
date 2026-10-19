@@ -947,6 +947,7 @@ const Sidebar = React.memo(({
   }, [explorerFontColor]);
 
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
+    browser: true,
     claude: false,
     opencode: false,
     codexcli: false,
@@ -968,6 +969,7 @@ const Sidebar = React.memo(({
         if (config) {
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
+            browser: parsed.browser !== false,
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
             codexcli: parsed.codexcli === true,
@@ -981,8 +983,9 @@ const Sidebar = React.memo(({
             opennotebook: parsed.opennotebook === true
           });
         } else {
-          // Si no hay configuración, todos desactivados por defecto
+          // Sin config: IA off; navegador ON por defecto
           setAiClientsEnabled({
+            browser: true,
             claude: false,
             opencode: false,
             codexcli: false,
@@ -1013,8 +1016,26 @@ const Sidebar = React.memo(({
 
     window.addEventListener('storage', handleStorageChange);
 
-    // También escuchar evento personalizado para cambios en la misma pestaña
-    const handleConfigChange = () => {
+    // Misma pestaña: preferir detail.config para no depender de un re-read
+    const handleConfigChange = (e) => {
+      const cfg = e?.detail?.config;
+      if (cfg && typeof cfg === 'object') {
+        setAiClientsEnabled({
+          browser: cfg.browser !== false,
+          claude: cfg.claude === true,
+          opencode: cfg.opencode === true,
+          codexcli: cfg.codexcli === true,
+          antigravitycli: cfg.antigravitycli === true,
+          hermescli: cfg.hermescli === true,
+          anythingllm: cfg.anythingllm === true,
+          openwebui: cfg.openwebui === true,
+          librechat: cfg.librechat === true,
+          agentzero: cfg.agentzero === true,
+          openclaw: cfg.openclaw === true,
+          opennotebook: cfg.opennotebook === true
+        });
+        return;
+      }
       loadAIClientsConfig();
     };
     window.addEventListener('ai-clients-config-changed', handleConfigChange);

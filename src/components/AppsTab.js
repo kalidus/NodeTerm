@@ -60,10 +60,11 @@ const AppsTab = ({
   const toast = useRef(null);
   const isWindows = isWindowsPlatform();
 
-  // Estado para cada cliente/servicio (Guacamole viene desactivado por defecto)
+  // Estado para cada cliente/servicio (Guacamole off; browser ON por defecto)
   const [clients, setClients] = useState({
     guacamole: false,
     cygwin: false,
+    browser: true,
     claude: false,
     opencode: false,
     codexcli: false,
@@ -163,7 +164,12 @@ const AppsTab = ({
       try {
         const parsed = JSON.parse(saved);
         const { geminicli: _removedGeminiCli, ...rest } = parsed;
-        setClients(prev => ({ ...prev, ...rest }));
+        // browser: clave ausente → ON (compatibilidad con configs previas)
+        setClients(prev => ({
+          ...prev,
+          ...rest,
+          browser: rest.browser !== false
+        }));
       } catch (error) {
         console.warn('[AppsTab] Error al cargar configuración:', error);
       }
@@ -920,6 +926,12 @@ const AppsTab = ({
       return;
     }
 
+    if (clientKey === 'browser') {
+      const willEnable = clients.browser !== false ? false : true;
+      saveClientsConfig({ ...clients, browser: willEnable });
+      return;
+    }
+
     if (clientKey === 'claude') {
       const willEnable = !clients.claude;
       if (willEnable && !claudeCliStatus.installed) {
@@ -1203,6 +1215,19 @@ const AppsTab = ({
       isCygwin: true
     },
     {
+      key: 'browser', category: 'services',
+      name: 'Navegador Web', shortName: 'Navegador',
+      color: '#38bdf8',
+      description: 'Navegador web integrado en pestañas de NodeTerm. Abre URLs, autocompleta credenciales y previsualiza enlaces del terminal sin salir de la app.',
+      features: ['Pestañas integradas', 'Webview persistente', 'Autocompletar passwords', 'Sin Docker'],
+      badges: [
+        { label: 'INTEGRADO', severity: 'info' },
+        { label: 'STANDALONE', severity: 'success' }
+      ],
+      requiresDocker: false,
+      isBrowser: true
+    },
+    {
       key: 'claude', category: 'cli',
       name: 'Claude Code', shortName: 'Claude Code',
       color: '#f59e0b',
@@ -1340,6 +1365,10 @@ const AppsTab = ({
       if (cygwinStatus.installed) return <span className="ai-status-dot installed" title="Instalado" />;
       return <span className="ai-status-dot not-installed" title="No instalado" />;
     }
+    if (client.isBrowser) {
+      if (clients.browser) return <span className="ai-status-dot running" title="Activada" />;
+      return <span className="ai-status-dot stopped" title="Desactivada" />;
+    }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
       if (!s) return null;
@@ -1376,6 +1405,10 @@ const AppsTab = ({
         return <span className="ai-status-label installed">Instalado{tier}</span>;
       }
       return <span className="ai-status-label not-installed">No instalado</span>;
+    }
+    if (client.isBrowser) {
+      if (clients.browser) return <span className="ai-status-label running">Activada</span>;
+      return <span className="ai-status-label not-installed">Desactivada</span>;
     }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
@@ -2013,7 +2046,13 @@ const AppsTab = ({
     return null;
   };
 
-  const isClientEnabled = (client) => !!clients[client.key];
+  const isClientEnabled = (client) => {
+    // Navegador: ausente = ON (misma semántica que la rail / isIntegratedBrowserEnabled)
+    if (client.isBrowser || client.key === 'browser') {
+      return clients.browser !== false;
+    }
+    return !!clients[client.key];
+  };
 
   const openWebAppUrl = (url) => {
     if (!url) return;
@@ -2044,6 +2083,9 @@ const AppsTab = ({
     }
     if (client.isCygwin) {
       return <i className="pi pi-code" style={{ fontSize: size, color: client.color }} />;
+    }
+    if (client.isBrowser) {
+      return <i className="pi pi-globe" style={{ fontSize: size, color: client.color }} />;
     }
     return <AIClientBrandIcon tabType={brandType} size={size} />;
   };
@@ -2081,6 +2123,10 @@ const AppsTab = ({
       if (cygwinStatus.installed) return { text: 'Instalado', className: 'installed' };
       return { text: 'No instalado', className: 'not-installed' };
     }
+    if (client.isBrowser) {
+      if (clients.browser) return { text: 'Activada', className: 'running' };
+      return { text: 'Desactivada', className: 'stopped' };
+    }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
       if (!s || s.loading) return { text: '…', className: 'stopped' };
@@ -2116,9 +2162,25 @@ const AppsTab = ({
 
   const renderHeroCtas = (client) => {
     const isEnabled = isClientEnabled(client);
-    if (!isEnabled && !client.isCygwin && !client.isGuacamole && !client.isRdp) return null;
+    if (!isEnabled && !client.isCygwin && !client.isGuacamole && !client.isRdp && !client.isBrowser) return null;
 
     const ctas = [];
+
+    if (client.isBrowser && isEnabled) {
+      ctas.push(
+        <Button
+          key="open-browser"
+          label="Abrir"
+          icon="pi pi-external-link"
+          className="p-button-sm"
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('open-browser-tab', {
+              detail: { url: 'about:blank', title: 'Navegador' }
+            }));
+          }}
+        />
+      );
+    }
 
     if (client.isCygwin) {
       ctas.push(

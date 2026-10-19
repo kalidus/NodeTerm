@@ -3,6 +3,10 @@ import { TAB_TYPES } from '../utils/constants';
 import connectionStore, { recordRecentPassword } from '../utils/connectionStore';
 import { findPasswordNodeByKey } from '../utils/favoritesSidebarTree';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
+import {
+  isIntegratedBrowserEnabled,
+  openUrlInSystemBrowser
+} from '../utils/browserWebview';
 import i18n from '../i18n';
 
 const EDITABLE_CONNECTION_TYPES = ['ssh', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole', 'sftp', 'ftp', 'scp', 'ssh-tunnel'];
@@ -475,6 +479,13 @@ export const useGlobalAppEvents = ({
       const { url, username, password, title } = info;
       const targetUrl = (url && typeof url === 'string') ? url.trim() : 'about:blank';
 
+      if (!isIntegratedBrowserEnabled()) {
+        if (/^https?:\/\//i.test(targetUrl)) {
+          openUrlInSystemBrowser(targetUrl);
+        }
+        return;
+      }
+
       // Si es una URL concreta (distinta de about:blank), verificar si ya está abierta
       if (targetUrl !== 'about:blank') {
         const existingTabs = getAllTabs();
@@ -507,6 +518,26 @@ export const useGlobalAppEvents = ({
     window.addEventListener('open-browser-tab', handler);
     return () => window.removeEventListener('open-browser-tab', handler);
   }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
+
+  // 10b. Cerrar pestañas del navegador integrado al desactivar la app
+  useEffect(() => {
+    const onConfigChange = () => {
+      if (isIntegratedBrowserEnabled()) return;
+      const browserKeys = getAllTabs()
+        .filter((t) => t.type === TAB_TYPES.BROWSER)
+        .map((t) => t.key);
+      browserKeys.forEach((key) => {
+        const allTabs = getAllTabs();
+        const tab = allTabs.find((t) => t.key === key);
+        if (!tab) return;
+        const idx = allTabs.indexOf(tab);
+        handleTabClose(tab, idx, false);
+      });
+    };
+
+    window.addEventListener('ai-clients-config-changed', onConfigChange);
+    return () => window.removeEventListener('ai-clients-config-changed', onConfigChange);
+  }, [getAllTabs, handleTabClose]);
 
   // 11. Pestaña de exploración de carpetas de passwords
   const PASSWORD_FOLDER_TAB_KEY = 'password-folder-view';

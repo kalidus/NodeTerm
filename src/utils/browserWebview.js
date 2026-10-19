@@ -1,7 +1,40 @@
 export const BROWSER_WEBVIEW_PARTITION = 'persist:nodeterm-browser';
+export const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
 const FALLBACK_CHROME_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36';
+
+/** Navegador integrado: ON por defecto si la clave no existe (compat). */
+export function isIntegratedBrowserEnabled() {
+  try {
+    if (typeof localStorage === 'undefined') return true;
+    const raw = localStorage.getItem(AI_CLIENTS_STORAGE_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed.browser !== false;
+  } catch {
+    return true;
+  }
+}
+
+export function openUrlInSystemBrowser(url) {
+  if (!url || typeof url !== 'string') return;
+  const trimmed = url.trim();
+  if (!trimmed) return;
+  if (window.electron?.system?.openWithBrowser) {
+    window.electron.system.openWithBrowser(trimmed).catch(() => {
+      window.electron?.openExternal?.(trimmed);
+    });
+    return;
+  }
+  if (window.electron?.openExternal) {
+    window.electron.openExternal(trimmed);
+    return;
+  }
+  if (window.electron?.import?.openExternal) {
+    window.electron.import.openExternal(trimmed);
+  }
+}
 
 export function getBrowserWebviewUserAgent() {
   if (typeof navigator === 'undefined' || !navigator.userAgent) {
