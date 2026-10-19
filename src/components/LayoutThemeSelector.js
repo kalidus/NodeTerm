@@ -34,7 +34,7 @@ const LayoutThemeSelector = () => {
       window.dispatchEvent(new CustomEvent('settings-updated', { 
         detail: { source: 'layout-sync' } 
       }));
-    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded' || layoutId === 'atelier') {
+    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded' || layoutId === 'atelier' || layoutId === 'mux') {
       localStorage.setItem('iconTheme', 'cupertino');
       localStorage.setItem('iconThemeSidebar', 'cupertino');
       // Dispatch event to notify useThemeManagement and other components
@@ -84,6 +84,65 @@ const LayoutThemeSelector = () => {
             </div>
           </div>
           <div style={{ height: '8px', backgroundColor: '#0e1116', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+        </div>
+      )
+    },
+    {
+      id: 'mux',
+      name: 'Mux',
+      description: 'La ventana como un multiplexor de TTY: cada región es un pane con cabecera de consola, sin neón ni mayúsculas.',
+      icon: 'pi-table',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0a0c0f',
+          boxSizing: 'border-box',
+          gap: '3px',
+          padding: '3px'
+        }}>
+          <div style={{
+            height: '9px',
+            backgroundColor: '#101418',
+            border: '1px solid rgba(125,206,160,0.28)',
+            borderRadius: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 4px'
+          }}>
+            <div style={{ width: '28%', height: '3px', backgroundColor: 'rgba(125,206,160,0.45)', borderRadius: '1px' }} />
+          </div>
+          <div style={{ display: 'flex', flex: 1, gap: '3px', minHeight: 0 }}>
+            <div style={{
+              width: '30%',
+              backgroundColor: '#101418',
+              border: '1px solid rgba(125,206,160,0.28)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
+              <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ height: '3px', width: '85%', backgroundColor: 'rgba(125,206,160,0.35)' }} />
+                <div style={{ height: '3px', width: '62%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
+                <div style={{ height: '3px', width: '70%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
+              </div>
+            </div>
+            <div style={{
+              flex: 1,
+              backgroundColor: '#101418',
+              border: '1px solid rgba(125,206,160,0.28)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
+              <div style={{ flex: 1, backgroundColor: '#0a0c0f' }} />
+            </div>
+          </div>
+          <div style={{ height: '7px', backgroundColor: '#101418', border: '1px solid rgba(125,206,160,0.2)', borderRadius: '2px' }} />
         </div>
       )
     },

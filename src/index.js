@@ -67,6 +67,7 @@ if (typeof window !== 'undefined') {
 import './styles/main.css';
 import './styles/layout/layouts.css';
 import './styles/layout/atelier.css';
+import './styles/layout/mux.css';
 // Fuentes: solo latin/latin-ext 400+700 al arranque. El resto se carga en Ajustes.
 import './styles/fonts-core.css';
 // import './assets/DashboardStyles.css';

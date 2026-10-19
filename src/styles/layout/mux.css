@@ -1,0 +1,353 @@
+/* Estilo Mux: la app como un multiplexor de TTY.
+   Solo aplica con body.layout-mux. Los colores salen del tema activo. */
+
+body.layout-mux {
+  --layout-border-radius-main: 4px;
+  --layout-border-radius-sm: 2px;
+  --layout-border-radius-lg: 6px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: none;
+  --layout-font-family: var(--ui-font-family);
+  --mux-mono: ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
+  --mux-pane-border: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 28%, transparent);
+  --mux-header-h: 22px;
+}
+
+body.layout-mux .app-container {
+  background: var(--ui-content-bg, #0a0c0f);
+}
+
+/* Hueco tipo tmux entre panes */
+body.layout-mux .main-splitter > .p-splitter-panel {
+  padding: 6px !important;
+}
+
+body.layout-mux .main-splitter > .p-splitter-panel:first-child {
+  padding-right: 3px !important;
+}
+
+body.layout-mux .main-splitter > .p-splitter-panel:last-child {
+  padding-left: 3px !important;
+}
+
+body.layout-mux .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  padding: 6px 3px 6px 6px !important;
+}
+
+/* ---------- Title bar: barra de sesión ---------- */
+html[data-custom-titlebar="true"] body.layout-mux .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-mux .title-bar span,
+html[data-custom-titlebar="true"] body.layout-mux .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-mux .title-bar {
+  margin: 6px 6px 0 6px !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  background: var(--ui-sidebar-bg, #101418) !important;
+  box-shadow: none !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+body.layout-mux .title-bar .app-search-input {
+  height: 22px !important;
+  border-radius: 4px !important;
+  font-family: var(--mux-mono) !important;
+  font-size: 12px !important;
+  background: color-mix(in srgb, var(--ui-fg, #d7e0d8) 6%, transparent) !important;
+  border: 1px solid var(--ui-border-subtle, transparent) !important;
+  box-shadow: none !important;
+  font-weight: 500 !important;
+}
+
+/* ---------- Status: línea tmux ---------- */
+body.layout-mux .status-bar {
+  margin: 0 6px 6px 6px !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  font-family: var(--mux-mono) !important;
+  letter-spacing: 0.02em;
+}
+
+body.layout-mux .status-bar-section span,
+body.layout-mux .status-group {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sidebar pane ~/sessions ---------- */
+body.layout-mux .sidebar-container.sidebar-root {
+  background: var(--ui-sidebar-bg) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  overflow: hidden;
+}
+
+body.layout-mux .sidebar-panel:not(.sidebar-panel-hidden-layout) {
+  display: flex;
+  flex-direction: column;
+}
+
+body.layout-mux .sidebar-panel:not(.sidebar-panel-hidden-layout)::before {
+  content: "~/";
+  display: flex;
+  align-items: center;
+  height: var(--mux-header-h);
+  min-height: var(--mux-header-h);
+  padding: 0 10px;
+  font-family: var(--mux-mono);
+  font-size: 11px;
+  color: var(--ui-fg-muted, rgba(215, 224, 216, 0.62));
+  border-bottom: 1px solid var(--mux-pane-border);
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, transparent);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+body.layout-mux .sidebar-tree .p-treenode-content.p-highlight::after {
+  background: var(--ui-accent-soft, rgba(125, 206, 160, 0.14)) !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary, #7dcea0);
+}
+
+body.layout-mux .sidebar-tree .p-treenode-content.p-highlight .node-label::before {
+  content: "\276F  ";
+  font-family: var(--mux-mono);
+  color: var(--ui-button-primary, #7dcea0);
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+/* ---------- Frames / tabs ---------- */
+body.layout-mux .terminal-frame {
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  box-shadow: none !important;
+  background: var(--ui-sidebar-bg, #101418) !important;
+}
+
+body.layout-mux .main-splitter .terminal-frame {
+  background: var(--ui-sidebar-bg, #101418) !important;
+  box-shadow: none !important;
+}
+
+body.layout-mux .terminal-frame-header {
+  min-height: var(--mux-header-h) !important;
+  max-height: var(--mux-header-h) !important;
+  padding: 0 10px !important;
+  font-family: var(--mux-mono);
+  font-size: 11px;
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, transparent) !important;
+  border-bottom: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .terminal-frame.main-content-frame .p-tabview-nav-container {
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, var(--ui-chrome-header-bg, var(--ui-sidebar-bg))) !important;
+  border-bottom: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  font-family: var(--mux-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.01em;
+  border-radius: 0 !important;
+}
+
+body.layout-mux .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  box-shadow: inset 0 -2px 0 var(--ui-button-primary, #7dcea0);
+}
+
+body.layout-mux .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  border-radius: 0 !important;
+}
+
+/* ---------- Home: panes, no HUD ---------- */
+body.layout-mux .home-panels-canvas {
+  position: relative;
+}
+
+body.layout-mux .home-panels-canvas::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.05) 3px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  opacity: 0.28;
+  z-index: 4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.layout-mux .home-panels-canvas::after {
+    display: none;
+  }
+}
+
+body.layout-mux .home-panel-frame,
+body.layout-mux .home-clock-card,
+body.layout-mux .home-fav-tile,
+body.layout-mux .home-jump-tile,
+body.layout-mux .home-group-card,
+body.layout-mux .home-dock-tile {
+  border: 1px solid var(--mux-pane-border) !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  box-shadow: none !important;
+}
+
+body.layout-mux .home-dock-tile-well {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+body.layout-mux .home-dock-group-title {
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  font-family: var(--mux-mono) !important;
+  font-weight: 600 !important;
+  color: var(--ui-fg-muted, inherit) !important;
+}
+
+body.layout-mux .hero-search-container {
+  filter: none !important;
+}
+
+body.layout-mux .hero-search-container::before {
+  text-shadow: none !important;
+  opacity: 0.4 !important;
+}
+
+body.layout-mux .hero-search-container::after {
+  display: none !important;
+}
+
+body.layout-mux .cyber-sessions-title {
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  font-family: var(--mux-mono) !important;
+  font-weight: 600 !important;
+  color: var(--ui-fg-muted, var(--ui-dialog-text)) !important;
+}
+
+body.layout-mux .cyber-sessions-dot {
+  box-shadow: none !important;
+}
+
+body.layout-mux .crc-prefix-arrow {
+  display: inline !important;
+  opacity: 0.4 !important;
+  color: var(--ui-button-primary, #7dcea0) !important;
+}
+
+body.layout-mux .cyber-result-card {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+body.layout-mux .cyber-sessions-empty,
+body.layout-mux .connection-history-empty {
+  font-style: normal !important;
+  font-family: var(--mux-mono) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--ui-fg-muted, inherit) !important;
+  text-align: center;
+  padding: 1.25rem 0.75rem !important;
+}
+
+/* ---------- Diálogos TTY ---------- */
+body.layout-mux .p-dialog.app-dialog {
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  box-shadow: var(--ui-shadow-2, 0 16px 48px rgba(0, 0, 0, 0.38)) !important;
+}
+
+body.layout-mux .p-dialog.app-dialog .p-dialog-header {
+  min-height: var(--mux-header-h);
+  padding: 6px 12px !important;
+  font-family: var(--mux-mono);
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, var(--ui-dialog-bg)) !important;
+  border-bottom: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .p-dialog.app-dialog .p-dialog-title::before,
+body.layout-mux .app-dialog-header-title::before {
+  content: "$ ";
+  opacity: 0.4;
+  font-family: var(--mux-mono);
+}
+
+body.layout-mux .p-dialog.app-dialog .p-dialog-footer {
+  font-family: var(--mux-mono);
+  border-top: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .app-surface,
+body.layout-mux .search-dropdown {
+  border-radius: var(--layout-border-radius-main);
+  border-color: var(--mux-pane-border);
+}
+
+/* ---------- Ajustes: nav tipo ls ---------- */
+body.layout-mux .settings-sidebar {
+  border-right: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .settings-nav-item {
+  font-family: var(--mux-mono);
+  font-size: 12px;
+  border-radius: 0;
+}
+
+body.layout-mux .settings-nav-item.active {
+  background: var(--ui-accent-soft, rgba(125, 206, 160, 0.14)) !important;
+  color: var(--ui-dialog-text) !important;
+  border-color: transparent !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary, #7dcea0) !important;
+}
+
+body.layout-mux .settings-nav-item.active .settings-nav-item-text::before {
+  content: "./";
+  opacity: 0.45;
+  margin-right: 2px;
+}
+
+body.layout-mux .general-settings-section {
+  border-radius: var(--layout-border-radius-main);
+  border-color: var(--mux-pane-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---------- Explorador, red, vault ---------- */
+body.layout-mux .file-explorer-header,
+body.layout-mux .network-tool-header-container,
+body.layout-mux .password-tab-header {
+  min-height: var(--mux-header-h);
+  font-family: var(--mux-mono);
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, var(--ui-content-bg)) !important;
+  color: var(--ui-dialog-text, var(--ui-sidebar-text)) !important;
+  border-bottom: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .file-explorer-card {
+  border-radius: var(--layout-border-radius-main) !important;
+  border-color: var(--mux-pane-border) !important;
+  box-shadow: none !important;
+}
+
+body.layout-mux .password-hero-title-input,
+body.layout-mux .password-input-control,
+body.layout-mux .password-textarea {
+  color: var(--ui-dialog-text) !important;
+}
