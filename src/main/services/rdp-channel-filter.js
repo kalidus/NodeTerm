@@ -30,6 +30,8 @@ const CHANNEL_FLAG_LAST = 0x02;
 const CHANNEL_FLAG_SHOW_PROTOCOL = 0x10;
 const MCS_SEND_DATA_INDICATION = 0x68;
 const MCS_CHANNEL_JOIN_CONFIRM = 0x3e;
+/** T.125 / IronRDP: UserId en PER se codifica como (id - BASE). El canal user real es BASE+offset. */
+const MCS_BASE_CHANNEL_ID = 1001;
 const SC_NET = 0x0c03;
 const SC_MSGCHANNEL = 0x0c04;
 
@@ -37,8 +39,150 @@ const SC_MSGCHANNEL = 0x0c04;
 const IRONRDP_SHARE_CONTROL_MIN = 10;
 
 const SEC_FLAGSHI_VALID = 0x8000;
+const SEC_EXCHANGE_PKT = 0x0001;
+const SEC_TRANSPORT_REQ = 0x0002;
+const SEC_TRANSPORT_RSP = 0x0004;
+const SEC_INFO_PKT = 0x0040;
+const SEC_LICENSE_PKT = 0x0080;
+const SEC_REDIRECTION_PKT = 0x0400;
 const SEC_AUTODETECT_REQ = 0x1000;
+const SEC_AUTODETECT_RSP = 0x2000;
 const SEC_HEARTBEAT = 0x4000;
+
+/** SEC_* de propósito distinto a licencia; si llegan en NewLicenseRequest tumba IronRDP (#1629). */
+const SEC_PRE_LICENSE_DROP_MASK =
+  SEC_EXCHANGE_PKT |
+  SEC_TRANSPORT_REQ |
+  SEC_TRANSPORT_RSP |
+  SEC_INFO_PKT |
+  SEC_REDIRECTION_PKT |
+  SEC_AUTODETECT_REQ |
+  SEC_AUTODETECT_RSP |
+  SEC_HEARTBEAT;
+
+const LICENSE_ERROR_ALERT = 0xff;
+const LICENSE_STATUS_VALID_CLIENT = 0x00000007;
+const LICENSE_ST_NO_TRANSITION = 0x00000002;
+/** HRESULT E_ABORT: rechazar UDP multitransport (MS-RDPBCGR 2.2.15.2 / FreeRDP). */
+const HR_MULTITRANSPORT_FAIL = 0x80004004;
+
+/**
+ * PDU de licencia sintético STATUS_VALID_CLIENT (MS-RDPBCGR / MS-RDPELE).
+ * Sirve para sacar a IronRDP de LicenseExchange cuando el servidor salta la
+ * licencia y manda ShareControl (Demand Active / DeactivateAll) directamente.
+ */
+function buildStatusValidClientUserData() {
+  const body = Buffer.alloc(12);
+  body.writeUInt32LE(LICENSE_STATUS_VALID_CLIENT, 0);
+  body.writeUInt32LE(LICENSE_ST_NO_TRANSITION, 4);
+  body.writeUInt16LE(0, 8); // blob type
+  body.writeUInt16LE(0, 10); // blob length
+  const preambleSize = 4 + body.length;
+  const userData = Buffer.alloc(4 + preambleSize);
+  userData.writeUInt16LE(SEC_LICENSE_PKT, 0);
+  userData.writeUInt16LE(0, 2);
+  userData[4] = LICENSE_ERROR_ALERT;
+  userData[5] = 0x03; // PreambleVersion::V3
+  userData.writeUInt16LE(preambleSize, 6);
+  body.copy(userData, 8);
+  return userData;
+}
+
+/** Protocolos UDP de Initiate Multitransport Request (MS-RDPBCGR 2.2.15.1). */
+const MT_PROTO_UDPFECR = 0x01;
+const MT_PROTO_UDPFECL = 0x02;
+/** TS_SECURITY_HEADER siempre es 4B (flags+flagsHi), aunque FLAGSHI_VALID no esté. */
+const MT_SEC_HEADER_LEN = 4;
+/** requestId(4) + protocol(2) + reserved(2) + cookie(16). */
+const MT_REQ_BODY_MIN = 4 + 2 + 2 + 16;
+
+/**
+ * Initiate Multitransport Request (MS-RDPBCGR 2.2.15.1) tras licencia.
+ * IronRDP anuncia MultiTransport en GCC; con Soft-Sync Windows espera
+ * SEC_TRANSPORT_RSP antes de Demand Active (si no → hang post-licencia).
+ * No confundir con ShareControl: totalLength puede tener bit 0x0002 (p.ej. 0x0016).
+ * @returns {{ requestId: number }|null}
+ */
+function parseSecTransportRequest(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < MT_SEC_HEADER_LEN + MT_REQ_BODY_MIN) {
+    return null;
+  }
+  const flags = userData.readUInt16LE(0);
+  // Solo SEC_TRANSPORT_REQ (ignorar FLAGSHI_VALID); evita ShareControl length/type.
+  const lowFlags = flags & 0x7fff;
+  if (lowFlags !== SEC_TRANSPORT_REQ) return null;
+  const off = MT_SEC_HEADER_LEN;
+  const requestId = userData.readUInt32LE(off) >>> 0;
+  const requestedProtocol = userData.readUInt16LE(off + 4);
+  // reserved puede ser !=0 (FreeRDP: JSON extra); no exigir 0.
+  if (requestedProtocol !== MT_PROTO_UDPFECR && requestedProtocol !== MT_PROTO_UDPFECL) {
+    return null;
+  }
+  return { requestId };
+}
+
+/** SEC_TRANSPORT_RSP con hrResponse de rechazo (TCP-only). Cabecera SEC 4B. */
+function buildSecTransportFailResponse(requestId) {
+  const ud = Buffer.alloc(MT_SEC_HEADER_LEN + 8);
+  ud.writeUInt16LE(SEC_TRANSPORT_RSP, 0);
+  ud.writeUInt16LE(0, 2); // flagsHi
+  ud.writeUInt32LE(requestId >>> 0, 4);
+  ud.writeUInt32LE(HR_MULTITRANSPORT_FAIL >>> 0, 8);
+  return ud;
+}
+
+/**
+ * Si el PDU es Multitransport REQ, drop + RSP fail al mismo canal.
+ * @returns {object|null}
+ */
+function consumeMultitransportRequest(state, channelId, userData) {
+  const req = parseSecTransportRequest(userData);
+  if (!req) return null;
+  markDropped(state, channelId);
+  const initiator = state.clientInitiator || 0;
+  const reply = buildMcsSendDataRequest(
+    initiator,
+    channelId,
+    buildSecTransportFailResponse(req.requestId)
+  );
+  console.warn(
+    `[Bridge] Multitransport REQ → RSP fail (TCP-only) ch=${channelId} id=${req.requestId}`
+  );
+  return {
+    forward: null,
+    replies: [reply],
+    dropped: true,
+    note: `multitransport-rsp-fail ch=${channelId} id=${req.requestId}`,
+    channelId,
+    isCliprdr: false,
+    cliprdrDesc: null
+  };
+}
+
+/** STATUS_VALID_CLIENT real (ERROR_ALERT): cierra el gate pre-licencia. */
+function noteLicenseValidClient(state, userData) {
+  if (!state || !Buffer.isBuffer(userData) || userData.length < 12) return false;
+  if ((userData.readUInt16LE(0) & SEC_LICENSE_PKT) === 0) return false;
+  if (userData[4] !== LICENSE_ERROR_ALERT) return false;
+  if (userData.readUInt32LE(8) !== LICENSE_STATUS_VALID_CLIENT) return false;
+  if (state.licenseExchangeOpen !== false) {
+    state.licenseExchangeOpen = false;
+    console.warn('[Bridge] License STATUS_VALID_CLIENT: gate pre-licencia cerrado');
+  }
+  return true;
+}
+
+function looksLikeShareControlDuringLicense(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < IRONRDP_SHARE_CONTROL_MIN) return null;
+  const totalLen = userData.readUInt16LE(0);
+  const typeWord = userData.readUInt16LE(2);
+  const shareType = typeWord & 0x000f;
+  const shareVer = typeWord & 0xfff0;
+  if (shareVer !== 0x0010 && shareVer !== 0x0000) return null;
+  if (![1, 2, 3, 4, 6, 7, 10].includes(shareType)) return null;
+  if (Math.abs(totalLen - userData.length) > 4) return null;
+  return shareType;
+}
 
 function isTpkt(buf) {
   return Buffer.isBuffer(buf) && buf.length >= 7 && buf[0] === 0x03 && buf[1] === 0x00;
@@ -164,13 +308,22 @@ function readChannelJoinConfirmId(buf) {
   return buf.readUInt16BE(11);
 }
 
-/** MCS Attach User Confirm (0x2e): user id en offset 9 si result=0.
- * Wallix (y mstsc contra Wallix) envian userId=0; IronRDP join-ea con initiator 0.
- * 0 es un initiator valido: no filtrarlo.
+/** MCS Attach User Confirm (0x2e): offset PER del userId en bytes 9-10.
+ * PER: nibble alto de byte 8 = Result (0=rt-successful). El nibble bajo puede ser !=0.
+ * Devuelve el valor de cable (sin +1001), igual que IronRDP write_u16(..., BASE).
+ * El canal user logico es MCS_BASE_CHANNEL_ID + offset (p.ej. 8 → 1009).
  */
 function readAttachUserConfirmInitiator(buf) {
-  if (!isTpkt(buf) || buf.length < 11 || buf[7] !== 0x2e || buf[8] !== 0x00) return null;
+  if (!isTpkt(buf) || buf.length < 11 || buf[7] !== 0x2e) return null;
+  const result = (buf[8] >> 4) & 0x0f;
+  if (result !== 0) return null;
   return buf.readUInt16BE(9);
+}
+
+/** Canal MCS de usuario (logico) a partir del initiator de cable. */
+function mcsUserChannelId(wireInitiator) {
+  if (wireInitiator == null || wireInitiator < 0) return null;
+  return (wireInitiator + MCS_BASE_CHANNEL_ID) & 0xffff;
 }
 
 /** MCS Channel Join Request (0x38), 12 bytes. */
@@ -298,8 +451,14 @@ function enqueueClientChannelJoin(state, frame) {
 function noteServerAttachUserConfirm(state, buf) {
   const id = readAttachUserConfirmInitiator(buf);
   if (!state || id == null) return false;
-  // nullish: initiator 0 (Wallix) es valido y debe persistir.
-  if (state.clientInitiator == null) state.clientInitiator = id;
+  // createChannelFilterState inicia clientInitiator en 0 (placeholder). El userId
+  // real del Attach User Confirm debe sustituirlo; 0 de Wallix solo se conserva
+  // si el servidor realmente asigna 0.
+  if (!state.clientInitiator) {
+    state.clientInitiator = id;
+  } else if (id > 0) {
+    state.clientInitiator = id;
+  }
   return true;
 }
 
@@ -421,6 +580,8 @@ function createChannelFilterState() {
     channelIdToName: new Map(),
     // DynVC por sesion (Echo Soft-Sync). NUNCA compartir entre pestañas.
     activeDvcChannels: new Map(),
+    // ChannelIds con CREATE_RSP SUCCESS del WASM (IronRDP ya tiene el canal).
+    wasmOpenedDvcChannels: new Set(),
     messageChannelId: null,
     staticVcChannelId: null,
     cliprdrChannelId: null,
@@ -502,8 +663,109 @@ function createChannelFilterState() {
     cliprdrEarlyJoinSent: false,
     cliprdrJoined: false,
     cliprdrBridgeHandshakeSent: false,
-    autoDetect: createAutoDetectState()
+    autoDetect: createAutoDetectState(),
+    // true hasta el primer Demand Active: IronRDP no tolera SEC_AUTODETECT/etc. en licencia.
+    licenseExchangeOpen: true,
+    // IronRDP anuncia SUPPORT_SKIP_CHANNELJOIN; si el servidor tambien lo soporta,
+    // no hay joins ni hay que retener Client Info. Si el servidor NO lo soporta y
+    // el WASM igual salta joins, el bridge los inyecta y retiene Client Info.
+    clientSkipChannelJoin: false,
+    serverSkipChannelJoin: false,
+    skipChannelJoin: false,
+    bridgeMandatoryJoinsSent: false,
+    pendingClientInfo: null,
+    ioJoinConfirmedForClientInfo: false
   };
+}
+
+/**
+ * Tras Attach User Confirm: IronRDP WASM a menudo salta Channel Joins (skip mal
+ * negociado / channel_ids vacio) y Windows responde DeactivateAll+Disconnect.
+ * El bridge une user+IO(+SC_NET conocidos) si aun no se pidieron.
+ *
+ * Importante: clientInitiator es el offset PER de cable (p.ej. 8). El canal user
+ * a unir es 1001+offset (1009). ChannelJoinRequest.initiator va en cable como
+ * offset; channelId va absoluto (IronRDP per::write_u16 base 1001 / 0).
+ * @returns {Buffer[]}
+ */
+function takeBridgeMandatoryJoins(state) {
+  if (!state || state.bridgeMandatoryJoinsSent) return [];
+  // Ambos lados acordaron omitir joins: inyectarlos puede tumbar Windows y
+  // retener Client Info garantiza el Disconnect (el servidor ya espera Info).
+  if (state.skipChannelJoin === true) return [];
+  const wireInitiator = state.clientInitiator;
+  // Placeholder 0 es valido (Wallix); null no.
+  if (wireInitiator == null) return [];
+
+  const requested = ensureJoinSet(state);
+  const io = state.ioChannelId != null ? state.ioChannelId : 1003;
+  const userCh = mcsUserChannelId(wireInitiator);
+  const channels = new Set([io]);
+  if (userCh != null) channels.add(userCh);
+  if (state.allowed instanceof Set) {
+    for (const id of state.allowed) {
+      if (id != null) channels.add(id);
+    }
+  }
+  // No unir message channel aqui: IronRDP no lo usa y un ID mal parseado (p.ej. 1008)
+  // provoca joins invalidos. El servidor lo une solo si el cliente lo pide en el handshake.
+
+  const missing = [...channels].filter((id) => !requested.has(id)).sort((a, b) => a - b);
+  // Si el WASM ya pidio user+IO, no reinyectar.
+  if (missing.length === 0) return [];
+
+  state.bridgeMandatoryJoinsSent = true;
+  const joins = [];
+  for (const id of missing) {
+    requested.add(id);
+    joins.push(buildMcsChannelJoinRequest(wireInitiator, id));
+  }
+  return joins;
+}
+
+/** Client Info (SEC_INFO_PKT) hacia el servidor. */
+function isClientInfoUserData(userData) {
+  return Buffer.isBuffer(userData) && userData.length >= 6
+    && (userData.readUInt16LE(0) & SEC_INFO_PKT) !== 0;
+}
+
+/**
+ * Retiene Client Info hasta JoinConfirm de IO (si el bridge inyectó joins).
+ * @returns {{ hold: boolean, release: Buffer|null }}
+ */
+function holdOrReleaseClientInfo(state, frame) {
+  if (!state || !Buffer.isBuffer(frame)) return { hold: false, release: null };
+  const parsed = parseMcsSendData(frame);
+  if (!parsed || !isClientInfoUserData(parsed.userData)) {
+    return { hold: false, release: null };
+  }
+  if (state.skipChannelJoin === true || !state.bridgeMandatoryJoinsSent) {
+    return { hold: false, release: null };
+  }
+  const io = state.ioChannelId != null ? state.ioChannelId : 1003;
+  const confirmed = state.serverJoinConfirmed instanceof Set && state.serverJoinConfirmed.has(io);
+  if (confirmed || state.ioJoinConfirmedForClientInfo) {
+    state.ioJoinConfirmedForClientInfo = true;
+    state.pendingClientInfo = null;
+    return { hold: false, release: null };
+  }
+  state.pendingClientInfo = Buffer.from(frame);
+  return { hold: true, release: null };
+}
+
+/**
+ * Tras JoinConfirm de IO: liberar Client Info retenido.
+ * @returns {Buffer[]}
+ */
+function takePendingClientInfoAfterIoJoin(state, confirmChannelId) {
+  if (!state) return [];
+  const io = state.ioChannelId != null ? state.ioChannelId : 1003;
+  if (confirmChannelId !== io) return [];
+  state.ioJoinConfirmedForClientInfo = true;
+  if (!Buffer.isBuffer(state.pendingClientInfo)) return [];
+  const pending = state.pendingClientInfo;
+  state.pendingClientInfo = null;
+  return [pending];
 }
 
 /**
@@ -584,6 +846,29 @@ function learnFromServerGcc(state, buf) {
     state.allowed.delete(parsed.messageChannelId);
   }
 
+  try {
+    const { describeServerEarlyCaps } = require('./rdp-mcs-helpers');
+    const sc = describeServerEarlyCaps(buf);
+    if (sc) {
+      state.serverSkipChannelJoin = sc.skipChannelJoinSupported === true;
+      state.serverEarlyCapabilityFlags = sc.earlyCapabilityFlags;
+    }
+  } catch (_) { /* noop */ }
+  // IronRDP (connector) siempre anuncia SUPPORT_SKIP_CHANNELJOIN. Si el servidor
+  // tambien lo soporta, IronRDP omite joins y manda Client Info tras AUC.
+  if (state.serverSkipChannelJoin === true) {
+    state.skipChannelJoin = true;
+    state.clientSkipChannelJoin = true;
+    state.ioJoinConfirmedForClientInfo = true;
+    console.warn(
+      `[Bridge] SKIP_CHANNELJOIN activo (SC_CORE early=0x${
+        (state.serverEarlyCapabilityFlags != null
+          ? state.serverEarlyCapabilityFlags
+          : 0).toString(16)
+      }): sin joins inyectados; Client Info pasa directo`
+    );
+  }
+
   // Mapear lo que ANUNCIAMOS al servidor (tras la inyeccion) a los IDs de SC_NET.
   state.channelIdToName = new Map();
   // Usar clientChannelNames (con inyeccion) para el mapa servidor->nombre.
@@ -637,6 +922,10 @@ function learnFromServerGcc(state, buf) {
     parsed.channelIds
   );
   syncWasmJoinedChannels(state, parsed.channelIds);
+  // SKIP_CHANNELJOIN: no hay JoinConfirm; marcar cliprdr unido tras mapear SC_NET.
+  if (state.skipChannelJoin === true && state.cliprdrChannelId != null) {
+    state.cliprdrJoined = true;
+  }
   if (state.virtualChannels === true) {
     state.virtualBridgeJoinIds = new Set(state.injectOnlyChannelIds || []);
     state.virtualJoinConfirmed = new Set();
@@ -652,13 +941,20 @@ function learnClientInitiator(state, buf) {
 
   if (!state.clientChannelNames || state.clientChannelNames.length === 0) {
     try {
-      const { findClientNetworkChannels } = require('./rdp-mcs-helpers');
+      const {
+        findClientNetworkChannels,
+        describeClientEarlyCaps
+      } = require('./rdp-mcs-helpers');
       const chs = findClientNetworkChannels(buf);
       if (chs.length) {
         state.clientChannelNames = chs;
         if (!state.wasmChannelNames || state.wasmChannelNames.length === 0) {
           state.wasmChannelNames = chs.slice();
         }
+      }
+      const caps = describeClientEarlyCaps(buf);
+      if (caps && caps.supportSkipChannelJoin) {
+        state.clientSkipChannelJoin = true;
       }
     } catch (_) {}
   }
@@ -985,7 +1281,11 @@ function consumeAutodetect(state, channelId, userData, force) {
 function isUserMcsChannel(state, channelId) {
   if (channelId == null) return false;
   if (channelId === 1001 || channelId === 1002) return true;
-  if (state && state.clientInitiator != null && channelId === state.clientInitiator) return true;
+  if (state && state.clientInitiator != null) {
+    // clientInitiator es offset de cable; el canal user logico es BASE+offset.
+    if (channelId === state.clientInitiator) return true;
+    if (channelId === mcsUserChannelId(state.clientInitiator)) return true;
+  }
   if (state && state.messageChannelId != null && channelId === state.messageChannelId) return true;
   return false;
 }
@@ -1405,9 +1705,11 @@ function claimCliprdrPdu(state, channelId, userData) {
   confirmCliprdrWriteChannel(state, channelId);
   maybePromoteSelectorAppCliprdr(state);
   retryConfirmAppCliprdrWrite(state);
-  // Selector n/a: servidor habla cliprdr en el VC nombrado (hop RDP sin 2o READY).
-  // No tocar wallixService null (BeeSer / RDP directo).
+  // Selector Wallix n/a: servidor habla cliprdr en el VC nombrado (hop RDP sin 2o READY).
+  // Solo si ya es bastion/virtual — el RDP directo también usa service=n/a y no
+  // debe marcarse isBastion (rompe DynVC/cliprdr como si fuera Wallix).
   if (state.wallixService === 'n/a'
+      && (state.isBastion === true || state.virtualChannels === true)
       && cliprdrDeclaredName(state, channelId) === 'cliprdr') {
     const named = declaredChannelId(state, 'cliprdr');
     if (named === channelId && isSafeStaticCliprdrWrite(state, named)) {
@@ -1498,17 +1800,19 @@ function isNamedCliprdrPreGreetPdu(desc) {
 
 const CB_MSG_CLIP_CAPS = 0x0007;
 const CB_MSG_TEMP_DIRECTORY = 0x0006;
+const CB_MSG_FORMAT_DATA_RESPONSE = 0x0005;
+const CB_RESPONSE_FAIL = 0x0002;
 /** IronRDP-like: long names + file clip + lock + huge files. */
 const DEFAULT_CLIPRDR_GENERAL_FLAGS = 0x3e;
 const CLIPRDR_TEMPDIR_BYTES = 520;
 const DEFAULT_CLIPRDR_TEMPDIR_PATH = 'C:\\Windows\\Temp\\';
 
 /** CHANNEL_PDU + CLIPRDR_HEADER + data, flags FIRST|LAST|SHOW_PROTOCOL (0x13). */
-function buildCliprdrChannelUserData(msgType, data) {
+function buildCliprdrChannelUserData(msgType, data, msgFlags = 0) {
   const payload = Buffer.isBuffer(data) ? data : Buffer.alloc(0);
   const clipHdr = Buffer.alloc(8);
   clipHdr.writeUInt16LE(msgType & 0xffff, 0);
-  clipHdr.writeUInt16LE(0, 2);
+  clipHdr.writeUInt16LE(msgFlags & 0xffff, 2);
   clipHdr.writeUInt32LE(payload.length, 4);
   const clipPayload = Buffer.concat([clipHdr, payload]);
   const chanHdr = Buffer.alloc(CHANNEL_PDU_HEADER_LEN);
@@ -1518,6 +1822,20 @@ function buildCliprdrChannelUserData(msgType, data) {
     4
   );
   return Buffer.concat([chanHdr, clipPayload]);
+}
+
+/**
+ * CB_FORMAT_DATA_RESPONSE con CB_RESPONSE_FAIL (sin payload).
+ * Evita entregar FORMAT_DATA_REQUEST a IronRDP cuando submit_format_data
+ * tumba la sesion ("clipboard channel is not in Ready state").
+ */
+function buildCliprdrFormatDataResponseFail(channelId, opts = {}) {
+  const initiator = opts.initiator != null ? opts.initiator : 0;
+  return buildMcsSendDataRequest(
+    initiator,
+    channelId,
+    buildCliprdrChannelUserData(CB_MSG_FORMAT_DATA_RESPONSE, Buffer.alloc(0), CB_RESPONSE_FAIL)
+  );
 }
 
 /**
@@ -1993,16 +2311,37 @@ function applyStaticVcReasmForward(state, reasmKey, frame, channelId, userData, 
 
 function buildCliprdrResult(state, buf, channelId, userData) {
   let desc = describeCliprdrPdu(userData);
-  if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
-    state.cliprdrServerReady = true;
-  }
+  // IronRDP Ready = CB_MONITOR_READY. CAPS solo no basta: si marcamos ready
+  // antes, el cliente manda FORMAT_LIST y al FORMAT_DATA_REQUEST hace
+  // submit_format_data → "clipboard channel is not in Ready state".
   if (desc && desc.includes('CB_CLIP_CAPS')) {
     noteServerCliprdrCaps(state, userData);
   }
   if (desc && desc.includes('CB_MONITOR_READY')) {
+    state.cliprdrServerReady = true;
     noteServerCliprdrMonitorReady(state, userData);
     retryConfirmAppCliprdrWrite(state);
     retryConfirmRdpCliprdrWrite(state);
+  }
+  // Windows pide datos tras el FORMAT_LIST del cliente. IronRDP 0.7 a menudo
+  // no esta Ready y cierra la sesion entera; FAIL local mantiene EGFX vivo.
+  if (desc && desc.includes('CB_FORMAT_DATA_REQUEST')) {
+    const reply = buildCliprdrFormatDataResponseFail(channelId, {
+      initiator: state.clientInitiator || 0
+    });
+    console.warn(
+      `[Bridge Clipboard] FORMAT_DATA_REQUEST → FAIL local (no WASM; evita Ready crash) ch=${channelId}`
+    );
+    return {
+      forward: null,
+      replies: [reply],
+      dropped: true,
+      note: `cliprdr-format-data-req-fail-local ch=${channelId}`,
+      channelId: state.cliprdrChannelId,
+      serverChannelId: channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
   }
   if (desc && desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE')) {
     state.cliprdrServerFormatListSeen = true;
@@ -2149,8 +2488,36 @@ function filterIoChannelPdu(state, channelId, userData) {
 
   // 2. Si es un paquete de licencia (SEC_LICENSE_PKT = 0x0080), DEBE PASAR para completar el handshake
   const secFlags = userData.length >= 2 ? userData.readUInt16LE(0) : 0;
-  if ((secFlags & 0x0080) !== 0) {
+  if ((secFlags & SEC_LICENSE_PKT) !== 0) {
+    noteLicenseValidClient(state, userData);
     return null;
+  }
+
+  const VALID_SHARE_CONTROL_TYPES = [1, 2, 3, 4, 6, 7, 10];
+
+  // 2b. Gate pre-licencia (IronRDP #1629 / DeactivateAll prematuro):
+  // ShareControl (Demand Active / DeactivateAll) lo maneja processServerFrame con
+  // STATUS_VALID_CLIENT sintético. Aquí solo dropeamos SEC_* / basura sin LICENSE_PKT.
+  if (state.licenseExchangeOpen !== false && userData.length >= 4) {
+    const shareType = looksLikeShareControlDuringLicense(userData);
+    if (shareType === 1 || shareType === 6) {
+      // processServerFrame lo intercepta antes; si llega aquí, no dropear.
+    } else if ((secFlags & SEC_AUTODETECT_REQ) !== 0 || (secFlags & SEC_PRE_LICENSE_DROP_MASK) !== 0
+        || shareType == null) {
+      const kind = (secFlags & SEC_AUTODETECT_REQ) !== 0
+        ? 'pre-license-autodetect'
+        : ((secFlags & SEC_PRE_LICENSE_DROP_MASK) !== 0
+          ? 'pre-license-non-license-sec'
+          : 'pre-license-drop');
+      markDropped(state, channelId);
+      return {
+        forward: null,
+        replies: [],
+        dropped: true,
+        note: `${kind} flags=0x${secFlags.toString(16)} len=${userData.length}B hex=${userData.toString('hex').slice(0, 40)}`,
+        channelId
+      };
+    }
   }
 
   // 3. PDUs con longitud menor a la mínima de ShareControlHeader (10 bytes)
@@ -2177,7 +2544,6 @@ function filterIoChannelPdu(state, channelId, userData) {
   // Tipos no soportados (ej. 0x0b=11) crashean fatalmente IronRDP: 'invalid pdu_type: invalid pdu type ...'
   const pduTypeWithVersion = userData.readUInt16LE(2);
   const pduType = pduTypeWithVersion & 0x000f;
-  const VALID_SHARE_CONTROL_TYPES = [1, 2, 3, 4, 6, 7, 10];
   if (!VALID_SHARE_CONTROL_TYPES.includes(pduType)) {
     markDropped(state, channelId);
     return {
@@ -2189,6 +2555,11 @@ function filterIoChannelPdu(state, channelId, userData) {
     };
   }
 
+  // Primer Demand Active fuera del gate (p.ej. ya cerrado): mantener coherencia.
+  if (pduType === 1 && state.licenseExchangeOpen !== false) {
+    state.licenseExchangeOpen = false;
+  }
+
   return null;
 }
 
@@ -2198,12 +2569,12 @@ function wasmHasDrdynvcName(state) {
 }
 
 /**
- * DisplayControl solo en directo (bastion lo stub-acepta con EGFX, sin WASM).
- * EGFX Graphics sigue permitido en bastion via wasmAllowsGraphicsDvc.
+ * DisplayControl: IronRDP WASM actual responde CREATE_RSP 0xC0000001
+ * (STATUS_UNSUCCESSFUL). No reenviar; bastion lo stub-acepta, directo NOT_SUPPORTED.
+ * EGFX Graphics sigue por wasmAllowsGraphicsDvc.
  */
-function wasmDeclaredDrdynvc(state) {
-  if (state && state.isBastion) return false;
-  return wasmHasDrdynvcName(state);
+function wasmDeclaredDrdynvc(_state) {
+  return false;
 }
 
 function wasmAllowsGraphicsDvc(state) {
@@ -2372,7 +2743,8 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
     allowGraphics,
     allowAudio,
     bastionStub,
-    activeDvcChannels: state.activeDvcChannels
+    activeDvcChannels: state.activeDvcChannels,
+    wasmOpenedDvcChannels: state.wasmOpenedDvcChannels
   });
   if (!dvc.handled) return null;
 
@@ -2587,6 +2959,63 @@ function processServerFrame(state, buf) {
     if (virt) return { ...empty, ...virt };
   }
 
+  // Directo / WASM sin joins: tras Attach User Confirm unir user+IO(+SC_NET).
+  if (isTpkt(buf) && buf.length >= 9 && buf[4] === 0x02 && buf[5] === 0xf0 && buf[6] === 0x80
+      && buf[7] === 0x2e) {
+    const aucHex = buf.toString('hex');
+    const parsedId = readAttachUserConfirmInitiator(buf);
+    noteServerAttachUserConfirm(state, buf);
+    const joins = takeBridgeMandatoryJoins(state);
+    console.warn(
+      `[Bridge] Attach User Confirm hex=${aucHex} parsedUser=${parsedId}` +
+      ` initiator=${state.clientInitiator} io=${state.ioChannelId}` +
+      ` joins=${joins.length} alreadySent=${state.bridgeMandatoryJoinsSent}` +
+      ` requested=[${[...(state.clientJoinRequested || [])].join(',')}]`
+    );
+    if (joins.length) {
+      console.warn(
+        `[Bridge] Channel Joins inyectados tras Attach User Confirm: ` +
+        `${joins.length} canal(es) ids=[${joins.map((j) => j.readUInt16BE(10)).join(',')}]`
+      );
+      return {
+        forward: buf,
+        replies: joins,
+        dropped: false,
+        note: `bridge-mandatory-joins n=${joins.length}`,
+        channelId: null,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
+  }
+
+  // Joins inyectados por el bridge: absorber confirms y liberar Client Info en IO.
+  if (state.bridgeMandatoryJoinsSent
+      && isTpkt(buf) && buf.length >= 15 && buf[7] === MCS_CHANNEL_JOIN_CONFIRM) {
+    const result = (buf[8] >> 3) & 0x0f;
+    const requested = buf.readUInt16BE(11);
+    if (result === 0) {
+      if (!(state.serverJoinConfirmed instanceof Set)) state.serverJoinConfirmed = new Set();
+      state.serverJoinConfirmed.add(requested);
+      const released = takePendingClientInfoAfterIoJoin(state, requested);
+      if (released.length) {
+        console.warn(`[Bridge] Client Info liberado tras JoinConfirm IO ch=${requested}`);
+      }
+      markDropped(state, requested);
+      return {
+        forward: null,
+        replies: released,
+        dropped: true,
+        note: released.length
+          ? `release-client-info-after-io-join ch=${requested}`
+          : `bridge-join-confirm-absorbed ch=${requested}`,
+        channelId: requested,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
+  }
+
   let frame = buf;
   if (!state.ready) {
     const learned = learnFromServerGcc(state, frame);
@@ -2732,7 +3161,8 @@ function processServerFrame(state, buf) {
       allowGraphics,
       allowAudio,
       bastionStub,
-      activeDvcChannels: state.activeDvcChannels
+      activeDvcChannels: state.activeDvcChannels,
+      wasmOpenedDvcChannels: state.wasmOpenedDvcChannels
     });
     if (dvc.handled && dvc.forward) {
       if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
@@ -2915,7 +3345,8 @@ function processServerFrame(state, buf) {
         allowGraphics,
         allowAudio,
         bastionStub,
-        activeDvcChannels: state.activeDvcChannels
+        activeDvcChannels: state.activeDvcChannels,
+        wasmOpenedDvcChannels: state.wasmOpenedDvcChannels
       });
       if (dvc.handled && dvc.forward) {
         if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
@@ -3058,6 +3489,8 @@ function processServerFrame(state, buf) {
     }
 
     if (parsed) {
+      const mt = consumeMultitransportRequest(state, channelId, parsed.userData);
+      if (mt) return mt;
       const siphoned = consumeAutodetect(state, channelId, parsed.userData, true);
       if (siphoned) return siphoned;
     }
@@ -3099,6 +3532,59 @@ function processServerFrame(state, buf) {
 
   // 3. Tráfico en el Canal IO:
   if (!parsed) return empty;
+
+  // Multitransport a veces llega por IO; mismo ACK fail TCP-only.
+  if (Buffer.isBuffer(parsed.userData)) {
+    const mtIo = consumeMultitransportRequest(state, channelId, parsed.userData);
+    if (mtIo) return mtIo;
+  }
+
+  // Servidor salta licencia y manda ShareControl (Demand Active / DeactivateAll).
+  // IronRDP en NewLicenseRequest decodifica eso como LicenseHeader → securityHeaderFlags.
+  // Inyectamos STATUS_VALID_CLIENT y cerramos el gate. DeactivateAll se omite (WASM 0.7
+  // no hace skip en CapabilitiesExchange); Demand Active se reenvía tras el sintético.
+  if (state.licenseExchangeOpen !== false && Buffer.isBuffer(parsed.userData)
+      && (parsed.userData.readUInt16LE(0) & SEC_LICENSE_PKT) === 0) {
+    const shareType = looksLikeShareControlDuringLicense(parsed.userData);
+    if (shareType === 1 || shareType === 6) {
+      state.licenseExchangeOpen = false;
+      const licenseUd = buildStatusValidClientUserData();
+      const licenseFrame = buildMcsSendDataIndication(
+        parsed.initiator != null ? parsed.initiator : (state.clientInitiator || 0),
+        channelId,
+        licenseUd
+      );
+      if (shareType === 6) {
+        markDropped(state, channelId);
+        console.warn(
+          `[Bridge] Pre-license: DeactivateAll → STATUS_VALID_CLIENT sintético ` +
+          `(omitido DA ${parsed.userData.length}B)`
+        );
+        return {
+          forward: licenseFrame,
+          replies: [],
+          dropped: false,
+          note: 'pre-license-synth-valid-client drop-deactivate-all',
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
+      console.warn(
+        `[Bridge] Pre-license: Demand Active → STATUS_VALID_CLIENT sintético + forward DA`
+      );
+      return {
+        forward: frame,
+        replies: [],
+        dropped: false,
+        note: 'pre-license-synth-valid-client then demand-active',
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        wasmInjectBefore: [licenseFrame]
+      };
+    }
+  }
 
   const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
   if (siphoned) return siphoned;
@@ -3201,6 +3687,7 @@ module.exports = {
   isNamedCliprdrPreGreetPdu,
   buildClientCliprdrCapsFrame,
   buildClientCliprdrTempDirFrame,
+  buildCliprdrFormatDataResponseFail,
   takeSynthCliprdrPreGreet,
   isProbeTempDirOnGreetEnabled,
   takeProbeTempDirOnGreet,
@@ -3231,6 +3718,15 @@ module.exports = {
   processServerFrame,
   tryConsumeAutoDetectFrame,
   siphonAutoDetectFrames,
+  buildStatusValidClientUserData,
+  looksLikeShareControlDuringLicense,
+  parseSecTransportRequest,
+  buildSecTransportFailResponse,
+  noteLicenseValidClient,
+  takeBridgeMandatoryJoins,
+  holdOrReleaseClientInfo,
+  takePendingClientInfoAfterIoJoin,
+  isClientInfoUserData,
   wasmDeclaredDrdynvc,
   wasmAllowsGraphicsDvc,
   wasmAllowsAudioDvc,

@@ -90,6 +90,73 @@ function peekDvcCmd(userData) {
   return (userData[8] >> 4) & 0x0f;
 }
 
+/**
+ * Si el FIRST es DATA, lee el ChannelId. null si no es DATA o faltan bytes.
+ * @returns {{ channelId: number }|null}
+ */
+function peekDvcDataChannelId(userData) {
+  if (!isChannelPduFirst(userData) || userData.length < 10) return null;
+  const headerByte = userData[8];
+  const cmd = (headerByte >> 4) & 0x0f;
+  const isData = cmd === DVC_CMD_DATA || cmd === DVC_CMD_DATA_FIRST
+    || cmd === DVC_CMD_DATA_COMPRESSED || cmd === DVC_CMD_DATA_FIRST_COMPRESSED;
+  if (!isData) return null;
+  const cbId = headerByte & 0x03;
+  let idLen = 1;
+  if (cbId === 1) idLen = 2;
+  else if (cbId === 2) idLen = 4;
+  else if (cbId !== 0) return null;
+  if (userData.length < 9 + idLen) return null;
+  let channelId = 0;
+  if (idLen === 1) channelId = userData.readUInt8(9);
+  else if (idLen === 2) channelId = userData.readUInt16LE(9);
+  else channelId = userData.readUInt32LE(9);
+  return { channelId };
+}
+
+/**
+ * IronRDP solo tiene el canal tras procesar CREATE y emitir CREATE_RSP ok.
+ * Sin wasmOpenedDvcChannels (tests legacy) se considera abierto.
+ */
+function isWasmOpenedDvc(channelId, options) {
+  const opened = options && options.wasmOpenedDvcChannels;
+  if (!(opened instanceof Set)) return true;
+  return opened.has(channelId);
+}
+
+function canForwardDvcData(channelId, chName, options) {
+  if (!shouldForwardDvcChannel(chName, options)) return false;
+  return isWasmOpenedDvc(channelId, options);
+}
+
+/**
+ * DATA de un DVC que el WASM no abrió no debe llegar a IronRDP:
+ * process_data cierra con "access to non existing DVC channel".
+ * @returns {object|null} resultado absorb, o null si el fragmento puede seguir
+ */
+function absorbUnopenedDvcData(userData, options, activeDvcChannels) {
+  const peek = peekDvcDataChannelId(userData);
+  if (!peek) return null;
+  if (peek.channelId > MAX_PLAUSIBLE_DVC_CHANNEL_ID) {
+    return dvcReplyResult(
+      [],
+      `dvc-data-id-implausible ch=${peek.channelId} absorbed`
+    );
+  }
+  const chName = activeDvcChannels.get(peek.channelId) || '';
+  if (canForwardDvcData(peek.channelId, chName, options)) return null;
+  if (shouldForwardDvcChannel(chName, options)) {
+    return dvcReplyResult(
+      [],
+      `dvc-data-pending-open ch=${peek.channelId} (${userData.length}B absorbed)`
+    );
+  }
+  return dvcReplyResult(
+    [],
+    `dvc-data-unopened ch=${peek.channelId} (${userData.length}B absorbed)`
+  );
+}
+
 function isCompressedDvcCmd(cmd) {
   return cmd === DVC_CMD_DATA_FIRST_COMPRESSED || cmd === DVC_CMD_DATA_COMPRESSED;
 }
@@ -482,7 +549,8 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
  * @param {number} initiator
  * @param {Buffer} userData
  * @param {{ allowDisplayControl?: boolean, allowGraphics?: boolean,
- *           allowAudio?: boolean, bastionStub?: boolean, activeDvcChannels?: Map }} [options]
+ *           allowAudio?: boolean, bastionStub?: boolean, activeDvcChannels?: Map,
+ *           wasmOpenedDvcChannels?: Set }} [options]
  * @returns {{ handled: boolean, forward: boolean, replies: Buffer[], note: string|null }}
  */
 function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
@@ -495,10 +563,13 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   // Cmd solo es fiable con FLAG_FIRST (en continuaciones el byte 8 es payload).
   const peekCmd = isChannelPduFirst(userData) ? peekDvcCmd(userData) : null;
 
-  // FIRST|LAST en cabecera pero payload truncado (TPKT a medias): NO absorber.
-  // Si se tira como cmd raro/comprimido, el resto del TPKT llega huerfano a IronRDP.
+  // FIRST|LAST en cabecera pero payload truncado (TPKT a medias): NO absorber
+  // salvo DATA de un canal que el WASM no abrió. Si se tira como cmd raro, el
+  // resto del TPKT llega huerfano a IronRDP.
   if (wantsDynvcPassthrough(options) && isChannelPduFirstLastFlags(userData)
       && !isCompleteChannelPdu(userData)) {
+    const unopened = absorbUnopenedDvcData(userData, options, activeDvcChannels);
+    if (unopened) return unopened;
     return {
       handled: false,
       forward: false,
@@ -534,9 +605,11 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   }
 
   // Fragmentos CHANNEL_PDU (FIRST sin LAST, etc.): con EGFX no se interpretan aqui.
-  // Si el filtro ya absorbio un FIRST sin LAST (compressed/cmd raro), NO debe
-  // reenviar estas continuaciones: ver serverDrdynvcDropFragmentOpen.
+  // DATA de un canal sin CREATE reenviado se absorbe. CREATE/CAPS siguen al
+  // reensamblado. Continuaciones sin FIRST las filtra serverDrdynvcDropFragmentOpen.
   if (wantsDynvcPassthrough(options) && !isCompleteChannelPdu(userData)) {
+    const unopened = absorbUnopenedDvcData(userData, options, activeDvcChannels);
+    if (unopened) return unopened;
     return {
       handled: false,
       forward: false,
@@ -594,15 +667,12 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   }
 
   if (parsed.type === 'data') {
-    // ID imposible: basura de un fragmento mal parseado. Passthrough al WASM
-    // solo si no es DynVC comprimido (ya filtrado arriba por peekCmd).
+    // ID imposible: basura de un fragmento mal parseado. No reenviar al WASM.
     if (typeof parsed.channelId === 'number' && parsed.channelId > MAX_PLAUSIBLE_DVC_CHANNEL_ID) {
-      return {
-        handled: false,
-        forward: false,
-        replies: [],
-        note: `dvc-data-id-implausible ch=${parsed.channelId}`
-      };
+      return dvcReplyResult(
+        [],
+        `dvc-data-id-implausible ch=${parsed.channelId} absorbed`
+      );
     }
     const chName = activeDvcChannels.get(parsed.channelId) || '';
     const kind = parsed.cmd === DVC_CMD_DATA_FIRST || parsed.cmd === DVC_CMD_DATA_FIRST_COMPRESSED
@@ -617,10 +687,18 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
       );
     }
 
-    if (shouldForwardDvcChannel(chName, options)) {
+    if (canForwardDvcData(parsed.channelId, chName, options)) {
       const totalHint = parsed.totalLength != null ? ` total=${parsed.totalLength}` : '';
       return dvcForwardResult(
         `dvc-forward-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B${totalHint})`
+      );
+    }
+
+    // CREATE reenviado pero WASM aun sin CREATE_RSP ok: no entregar DATA.
+    if (shouldForwardDvcChannel(chName, options)) {
+      return dvcReplyResult(
+        [],
+        `dvc-${kind}-pending-open ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
       );
     }
 
@@ -634,16 +712,11 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
       );
     }
 
-    // Solo canal desconocido (CREATE lo vio solo el WASM): reenviar sin comprimir.
-    if (wantsDynvcPassthrough(options)) {
-      return dvcForwardResult(
-        `dvc-forward-${kind}-unknown ch=${parsed.channelId} (${parsed.data.length}B)`
-      );
-    }
-
+    // Sin CREATE previo el WASM no tiene el canal: DATA aquí es el crash
+    // "access to non existing DVC channel". mstsc no entrega ese DATA.
     return dvcReplyResult(
       [],
-      `dvc-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
+      `dvc-${kind}-unopened ch=${parsed.channelId} (${parsed.data.length}B absorbed)`
     );
   }
 
@@ -671,6 +744,8 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   if (parsed.type === 'close') {
     const chName = activeDvcChannels.get(parsed.channelId) || '';
     activeDvcChannels.delete(parsed.channelId);
+    const opened = options.wasmOpenedDvcChannels;
+    if (opened instanceof Set) opened.delete(parsed.channelId);
     if (shouldForwardDvcChannel(chName, options)) {
       return dvcForwardResult(`dvc-forward-close ch=${parsed.channelId}`);
     }
@@ -705,6 +780,8 @@ module.exports = {
   buildDvcCapabilitiesResponse,
   handleDvcRequest,
   clearActiveDvcChannels,
+  canForwardDvcData,
+  isWasmOpenedDvc,
   isCompleteChannelPdu,
   isDisplayControlName,
   isGraphicsChannelName,

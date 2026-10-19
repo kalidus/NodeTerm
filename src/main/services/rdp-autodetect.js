@@ -28,6 +28,10 @@ const NETCHAR_SYNC = 0x0018;
 
 const SEC_AUTODETECT_REQ = 0x1000;
 const SEC_AUTODETECT_RSP = 0x2000;
+const SEC_FLAGSHI_VALID = 0x8000;
+
+/** Tipos ShareControl que IronRDP acepta (mismo set que filterIoChannelPdu). */
+const SHARE_CONTROL_TYPES = new Set([1, 2, 3, 4, 6, 7, 10]);
 
 const MCS_SEND_DATA_REQUEST = 0x64;
 const MCS_SEND_DATA_INDICATION = 0x68;
@@ -157,11 +161,34 @@ function stripSecAutodetect(userData) {
     return { hadSec: false, body: userData };
   }
   const flags = userData.readUInt16LE(0);
+  if ((flags & SEC_AUTODETECT_REQ) === 0) {
+    return { hadSec: false, body: userData };
+  }
+
+  // Cuerpo AD real tras Basic Security Header (MS-RDPBCGR 2.2.14).
+  if (userData.length >= 6) {
+    const hdrLen = userData[4];
+    const typeId = userData[5];
+    if ((hdrLen === 0x06 || hdrLen === 0x08 || hdrLen === 0x0e) && typeId === 0x00) {
+      return { hadSec: true, body: userData.subarray(4), flags };
+    }
+  }
+
   const flagsHi = userData.readUInt16LE(2);
-  if (flagsHi === 0 && (flags & SEC_AUTODETECT_REQ) !== 0) {
+  // Classic: flagsHi==0. También FLAGSHI_VALID con flagsHi arbitrario (#1629 / RDS).
+  if (flagsHi === 0 || (flags & SEC_FLAGSHI_VALID) !== 0) {
     return { hadSec: true, body: userData.subarray(4), flags };
   }
-  return { hadSec: false, body: userData };
+
+  // totalLength de ShareControl puede tener bit 0x1000 (p.ej. len>=4096 o 0x100c);
+  // no tratarlo como SEC_AUTODETECT si el type|ver parece ShareControl.
+  const shareType = flagsHi & 0x000f;
+  const shareVer = flagsHi & 0xfff0;
+  if (SHARE_CONTROL_TYPES.has(shareType) && (shareVer === 0x0010 || shareVer === 0x0000)) {
+    return { hadSec: false, body: userData };
+  }
+
+  return { hadSec: true, body: userData.subarray(4), flags };
 }
 
 function wrapSecAutodetectRsp(body) {

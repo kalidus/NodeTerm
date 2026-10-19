@@ -325,12 +325,19 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     const proc = processServerFrame(state, invalidShareControl);
     assert.equal(proc.dropped, true);
     assert.equal(proc.forward, null);
-    assert.ok(proc.note.includes('invalid-share-control-0xb'));
+    // Gate pre-license puede atrapar antes el mismo PDU (flags con bits SEC).
+    assert.ok(
+      proc.note.includes('invalid-share-control-0xb')
+      || proc.note.includes('pre-license-non-license-sec')
+      || proc.note.includes('pre-license-drop'),
+      `nota inesperada: ${proc.note}`
+    );
   });
 
   test('permite ShareControlHeader con pduType estándar (DemandActive=1, ConfirmActive=3, Data=7) en canal IO', () => {
     const state = createChannelFilterState();
     learnFromServerGcc(state, f1); // ioChannelId = 1003
+    state.licenseExchangeOpen = false;
 
     // Data PDU: totalLength=20, pduType=0x0017 (type 7), pduSource=1003, shareId=0x00010000
     const dataPduUserData = Buffer.from('14001700eb030000010000000000000000000000', 'hex');
@@ -389,7 +396,7 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(processServerFrame(state, garbage).dropped, true);
   });
 
-  test('procesa PDU cliprdr legítima en canal 1004 y activa cliprdrServerReady', () => {
+  test('procesa PDU cliprdr legítima en canal 1004; Ready solo con MONITOR_READY', () => {
     const { isCliprdrHeader } = require('../../src/main/services/rdp-channel-filter');
     const state = createChannelFilterState();
     learnFromServerGcc(state, f1); // ioChannelId = 1003, cliprdr = 1004
@@ -422,7 +429,49 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.ok(proc.forward);
     assert.equal(proc.forward.readUInt16BE(10), 1004);
     assert.equal(proc.channelId, 1004);
+    assert.equal(state.cliprdrServerReady, false);
+
+    const readyUd = Buffer.alloc(16);
+    readyUd.writeUInt32LE(8, 0);
+    readyUd.writeUInt32LE(3, 4);
+    readyUd.writeUInt16LE(1, 8); // CB_MONITOR_READY
+    const readyPdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 30, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 16]),
+      readyUd
+    ]);
+    const procReady = processServerFrame(state, readyPdu);
+    assert.equal(procReady.dropped, false);
     assert.equal(state.cliprdrServerReady, true);
+  });
+
+  test('FORMAT_DATA_REQUEST no llega a WASM: FAIL local (evita Ready crash)', () => {
+    const { describeCliprdrPdu } = require('../../src/main/services/rdp-channel-filter');
+    const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
+    const state = createChannelFilterState();
+    learnFromServerGcc(state, f1);
+    state.cliprdrChannelId = 1004;
+    state.clientInitiator = 1002;
+    state.cliprdrServerReady = true;
+
+    const reqUd = Buffer.alloc(20);
+    reqUd.writeUInt32LE(12, 0);
+    reqUd.writeUInt32LE(3, 4);
+    reqUd.writeUInt16LE(4, 8); // CB_FORMAT_DATA_REQUEST
+    reqUd.writeUInt16LE(0, 10);
+    reqUd.writeUInt32LE(4, 12);
+    reqUd.writeUInt32LE(0x0c, 16);
+    const pdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 34, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 20]),
+      reqUd
+    ]);
+    const proc = processServerFrame(state, pdu);
+    assert.equal(proc.dropped, true);
+    assert.equal(proc.forward, null);
+    assert.equal(proc.replies.length, 1);
+    assert.match(String(proc.note || ''), /format-data-req-fail-local/);
+    const mcs = parseMcsSendData(proc.replies[0]);
+    assert.match(describeCliprdrPdu(mcs.userData), /CB_FORMAT_DATA_RESPONSE/);
+    assert.match(describeCliprdrPdu(mcs.userData), /flags=0x2/);
   });
 
   test('procesa CB_FORMAT_LIST con alineación de padding de Windows (canal 1004 directo) sin descartarlo', () => {

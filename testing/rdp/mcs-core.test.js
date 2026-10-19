@@ -76,14 +76,21 @@ describe('fixWallixGccConnectPduLength', () => {
     assert.equal(again.reason, 'already-ok');
   });
 
-  it('prepareMcsConnectInitial incluye parche Wallix', () => {
+  it('prepareMcsConnectInitial incluye parche Wallix en bastion', () => {
     const iron = loadIronMcs();
     if (!iron) return;
-    const prepared = prepareMcsConnectInitial(iron, 1);
-    assert.ok(prepared.notes.some((n) => n.includes('Wallix GCC connectPDU')));
+    const prepared = prepareMcsConnectInitial(iron, 1, { isBastion: true });
+    assert.ok(prepared.notes.some((n) => /Wallix GCC connectPDU/.test(n) && !/omitido/.test(n)));
     const core = findClientCoreData(prepared.buf);
     assert.ok(core);
     assert.equal(core.serverSelectedProtocol, 1);
     assert.equal(prepared.buf.readUInt32LE(core.offset + 20), 19041);
+  });
+
+  it('prepareMcsConnectInitial omite GCC Wallix en RDP directo', () => {
+    const iron = loadIronMcs();
+    if (!iron) return;
+    const prepared = prepareMcsConnectInitial(iron, 1, { isBastion: false });
+    assert.ok(prepared.notes.some((n) => /omitido \(directo\)/.test(n)));
   });
 });

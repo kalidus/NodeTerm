@@ -15,7 +15,7 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitTpktFrames, RdpStreamDeframer, RdpFrameSplitter } = require('./rdp-protocol-helpers');
-const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, patchClientCoreWant32bpp, describeClientEarlyCaps, formatClientEarlyCaps } = require('./rdp-mcs-helpers');
+const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, isMcsConnectResponse, patchClientCoreWant32bpp, describeClientEarlyCaps, describeServerEarlyCaps, formatClientEarlyCaps } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const {
   describeCapabilities,
@@ -84,6 +84,8 @@ const {
   shouldOrderClientJoins,
   enqueueClientChannelJoin,
   readChannelJoinRequest,
+  holdOrReleaseClientInfo,
+  takeBridgeMandatoryJoins,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
   remapClientRdpsndFrame,
@@ -223,9 +225,8 @@ function isBastionSession(session) {
   const rawUser = String(session.username || session.userChain || '');
   if (rawUser.split('@').length >= 3) return true;
   if (rawUser.includes('#') || (rawUser.includes('@') && rawUser.includes(':'))) return true;
-  if (typeof session.selectedProtocol === 'number' && session.selectedProtocol !== 0x02 && session.selectedProtocol !== 0x08) {
-    return true;
-  }
+  // NO usar selectedProtocol: SSL/TLS (0x01) es habitual en RDP directo a Windows
+  // y clasificarlo como bastion aplicaba inject+GCC Wallix y tumbaba el handshake.
   return false;
 }
 
@@ -280,7 +281,12 @@ function resolveInjectedChannels(session) {
   const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
   if (requested && requested.toLowerCase() === 'off') return null;
   if (requested) return parseInjectChannelsSpec(requested);
-  return RDP_INJECTED_CHANNELS;
+  // Bastion Wallix: inyectar rdpdr/rdpsnd como mstsc.
+  // Directo a Windows nativo: no inyectar por defecto — el prepare Wallix+inject
+  // corrompe el Connect Initial y el servidor manda DeactivateAll tras AUC
+  // (SKIP_CHANNELJOIN) sin llegar a Client Info. Opt-in con NODETERM_RDP_INJECT_CHANNELS.
+  if (isBastionSession(session)) return RDP_INJECTED_CHANNELS;
+  return null;
 }
 
 /**
@@ -1534,6 +1540,27 @@ class RdpNativeBridgeService extends EventEmitter {
                     recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
                     if (recentRdpFrames.length > RECENT_FRAMES_WINDOW) recentRdpFrames.shift();
 
+                    // Primeros frames del handshake (sigue tras Valid Client: Multitransport/DA).
+                    if (!isFastPath && framesFromRdp <= 12) {
+                      const parsedEarly = parseMcsSendData(frame);
+                      const ud = parsedEarly && parsedEarly.userData;
+                      const flagsHex = ud && ud.length >= 2
+                        ? ` flags=0x${ud.readUInt16LE(0).toString(16)}`
+                        : '';
+                      let extra = '';
+                      if (framesFromRdp === 1 && pduDesc.includes('0x7f')) {
+                        extra = ` ready=${channelFilter.ready} io=${channelFilter.ioChannelId}` +
+                          ` allowed=[${channelFilter.allowed ? [...channelFilter.allowed].join(',') : ''}]` +
+                          ` raw=${frame.toString('hex').slice(0, 96)}`;
+                      } else if (n <= 16 && !ud) {
+                        extra = ` raw=${frame.toString('hex')}`;
+                      }
+                      console.warn(
+                        `🔎 [Bridge] Handshake frame#${framesFromRdp} ${n}B ch=${parsedEarly ? parsedEarly.channelId : '?'} | ${pduDesc}${flagsHex}` +
+                        (ud ? ` ud=${ud.toString('hex').slice(0, 48)}` : '') + extra
+                      );
+                    }
+
                     // El motivo del cierre viaja en un PDU TPKT, no en FastPath: se comprueba solo en paquetes no-FastPath
                     const disconnectDesc = describeDisconnectPdu(frame);
                     if (disconnectDesc) {
@@ -1587,9 +1614,60 @@ class RdpNativeBridgeService extends EventEmitter {
                   const wasReady = channelFilter.ready;
                   const prevWriteCh = channelFilter.cliprdrWriteChannelId;
                   if (!isFastPath) noteServerAttachUserConfirm(channelFilter, frame);
+                  // Cinturon: inyectar Channel Joins en cuanto llega Attach User Confirm,
+                  // antes del resto del filtro (IronRDP no los envia → Windows cierra).
+                  if (!isFastPath && frame.length >= 8 && frame[0] === 0x03 && frame[7] === 0x2e
+                      && !channelFilter.bridgeMandatoryJoinsSent
+                      && channelFilter.skipChannelJoin !== true
+                      && tlsSocket && tlsSocket.writable) {
+                    const earlyJoins = takeBridgeMandatoryJoins(channelFilter);
+                    if (earlyJoins.length) {
+                      const joinIds = earlyJoins.map((j) => j.readUInt16BE(10)).join(',');
+                      console.warn(
+                        `[Bridge] Channel Joins (early-hook) n=${earlyJoins.length}` +
+                        ` initWire=${channelFilter.clientInitiator}` +
+                        ` userCh=${(channelFilter.clientInitiator || 0) + 1001}` +
+                        ` io=${channelFilter.ioChannelId || 1003} ids=[${joinIds}]`
+                      );
+                      for (const join of earlyJoins) {
+                        bytesToRdp += join.length;
+                        tlsSocket.write(join);
+                      }
+                    }
+                  }
                   const processed = processServerFrame(channelFilter, frame);
                   if (!isFastPath) {
                     noteServerChannelJoinConfirm(channelFilter, frame);
+                  }
+                  if (!wasReady && channelFilter.ready) {
+                    console.warn(
+                      `[Bridge] SC_NET listo io=${channelFilter.ioChannelId}` +
+                      ` allowed=[${[...(channelFilter.allowed || [])].join(',')}]` +
+                      ` skipJoin=${channelFilter.skipChannelJoin === true}` +
+                      ` msgCh=${channelFilter.messageChannelId}`
+                    );
+                  } else if (!isFastPath && framesFromRdp === 1 && !channelFilter.ready) {
+                    console.warn(
+                      `[Bridge] SC_NET no parseado en Connect Response (${n}B)` +
+                      ` hex=${frame.toString('hex').slice(0, 128)}`
+                    );
+                  }
+                  if (!isFastPath && framesFromRdp === 1 && isMcsConnectResponse(frame)) {
+                    try {
+                      const dumpPath = path.join(framesDir, 'last-mcs-connect-response.hex');
+                      fs.mkdirSync(framesDir, { recursive: true });
+                      fs.writeFileSync(dumpPath, frame.toString('hex'), 'utf8');
+                      const sc = describeServerEarlyCaps(frame);
+                      if (sc) {
+                        console.warn(
+                          `[Bridge] SC_CORE early=0x${
+                            sc.earlyCapabilityFlags != null
+                              ? sc.earlyCapabilityFlags.toString(16)
+                              : 'n/a'
+                          } skipJoin=${sc.skipChannelJoinSupported} len=${sc.scCoreLen}`
+                        );
+                      }
+                    } catch (_) { /* noop */ }
                   }
                   if (timeline.enabled && channelFilter.wallixService
                       && timeline.label !== channelFilter.wallixService
@@ -1851,6 +1929,16 @@ class RdpNativeBridgeService extends EventEmitter {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
+                    // Visible sin NODETERM_RDP_DEBUG: IronRDP #1629 (AD/SEC en licencia).
+                    if (/pre-license/i.test(String(processed.note || ''))) {
+                      console.warn(
+                        `🚫 [Bridge] Pre-license drop frame#${framesFromRdp}: ${processed.note}`
+                      );
+                      this.emit('diagnostic-log', {
+                        category: 'license',
+                        message: `Pre-license drop #${framesFromRdp}: ${processed.note}`
+                      });
+                    }
                     if (timeline.enabled && typeof note === 'string') {
                       if (/rdpdr-announce/i.test(note) && !/corto/i.test(note)) {
                         timeline.mark(
@@ -1899,6 +1987,19 @@ class RdpNativeBridgeService extends EventEmitter {
                     timeline.noteIn('drop', n);
                     trafficStats.note(pduDesc, n);
                     continue;
+                  }
+
+                  // STATUS_VALID_CLIENT sintético antes de Demand Active (salto de licencia).
+                  if (Array.isArray(processed.wasmInjectBefore) && processed.wasmInjectBefore.length
+                      && ws.readyState === ws.OPEN) {
+                    for (const inj of processed.wasmInjectBefore) {
+                      if (!inj || typeof inj.length !== 'number') continue;
+                      try {
+                        sendBinaryToWasm(inj);
+                      } catch (injErr) {
+                        console.warn('[Bridge] No se pudo inyectar PDU pre-license a WASM:', injErr.message);
+                      }
+                    }
                   }
 
                   // Caps quick-reply u otras respuestas DVC junto al forward hacia WASM.
@@ -1954,17 +2055,26 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                   }
 
-                  if (processed.dvcForward && isDebug) {
+                  if (processed.dvcForward) {
                     channelFilter.dvcForwardDebugCount = (channelFilter.dvcForwardDebugCount || 0) + 1;
                     if (channelFilter.dvcForwardDebugCount <= 24) {
                       const parsedFwd = parseMcsSendData(frame);
                       const dbg = parsedFwd
                         ? formatDrdynvcForwardDebug(parsedFwd.userData)
                         : null;
-                      console.log(
+                      console.warn(
                         `[Bridge] DynVC->WASM #${channelFilter.dvcForwardDebugCount}` +
                         ` ch=${processed.channelId} ${processed.note || ''}` +
                         (dbg ? ` | ${dbg}` : '')
+                      );
+                    }
+                  } else if (processed.dropped && typeof processed.note === 'string'
+                      && /dvc-(data|forward|reject|accept|caps|pending|unopened)/i.test(processed.note)) {
+                    channelFilter.dvcDropDebugCount = (channelFilter.dvcDropDebugCount || 0) + 1;
+                    if (channelFilter.dvcDropDebugCount <= 24) {
+                      console.warn(
+                        `[Bridge] DynVC drop #${channelFilter.dvcDropDebugCount}` +
+                        ` ch=${processed.channelId} ${processed.note}`
                       );
                     }
                   }
@@ -2214,6 +2324,12 @@ class RdpNativeBridgeService extends EventEmitter {
           lastWsFrameAt = now;
 
           framesToRdp += 1;
+          if (framesToRdp <= 8 && channelFilter.licenseExchangeOpen !== false) {
+            const earlyDesc = describeRdpPdu(payload);
+            console.warn(
+              `📤 [Bridge] Handshake WASM→RDP #${framesToRdp} ${payload.length}B | ${earlyDesc}`
+            );
+          }
           const chsLearned = learnClientInitiator(channelFilter, payload);
           if (chsLearned || framesToRdp === 1) {
             const reqChs = channelFilter.clientChannelNames && channelFilter.clientChannelNames.length
@@ -2246,6 +2362,16 @@ class RdpNativeBridgeService extends EventEmitter {
               continue;
             }
             noteClientChannelJoinRequest(channelFilter, clientFrame);
+            // Retener Client Info hasta JoinConfirm de IO (joins inyectados por el bridge).
+            const infoHold = holdOrReleaseClientInfo(channelFilter, clientFrame);
+            if (infoHold.hold) {
+              clientFramesChanged = true;
+              console.warn(
+                `[Bridge] Client Info retenido hasta JoinConfirm IO ` +
+                `(${clientFrame.length}B; IronRDP envio Info sin Channel Joins)`
+              );
+              continue;
+            }
             // Bastion sin EGFX: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
             // Con EGFX no se capa: el destino tiene que ver Surface/codecs del WASM.
             if (shouldSanitizeBastionConfirm(normalizeBitmaps, channelFilter.egfxGraphics)
@@ -2395,7 +2521,8 @@ class RdpNativeBridgeService extends EventEmitter {
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
             injectChannels: resolveInjectedChannels(session),
             stripChannels,
-            force32
+            force32,
+            isBastion: channelFilter.isBastion === true
           });
           forward = prepared.buf;
           const sentChs = findClientNetworkChannels(prepared.buf);
@@ -2406,9 +2533,11 @@ class RdpNativeBridgeService extends EventEmitter {
             || 'n/a';
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
           const prepareMsg = `[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`;
-          // Siempre log si se ha hecho strip (experimento selector): hay que verlo en consola.
-          if (isDebug || (stripChannels && stripChannels.length)) {
-            console.log(prepareMsg);
+          console.warn(prepareMsg);
+          const clientCaps = describeClientEarlyCaps(payload);
+          if (clientCaps) {
+            if (clientCaps.supportSkipChannelJoin) channelFilter.clientSkipChannelJoin = true;
+            console.warn(formatClientEarlyCaps(clientCaps));
           }
           if (stripChannels && stripChannels.length) {
             channelFilter.omitCliprdrRdpdr = true;
@@ -2437,7 +2566,8 @@ class RdpNativeBridgeService extends EventEmitter {
             const preparedLate = prepareMcsConnectInitial(connectInitial, savedSelectedProtocol, {
               injectChannels: resolveInjectedChannels(session),
               stripChannels: stripChannelsLate,
-              force32
+              force32,
+              isBastion: channelFilter.isBastion === true
             });
             forward = preparedLate.buf;
             const sentChsLate = findClientNetworkChannels(preparedLate.buf);
@@ -3015,9 +3145,26 @@ class RdpNativeBridgeService extends EventEmitter {
     if (!isClip) {
       // Caps quick-reply: el bridge ya respondio Caps al servidor; un segundo
       // CapsResponse del WASM desalinea DynVC / alarga el salto Wallix.
-      if (channelFilter.egfxCapsRepliedByBridge) {
+      {
         const dvcClient = parseDvcPdu(parsed.userData);
-        if (dvcClient && dvcClient.type === 'caps-req') {
+        if (dvcClient && dvcClient.type === 'create-rsp') {
+          if ((dvcClient.status >>> 0) === 0) {
+            if (!(channelFilter.wasmOpenedDvcChannels instanceof Set)) {
+              channelFilter.wasmOpenedDvcChannels = new Set();
+            }
+            channelFilter.wasmOpenedDvcChannels.add(dvcClient.channelId);
+            console.warn(
+              `[Bridge] DynVC CREATE_RSP ok ch=${dvcClient.channelId} (DATA permitido)`
+            );
+          } else {
+            console.warn(
+              `[Bridge] DynVC CREATE_RSP fail ch=${dvcClient.channelId}` +
+              ` status=0x${(dvcClient.status >>> 0).toString(16)}`
+            );
+          }
+        }
+        if (channelFilter.egfxCapsRepliedByBridge
+            && dvcClient && dvcClient.type === 'caps-req') {
           if (!channelFilter.loggedEgfxCapsMute) {
             channelFilter.loggedEgfxCapsMute = true;
             if (rdpDebug() || channelFilter.rdpDebug) {
@@ -3054,16 +3201,36 @@ class RdpNativeBridgeService extends EventEmitter {
     const cacheUntilGreeting = channelFilter.serverCliprdrChannelId == null
       && channelFilter.cliprdrOnUnsafeChannel == null
       && (channelFilter.wallixService === 'RDP' || channelFilter.wallixService === 'APP');
-    // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
-    // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU; solo se avisa una vez por sesion.
-    if (!cacheUntilGreeting && !channelFilter.cliprdrServerReady && !channelFilter.loggedCliprdrBeforeReady) {
-      channelFilter.loggedCliprdrBeforeReady = true;
-      const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
-      if (rdpDebug() || channelFilter.rdpDebug) console.warn(guardMsg);
-      if (typeof channelFilter.recordCliprdr === 'function') {
-        channelFilter.recordCliprdr(guardMsg);
+    // Antes de MONITOR_READY IronRDP no esta Ready: FORMAT_LIST / DATA al wire
+    // provoca submit_format_data → disconnect. CAPS/TEMPDIR si pueden salir.
+    if (!channelFilter.cliprdrServerReady) {
+      const holdUntilReady = typeof clipDesc === 'string' && (
+        (clipDesc.includes('CB_FORMAT_LIST') && !clipDesc.includes('CB_FORMAT_LIST_RESPONSE'))
+        || clipDesc.includes('CB_FORMAT_DATA')
+        || clipDesc.includes('CB_FILECONTENTS')
+      );
+      if (holdUntilReady) {
+        enqueueClientCliprdr(channelFilter, frame);
+        if (!channelFilter.loggedCliprdrBeforeReady) {
+          channelFilter.loggedCliprdrBeforeReady = true;
+          const holdMsg = `⚠️ [Bridge Clipboard] ${clipDesc} encolado hasta CB_MONITOR_READY (IronRDP Ready)`;
+          console.warn(holdMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') {
+            channelFilter.recordCliprdr(holdMsg);
+          }
+          this.emit('diagnostic-log', { category: 'cliprdr-order', message: holdMsg });
+        }
+        return { forward: null, inject: [] };
       }
-      this.emit('diagnostic-log', { category: 'cliprdr-order', message: guardMsg });
+      if (!cacheUntilGreeting && !channelFilter.loggedCliprdrBeforeReady) {
+        channelFilter.loggedCliprdrBeforeReady = true;
+        const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY: ${clipDesc}`;
+        if (rdpDebug() || channelFilter.rdpDebug) console.warn(guardMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') {
+          channelFilter.recordCliprdr(guardMsg);
+        }
+        this.emit('diagnostic-log', { category: 'cliprdr-order', message: guardMsg });
+      }
     }
 
     // Saludo en un VC estatico (cliprdr 1004/1006, o el que Session Probe elija: a veces

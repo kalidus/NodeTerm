@@ -380,15 +380,38 @@ describe('juego de canales por defecto del bridge', () => {
     }
   });
 
-  test('por defecto desplaza cliprdr detras de rdpdr+rdpsnd (orden mstsc)', () => {
-    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr', 'rdpsnd'], after: [] });
-    assert.deepEqual(
+  test('directo: sin inject; bastion: rdpdr+rdpsnd delante (orden mstsc)', () => {
+    assert.equal(resolveInjectedChannels(), null);
+    assert.equal(
       resolveInjectedChannels({ host: '192.168.10.52', username: 'admin' }),
+      null
+    );
+    assert.deepEqual(
+      resolveInjectedChannels({ host: 'wallix', useBastionWallix: true }),
       { before: ['rdpdr', 'rdpsnd'], after: [] }
     );
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
-    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
+    const bastionInj = resolveInjectedChannels({ useBastionWallix: true });
+    const res = prepareMcsConnectInitial(frame, 0x01, {
+      injectChannels: bastionInj,
+      isBastion: true
+    });
     assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
+    assert.ok(res.notes.some((n) => /Wallix GCC connectPDU/.test(n) && !/omitido/.test(n)));
+  });
+
+  test('directo: prepare omite GCC Wallix; bastion lo aplica', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000], ['drdynvc', 0xc0800000]]);
+    const direct = prepareMcsConnectInitial(frame, 0x01, { isBastion: false });
+    assert.ok(direct.notes.some((n) => /omitido \(directo\)/.test(n)));
+    assert.ok(!direct.notes.some((n) => /canales inyectados/.test(n)));
+
+    const bastion = prepareMcsConnectInitial(frame, 0x01, {
+      isBastion: true,
+      injectChannels: { before: ['rdpdr', 'rdpsnd'], after: [] }
+    });
+    assert.ok(bastion.notes.some((n) => /canales inyectados/.test(n)));
+    assert.ok(bastion.notes.some((n) => /Wallix GCC connectPDU/.test(n) && !/omitido/.test(n)));
   });
 
   test("'off' deja la conexion sin tocar", () => {

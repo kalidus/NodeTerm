@@ -62,6 +62,9 @@ describe('filterServerFrame', () => {
     assert.ok(state.allowed.has(1004));
     assert.equal(state.allowed.has(1001), false);
 
+    // Tras licencia: ShareControl / short-io se filtran con las reglas normales.
+    state.licenseExchangeOpen = false;
+
     // from-18-22b: 8B IO con SEC_FLAGSHI — IronRDP ShareControl pide 10B; dropear.
     const shortIo = Buffer.from(fs.readFileSync(path.join(__dirname, 'frames/from-18-22b.hex'), 'utf8').trim(), 'hex');
     assert.equal(filterServerFrame(state, shortIo), null);

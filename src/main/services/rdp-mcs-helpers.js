@@ -465,6 +465,10 @@ const RNS_UD_COLOR_8BPP_POST_BETA2 = 0xca01;
 const RNS_UD_CS_WANT_32BPP_SESSION = 0x0002;
 /** MS-RDPBCGR 2.2.1.3.2 — cliente anuncia EGFX / DynVC Graphics */
 const RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL = 0x0100;
+/** MS-RDPBCGR 2.2.1.3.2 — IronRDP lo pone siempre; con skip del servidor no hay Channel Joins */
+const RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN = 0x0800;
+/** MS-RDPBCGR 2.2.1.4.2 — servidor permite omitir Channel Join Request/Confirm */
+const RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED = 0x00000008;
 const HIGH_COLOR_24BPP = 0x0018;
 const HIGH_COLOR_16BPP = 0x0010;
 
@@ -484,6 +488,7 @@ function describeClientEarlyCaps(buf) {
   return {
     earlyCapabilityFlags: early,
     supportDynVcGfx: (early & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL) !== 0,
+    supportSkipChannelJoin: (early & RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN) !== 0,
     highColorDepth: high
   };
 }
@@ -492,7 +497,34 @@ function formatClientEarlyCaps(info) {
   if (!info) return '';
   return `[Bridge] early caps cliente: flags=0x${info.earlyCapabilityFlags.toString(16)}`
     + ` EGFX=${info.supportDynVcGfx ? 'si' : 'no'}`
+    + ` skipJoin=${info.supportSkipChannelJoin ? 'si' : 'no'}`
     + ` highColor=0x${(info.highColorDepth ?? 0).toString(16)}`;
+}
+
+/**
+ * Lee earlyCapabilityFlags de TS_UD_SC_CORE (Connect Response).
+ * length>=16 incluye earlyCapabilityFlags (u32).
+ * @returns {{ earlyCapabilityFlags: number|null, skipChannelJoinSupported: boolean }|null}
+ */
+function describeServerEarlyCaps(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 12) return null;
+  const mcdn = buf.indexOf(Buffer.from('McDn'));
+  const start = mcdn >= 0 ? mcdn + 4 : 0;
+  for (let i = start; i + 12 <= buf.length; i++) {
+    if (buf.readUInt16LE(i) !== SC_CORE) continue;
+    const length = buf.readUInt16LE(i + 2);
+    if (length < 12 || i + length > buf.length) continue;
+    if (length < 16) {
+      return { earlyCapabilityFlags: null, skipChannelJoinSupported: false, scCoreLen: length };
+    }
+    const early = buf.readUInt32LE(i + 12) >>> 0;
+    return {
+      earlyCapabilityFlags: early,
+      skipChannelJoinSupported: (early & RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED) !== 0,
+      scCoreLen: length
+    };
+  }
+  return null;
 }
 
 /** ¿Es un MCS Connect Initial completo (TPKT + X.224 data + BER 7f 65)? */
@@ -842,20 +874,32 @@ function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
     }
   }
 
-  const gccLen = fixWallixGccConnectPduLength(current);
-  if (gccLen.patched) {
-    current = gccLen.buf;
-    notes.push(`Wallix GCC connectPDU ${gccLen.oldLen}->${gccLen.newLen} (udata+14)`);
-  } else if (gccLen.reason === 'already-ok') {
-    notes.push('Wallix GCC connectPDU ok');
+  // El ajuste connectPDU=udata+14 es para Wallix/MITM o tras inyectar canales.
+  // En RDP directo nativo reescribir esa longitud tumba el handshake (DA tras AUC).
+  const needWallixGcc = options.wallixGcc === true
+    || options.isBastion === true
+    || notes.some((n) => /canales inyectados|canales eliminados/.test(String(n)));
+  if (needWallixGcc) {
+    const gccLen = fixWallixGccConnectPduLength(current);
+    if (gccLen.patched) {
+      current = gccLen.buf;
+      notes.push(`Wallix GCC connectPDU ${gccLen.oldLen}->${gccLen.newLen} (udata+14)`);
+    } else if (gccLen.reason === 'already-ok') {
+      notes.push('Wallix GCC connectPDU ok');
+    } else {
+      notes.push(`Wallix GCC connectPDU ${gccLen.reason}`);
+    }
   } else {
-    notes.push(`Wallix GCC connectPDU ${gccLen.reason}`);
+    notes.push('Wallix GCC connectPDU omitido (directo)');
   }
 
-  const netPatch = patchClientNetworkChannelOptions(current);
-  if (netPatch.patched) {
-    current = netPatch.buf;
-    notes.push(...netPatch.changes);
+  // Opciones CS_NET estilo mstsc: utiles en bastion; en directo solo si hubo inject/strip.
+  if (needWallixGcc || options.patchChannelOptions === true) {
+    const netPatch = patchClientNetworkChannelOptions(current);
+    if (netPatch.patched) {
+      current = netPatch.buf;
+      notes.push(...netPatch.changes);
+    }
   }
 
   return { buf: current, notes, core: findClientCoreData(current) };
@@ -1028,8 +1072,11 @@ module.exports = {
   patchClientCoreBastion16bpp,
   HIGH_COLOR_16BPP,
   describeClientEarlyCaps,
+  describeServerEarlyCaps,
   formatClientEarlyCaps,
   RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL,
+  RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN,
+  RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED,
   fixWallixGccConnectPduLength,
   prepareMcsConnectInitial,
   patchInfoPacket,
