@@ -2138,32 +2138,35 @@
   background: var(--ui-sidebar-hover) !important;
 }
 
-/* Cuadro con borde para el toggler - estilo Windows Explorer */
+/* Cuadro con borde para el toggler - estilo Windows Explorer / mRemoteNG (9×9)
+   Colores vía variables del tema UI; +/− dibujados con trazos CSS (centrado perfecto) */
 .sidebar-tree.tree-theme-windowsClassic .p-tree-toggler {
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  min-height: 16px !important;
+  width: 9px !important;
+  height: 9px !important;
+  min-width: 9px !important;
+  min-height: 9px !important;
   margin-right: 4px !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border: 1px solid var(--ui-sidebar-text, rgba(255, 255, 255, 0.6)) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-sidebar-text, rgba(255, 255, 255, 0.8)) 55%, transparent) !important;
   border-radius: 0 !important;
-  background: transparent !important;
+  background: color-mix(in srgb, var(--ui-sidebar-text, rgba(255, 255, 255, 0.8)) 12%, var(--ui-sidebar-bg, transparent)) !important;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9)) !important;
   cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.15s ease;
+  opacity: 1;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   padding: 0 !important;
   position: relative;
   flex-shrink: 0;
-  overflow: visible;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:hover {
-  opacity: 1;
   background: var(--ui-sidebar-hover) !important;
   border-color: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary) !important;
 }
 
 .sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:focus {
@@ -2180,40 +2183,49 @@
   height: 0 !important;
 }
 
-/* Usar ::before para el símbolo + o - - que llene todo el cuadro y esté perfectamente centrado */
+/* Trazo horizontal (común a + y −), perfectamente centrado */
 .sidebar-tree.tree-theme-windowsClassic .p-tree-toggler::before {
-  content: '+' !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 16px !important;
-  height: 16px !important;
-  font-size: 17px !important;
-  font-weight: 900 !important;
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9)) !important;
-  font-family: 'Segoe UI', Arial, sans-serif !important;
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
   margin: 0 !important;
   padding: 0 !important;
-  position: absolute;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, calc(-50% - 1px)) !important;
-  box-sizing: border-box;
   pointer-events: none;
-  line-height: 1 !important;
-  text-align: center !important;
-  letter-spacing: 0 !important;
+  box-sizing: border-box;
 }
 
-/* Mostrar "-" cuando el nodo está expandido - múltiples detectores */
-/* 1. Detectar por el icono angle-down de PrimeReact (expandido = angle-down, colapsado = angle-right) */
-.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-tree-toggler .pi-angle-down) .p-tree-toggler::before,
-.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:has(.pi-angle-down)::before,
+/* Trazo vertical del + (colapsado); se oculta al expandir → queda − */
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler::after {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1px;
+  height: 5px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Mostrar solo "−" cuando el nodo está expandido (ocultar trazo vertical) */
+/* 1. Detectar por el icono angle-down de PrimeReact */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-tree-toggler .pi-angle-down) .p-tree-toggler::after,
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler:has(.pi-angle-down)::after,
 /* 2. Detectar por aria-expanded */
-.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler[aria-expanded="true"]::before,
-/* 3. Detectar cuando el nodo tiene hijos visibles (no ocultos) */
-.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-treenode-children:not([style*="display: none"])) > .p-treenode-content > .p-tree-toggler::before {
-  content: '−' !important;
+.sidebar-tree.tree-theme-windowsClassic .p-tree-toggler[aria-expanded="true"]::after,
+/* 3. Detectar cuando el nodo tiene hijos visibles */
+.sidebar-tree.tree-theme-windowsClassic .p-treenode:has(.p-treenode-children:not([style*="display: none"])) > .p-treenode-content > .p-tree-toggler::after {
+  display: none !important;
 }
 
 /* Nodos hoja no tienen toggler, pero necesitamos el espacio */
