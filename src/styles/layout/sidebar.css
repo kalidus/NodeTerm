@@ -287,7 +287,7 @@ body.theme-transitioning .content-main {
   font-size: inherit !important;
   background: transparent !important;
   isolation: isolate;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 /* Fondo full-bleed en pseudo-elemento (no pisa ::before de líneas del tema) */
 .sidebar-tree .p-treenode-content::after {

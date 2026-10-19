@@ -2412,7 +2412,7 @@
 .sidebar-tree .p-tree-container,
 .sidebar-tree .p-treenode,
 .sidebar-tree .p-treenode-content {
-  overflow: visible;
+  overflow: visible !important;
 }
 
 /* Sin caja de hover en la flecha ▶: solo el highlight de la fila (::after) */
