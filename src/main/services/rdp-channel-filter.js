@@ -145,9 +145,11 @@ function consumeMultitransportRequest(state, channelId, userData) {
     channelId,
     buildSecTransportFailResponse(req.requestId)
   );
-  console.warn(
-    `[Bridge] Multitransport REQ → RSP fail (TCP-only) ch=${channelId} id=${req.requestId}`
-  );
+  if (state.rdpDebug === true) {
+    console.warn(
+      `[Bridge] Multitransport REQ → RSP fail (TCP-only) ch=${channelId} id=${req.requestId}`
+    );
+  }
   return {
     forward: null,
     replies: [reply],
@@ -167,7 +169,9 @@ function noteLicenseValidClient(state, userData) {
   if (userData.readUInt32LE(8) !== LICENSE_STATUS_VALID_CLIENT) return false;
   if (state.licenseExchangeOpen !== false) {
     state.licenseExchangeOpen = false;
-    console.warn('[Bridge] License STATUS_VALID_CLIENT: gate pre-licencia cerrado');
+    if (state.rdpDebug === true) {
+      console.warn('[Bridge] License STATUS_VALID_CLIENT: gate pre-licencia cerrado');
+    }
   }
   return true;
 }
@@ -890,13 +894,15 @@ function learnFromServerGcc(state, buf) {
     state.skipChannelJoin = true;
     state.clientSkipChannelJoin = true;
     state.ioJoinConfirmedForClientInfo = true;
-    console.warn(
-      `[Bridge] SKIP_CHANNELJOIN activo (SC_CORE early=0x${
-        (state.serverEarlyCapabilityFlags != null
-          ? state.serverEarlyCapabilityFlags
-          : 0).toString(16)
-      }): sin joins inyectados; Client Info pasa directo`
-    );
+    if (state.rdpDebug === true) {
+      console.warn(
+        `[Bridge] SKIP_CHANNELJOIN activo (SC_CORE early=0x${
+          (state.serverEarlyCapabilityFlags != null
+            ? state.serverEarlyCapabilityFlags
+            : 0).toString(16)
+        }): sin joins inyectados; Client Info pasa directo`
+      );
+    }
   }
 
   // Mapear lo que ANUNCIAMOS al servidor (tras la inyeccion) a los IDs de SC_NET.
@@ -1777,7 +1783,18 @@ function noteServerCliprdrCaps(state, userData) {
   if (!state || !Buffer.isBuffer(userData) || !isChannelPduHeader(userData)) return;
   const payload = userData.subarray(CHANNEL_PDU_HEADER_LEN);
   if (payload.length < 24 || payload.readUInt16LE(0) !== 0x0007) return;
-  state.cliprdrServerGeneralFlags = payload.readUInt32LE(20);
+  const gf = payload.readUInt32LE(20) >>> 0;
+  state.cliprdrServerGeneralFlags = gf;
+  state.cliprdrFileClipUnavailable = !cliprdrOffersFileClip(gf);
+  if (!state.loggedCliprdrCapsRaw) {
+    state.loggedCliprdrCapsRaw = true;
+    if (state.rdpDebug === true) {
+      const bit = cliprdrOffersFileClip(gf) ? '+fileclip' : '-fileclip';
+      console.warn(
+        `[Bridge Clipboard] CAPS servidor raw generalFlags=0x${gf.toString(16)}${bit}`
+      );
+    }
+  }
 }
 
 function noteServerCliprdrMonitorReady(state, userData) {
@@ -2112,14 +2129,17 @@ function applyCliprdrReplayFrame(frame, writeCh, flags) {
 
 /**
  * Flags CAPS del rehandshake post-hop (mstsc clipboard: 0x3e tras el 2o READY).
- * Si el servidor ya ofrecio file-clip, ecoamos esos flags; si no, DEFAULT 0x3e.
+ * Si el servidor ya ofrecio file-clip, ecoamos esos flags.
+ * Bastion sin file-clip aun: DEFAULT 0x3e (la maquina suele traerlo luego).
+ * Directo (p.ej. KRdp CAPS 0x2): no mentir; eco del raw del host.
  */
 function resolveRehandshakeCapsFlags(state) {
   const server = state && state.cliprdrServerGeneralFlags != null
     ? (state.cliprdrServerGeneralFlags >>> 0)
     : 0;
   if ((server & CB_STREAM_FILECLIP_ENABLED) !== 0) return server;
-  return DEFAULT_CLIPRDR_GENERAL_FLAGS;
+  if (state && state.isBastion === true) return DEFAULT_CLIPRDR_GENERAL_FLAGS;
+  return server || DEFAULT_CLIPRDR_GENERAL_FLAGS;
 }
 
 // El selector completo el handshake con flags 0x13 y generalFlags=0x2. La maquina
@@ -2353,15 +2373,22 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     retryConfirmAppCliprdrWrite(state);
     retryConfirmRdpCliprdrWrite(state);
   }
-  // Windows pide datos tras el FORMAT_LIST del cliente. IronRDP 0.7 a menudo
+  // Windows/KRdp pide datos tras el FORMAT_LIST del cliente. IronRDP 0.7 a menudo
   // no esta Ready y cierra la sesion entera; FAIL local mantiene EGFX vivo.
+  // No marcar unhealthy: el FAIL es intencional (no un fallo de canal).
   if (desc && desc.includes('CB_FORMAT_DATA_REQUEST')) {
     const reply = buildCliprdrFormatDataResponseFail(channelId, {
       initiator: state.clientInitiator || 0
     });
-    console.warn(
-      `[Bridge Clipboard] FORMAT_DATA_REQUEST → FAIL local (no WASM; evita Ready crash) ch=${channelId}`
-    );
+    if (state.cliprdrHealth) {
+      state.cliprdrHealth.pendingRequest = null;
+    }
+    state.cliprdrLocalFormatDataFail = true;
+    if (state.rdpDebug === true) {
+      console.warn(
+        `[Bridge Clipboard] FORMAT_DATA_REQUEST → FAIL local (no WASM; evita Ready crash) ch=${channelId}`
+      );
+    }
     return {
       forward: null,
       replies: [reply],
@@ -2370,7 +2397,8 @@ function buildCliprdrResult(state, buf, channelId, userData) {
       channelId: state.cliprdrChannelId,
       serverChannelId: channelId,
       isCliprdr: true,
-      cliprdrDesc: desc
+      cliprdrDesc: desc,
+      cliprdrLocalFail: true
     };
   }
   if (desc && desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE')) {
@@ -2998,17 +3026,21 @@ function processServerFrame(state, buf) {
     const parsedId = readAttachUserConfirmInitiator(buf);
     noteServerAttachUserConfirm(state, buf);
     const joins = takeBridgeMandatoryJoins(state);
-    console.warn(
-      `[Bridge] Attach User Confirm hex=${aucHex} parsedUser=${parsedId}` +
-      ` initiator=${state.clientInitiator} io=${state.ioChannelId}` +
-      ` joins=${joins.length} alreadySent=${state.bridgeMandatoryJoinsSent}` +
-      ` requested=[${[...(state.clientJoinRequested || [])].join(',')}]`
-    );
-    if (joins.length) {
+    if (state.rdpDebug === true) {
       console.warn(
-        `[Bridge] Channel Joins inyectados tras Attach User Confirm: ` +
-        `${joins.length} canal(es) ids=[${joins.map((j) => j.readUInt16BE(10)).join(',')}]`
+        `[Bridge] Attach User Confirm hex=${aucHex} parsedUser=${parsedId}` +
+        ` initiator=${state.clientInitiator} io=${state.ioChannelId}` +
+        ` joins=${joins.length} alreadySent=${state.bridgeMandatoryJoinsSent}` +
+        ` requested=[${[...(state.clientJoinRequested || [])].join(',')}]`
       );
+      if (joins.length) {
+        console.warn(
+          `[Bridge] Channel Joins inyectados tras Attach User Confirm: ` +
+          `${joins.length} canal(es) ids=[${joins.map((j) => j.readUInt16BE(10)).join(',')}]`
+        );
+      }
+    }
+    if (joins.length) {
       return {
         forward: buf,
         replies: joins,

@@ -298,6 +298,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const clipboardHistoryRef = useRef([]);
   const clipboardFailedRef = useRef(false);
   const clipboardUnhealthyToastShownRef = useRef(false);
+  /** Host sin CB_STREAM_FILECLIP (p.ej. KRdp): solo texto por cliprdr. */
+  const hostFileClipUnavailableRef = useRef(false);
+  const filePathAsTextToastShownRef = useRef(false);
   const userClosingRef = useRef(false);
   /** Tras 0x112f: reintentar EGFX sin H.264/WebCodecs (Progressive/ClearCodec). */
   const gfxNoAvcFallbackUsedRef = useRef(false);
@@ -310,9 +313,31 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     void window.electron.ipcRenderer.invoke('rdp:mark-user-close', tokenId).catch(() => {});
   };
 
+  const looksLikeRemoteFilePathAsText = (text) => {
+    const t = String(text || '').trim();
+    if (!t) return false;
+    if (/^file:\/\//i.test(t)) return true;
+    if (/^x-special\/(?:gnome|kde|mate)-copied-files/i.test(t)) return true;
+    if (/^(?:copy|cut)\nfile:\/\//im.test(t)) return true;
+    // Ruta Unix absoluta (KRdp a menudo pone solo el path como CF_UNICODETEXT).
+    if (/^\/(?:home|Users|tmp|var|mnt|media)\//.test(t) && !/\s/.test(t) && t.length < 512) {
+      return true;
+    }
+    return false;
+  };
+
   const markClipboardUnhealthy = (reason = 'unknown') => {
+    const reasonStr = String(reason || 'unknown');
+    // FAIL local pre-Ready / watch pending_data: no es un canal roto.
+    if (reasonStr === 'pending_data' || reasonStr === 'pending_request'
+        || reasonStr.startsWith('pending_')) {
+      if (isRdpDebugEnabled()) {
+        console.warn(`📋 [IronRDP Clipboard] watch cliprdr ignorado (${reasonStr})`);
+      }
+      return;
+    }
     clipboardFailedRef.current = true;
-    console.warn(`📋 [IronRDP Clipboard] Portapapeles RDP no disponible (${reason})`);
+    console.warn(`📋 [IronRDP Clipboard] Portapapeles RDP no disponible (${reasonStr})`);
     dumpClipboardHistory('Historial de portapapeles al detectar fallo CLIPRDR:');
     dumpBridgeTraces('Trazas del bridge al detectar fallo CLIPRDR:');
     if (clipboardUnhealthyToastShownRef.current) return;
@@ -320,7 +345,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     toastRef.current?.show({
       severity: 'warn',
       summary: 'Portapapeles RDP no disponible',
-      detail: String(reason),
+      detail: reasonStr,
       life: 4000
     });
   };
@@ -890,6 +915,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     lastBackendReasonRef.current = null;
     clipboardFailedRef.current = false;
     clipboardUnhealthyToastShownRef.current = false;
+    hostFileClipUnavailableRef.current = false;
+    filePathAsTextToastShownRef.current = false;
     userClosingRef.current = false;
     clearTransferDismissTimers();
     uploadFailedIdsRef.current.clear();
@@ -969,6 +996,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       markClipboardUnhealthy(data.reason || 'unknown');
     };
 
+    const handleClipboardFileclipStatus = (payload) => {
+      const data = payload && typeof payload === 'object' ? payload : null;
+      if (!data || data.tokenId !== currentTokenIdRef.current) return;
+      hostFileClipUnavailableRef.current = data.available === false;
+      if (isRdpDebugEnabled()) {
+        console.warn(
+          `📋 [IronRDP Clipboard] file-clip host: available=${data.available !== false}` +
+          ` flags=0x${((data.generalFlags || 0) >>> 0).toString(16)} (${data.reason || ''})`
+        );
+      }
+    };
+
     let udpPayloadCount = 0;
     const handleUdpPayload = (payload) => {
       if (typeof pushUdpPayload !== 'function' || !payload) return;
@@ -988,11 +1027,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     window.electron.ipcRenderer.on('rdp:native-session-closed', handleSessionClosed);
     window.electron.ipcRenderer.on('rdp:diagnostic-log', handleDiagnosticLog);
     window.electron.ipcRenderer.on('rdp:clipboard-unhealthy', handleClipboardUnhealthy);
+    window.electron.ipcRenderer.on('rdp:clipboard-fileclip-status', handleClipboardFileclipStatus);
     window.electron.ipcRenderer.on('rdp:udp-payload', handleUdpPayload);
     return () => {
       window.electron.ipcRenderer.removeListener('rdp:native-session-closed', handleSessionClosed);
       window.electron.ipcRenderer.removeListener('rdp:diagnostic-log', handleDiagnosticLog);
       window.electron.ipcRenderer.removeListener('rdp:clipboard-unhealthy', handleClipboardUnhealthy);
+      window.electron.ipcRenderer.removeListener('rdp:clipboard-fileclip-status', handleClipboardFileclipStatus);
       window.electron.ipcRenderer.removeListener('rdp:udp-payload', handleUdpPayload);
     };
   }, []);
@@ -1691,12 +1732,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                       console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
                     }
                     await writeLocalClipboardText(text);
-                    toastRef.current?.show({
-                      severity: 'success',
-                      summary: 'Portapapeles Remoto',
-                      detail: `Texto copiado al portapapeles: "${text.length > 50 ? text.slice(0, 50) + '...' : text}"`,
-                      life: 2500
-                    });
+                    // Texto: sync en silencio. Ruta/file:// sin FileGroupDescriptorW → un warn.
+                    if (looksLikeRemoteFilePathAsText(text) && !filePathAsTextToastShownRef.current) {
+                      filePathAsTextToastShownRef.current = true;
+                      toastRef.current?.show({
+                        severity: 'warn',
+                        summary: 'Fichero no transferido',
+                        detail: 'Este servidor RDP solo sincroniza texto. La ruta se copió como texto; no hay transferencia de ficheros por portapapeles.',
+                        life: 5000
+                      });
+                    }
                   }
                   break;
                 }
@@ -2549,6 +2594,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   // Transferencia segura de archivos con reintento automatico si el canal CLIPRDR esta negociando
   const uploadFilesSafely = async (provider, files) => {
     if (!provider || !files || !files.length) return;
+    if (hostFileClipUnavailableRef.current) {
+      toastRef.current?.show({
+        severity: 'warn',
+        summary: 'Transferencia no disponible',
+        detail: 'Este servidor RDP no ofrece transferencia de ficheros por portapapeles (solo texto).',
+        life: 5000
+      });
+      return null;
+    }
     isFileTransferArmedRef.current = true;
     for (let attempt = 1; attempt <= 4; attempt++) {
       try {

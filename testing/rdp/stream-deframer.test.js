@@ -452,6 +452,7 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     state.cliprdrChannelId = 1004;
     state.clientInitiator = 1002;
     state.cliprdrServerReady = true;
+    state.cliprdrHealth = { pendingRequest: 'data', failed: false, dataRequested: 1 };
 
     const reqUd = Buffer.alloc(20);
     reqUd.writeUInt32LE(12, 0);
@@ -468,10 +469,46 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(proc.dropped, true);
     assert.equal(proc.forward, null);
     assert.equal(proc.replies.length, 1);
+    assert.equal(proc.cliprdrLocalFail, true);
     assert.match(String(proc.note || ''), /format-data-req-fail-local/);
+    assert.equal(state.cliprdrHealth.pendingRequest, null);
     const mcs = parseMcsSendData(proc.replies[0]);
     assert.match(describeCliprdrPdu(mcs.userData), /CB_FORMAT_DATA_RESPONSE/);
     assert.match(describeCliprdrPdu(mcs.userData), /flags=0x2/);
+  });
+
+  test('CAPS servidor raw 0x2 marca fileClipUnavailable y se reenvia sin boost', () => {
+    const { resolveRehandshakeCapsFlags } = require('../../src/main/services/rdp-channel-filter');
+    const state = createChannelFilterState();
+    learnFromServerGcc(state, f1);
+    state.cliprdrChannelId = 1004;
+    state.isBastion = false;
+
+    const capsUd = Buffer.alloc(32);
+    capsUd.writeUInt32LE(24, 0);
+    capsUd.writeUInt32LE(3, 4);
+    capsUd.writeUInt16LE(7, 8); // CB_CLIP_CAPS
+    capsUd.writeUInt16LE(0, 10);
+    capsUd.writeUInt32LE(16, 12);
+    capsUd.writeUInt16LE(1, 16); // cSets
+    capsUd.writeUInt16LE(0, 18);
+    capsUd.writeUInt16LE(1, 20); // GENERAL
+    capsUd.writeUInt16LE(12, 22);
+    capsUd.writeUInt32LE(2, 24); // version 2
+    capsUd.writeUInt32LE(0x2, 28); // solo long names
+    const pdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 46, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 32]),
+      capsUd
+    ]);
+    const proc = processServerFrame(state, pdu);
+    assert.equal(proc.dropped, false);
+    assert.ok(proc.forward);
+    assert.equal(state.cliprdrServerGeneralFlags, 0x2);
+    assert.equal(state.cliprdrFileClipUnavailable, true);
+    assert.equal(resolveRehandshakeCapsFlags(state), 0x2);
+
+    state.isBastion = true;
+    assert.equal(resolveRehandshakeCapsFlags(state), 0x3e);
   });
 
   test('procesa CB_FORMAT_LIST con alineación de padding de Windows (canal 1004 directo) sin descartarlo', () => {

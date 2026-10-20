@@ -54,6 +54,11 @@ function registerRdpHandlers(dependencies) {
     broadcastToRenderers('rdp:clipboard-unhealthy', eventData);
   });
 
+  rdpNativeBridgeService.removeAllListeners('clipboard-fileclip-status');
+  rdpNativeBridgeService.on('clipboard-fileclip-status', (eventData) => {
+    broadcastToRenderers('rdp:clipboard-fileclip-status', eventData);
+  });
+
   // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
   const egfxJournal = require('../services/rdp-egfx-journal');
 

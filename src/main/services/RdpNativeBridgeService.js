@@ -363,6 +363,7 @@ function isNoisyDrop(note) {
       || note.includes('rail-absorb') || note.includes('rail-handshake')
       || note.includes('cliprdr-swallow-2nd-gen')
       || note.includes('cliprdr-defer-weak-caps')
+      || note.includes('cliprdr-format-data-req-fail-local')
       // DynVC keepalive / ruido: no saturar consola ni el tope de hitos del timeline.
       || note.includes('dvc-echo-reply')
       || note.includes('dvc-compressed-drop')
@@ -644,22 +645,27 @@ class RdpNativeBridgeService extends EventEmitter {
         if (recentCliprdrEvents.length > RECENT_CLIPRDR_WINDOW) {
           recentCliprdrEvents.shift();
         }
-        console.warn(`[Bridge] ${line}`);
-        if (kind === 'request') {
-          emitClipboardUnhealthy('pending_data');
+        // pending_request tras FAIL local no es canal roto: sin unhealthy ni spam.
+        if (isDebug) {
+          console.warn(`[Bridge] ${line}`);
         }
       }, CLIPRDR_WATCH_MS);
     };
 
     const emitClipboardUnhealthy = (reason) => {
+      const failReason = String(reason || 'unknown');
+      if (failReason === 'pending_data' || failReason === 'pending_request'
+          || failReason.startsWith('pending_')) {
+        return;
+      }
       if (channelFilter.loggedClipboardUnhealthy) return;
       channelFilter.loggedClipboardUnhealthy = true;
       const summary = summarizeCliprdrHealth(channelFilter);
-      const failReason = reason || summary.failReason || 'unknown';
-      console.warn(`⚠️ [RdpNativeBridgeService] Portapapeles RDP no disponible (${failReason})`);
+      const outReason = failReason || summary.failReason || 'unknown';
+      console.warn(`⚠️ [RdpNativeBridgeService] Portapapeles RDP no disponible (${outReason})`);
       this.emit('clipboard-unhealthy', {
         tokenId: session.id,
-        reason: failReason,
+        reason: outReason,
         summary
       });
     };
@@ -1540,8 +1546,8 @@ class RdpNativeBridgeService extends EventEmitter {
                     recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
                     if (recentRdpFrames.length > RECENT_FRAMES_WINDOW) recentRdpFrames.shift();
 
-                    // Primeros frames del handshake (sigue tras Valid Client: Multitransport/DA).
-                    if (!isFastPath && framesFromRdp <= 12) {
+                    // Primeros frames del handshake: solo con rdpDebug.
+                    if (isDebug && !isFastPath && framesFromRdp <= 12) {
                       const parsedEarly = parseMcsSendData(frame);
                       const ud = parsedEarly && parsedEarly.userData;
                       const flagsHex = ud && ud.length >= 2
@@ -1626,13 +1632,15 @@ class RdpNativeBridgeService extends EventEmitter {
                       && tlsSocket && tlsSocket.writable) {
                     const earlyJoins = takeBridgeMandatoryJoins(channelFilter);
                     if (earlyJoins.length) {
-                      const joinIds = earlyJoins.map((j) => j.readUInt16BE(10)).join(',');
-                      console.warn(
-                        `[Bridge] Channel Joins (early-hook) n=${earlyJoins.length}` +
-                        ` initWire=${channelFilter.clientInitiator}` +
-                        ` userCh=${(channelFilter.clientInitiator || 0) + 1001}` +
-                        ` io=${channelFilter.ioChannelId || 1003} ids=[${joinIds}]`
-                      );
+                      if (isDebug) {
+                        const joinIds = earlyJoins.map((j) => j.readUInt16BE(10)).join(',');
+                        console.warn(
+                          `[Bridge] Channel Joins (early-hook) n=${earlyJoins.length}` +
+                          ` initWire=${channelFilter.clientInitiator}` +
+                          ` userCh=${(channelFilter.clientInitiator || 0) + 1001}` +
+                          ` io=${channelFilter.ioChannelId || 1003} ids=[${joinIds}]`
+                        );
+                      }
                       for (const join of earlyJoins) {
                         bytesToRdp += join.length;
                         tlsSocket.write(join);
@@ -1644,17 +1652,21 @@ class RdpNativeBridgeService extends EventEmitter {
                     noteServerChannelJoinConfirm(channelFilter, frame);
                   }
                   if (!wasReady && channelFilter.ready) {
-                    console.warn(
-                      `[Bridge] SC_NET listo io=${channelFilter.ioChannelId}` +
-                      ` allowed=[${[...(channelFilter.allowed || [])].join(',')}]` +
-                      ` skipJoin=${channelFilter.skipChannelJoin === true}` +
-                      ` msgCh=${channelFilter.messageChannelId}`
-                    );
+                    if (isDebug) {
+                      console.warn(
+                        `[Bridge] SC_NET listo io=${channelFilter.ioChannelId}` +
+                        ` allowed=[${[...(channelFilter.allowed || [])].join(',')}]` +
+                        ` skipJoin=${channelFilter.skipChannelJoin === true}` +
+                        ` msgCh=${channelFilter.messageChannelId}`
+                      );
+                    }
                   } else if (!isFastPath && framesFromRdp === 1 && !channelFilter.ready) {
-                    console.warn(
-                      `[Bridge] SC_NET no parseado en Connect Response (${n}B)` +
-                      ` hex=${frame.toString('hex').slice(0, 128)}`
-                    );
+                    if (isDebug) {
+                      console.warn(
+                        `[Bridge] SC_NET no parseado en Connect Response (${n}B)` +
+                        ` hex=${frame.toString('hex').slice(0, 128)}`
+                      );
+                    }
                   }
                   if (!isFastPath && framesFromRdp === 1 && isMcsConnectResponse(frame)) {
                     try {
@@ -1662,7 +1674,7 @@ class RdpNativeBridgeService extends EventEmitter {
                       fs.mkdirSync(framesDir, { recursive: true });
                       fs.writeFileSync(dumpPath, frame.toString('hex'), 'utf8');
                       const sc = describeServerEarlyCaps(frame);
-                      if (sc) {
+                      if (sc && isDebug) {
                         console.warn(
                           `[Bridge] SC_CORE early=0x${
                             sc.earlyCapabilityFlags != null
@@ -1730,7 +1742,14 @@ class RdpNativeBridgeService extends EventEmitter {
                       ? ` <-ch=${processed.serverChannelId}`
                       : '';
                     const clipLog = `📥 cliprdr ch=${processed.channelId}${via} ${processed.cliprdrDesc || 'PDU'}`;
-                    recordCliprdrEvent(clipLog, { inbound: true });
+                    // FAIL local pre-Ready: anotar el request pero no armar watch ni unhealthy.
+                    recordCliprdrEvent(clipLog, {
+                      inbound: true,
+                      skipWatch: processed.cliprdrLocalFail === true
+                    });
+                    if (processed.cliprdrLocalFail === true && channelFilter.cliprdrHealth) {
+                      channelFilter.cliprdrHealth.pendingRequest = null;
+                    }
                     if (isDebug) {
                       console.log(`📋 ${clipLog}`);
                     }
@@ -1738,6 +1757,18 @@ class RdpNativeBridgeService extends EventEmitter {
                       category: 'cliprdr',
                       message: clipLog
                     });
+                    if (channelFilter.cliprdrFileClipUnavailable
+                        && !channelFilter.loggedCliprdrFileClipUnavailable
+                        && processed.cliprdrDesc
+                        && processed.cliprdrDesc.includes('CB_CLIP_CAPS')) {
+                      channelFilter.loggedCliprdrFileClipUnavailable = true;
+                      this.emit('clipboard-fileclip-status', {
+                        tokenId: session.id,
+                        available: false,
+                        generalFlags: (channelFilter.cliprdrServerGeneralFlags || 0) >>> 0,
+                        reason: 'server_caps_no_fileclip'
+                      });
+                    }
                     if (processed.note && processed.note.includes('cliprdr-defer-weak-caps')
                         && !channelFilter.loggedCliprdrDeferWeakCaps) {
                       channelFilter.loggedCliprdrDeferWeakCaps = true;
@@ -1929,6 +1960,14 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
                   // Dropped: replies SIEMPRE (Echo/stubs). isNoisyDrop solo silencia logs.
                   if (processed.dropped) {
+                    // FAIL local a FORMAT_DATA_REQUEST: no armar watch ni unhealthy.
+                    if (processed.cliprdrLocalFail === true && processed.cliprdrDesc) {
+                      const failLog = `📥 cliprdr ch=${processed.channelId} ${processed.cliprdrDesc}`;
+                      recordCliprdrEvent(failLog, { inbound: true, skipWatch: true });
+                      if (channelFilter.cliprdrHealth) {
+                        channelFilter.cliprdrHealth.pendingRequest = null;
+                      }
+                    }
                     noteDvcDiagFromNote(processed.note);
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
@@ -2059,7 +2098,7 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                   }
 
-                  if (processed.dvcForward) {
+                  if (isDebug && processed.dvcForward) {
                     channelFilter.dvcForwardDebugCount = (channelFilter.dvcForwardDebugCount || 0) + 1;
                     if (channelFilter.dvcForwardDebugCount <= 24) {
                       const parsedFwd = parseMcsSendData(frame);
@@ -2072,7 +2111,7 @@ class RdpNativeBridgeService extends EventEmitter {
                         (dbg ? ` | ${dbg}` : '')
                       );
                     }
-                  } else if (processed.dropped && typeof processed.note === 'string'
+                  } else if (isDebug && processed.dropped && typeof processed.note === 'string'
                       && /dvc-(data|forward|reject|accept|caps|pending|unopened)/i.test(processed.note)) {
                     channelFilter.dvcDropDebugCount = (channelFilter.dvcDropDebugCount || 0) + 1;
                     if (channelFilter.dvcDropDebugCount <= 24) {
@@ -2328,7 +2367,7 @@ class RdpNativeBridgeService extends EventEmitter {
           lastWsFrameAt = now;
 
           framesToRdp += 1;
-          if (framesToRdp <= 8 && channelFilter.licenseExchangeOpen !== false) {
+          if (isDebug && framesToRdp <= 8 && channelFilter.licenseExchangeOpen !== false) {
             const earlyDesc = describeRdpPdu(payload);
             console.warn(
               `📤 [Bridge] Handshake WASM→RDP #${framesToRdp} ${payload.length}B | ${earlyDesc}`
@@ -2530,18 +2569,19 @@ class RdpNativeBridgeService extends EventEmitter {
           });
           forward = prepared.buf;
           const sentChs = findClientNetworkChannels(prepared.buf);
-          // Una linea por conexion, siempre: el juego de canales condiciona todo el resto de la
-          // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
+          // Hitos CS_NET: diagnostic-log siempre; consola solo con rdpDebug
+          // (salvo strip selector, que es una prueba opt-in y conviene verla).
           const wallixService = channelFilter.wallixService
             || wallixServiceFromSession(session)
             || 'n/a';
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
           const prepareMsg = `[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`;
-          console.warn(prepareMsg);
+          if (isDebug) console.warn(prepareMsg);
+          this.emit('diagnostic-log', { category: 'mcs-prepare', message: prepareMsg });
           const clientCaps = describeClientEarlyCaps(payload);
           if (clientCaps) {
             if (clientCaps.supportSkipChannelJoin) channelFilter.clientSkipChannelJoin = true;
-            console.warn(formatClientEarlyCaps(clientCaps));
+            if (isDebug) console.warn(formatClientEarlyCaps(clientCaps));
           }
           if (stripChannels && stripChannels.length) {
             channelFilter.omitCliprdrRdpdr = true;
@@ -3157,10 +3197,12 @@ class RdpNativeBridgeService extends EventEmitter {
               channelFilter.wasmOpenedDvcChannels = new Set();
             }
             channelFilter.wasmOpenedDvcChannels.add(dvcClient.channelId);
-            console.warn(
-              `[Bridge] DynVC CREATE_RSP ok ch=${dvcClient.channelId} (DATA permitido)`
-            );
-          } else {
+            if (rdpDebug() || channelFilter.rdpDebug) {
+              console.warn(
+                `[Bridge] DynVC CREATE_RSP ok ch=${dvcClient.channelId} (DATA permitido)`
+              );
+            }
+          } else if (rdpDebug() || channelFilter.rdpDebug) {
             console.warn(
               `[Bridge] DynVC CREATE_RSP fail ch=${dvcClient.channelId}` +
               ` status=0x${(dvcClient.status >>> 0).toString(16)}`
