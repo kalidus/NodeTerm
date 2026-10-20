@@ -1670,18 +1670,25 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
                   if (!isFastPath && framesFromRdp === 1 && isMcsConnectResponse(frame)) {
                     try {
-                      const dumpPath = path.join(framesDir, 'last-mcs-connect-response.hex');
-                      fs.mkdirSync(framesDir, { recursive: true });
-                      fs.writeFileSync(dumpPath, frame.toString('hex'), 'utf8');
-                      const sc = describeServerEarlyCaps(frame);
-                      if (sc && isDebug) {
-                        console.warn(
-                          `[Bridge] SC_CORE early=0x${
-                            sc.earlyCapabilityFlags != null
-                              ? sc.earlyCapabilityFlags.toString(16)
-                              : 'n/a'
-                          } skipJoin=${sc.skipChannelJoinSupported} len=${sc.scCoreLen}`
+                      if (isDebug || process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                        fs.mkdirSync(framesDir, { recursive: true });
+                        fs.writeFileSync(
+                          path.join(framesDir, 'last-mcs-connect-response.hex'),
+                          frame.toString('hex'),
+                          'utf8'
                         );
+                      }
+                      if (isDebug) {
+                        const sc = describeServerEarlyCaps(frame);
+                        if (sc) {
+                          console.warn(
+                            `[Bridge] SC_CORE early=0x${
+                              sc.earlyCapabilityFlags != null
+                                ? sc.earlyCapabilityFlags.toString(16)
+                                : 'n/a'
+                            } skipJoin=${sc.skipChannelJoinSupported} len=${sc.scCoreLen}`
+                          );
+                        }
                       }
                     } catch (_) { /* noop */ }
                   }
