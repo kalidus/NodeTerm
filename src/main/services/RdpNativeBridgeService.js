@@ -1616,8 +1616,12 @@ class RdpNativeBridgeService extends EventEmitter {
                   if (!isFastPath) noteServerAttachUserConfirm(channelFilter, frame);
                   // Cinturon: inyectar Channel Joins en cuanto llega Attach User Confirm,
                   // antes del resto del filtro (IronRDP no los envia → Windows cierra).
+                  // Capa virtual: virtualJoinServerFrame une solo inject-only (rdpdr/rdpsnd);
+                  // takeBridgeMandatoryJoins aqui uniria TODO allowed y absorberia confirms
+                  // que el WASM necesita → Wallix FIN sin Client Info (95549d14 regresión).
                   if (!isFastPath && frame.length >= 8 && frame[0] === 0x03 && frame[7] === 0x2e
                       && !channelFilter.bridgeMandatoryJoinsSent
+                      && channelFilter.virtualChannels !== true
                       && channelFilter.skipChannelJoin !== true
                       && tlsSocket && tlsSocket.writable) {
                     const earlyJoins = takeBridgeMandatoryJoins(channelFilter);

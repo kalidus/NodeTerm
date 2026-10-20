@@ -166,6 +166,36 @@ describe('capa virtual en bastion', () => {
     }
   });
 
+  test('regresion 95549d14: mandatory joins no deben comer confirms que el WASM pidio', () => {
+    const {
+      takeBridgeMandatoryJoins,
+      noteClientChannelJoinRequest,
+      shouldAbsorbBridgeJoinConfirm
+    } = require('../../src/main/services/rdp-channel-filter');
+    const state = virtualState(wasm, client);
+    processServerFrame(state, buildScNetFrame(1003, ids));
+    // Simula early-hook legacy que unio TODO allowed (antes del guard virtual).
+    state.virtualChannels = false;
+    state.clientInitiator = 0;
+    const forced = takeBridgeMandatoryJoins(state);
+    assert.ok(forced.length >= 4);
+    assert.equal(state.bridgeMandatoryJoinsSent, true);
+
+    // WASM tambien pide IO/cliprdr/drdynvc (como IronRDP contra Wallix skipJoin=false).
+    for (const ch of [1001, 1003, 1006, 1007]) {
+      noteClientChannelJoinRequest(state, buildMcsChannelJoinRequest(0, ch));
+    }
+
+    assert.equal(shouldAbsorbBridgeJoinConfirm(state, 1004), true);
+    assert.equal(shouldAbsorbBridgeJoinConfirm(state, 1005), true);
+    for (const ch of [1001, 1003, 1006, 1007]) {
+      assert.equal(shouldAbsorbBridgeJoinConfirm(state, ch), false, `ch=${ch}`);
+      const r = processServerFrame(state, joinConfirm(0, ch));
+      assert.equal(r.dropped, false, `ch=${ch}`);
+      assert.ok(r.forward, `ch=${ch} debe llegar al WASM`);
+    }
+  });
+
   test('cola de joins: drdynvc no sale antes que IO y cliprdr', () => {
     const state = virtualState(wasm, client);
     processServerFrame(state, buildScNetFrame(1003, ids));

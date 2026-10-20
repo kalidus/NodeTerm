@@ -358,8 +358,32 @@ function noteClientChannelJoinRequest(state, buf) {
   const req = readChannelJoinRequest(buf);
   if (!state || !req) return false;
   ensureJoinSet(state).add(req.channelId);
+  if (!(state.wasmJoinRequested instanceof Set)) state.wasmJoinRequested = new Set();
+  state.wasmJoinRequested.add(req.channelId);
   if (req.initiator > 0 && !state.clientInitiator) state.clientInitiator = req.initiator;
   return true;
+}
+
+/**
+ * JoinConfirm que el bridge debe comerse (no reenviar al WASM).
+ * Inject-only virtual siempre; legacy solo si el bridge lo unio y el WASM no lo pidio.
+ */
+function shouldAbsorbBridgeJoinConfirm(state, channelId) {
+  if (!state || channelId == null) return false;
+  if (state.virtualBridgeJoinIds instanceof Set && state.virtualBridgeJoinIds.has(channelId)) {
+    return true;
+  }
+  if (state.injectOnlyChannelIds instanceof Set && state.injectOnlyChannelIds.has(channelId)) {
+    return true;
+  }
+  if (!state.bridgeMandatoryJoinsSent) return false;
+  if (state.wasmJoinRequested instanceof Set && state.wasmJoinRequested.has(channelId)) {
+    return false;
+  }
+  if (state.bridgeMandatoryJoinIds instanceof Set && state.bridgeMandatoryJoinIds.has(channelId)) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -673,6 +697,10 @@ function createChannelFilterState() {
     serverSkipChannelJoin: false,
     skipChannelJoin: false,
     bridgeMandatoryJoinsSent: false,
+    // IDs unidos por takeBridgeMandatoryJoins (legacy / early-hook no virtual).
+    bridgeMandatoryJoinIds: null,
+    // IDs que el WASM pidio en Channel Join Request (para no absorber sus confirms).
+    wasmJoinRequested: null,
     pendingClientInfo: null,
     ioJoinConfirmedForClientInfo: false
   };
@@ -715,9 +743,11 @@ function takeBridgeMandatoryJoins(state) {
   if (missing.length === 0) return [];
 
   state.bridgeMandatoryJoinsSent = true;
+  if (!(state.bridgeMandatoryJoinIds instanceof Set)) state.bridgeMandatoryJoinIds = new Set();
   const joins = [];
   for (const id of missing) {
     requested.add(id);
+    state.bridgeMandatoryJoinIds.add(id);
     joins.push(buildMcsChannelJoinRequest(wireInitiator, id));
   }
   return joins;
@@ -2960,7 +2990,9 @@ function processServerFrame(state, buf) {
   }
 
   // Directo / WASM sin joins: tras Attach User Confirm unir user+IO(+SC_NET).
-  if (isTpkt(buf) && buf.length >= 9 && buf[4] === 0x02 && buf[5] === 0xf0 && buf[6] === 0x80
+  // Capa virtual: ya cubierto por virtualJoinServerFrame (inject-only); no unir todo allowed.
+  if (state.virtualChannels !== true
+      && isTpkt(buf) && buf.length >= 9 && buf[4] === 0x02 && buf[5] === 0xf0 && buf[6] === 0x80
       && buf[7] === 0x2e) {
     const aucHex = buf.toString('hex');
     const parsedId = readAttachUserConfirmInitiator(buf);
@@ -2989,7 +3021,8 @@ function processServerFrame(state, buf) {
     }
   }
 
-  // Joins inyectados por el bridge: absorber confirms y liberar Client Info en IO.
+  // Joins inyectados por el bridge: absorber confirms (solo inject-only / no pedidos
+  // por WASM) y liberar Client Info retenido en IO.
   if (state.bridgeMandatoryJoinsSent
       && isTpkt(buf) && buf.length >= 15 && buf[7] === MCS_CHANNEL_JOIN_CONFIRM) {
     const result = (buf[8] >> 3) & 0x0f;
@@ -3001,18 +3034,31 @@ function processServerFrame(state, buf) {
       if (released.length) {
         console.warn(`[Bridge] Client Info liberado tras JoinConfirm IO ch=${requested}`);
       }
-      markDropped(state, requested);
-      return {
-        forward: null,
-        replies: released,
-        dropped: true,
-        note: released.length
-          ? `release-client-info-after-io-join ch=${requested}`
-          : `bridge-join-confirm-absorbed ch=${requested}`,
-        channelId: requested,
-        isCliprdr: false,
-        cliprdrDesc: null
-      };
+      if (shouldAbsorbBridgeJoinConfirm(state, requested)) {
+        markDropped(state, requested);
+        return {
+          forward: null,
+          replies: released,
+          dropped: true,
+          note: released.length
+            ? `release-client-info-after-io-join ch=${requested}`
+            : `bridge-join-confirm-absorbed ch=${requested}`,
+          channelId: requested,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
+      if (released.length) {
+        return {
+          forward: buf,
+          replies: released,
+          dropped: false,
+          note: `release-client-info-after-io-join ch=${requested}`,
+          channelId: requested,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
     }
   }
 
@@ -3653,6 +3699,7 @@ module.exports = {
   readChannelJoinRequest,
   buildMcsChannelJoinRequest,
   noteClientChannelJoinRequest,
+  shouldAbsorbBridgeJoinConfirm,
   noteServerAttachUserConfirm,
   noteServerChannelJoinConfirm,
   shouldOrderClientJoins,
