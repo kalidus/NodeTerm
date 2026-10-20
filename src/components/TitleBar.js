@@ -1168,7 +1168,49 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
-        {/* Botón ocultar titlebar */}
+        {/* Tema y diseño de pestañas (panel rápido de apariencia) */}
+        <button
+          type="button"
+          title="Tema y diseño de pestañas"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const anchor = event.currentTarget;
+            window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
+              detail: { anchor }
+            }));
+          }}
+          style={{
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
+            margin: 0,
+            padding: 0,
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+            verticalAlign: 'middle',
+            position: 'relative',
+            top: '1px',
+            color: 'var(--ui-titlebar-text, #fff)',
+            opacity: 0.75,
+            WebkitAppRegion: 'no-drag'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
+            e.currentTarget.style.opacity = '1';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.opacity = '0.75';
+          }}
+        >
+          <i className="pi pi-cog" style={{ fontSize: '0.9rem', pointerEvents: 'none' }} />
+        </button>
         {/* Botón de menú (3 puntos) */}
         <button
           title="Menú"
