@@ -9,6 +9,31 @@ class SSHStatsService {
   constructor() {
     this.activeStatsTabId = null;
     this.statusBarPollingIntervalMs = 5000; // 5 segundos por defecto (reducir contención SSH)
+    /** @type {Map<string, string>} tabId -> último mensaje de error ya logueado */
+    this._statsErrorLoggedByTab = new Map();
+  }
+
+  /**
+   * Ejecuta el script vía /bin/sh para no depender del login shell (fish/zsh/etc.).
+   * fish trata las comillas simples como literales; sh recibe el script intacto.
+   */
+  wrapInPosixSh(command) {
+    return `/bin/sh -c '${String(command).replace(/'/g, `'\\''`)}'`;
+  }
+
+  /**
+   * Loguea un error de stats como máximo una vez por tabId + mensaje (evita spam del poll).
+   */
+  logStatsErrorOnce(tabId, error) {
+    const msg = (error && error.message) ? error.message : String(error);
+    const key = String(tabId);
+    if (this._statsErrorLoggedByTab.get(key) === msg) return;
+    this._statsErrorLoggedByTab.set(key, msg);
+    console.error('[SSH STATS] Error:', error);
+  }
+
+  clearStatsError(tabId) {
+    this._statsErrorLoggedByTab.delete(String(tabId));
   }
 
   /**
@@ -550,7 +575,10 @@ class SSHStatsService {
 
       // Consolidar CPU, memoria, disco, uptime, red, IP y distro en una SOLA llamada de shell.
       // Esto es CRÍTICO para routers y bastiones que limitan canales/sesiones.
-      const command = `grep '^cpu' /proc/stat && echo "---CPU_END---" && free -b 2>/dev/null && echo "---MEM_END---" && df -P 2>/dev/null && echo "---DISK_END---" && uptime 2>/dev/null && echo "---UPTIME_END---" && cat /proc/net/dev 2>/dev/null && echo "---NET_END---" && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && echo "---OS_END---" && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---" && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "")`;
+      // wrapInPosixSh evita que fish (u otros login shells) parseen subshells POSIX (...).
+      const command = this.wrapInPosixSh(
+        `grep '^cpu' /proc/stat && echo "---CPU_END---" && free -b 2>/dev/null && echo "---MEM_END---" && df -P 2>/dev/null && echo "---DISK_END---" && uptime 2>/dev/null && echo "---UPTIME_END---" && cat /proc/net/dev 2>/dev/null && echo "---NET_END---" && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && echo "---OS_END---" && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---" && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "")`
+      );
 
       const rawOutput = await conn.ssh.exec(command);
       const parts = rawOutput.split('\n');
@@ -600,7 +628,6 @@ class SSHStatsService {
         hostname: realHostname
       };
     } catch (error) {
-      console.error('[SSH STATS] Error:', error);
       throw error;
     }
   }
@@ -803,10 +830,11 @@ class SSHStatsService {
       // Actualizar valores en la conexión
       conn.realHostname = realHostname;
       conn.finalDistroId = finalDistroId;
+      this.clearStatsError(tabId);
 
       sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
     } catch (e) {
-      // Silenciar errores de stats
+      this.logStatsErrorOnce(tabId, e);
     } finally {
       const finalConn = sshConnections[tabId];
       if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
@@ -847,10 +875,13 @@ class SSHStatsService {
 
       try {
         if (connObj.ssh.execCommand) {
-          const command = 'grep "^cpu" /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "") && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---"';
+          const command = self.wrapInPosixSh(
+            'grep "^cpu" /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "") && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---"'
+          );
 
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
+              self.logStatsErrorOnce(tabId, err || new Error('Empty stats result'));
               // Enviar stats básicas en caso de error
               const fallbackStats = self.createFallbackStats('Bastión', 'linux', config.host);
               sendToRenderer(sender, `ssh-stats:update:${tabId}`, fallbackStats);
@@ -868,9 +899,10 @@ class SSHStatsService {
 
             try {
               const stats = self.processBastionStats(result.stdout, bastionStatsState, tabId, config.host);
+              self.clearStatsError(tabId);
               sendToRenderer(sender, `ssh-stats:update:${tabId}`, stats);
             } catch (parseErr) {
-              // Error parseando stats
+              self.logStatsErrorOnce(tabId, parseErr);
             }
 
             // Programar siguiente ejecución
@@ -912,6 +944,7 @@ class SSHStatsService {
       conn.statsTimeout = null;
       conn.statsLoopRunning = false;
     }
+    this.clearStatsError(tabId);
   }
 
   /**
