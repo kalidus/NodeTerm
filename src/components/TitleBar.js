@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
-import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -38,27 +37,41 @@ const TitleBarIconButton = ({
   </button>
 );
 
+/* Layout Cursor-like: misma forma, trazo fino (sin relleno grueso) */
+const LAYOUT_STROKE = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+};
+
 const IconSidebarLeft = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5V1H3.5zm2.5 0v13.5h6.5a.5.5 0 0 0 .5-.5V1.5a.5.5 0 0 0-.5-.5H6z" />
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M6 2v12" {...LAYOUT_STROKE} />
   </svg>
 );
 
 const IconPanelBottom = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V10h10V1.5a.5.5 0 0 0-.5-.5h-9zM3 11v3.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V11H3z" />
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M2 10.5h12" {...LAYOUT_STROKE} />
   </svg>
 );
 
-const IconPanelTop = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V5h10V1.5a.5.5 0 0 0-.5-.5h-9zM3 6v8.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V6H3z" />
+const IconSidebarRight = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M10 2v12" {...LAYOUT_STROKE} />
   </svg>
 );
 
 const IconLayout = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-    <path d="M1.5 1A1.5 1.5 0 0 0 0 2.5v3A1.5 1.5 0 0 0 1.5 7h3A1.5 1.5 0 0 0 6 5.5v-3A1.5 1.5 0 0 0 4.5 1h-3zm0 8A1.5 1.5 0 0 0 0 10.5v3A1.5 1.5 0 0 0 1.5 15h3A1.5 1.5 0 0 0 6 13.5v-3A1.5 1.5 0 0 0 4.5 9h-3zm8-8A1.5 1.5 0 0 0 8 2.5v11A1.5 1.5 0 0 0 9.5 15h3a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 12.5 1h-3z" />
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="1.5" y="1.5" width="5" height="13" rx="1.2" {...LAYOUT_STROKE} />
+    <rect x="8.5" y="1.5" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
+    <rect x="8.5" y="9" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
   </svg>
 );
 
@@ -775,15 +788,6 @@ const TitleBar = ({
     window.electronAPI?.close && window.electronAPI.close();
   };
 
-  // Función para manejar el menú de aplicación del TitleBar
-  const handleAppMenuClick = (event) => {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard);
-    createContextMenu(event, menuStructure, 'app-context-menu-unified');
-  };
-
-
   return (
     <div
       className="title-bar"
@@ -1335,7 +1339,7 @@ const TitleBar = ({
             active={!mainFrameHeaderCollapsed}
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-main-frame-header'))}
           >
-            <IconPanelTop />
+            <IconSidebarRight />
           </TitleBarIconButton>
         </div>
 
@@ -1418,13 +1422,6 @@ const TitleBar = ({
             }}
           >
             <i className="pi pi-cog" />
-          </TitleBarIconButton>
-          <TitleBarIconButton title="Menú" onClick={handleAppMenuClick}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-              <circle cy="6" cx="2.5" r="1.2" />
-              <circle cy="6" cx="6" r="1.2" />
-              <circle cy="6" cx="9.5" r="1.2" />
-            </svg>
           </TitleBarIconButton>
         </div>
 
