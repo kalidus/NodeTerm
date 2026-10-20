@@ -171,6 +171,12 @@ const App = () => {
   });
 
   React.useEffect(() => {
+    const toggleMainFrameHeader = () => setMainFrameHeaderCollapsed(prev => !prev);
+    window.addEventListener('toggle-main-frame-header', toggleMainFrameHeader);
+    return () => window.removeEventListener('toggle-main-frame-header', toggleMainFrameHeader);
+  }, []);
+
+  React.useEffect(() => {
     try {
       persistSyncedSetting(
         STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED,
@@ -2827,6 +2833,8 @@ const App = () => {
           handleToggleTitleBar={handleToggleTitleBar}
           iconTheme={iconTheme}
           expandedKeys={expandedKeys}
+          sidebarCollapsed={sidebarCollapsed}
+          mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
         />
 
         <DialogsManager

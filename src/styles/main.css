@@ -23,6 +23,7 @@
 @import './components/color-selector.css';
 @import './components/folder-dialog.css';
 @import './components/animated-themes.css';
+@import './components/titlebar-actions.css';
 @import './components/password-manager-sidebar.css';
 @import './components/password-tab-content.css';
 @import './components/anything-llm.css';

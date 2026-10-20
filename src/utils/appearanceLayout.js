@@ -1,7 +1,45 @@
+import { themeManager } from './themeManager';
+import { persistSyncedSetting } from './persistSyncedSetting';
+
 /** Clave localStorage del estilo de apariencia (layout global de la UI). */
 export const UI_LAYOUT_STORAGE_KEY = 'ui_layout';
 
 const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux'];
+
+/** Opciones de layout para selectores rápidos (titlebar, etc.). */
+export const UI_LAYOUT_OPTIONS = [
+  { id: 'atelier', name: 'Atelier', icon: 'pi-star' },
+  { id: 'mux', name: 'Mux', icon: 'pi-th-large' },
+  { id: 'default', name: 'Default', icon: 'pi-box' },
+  { id: 'unified', name: 'Unified', icon: 'pi-stop' },
+  { id: 'unified-rounded', name: 'Unified Rounded', icon: 'pi-circle' },
+  { id: 'unified-app-rounded', name: 'App Rounded', icon: 'pi-window-maximize' },
+  { id: 'cyberpunk', name: 'Cyberpunk', icon: 'pi-bolt' },
+];
+
+function syncIconThemeForLayout(layoutId) {
+  if (layoutId === 'cyberpunk') {
+    localStorage.setItem('iconTheme', 'cyber_blue');
+    localStorage.setItem('iconThemeSidebar', 'cyber_blue');
+  } else if (
+    layoutId === 'unified' ||
+    layoutId === 'unified-rounded' ||
+    layoutId === 'unified-app-rounded' ||
+    layoutId === 'atelier' ||
+    layoutId === 'mux'
+  ) {
+    localStorage.setItem('iconTheme', 'cupertino');
+    localStorage.setItem('iconThemeSidebar', 'cupertino');
+  } else if (layoutId === 'default') {
+    localStorage.setItem('iconTheme', 'ghost_ui');
+    localStorage.setItem('iconThemeSidebar', 'ghost_ui');
+  } else {
+    return;
+  }
+  window.dispatchEvent(new CustomEvent('settings-updated', {
+    detail: { source: 'layout-sync' }
+  }));
+}
 
 /**
  * Aplica en <body> el layout guardado (moderno / cyberpunk / unificado).
@@ -15,7 +53,7 @@ export function applyUILayoutFromStorage() {
   let layoutId = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
   if (layoutId === 'modern-custom') {
     layoutId = 'unified-rounded';
-    localStorage.setItem(UI_LAYOUT_STORAGE_KEY, 'unified-rounded');
+    localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
   }
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);
   document.body.classList.add(`layout-${layoutId}`);
@@ -23,4 +61,28 @@ export function applyUILayoutFromStorage() {
     window.electronAPI.setWindowCorners(layoutId);
   }
   return layoutId;
+}
+
+/**
+ * Persiste y aplica un layout de UI (iconos + body class + titlebar).
+ * @param {string} layoutId
+ * @returns {string} layoutId aplicado
+ */
+export function setUILayout(layoutId) {
+  if (!layoutId) return applyUILayoutFromStorage();
+  persistSyncedSetting(UI_LAYOUT_STORAGE_KEY, layoutId);
+  syncIconThemeForLayout(layoutId);
+  const applied = applyUILayoutFromStorage();
+  themeManager.refreshTitlebarForCurrentLayout();
+  window.dispatchEvent(new Event('layout-changed'));
+  return applied;
+}
+
+export function getCurrentUILayoutId() {
+  try {
+    const id = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
+    return id === 'modern-custom' ? 'unified-rounded' : id;
+  } catch {
+    return 'unified';
+  }
 }

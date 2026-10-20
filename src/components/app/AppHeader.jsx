@@ -28,7 +28,9 @@ export const AppHeader = ({
   handleImportComplete,
   handleToggleTitleBar,
   iconTheme,
-  expandedKeys
+  expandedKeys,
+  sidebarCollapsed = false,
+  mainFrameHeaderCollapsed = true
 }) => {
   if (titleBarCollapsed || isMinimalMode) {
     return null;
@@ -133,6 +135,8 @@ export const AppHeader = ({
       onToggleTitleBar={handleToggleTitleBar}
       iconTheme={iconTheme}
       expandedKeys={expandedKeys}
+      sidebarCollapsed={sidebarCollapsed}
+      mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
     />
   );
 };

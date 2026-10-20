@@ -503,6 +503,23 @@ const HomeTab = ({
   const homeOptionsOverlayRef = useRef(null);
   const localThemeOverlayRef = useRef(null);
   const frameStyleOverlayRef = useRef(null);
+
+  // Abrir opciones de Home desde la titlebar (icono sliders)
+  useEffect(() => {
+    const openHomeOptions = (e) => {
+      const anchor = e?.detail?.anchor;
+      const overlay = homeOptionsOverlayRef.current;
+      if (!anchor || !overlay?.toggle) return;
+      overlay.toggle({
+        currentTarget: anchor,
+        target: anchor,
+        preventDefault() {},
+        stopPropagation() {},
+      });
+    };
+    window.addEventListener('open-home-options', openHomeOptions);
+    return () => window.removeEventListener('open-home-options', openHomeOptions);
+  }, []);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const prevContainerSizeRef = useRef({
@@ -1736,6 +1753,9 @@ const HomeTab = ({
       } catch (e) {
         console.error('Error guardando preferencia de status bar:', e);
       }
+      window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', {
+        detail: { visible: newValue }
+      }));
       return newValue;
     });
   };

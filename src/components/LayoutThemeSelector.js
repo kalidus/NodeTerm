@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { themeManager } from '../utils/themeManager';
-import { applyUILayoutFromStorage, UI_LAYOUT_STORAGE_KEY } from '../utils/appearanceLayout';
-import { persistSyncedSetting } from '../utils/persistSyncedSetting';
+import { applyUILayoutFromStorage, setUILayout } from '../utils/appearanceLayout';
 import '../styles/components/layout-theme-selector.css';
 
 const LayoutThemeSelector = () => {
@@ -16,44 +14,17 @@ const LayoutThemeSelector = () => {
     syncLayoutFromStorage();
     window.addEventListener('localstorage-sync-ready', syncLayoutFromStorage);
     window.addEventListener('settings-updated', syncLayoutFromStorage);
+    window.addEventListener('layout-changed', syncLayoutFromStorage);
     return () => {
       window.removeEventListener('localstorage-sync-ready', syncLayoutFromStorage);
       window.removeEventListener('settings-updated', syncLayoutFromStorage);
+      window.removeEventListener('layout-changed', syncLayoutFromStorage);
     };
   }, [syncLayoutFromStorage]);
 
   const handleLayoutChange = useCallback((layoutId) => {
     setCurrentLayout(layoutId);
-    persistSyncedSetting(UI_LAYOUT_STORAGE_KEY, layoutId);
-    
-    // Auto-sync icon theme for Cyberpunk
-    if (layoutId === 'cyberpunk') {
-      localStorage.setItem('iconTheme', 'cyber_blue');
-      localStorage.setItem('iconThemeSidebar', 'cyber_blue');
-      // Dispatch event to notify useThemeManagement and other components
-      window.dispatchEvent(new CustomEvent('settings-updated', { 
-        detail: { source: 'layout-sync' } 
-      }));
-    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded' || layoutId === 'atelier' || layoutId === 'mux') {
-      localStorage.setItem('iconTheme', 'cupertino');
-      localStorage.setItem('iconThemeSidebar', 'cupertino');
-      // Dispatch event to notify useThemeManagement and other components
-      window.dispatchEvent(new CustomEvent('settings-updated', { 
-        detail: { source: 'layout-sync' } 
-      }));
-    } else if (layoutId === 'default') {
-      localStorage.setItem('iconTheme', 'ghost_ui');
-      localStorage.setItem('iconThemeSidebar', 'ghost_ui');
-      // Dispatch event to notify useThemeManagement and other components
-      window.dispatchEvent(new CustomEvent('settings-updated', { 
-        detail: { source: 'layout-sync' } 
-      }));
-    }
-    
-    applyUILayoutFromStorage();
-
-    themeManager.refreshTitlebarForCurrentLayout();
-    window.dispatchEvent(new Event('layout-changed'));
+    setUILayout(layoutId);
   }, []);
 
   const layouts = [

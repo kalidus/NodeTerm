@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
@@ -10,8 +10,82 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import { STORAGE_KEYS } from '../utils/constants';
+import { persistHomeTabSetting } from '../utils/homeTabSync';
+import {
+  UI_LAYOUT_OPTIONS,
+  getCurrentUILayoutId,
+  setUILayout,
+} from '../utils/appearanceLayout';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage, onToggleTitleBar }) => {
+const TitleBarIconButton = ({
+  title,
+  onClick,
+  active = false,
+  danger = false,
+  className = '',
+  children,
+}) => (
+  <button
+    type="button"
+    title={title}
+    aria-label={title}
+    aria-pressed={active || undefined}
+    className={`title-bar-icon-btn${active ? ' is-active' : ''}${danger ? ' is-danger' : ''}${className ? ` ${className}` : ''}`}
+    onClick={onClick}
+  >
+    {children}
+  </button>
+);
+
+const IconSidebarLeft = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5V1H3.5zm2.5 0v13.5h6.5a.5.5 0 0 0 .5-.5V1.5a.5.5 0 0 0-.5-.5H6z" />
+  </svg>
+);
+
+const IconPanelBottom = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V10h10V1.5a.5.5 0 0 0-.5-.5h-9zM3 11v3.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V11H3z" />
+  </svg>
+);
+
+const IconPanelTop = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" clipRule="evenodd" d="M2 1.5A1.5 1.5 0 0 1 3.5 0h9A1.5 1.5 0 0 1 14 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-13zM3.5 1a.5.5 0 0 0-.5.5V5h10V1.5a.5.5 0 0 0-.5-.5h-9zM3 6v8.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V6H3z" />
+  </svg>
+);
+
+const IconLayout = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <path d="M1.5 1A1.5 1.5 0 0 0 0 2.5v3A1.5 1.5 0 0 0 1.5 7h3A1.5 1.5 0 0 0 6 5.5v-3A1.5 1.5 0 0 0 4.5 1h-3zm0 8A1.5 1.5 0 0 0 0 10.5v3A1.5 1.5 0 0 0 1.5 15h3A1.5 1.5 0 0 0 6 13.5v-3A1.5 1.5 0 0 0 4.5 9h-3zm8-8A1.5 1.5 0 0 0 8 2.5v11A1.5 1.5 0 0 0 9.5 15h3a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 12.5 1h-3z" />
+  </svg>
+);
+
+const TitleBar = ({
+  sidebarFilter,
+  setSidebarFilter,
+  allNodes,
+  findAllConnections,
+  onOpenSSHConnection,
+  onOpenRdpConnection,
+  onOpenVncConnection,
+  onShowImportDialog,
+  onShowExportDialog,
+  onShowImportExportDialog,
+  onShowImportWizard,
+  onOpenImportWithSource,
+  onQuickImportFromSource,
+  iconTheme = 'material',
+  openEditSSHDialog,
+  openEditRdpDialog,
+  expandedKeys,
+  masterKey,
+  secureStorage,
+  onToggleTitleBar,
+  sidebarCollapsed = false,
+  mainFrameHeaderCollapsed = true,
+}) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
 
@@ -29,10 +103,83 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Debounced search state
   const [localFilter, setLocalFilter] = useState(sidebarFilter || '');
   const debounceTimeoutRef = useRef(null);
+  const layoutBtnRef = useRef(null);
+  const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
+  const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
+  const [statusBarVisible, setStatusBarVisible] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     setLocalFilter(sidebarFilter || '');
   }, [sidebarFilter]);
+
+  useEffect(() => {
+    const onStatusBarVisibility = (e) => {
+      if (e?.detail && typeof e.detail.visible === 'boolean') {
+        setStatusBarVisible(e.detail.visible);
+      }
+    };
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE) {
+        setStatusBarVisible(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('statusbar-visibility-changed', onStatusBarVisibility);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('statusbar-visibility-changed', onStatusBarVisibility);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
+    window.addEventListener('layout-changed', syncLayout);
+    return () => window.removeEventListener('layout-changed', syncLayout);
+  }, []);
+
+  useEffect(() => {
+    if (!layoutPopoverOpen) return;
+    const onDown = (e) => {
+      if (layoutBtnRef.current?.contains(e.target)) return;
+      if (e.target?.closest?.('.title-bar-layout-popover')) return;
+      setLayoutPopoverOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLayoutPopoverOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [layoutPopoverOpen]);
+
+  const handleToggleStatusBar = useCallback(() => {
+    setStatusBarVisible((prev) => {
+      const next = !prev;
+      try {
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, next.toString());
+      } catch { /* ignore */ }
+      window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', {
+        detail: { visible: next }
+      }));
+      return next;
+    });
+  }, []);
+
+  const handleSelectUiLayout = useCallback((layoutId) => {
+    setUILayout(layoutId);
+    setCurrentUiLayout(layoutId);
+    setLayoutPopoverOpen(false);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1167,176 +1314,149 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           )}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
-        {/* Tema y diseño de pestañas (panel rápido de apariencia) */}
-        <button
-          type="button"
-          title="Tema y diseño de pestañas"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const anchor = event.currentTarget;
-            window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
-              detail: { anchor }
-            }));
-          }}
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            margin: 0,
-            padding: 0,
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-            verticalAlign: 'middle',
-            position: 'relative',
-            top: '1px',
-            color: 'var(--ui-titlebar-text, #fff)',
-            opacity: 0.75,
-            WebkitAppRegion: 'no-drag'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
-            e.currentTarget.style.opacity = '1';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.opacity = '0.75';
-          }}
-        >
-          <i className="pi pi-cog" style={{ fontSize: '0.9rem', pointerEvents: 'none' }} />
-        </button>
-        {/* Botón de menú (3 puntos) */}
-        <button
-          title="Menú"
-          onClick={(event) => {
-            handleAppMenuClick(event);
-          }}
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            margin: 0,
-            padding: 0,
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-            verticalAlign: 'middle',
-            position: 'relative',
-            top: '1px'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="var(--ui-titlebar-text, #fff)" /><circle cy="6" cx="6" r="1.2" fill="var(--ui-titlebar-text, #fff)" /><circle cy="6" cx="9.5" r="1.2" fill="var(--ui-titlebar-text, #fff)" /></svg>
-        </button>
-        {/* Minimizar */}
-        <button
-          onClick={handleMinimize}
-          title="Minimizar"
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            margin: 0,
-            padding: 0,
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-            verticalAlign: 'middle',
-            position: 'relative',
-            top: '1px'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6.5" width="8" height="1.7" rx="0.85" fill="var(--ui-titlebar-text, #fff)" /></svg>
-        </button>
-        {/* Maximizar/Restaurar */}
-        <button
-          onClick={handleMaximizeRestore}
-          title={isMaximized ? "Restaurar" : "Maximizar"}
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            margin: 0,
-            padding: 0,
-            transition: 'all 0.2s ease',
-            cursor: 'pointer'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          {isMaximized ? (
-            /* Icono Restaurar (dos rectángulos superpuestos) */
-            <svg width="12" height="12" viewBox="0 0 14 14">
-              <path d="M4.5 4.5v-2h7v7h-2M2.5 4.5h7v7h-7z" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" />
-            </svg>
-          ) : (
-            /* Icono Maximizar (un solo rectángulo) */
-            <svg width="12" height="12" viewBox="0 0 14 14">
-              <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" />
-            </svg>
+      <div className="title-bar-actions">
+        <div className="title-bar-action-group">
+          <TitleBarIconButton
+            title={sidebarCollapsed ? 'Mostrar sidebar' : 'Ocultar sidebar'}
+            active={!sidebarCollapsed}
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          >
+            <IconSidebarLeft />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={statusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
+            active={statusBarVisible}
+            onClick={handleToggleStatusBar}
+          >
+            <IconPanelBottom />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior'}
+            active={!mainFrameHeaderCollapsed}
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-main-frame-header'))}
+          >
+            <IconPanelTop />
+          </TitleBarIconButton>
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
+        <div className="title-bar-action-group" ref={layoutBtnRef}>
+          <TitleBarIconButton
+            title="Cambiar layout de la UI"
+            active={layoutPopoverOpen}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setLayoutPopoverOpen((open) => !open);
+            }}
+          >
+            <IconLayout />
+          </TitleBarIconButton>
+          {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
+            (() => {
+              const rect = layoutBtnRef.current.getBoundingClientRect();
+              return (
+                <div
+                  className="title-bar-layout-popover"
+                  style={{
+                    top: rect.bottom + 4,
+                    right: Math.max(8, window.innerWidth - rect.right),
+                  }}
+                  role="menu"
+                >
+                  {UI_LAYOUT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={currentUiLayout === opt.id}
+                      className={`title-bar-layout-popover-item${currentUiLayout === opt.id ? ' is-selected' : ''}`}
+                      onClick={() => handleSelectUiLayout(opt.id)}
+                    >
+                      <i className={`pi ${opt.icon}`} />
+                      <span>{opt.name}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })(),
+            document.body
           )}
-        </button>
-        {/* Cerrar */}
-        <button
-          onClick={handleClose}
-          title="Cerrar"
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            margin: 0,
-            padding: 0,
-            transition: 'all 0.2s ease',
-            cursor: 'pointer'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'rgba(229,115,115,0.2)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 14 14"><line x1="4" y1="4" x2="10" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /><line x1="10" y1="4" x2="4" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /></svg>
-        </button>
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
+        <div className="title-bar-action-group">
+          <TitleBarIconButton
+            title="Buscar / Command Palette (Ctrl+K)"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
+          >
+            <i className="pi pi-search" />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title="Opciones de Home"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              window.dispatchEvent(new CustomEvent('open-home-options', {
+                detail: { anchor: event.currentTarget }
+              }));
+            }}
+          >
+            <i className="pi pi-sliders-h" />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title="Tema y diseño de pestañas"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const anchor = event.currentTarget;
+              window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
+                detail: { anchor }
+              }));
+            }}
+          >
+            <i className="pi pi-cog" />
+          </TitleBarIconButton>
+          <TitleBarIconButton title="Menú" onClick={handleAppMenuClick}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+              <circle cy="6" cx="2.5" r="1.2" />
+              <circle cy="6" cx="6" r="1.2" />
+              <circle cy="6" cx="9.5" r="1.2" />
+            </svg>
+          </TitleBarIconButton>
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
+        <div className="title-bar-action-group">
+          <TitleBarIconButton title="Minimizar" onClick={handleMinimize}>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+              <rect x="3" y="6.5" width="8" height="1.7" rx="0.85" />
+            </svg>
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={isMaximized ? 'Restaurar' : 'Maximizar'}
+            onClick={handleMaximizeRestore}
+          >
+            {isMaximized ? (
+              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M4.5 4.5v-2h7v7h-2M2.5 4.5h7v7h-7z" fill="none" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            )}
+          </TitleBarIconButton>
+          <TitleBarIconButton title="Cerrar" danger onClick={handleClose}>
+            <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+              <line x1="4" y1="4" x2="10" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="10" y1="4" x2="4" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </TitleBarIconButton>
+        </div>
       </div>
     </div>
   );

@@ -41,6 +41,15 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     };
   }, [sidebarCollapsed]);
 
+  // Toggle sidebar desde titlebar / atajos
+  useEffect(() => {
+    const handleToggleSidebar = () => {
+      setSidebarCollapsed(prev => !prev);
+    };
+    window.addEventListener('toggle-sidebar', handleToggleSidebar);
+    return () => window.removeEventListener('toggle-sidebar', handleToggleSidebar);
+  }, []);
+
   // Releer preferencia tras sync desde app-data.json (solo al iniciar / sincronizar)
   useEffect(() => {
     const reloadSidebarCollapsed = () => {
