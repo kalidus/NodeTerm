@@ -2558,63 +2558,13 @@ const App = () => {
     openSessionNodeKeys,
     onSyncActiveEditTab: handleSyncActiveEditTabFromSidebar,
 
-    // Props para conexiones
+    // Props para conexiones (sin estado de formularios SSH/RDP:
+    // viven en App/diálogos; incluirlos invalidaba React.memo del Tree en cada tecla)
     getAllFolders,
     createNewSSH,
     saveEditSSH,
     openEditSSHDialog,
     handleSaveRdpToSidebar,
-
-    // Estados de formularios SSH
-    sshName, setSSHName,
-    sshHost, setSSHHost,
-    sshUser, setSSHUser,
-    sshPassword, setSSHPassword,
-    sshPort, setSSHPort,
-    sshRemoteFolder, setSSHRemoteFolder,
-    sshTargetFolder, setSSHTargetFolder,
-    sshAutoCopyPassword, setSSHAutoCopyPassword,
-    sshX11Forwarding, setSSHX11Forwarding,
-    sshAgentForwarding, setSSHAgentForwarding,
-    sshAutoRecording, setSSHAutoRecording,
-    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
-    sshJumpHost, setSSHJumpHost,
-    sshJumpPort, setSSHJumpPort,
-    sshJumpUser, setSSHJumpUser,
-    sshJumpAuthMethod, setSSHJumpAuthMethod,
-    sshJumpPassword, setSSHJumpPassword,
-    sshJumpPrivateKey, setSSHJumpPrivateKey,
-    sshHostKeyPolicy, setSSHHostKeyPolicy,
-    sshDescription,
-
-    // Estados de formularios Edit SSH
-    editSSHName, setEditSSHName,
-    editSSHHost, setEditSSHHost,
-    editSSHUser, setEditSSHUser,
-    editSSHPassword, setEditSSHPassword,
-    editSSHRemoteFolder, setEditSSHRemoteFolder,
-    editSSHPort, setEditSSHPort,
-    editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-    editSSHX11Forwarding, setEditSSHX11Forwarding,
-    editSSHAgentForwarding, setEditSSHAgentForwarding,
-    editSSHAutoRecording, setEditSSHAutoRecording,
-    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
-    editSSHJumpHost, setEditSSHJumpHost,
-    editSSHJumpPort, setEditSSHJumpPort,
-    editSSHJumpUser, setEditSSHJumpUser,
-    editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
-    editSSHJumpPassword, setEditSSHJumpPassword,
-    editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
-    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
-    editSSHDescription, setEditSSHDescription,
-    editSSHIcon, setEditSSHIcon,
-
-    // Estados para modo edición
-    editSSHNode, setEditSSHNode,
-
-    // Estados de formularios RDP
-    rdpNodeData, setRdpNodeData,
-    editingRdpNode, setEditingRdpNode,
 
     // Encriptación
     masterKey,
@@ -2650,31 +2600,6 @@ const App = () => {
 
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,
-    sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
-    sshPort, setSSHPort, sshRemoteFolder, setSSHRemoteFolder, sshTargetFolder, setSSHTargetFolder,
-    sshAutoCopyPassword, setSSHAutoCopyPassword,
-    sshX11Forwarding, setSSHX11Forwarding,
-    sshAgentForwarding, setSSHAgentForwarding,
-    sshAutoRecording, setSSHAutoRecording,
-    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
-    sshJumpHost, setSSHJumpHost, sshJumpPort, setSSHJumpPort, sshJumpUser, setSSHJumpUser,
-    sshJumpAuthMethod, setSSHJumpAuthMethod, sshJumpPassword, setSSHJumpPassword,
-    sshJumpPrivateKey, setSSHJumpPrivateKey, sshHostKeyPolicy, setSSHHostKeyPolicy,
-    sshDescription,
-    editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
-    editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
-    editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-    editSSHX11Forwarding, setEditSSHX11Forwarding,
-    editSSHAgentForwarding, setEditSSHAgentForwarding,
-    editSSHAutoRecording, setEditSSHAutoRecording,
-    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
-    editSSHJumpHost, setEditSSHJumpHost, editSSHJumpPort, setEditSSHJumpPort,
-    editSSHJumpUser, setEditSSHJumpUser, editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
-    editSSHJumpPassword, setEditSSHJumpPassword, editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
-    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
-    editSSHDescription, setEditSSHDescription, editSSHIcon, setEditSSHIcon,
-    editSSHNode, setEditSSHNode,
-    rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
 
     // Dependencias de encriptación
     masterKey, secureStorage,

@@ -67,7 +67,9 @@ class SystemStatsService {
     this.timer = null;
     this.isFetching = false;
     this.latestStats = null;
-    this.pollIntervalMs = 2000;
+    // Linux: poll más espaciado por defecto (menos carga idle)
+    const isLinux = typeof window !== 'undefined' && window.electron?.platform === 'linux';
+    this.pollIntervalMs = isLinux ? 5000 : 2000;
     this.isPaused = false;
 
     // Escuchar eventos del sistema para suspender el polling cuando la pantalla se bloquee o entre en reposo

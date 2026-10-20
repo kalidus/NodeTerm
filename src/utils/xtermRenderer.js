@@ -80,10 +80,22 @@ export function attachVisibleTerminalRenderer(termInstance, customAddons, active
 /**
  * Activa WebGL al mostrar la pestaña y lo suelta al ocultarla, sin recrear el terminal.
  */
-export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, current) {
+/**
+ * @param {boolean} preferWebgl
+ * @param {{ canvasFallback?: boolean }} [opts] - Si preferWebgl=false y canvasFallback,
+ *   monta Canvas en lugar de suspender (splits con muchos paneles).
+ */
+export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, current, opts = {}) {
   if (!termInstance) return current || { rendererType: 'suspended', addon: null };
 
   if (!preferWebgl) {
+    if (opts.canvasFallback) {
+      if (current?.rendererType === 'canvas' && current.addon) return current;
+      try {
+        current?.addon?.dispose();
+      } catch (_) {}
+      return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: false });
+    }
     if (current?.rendererType === 'suspended') return current;
     try {
       current?.addon?.dispose();
@@ -305,9 +317,12 @@ export function createTimerBag() {
 /**
  * Ajusta renderer y write-buffer cuando la pestana pasa a segundo plano.
  * El attach inicial debe guardar el estado en el ref devuelto.
+ * @param {boolean} [preferWebgl] - Si se omite, sigue a `active`. En splits densos
+ *   se puede pasar false con active=true para usar Canvas y liberar contextos WebGL.
  */
-export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRef) {
+export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRef, preferWebgl) {
   const rendererRef = useRef(null);
+  const wantWebgl = active && (preferWebgl !== false);
 
   useEffect(() => {
     if (writeBufferRef?.current && typeof writeBufferRef.current.setActive === 'function') {
@@ -320,10 +335,11 @@ export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRe
     rendererRef.current = syncTerminalRenderer(
       termRef.current,
       { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
-      !!active,
-      rendererRef.current
+      !!wantWebgl,
+      rendererRef.current,
+      { canvasFallback: !!active && !wantWebgl }
     );
-  }, [active, xtermLib, termRef]);
+  }, [active, wantWebgl, xtermLib, termRef]);
 
   return rendererRef;
 }

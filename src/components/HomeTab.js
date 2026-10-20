@@ -418,9 +418,23 @@ const HomeTab = ({
     return clampHomeBackdropBlur(readFloatSetting(HOME_BACKDROP_BLUR_KEY, HOME_BACKDROP_BLUR_DEFAULT));
   });
 
+  const [liteEffectsOn, setLiteEffectsOn] = useState(() => {
+    try {
+      return document.documentElement.getAttribute('data-ui-lite-effects') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   const [hideNonTerminalHeaders, setHideNonTerminalHeaders] = useState(() => {
     return readBoolSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, false);
   });
+
+  useEffect(() => {
+    const onLite = (e) => setLiteEffectsOn(!!e.detail?.enabled);
+    window.addEventListener('nodeterm-lite-effects-changed', onLite);
+    return () => window.removeEventListener('nodeterm-lite-effects-changed', onLite);
+  }, []);
 
   useEffect(() => {
     persistHomeTabSetting('nodeterm_terminal_opacity', terminalOpacity.toString());
@@ -1610,11 +1624,11 @@ const HomeTab = ({
 
   const homeBackdropFilterValue = React.useMemo(
     () => homeBackdropFilter(homeBackdropBlur),
-    [homeBackdropBlur]
+    [homeBackdropBlur, liteEffectsOn]
   );
   const homeBackdropFilterGlass = React.useMemo(
     () => homeBackdropFilter(homeBackdropBlur, 180),
-    [homeBackdropBlur]
+    [homeBackdropBlur, liteEffectsOn]
   );
 
   const localTerminalTheme = React.useMemo(() => {

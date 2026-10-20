@@ -366,6 +366,7 @@ export const useThemeManagement = () => {
   useEffect(() => {
     try {
       localStorage.setItem('iconTheme', iconTheme);
+      window.dispatchEvent(new Event('icon-theme-changed'));
     } catch { }
   }, [iconTheme]);
 

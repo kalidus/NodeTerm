@@ -222,7 +222,7 @@ const isLowRamMachine = getTotalRamGb() <= 8;
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
 } else if (process.platform === 'linux') {
-  // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
+  // FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
   // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
   app.commandLine.appendSwitch('use-angle', 'gl');
   // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
@@ -230,6 +230,21 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
+  // Alinear con Windows: rasterización HW / zero-copy (sin DirectComposition ni Vulkan)
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+  app.commandLine.appendSwitch('enable-webgl');
+  app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+  app.commandLine.appendSwitch('enable-accelerated-video-decode');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
+  app.commandLine.appendSwitch('enable-smooth-scrolling');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  // Wayland nativo opcional (mejor input/tearing en setups NVIDIA recientes)
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || '').trim().toLowerCase();
+  if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
+    app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
+  }
 } else {
   // Aceleración GPU completa por hardware (Windows/macOS)
   app.commandLine.appendSwitch('ignore-gpu-blocklist');

@@ -92,18 +92,15 @@ const LocalFileExplorerSidebar = ({
       }
     };
     
-    // Verificar cambios periódicamente
-    const interval = setInterval(handleStorageChange, 2000); // Reducido de 500ms a 2000ms para ahorrar CPU/RAM
-    
-    // También escuchar eventos de storage
+    // Solo eventos (storage + icon-theme-changed): sin poll periódico
     window.addEventListener('storage', handleStorageChange);
-    
-    // Verificar inmediatamente
+    window.addEventListener('icon-theme-changed', handleStorageChange);
+
     handleStorageChange();
-    
+
     return () => {
-      clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('icon-theme-changed', handleStorageChange);
     };
   }, [iconTheme, iconSize, folderIconSize]);
   

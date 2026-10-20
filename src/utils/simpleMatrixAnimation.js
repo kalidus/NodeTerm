@@ -5,6 +5,13 @@ export function initSimpleMatrixAnimation() {
   const titleBar = document.querySelector('.title-bar[data-animation="matrix"]');
   if (!titleBar) return;
 
+  const liteEffects = document.documentElement.getAttribute('data-ui-lite-effects') === 'true';
+  const reducedMotion = document.documentElement.getAttribute('data-ui-reduced-motion') === 'true';
+  if (liteEffects || reducedMotion) {
+    cleanupMatrixAnimation();
+    return;
+  }
+
   // Limpiar animación anterior si existe
   cleanupMatrixAnimation();
 
@@ -35,7 +42,6 @@ export function initSimpleMatrixAnimation() {
   const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
 
   // Crear múltiples columnas de caracteres
-  // Verificar velocidad de animación para ajustar cantidad
   const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
   const numColumns = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 18 : 15); // Más columnas en normal
   const columnWidth = 100 / numColumns;
@@ -48,6 +54,13 @@ export function initSimpleMatrixAnimation() {
 export function initSimpleMatrixBlueAnimation() {
   const titleBar = document.querySelector('.title-bar[data-animation="matrix-blue"]');
   if (!titleBar) return;
+
+  const liteEffects = document.documentElement.getAttribute('data-ui-lite-effects') === 'true';
+  const reducedMotion = document.documentElement.getAttribute('data-ui-reduced-motion') === 'true';
+  if (liteEffects || reducedMotion) {
+    cleanupMatrixAnimation();
+    return;
+  }
 
   // Limpiar animación anterior si existe
   cleanupMatrixAnimation();
@@ -78,8 +91,6 @@ export function initSimpleMatrixBlueAnimation() {
   // Caracteres del Matrix
   const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
 
-  // Crear múltiples columnas de caracteres
-  // Verificar velocidad de animación para ajustar cantidad
   const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
   const numColumns = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 18 : 15); // Más columnas en normal
   const columnWidth = 100 / numColumns;

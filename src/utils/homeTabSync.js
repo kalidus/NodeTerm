@@ -32,9 +32,22 @@ export function clampHomeBackdropBlur(value) {
 }
 
 export function homeBackdropFilter(px, saturate) {
+  // Lite-effects: sin blur (CSS glass es el peaje continuo más caro en Linux/Chromium)
+  try {
+    if (typeof document !== 'undefined'
+      && document.documentElement.getAttribute('data-ui-lite-effects') === 'true') {
+      return 'none';
+    }
+  } catch { /* ignore */ }
   const n = clampHomeBackdropBlur(px);
   if (n <= 0) return 'none';
-  return saturate ? `blur(${n}px) saturate(${saturate}%)` : `blur(${n}px)`;
+  // Cap suave en Linux aunque lite-effects esté off (evitar 25–40px por defecto de frames)
+  let capped = n;
+  try {
+    const isLinux = typeof window !== 'undefined' && window.electron?.platform === 'linux';
+    if (isLinux && capped > 8) capped = 8;
+  } catch { /* ignore */ }
+  return saturate ? `blur(${capped}px) saturate(${saturate}%)` : `blur(${capped}px)`;
 }
 
 export function persistHomeTabSetting(key, value) {

@@ -1301,6 +1301,7 @@ const TabContentRendererInner = React.memo(({
         onCloseRight={() => handleCloseSplitPanel(tab.key, 'right')}
         path={[]}
         openInSplit={openInSplit}
+        active={isActiveTab}
         isBroadcastActive={tab.isBroadcastActive || false}
         onBroadcastData={handleBroadcastData}
         onToggleBroadcast={() => onToggleBroadcast && onToggleBroadcast(tab.key)}

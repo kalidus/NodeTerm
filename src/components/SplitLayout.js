@@ -159,7 +159,11 @@ const SplitLayout = ({
 
   path = [], // Path en el árbol para identificar este nodo
   openInSplit = null,
-  style = {} // Prop style para pasar estilos entre componentes recursivos
+  style = {}, // Prop style para pasar estilos entre componentes recursivos
+  /** false cuando la pestaña split está oculta → libera WebGL */
+  active = true,
+  /** Mapa key→preferWebgl precalculado en la raíz (splits densos) */
+  webglByKey = null
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
@@ -170,6 +174,52 @@ const SplitLayout = ({
   const isNestedSystem = first || second;
   const isArraySystem = terminals && terminals.length > 0;
   const isLegacySystem = leftTerminal && rightTerminal;
+
+  const MAX_WEBGL_PANES = 4;
+
+  const resolvedWebglByKey = React.useMemo(() => {
+    if (webglByKey) return webglByKey;
+    const map = new Map();
+    if (!active) return map;
+
+    const assign = (node, slots) => {
+      if (!node || slots <= 0) return slots;
+      if (node.type === 'terminal' && node.key) {
+        map.set(node.key, true);
+        return slots - 1;
+      }
+      if (node.type === 'split') {
+        slots = assign(node.first, slots);
+        slots = assign(node.second, slots);
+      }
+      return slots;
+    };
+
+    let slots = MAX_WEBGL_PANES;
+    if (isNestedSystem) {
+      assign({ type: 'split', first, second }, slots);
+    } else if (isArraySystem) {
+      for (const t of terminals) {
+        if (slots <= 0) break;
+        if (t?.key) {
+          map.set(t.key, true);
+          slots -= 1;
+        }
+      }
+    } else if (isLegacySystem) {
+      if (leftTerminal?.key) map.set(leftTerminal.key, true);
+      if (rightTerminal?.key && map.size < MAX_WEBGL_PANES) map.set(rightTerminal.key, true);
+    }
+    return map;
+  }, [webglByKey, active, isNestedSystem, isArraySystem, isLegacySystem, first, second, terminals, leftTerminal, rightTerminal]);
+
+  const panePreferWebgl = (key) => {
+    if (!active) return false;
+    if (!key) return true;
+    // Sin entrada en el mapa = fuera de presupuesto → Canvas
+    if (resolvedWebglByKey.size === 0) return !!active;
+    return resolvedWebglByKey.get(key) === true;
+  };
 
   // Asegurar que siempre haya un color de separador válido desde el inicio
   // Usar transparencia para que el separador sea visible sobre cualquier fondo
@@ -335,7 +385,8 @@ const SplitLayout = ({
             fontSize={fontSize}
             theme={theme}
             onContextMenu={onContextMenu}
-            active={true}
+            active={active}
+            preferWebgl={panePreferWebgl(node.key)}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
@@ -366,6 +417,8 @@ const SplitLayout = ({
           splitterColor={splitterColor}
           onClosePanel={onClosePanel}
           path={nodePath}
+          active={active}
+          webglByKey={resolvedWebglByKey}
           isBroadcastActive={isBroadcastActive}
           onBroadcastData={onBroadcastData}
           onToggleBroadcast={onToggleBroadcast}
@@ -377,7 +430,7 @@ const SplitLayout = ({
     }
 
     return null;
-  }, [fontFamily, fontSize, theme, onContextMenu, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel]);
+  }, [fontFamily, fontSize, theme, onContextMenu, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel, active, resolvedWebglByKey, isBroadcastActive, onBroadcastData, onToggleBroadcast, onToggleBroadcastTarget, broadcastExcludedTargets, effectiveSplitterColor]);
 
   // Función helper para encontrar el path de un terminal en el árbol por su key
   const findTerminalPath = useCallback((node, targetKey, currentPath = []) => {
@@ -590,7 +643,8 @@ const SplitLayout = ({
             fontSize={fontSize}
             theme={theme}
             onContextMenu={onContextMenu}
-            active={true}
+            active={active}
+            preferWebgl={panePreferWebgl(terminal.key)}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
@@ -1353,7 +1407,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(leftTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1419,7 +1474,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(rightTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1554,7 +1610,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(leftTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1625,7 +1682,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(rightTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1715,7 +1773,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(leftTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1775,7 +1834,8 @@ const SplitLayout = ({
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
-              active={true}
+              active={active}
+              preferWebgl={panePreferWebgl(rightTerminal.key)}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}

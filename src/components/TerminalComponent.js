@@ -7,6 +7,7 @@ import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import {
+    attachTerminalRenderer,
     attachVisibleTerminalRenderer,
     createStableTerminalFit,
     getTerminalScrollback,
@@ -23,6 +24,10 @@ import {
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
 import { sendSshUserInput, deferNonCritical } from '../utils/terminalInputSend';
+import {
+    resolveTerminalFontFamily,
+    getDefaultLocalTerminalFontFamily
+} from '../utils/resolveTerminalFontFamily';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -32,6 +37,8 @@ const TerminalComponent = forwardRef(({
     theme,
     onContextMenu,
     active,
+    /** En splits densos: false = Canvas (sigue pintando) sin contexto WebGL extra */
+    preferWebgl,
     stats: propsStats,
     hideStatusBar = false,
     statusBarIconTheme = 'classic',
@@ -146,7 +153,8 @@ const TerminalComponent = forwardRef(({
     };
     const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef, activeRef);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
-    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
+    const effectivePreferWebgl = preferWebgl !== false;
+    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef, effectivePreferWebgl);
 
     useEffect(() => {
         activeRef.current = active;
@@ -285,10 +293,10 @@ const TerminalComponent = forwardRef(({
         // ssh:data:*, el stdout se pierde (ni ring ni listener) y el terminal queda en blanco.
 
         // Detectar si es terminal local (inicio) de forma robusta
-        let defaultFont = fontFamily || 'monospace';
+        let defaultFont = resolveTerminalFontFamily(fontFamily || 'monospace');
         let defaultFontSize = fontSize;
         if (isLocalTerminal) {
-            defaultFont = localStorage.getItem('basicapp_local_terminal_font_family') || '"FiraCode Nerd Font", monospace';
+            defaultFont = getDefaultLocalTerminalFontFamily();
             defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
         }
 
@@ -327,7 +335,8 @@ const TerminalComponent = forwardRef(({
             fontWeight: '400', // Forzar un peso de fuente est??ndar definido
             fontWeightBold: 'bold',
             letterSpacing: 0,
-            lineHeight: 1.1,
+            // 1.0 evita celdas fraccionarias con HiDPI/scaling en Linux (FreeType)
+            lineHeight: 1.0,
         });
 
         // Inicializar buffer de escrituras por fotograma (60 FPS write batching)
@@ -362,7 +371,12 @@ const TerminalComponent = forwardRef(({
         term.current.open(terminalRef.current);
         fitStable();
 
-        rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
+        // preferWebgl=false en splits densos: Canvas (sigue pintando) sin WebGL extra
+        if (activeRef.current && preferWebgl === false) {
+            rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: false });
+        } else {
+            rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
+        }
 
         if (activeRef.current) {
             try {
@@ -786,7 +800,7 @@ const TerminalComponent = forwardRef(({
     // Effect to update font family dynamically
     useEffect(() => {
         if (term.current && fontFamily) {
-            term.current.options.fontFamily = fontFamily;
+            term.current.options.fontFamily = resolveTerminalFontFamily(fontFamily);
 
             // CR??TICO: Re-aplicar opciones de nitidez al cambiar de fuente
             // xterm.js a veces resetea o recalcula el renderizado internamente
@@ -794,7 +808,7 @@ const TerminalComponent = forwardRef(({
             term.current.options.fontWeightBold = 'bold';
             term.current.options.minimumContrastRatio = 1;
             term.current.options.letterSpacing = 0;
-            term.current.options.lineHeight = 1.1;
+            term.current.options.lineHeight = 1.0;
 
             // We might need to call fit again to readjust character sizes
             stableFitRef.current?.reset();
@@ -842,8 +856,9 @@ const TerminalComponent = forwardRef(({
                     rendererRef.current = syncTerminalRenderer(
                         term.current,
                         { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
-                        true,
-                        rendererRef.current
+                        preferWebgl !== false,
+                        rendererRef.current,
+                        { canvasFallback: preferWebgl === false }
                     );
                 }
                 fitStable();
@@ -867,7 +882,7 @@ const TerminalComponent = forwardRef(({
             clearTimeout(t1);
             clearTimeout(t2);
         };
-    }, [active, xtermLib]);
+    }, [active, preferWebgl, xtermLib]);
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)
     useEffect(() => {

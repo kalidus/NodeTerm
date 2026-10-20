@@ -10,6 +10,7 @@ import { markStartup } from './utils/startup-renderer-profiler';
 import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
 import { applyUILayoutFromStorage } from './utils/appearanceLayout';
 import { applySidebarTypographyCssVariables } from './utils/sidebarFontStack';
+import { applyLiteEffectsFromStorage } from './utils/uiLiteEffects';
 
 markStartup('index.js evaluado');
 
@@ -99,6 +100,7 @@ const applyEarlyBootTheme = () => {
     const animSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     root.setAttribute('data-ui-anim-speed', animSpeed);
     root.setAttribute('data-tab-anim-speed', animSpeed);
+    applyLiteEffectsFromStorage();
 
     // Fondo base acorde para evitar flash (blanco o oscuro)
     // Esto debe coincidir con el color de fondo del tema para ser imperceptible

@@ -244,6 +244,7 @@ class ExportImportService {
           use_primary_colors_titlebar: this.safeGetItem('use_primary_colors_titlebar'),
           nodeterm_ui_anim_speed: this.safeGetItem('nodeterm_ui_anim_speed'),
           nodeterm_ui_reduced_motion: this.safeGetItem('nodeterm_ui_reduced_motion'),
+          nodeterm_ui_lite_effects: this.safeGetItem('nodeterm_ui_lite_effects'),
           nodeterm_themes_per_row: this.safeGetItem('nodeterm_themes_per_row'),
           connectionDetailsPanelHeight: this.safeGetItem('connectionDetailsPanelHeight'),
           lock_home_button: this.safeGetItem('lock_home_button'),

@@ -12,6 +12,10 @@ import {
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import { explorerFonts } from '../themes';
 import { buildAppFontStack, UI_FONT_SIZE_DEFAULT } from '../utils/sidebarFontStack';
+import {
+  resolveLiteEffectsEnabled,
+  persistLiteEffectsEnabled,
+} from '../utils/uiLiteEffects';
 import UiFontSizeControl from './common/UiFontSizeControl';
 import '../styles/components/theme-selector.css';
 
@@ -226,6 +230,7 @@ const ThemeSelector = ({
   const saveTimeoutRef = useRef(null);
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [liteEffects, setLiteEffects] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [themesPerRow, setThemesPerRow] = useState(4);
   const [localUiFont, setLocalUiFont] = useState(() => {
@@ -296,6 +301,10 @@ const ThemeSelector = ({
     }
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
+
+    const initialLite = resolveLiteEffectsEnabled();
+    setLiteEffects(initialLite);
+    document.documentElement.setAttribute('data-ui-lite-effects', initialLite ? 'true' : 'false');
 
     const savedThemesPerRow = localStorage.getItem(THEMES_PER_ROW_KEY);
     if (savedThemesPerRow) {
@@ -466,6 +475,12 @@ const ThemeSelector = ({
     localStorage.setItem(REDUCED_MOTION_KEY, newValue.toString());
     document.documentElement.setAttribute('data-ui-reduced-motion', newValue ? 'true' : 'false');
   }, [reducedMotion]);
+
+  const handleLiteEffectsToggle = useCallback(() => {
+    const newValue = !liteEffects;
+    setLiteEffects(newValue);
+    persistLiteEffectsEnabled(newValue);
+  }, [liteEffects]);
 
   const handleThemesPerRowToggle = useCallback(() => {
     const options = [2, 4, 6, 8];
@@ -656,6 +671,19 @@ const ThemeSelector = ({
                         <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
                         <span>Animaciones</span>
                         <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
+                      </button>
+                    </div>
+                    <div className="theme-anim-option-wrapper">
+                      <button
+                        className={`theme-anim-option ${!liteEffects ? 'active' : ''}`}
+                        onClick={handleLiteEffectsToggle}
+                        title={liteEffects
+                          ? 'Activa blur/glass de la interfaz (más carga GPU, sobre todo en Linux)'
+                          : 'Desactiva blur/glass para una UI más ligera (recomendado en Linux)'}
+                      >
+                        <i className="pi pi-bolt" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                        <span>Efectos glass</span>
+                        <div className={`theme-mini-toggle ${!liteEffects ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
                       </button>
                     </div>
                     <div className="theme-anim-speed-wrapper">

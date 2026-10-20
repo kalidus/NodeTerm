@@ -30,7 +30,15 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
     const [pollingInterval, setPollingInterval] = useState(() => {
-        try { return parseInt(localStorage.getItem('statusBarPollingInterval') || '3', 10) * 1000; } catch { return 3000; }
+        try {
+            const saved = localStorage.getItem('statusBarPollingInterval');
+            if (saved) return parseInt(saved, 10) * 1000;
+            // Linux: intervalo mayor por defecto (menos IPC / nvidia-smi)
+            const isLinux = window.electron?.platform === 'linux';
+            return (isLinux ? 5 : 3) * 1000;
+        } catch {
+            return 3000;
+        }
     });
 
     const sessionHistory = useStatusBarSessionHistory(statusStats, { gpuStats });
@@ -67,7 +75,9 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
 
         let unsubscribe = () => {};
         let cancelled = false;
-        const gpuMinInterval = Math.max(5000, pollingInterval * 2);
+        // GPU stats: en Linux espaciar más (nvidia-smi / DRM)
+        const isLinux = window.electron?.platform === 'linux';
+        const gpuMinInterval = Math.max(isLinux ? 15000 : 5000, pollingInterval * (isLinux ? 3 : 2));
 
         const start = () => {
             if (cancelled) return;

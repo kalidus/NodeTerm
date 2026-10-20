@@ -165,38 +165,12 @@ const Sidebar = React.memo(({
   selectedNodeKey, // estado de selección del hook
   setSelectedNodeKey, // setter de selección del hook
 
-  // Props para conexiones
+  // Props para conexiones (estado de formularios SSH/RDP vive en App/diálogos)
   getAllFolders,
   createNewSSH,
   saveEditSSH,
   openEditSSHDialog,
   handleSaveRdpToSidebar,
-
-  // Estados de formularios SSH
-  sshName, setSSHName,
-  sshHost, setSSHHost,
-  sshUser, setSSHUser,
-  sshPassword, setSSHPassword,
-  sshPort, setSSHPort,
-  sshRemoteFolder, setSSHRemoteFolder,
-  sshTargetFolder, setSSHTargetFolder,
-  sshAutoCopyPassword, setSSHAutoCopyPassword,
-
-  // Estados de formularios Edit SSH
-  editSSHName, setEditSSHName,
-  editSSHHost, setEditSSHHost,
-  editSSHUser, setEditSSHUser,
-  editSSHPassword, setEditSSHPassword,
-  editSSHRemoteFolder, setEditSSHRemoteFolder,
-  editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-
-  // Estados para modo edición
-  editSSHNode, setEditSSHNode,
-
-  // Estados de formularios RDP
-  rdpNodeData, setRdpNodeData,
-  editingRdpNode, setEditingRdpNode,
 
   // Encriptación
   masterKey,

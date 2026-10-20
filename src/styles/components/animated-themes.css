@@ -299,7 +299,7 @@
 .title-bar[data-animation="space-station"] {
   background: linear-gradient(90deg, #0f1b33 0%, #152540 50%, #0f1b33 100%);
   animation: spaceStationPulse 16s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -337,7 +337,7 @@
 .title-bar[data-animation="terminal-hacker"] {
   background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
   animation: terminalHackerFlicker 12s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -367,7 +367,7 @@
 .title-bar[data-animation="cyberpunk"] {
   background: linear-gradient(90deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
   animation: cyberpunkGlow 20s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -395,7 +395,7 @@
 .title-bar[data-animation="matrix"] {
   background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
   animation: matrixPulse 14s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -608,7 +608,7 @@
 .title-bar[data-animation="quantum-flux"] {
   background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   animation: quantumFlux 18s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -636,7 +636,7 @@
 .title-bar[data-animation="holographic"] {
   background: linear-gradient(90deg, #0f0f23 0%, #1a1a3a 50%, #0f0f23 100%);
   animation: holographicShimmerPulse 20s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -664,7 +664,7 @@
 .title-bar[data-animation="cyber-grid"] {
   background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   animation: cyberGridPulse 16s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -692,7 +692,7 @@
 .title-bar[data-animation="neon-aurora"] {
   background: linear-gradient(90deg, #0a0f1f 0%, #1a1f3f 50%, #0a0f1f 100%);
   animation: neonAurora 18s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
@@ -720,7 +720,7 @@
 .title-bar[data-animation="plasma"] {
   background: linear-gradient(90deg, #1a0a2e 0%, #2a1a3e 50%, #1a0a2e 100%);
   animation: plasmaFlow 20s ease-in-out infinite;
-  will-change: filter;
+  will-change: opacity;
   position: relative;
   overflow: hidden;
 }
