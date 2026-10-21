@@ -18,6 +18,7 @@ import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../utils/homeTab
 import { getSidebarView, subscribeSidebarView } from '../utils/sidebarViewBus';
 import VaultCyberPanels from './home/VaultCyberPanels';
 import ConnectionCyberPanels from './home/ConnectionCyberPanels';
+import NotesCyberPanels from './home/NotesCyberPanels';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
 
@@ -914,6 +915,7 @@ const ConnectionHistory = ({
 
 	const showVaultTerminal = isActiveTab && sidebarView === 'passwords';
 	const showConnectionCyber = isActiveTab && sidebarView === 'connections';
+	const showNotesCyber = isActiveTab && sidebarView === 'documents';
 
 	return (
 		<div
@@ -1227,6 +1229,15 @@ const ConnectionHistory = ({
 							sidebarNodes={sidebarNodes}
 							onConnectToHistory={onConnectToHistory}
 							onEdit={onEdit}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							frameBackground={panelFrameBg}
+						/>
+					)}
+					{showNotesCyber && (
+						<NotesCyberPanels
+							documentNodes={documentNodes}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}

@@ -33,6 +33,7 @@ import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
+import { getHomeTabActive, subscribeHomeTabActive } from '../utils/homeTabActiveBus';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import '../styles/components/documents.css';
 
@@ -371,14 +372,18 @@ const DocumentsSidebar = ({
   }, [selectedNodeKey, documentNodes]);
 
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+  const [homeTabActive, setHomeTabActive] = useState(getHomeTabActive);
+
+  useEffect(() => subscribeHomeTabActive(setHomeTabActive), []);
 
   const isDetailsPanelVisible = useMemo(() => {
+    if (homeTabActive) return false;
     if (!selectedNodeForDetails) return false;
     const data = selectedNodeForDetails.data;
     const isFolder = selectedNodeForDetails.droppable || data?.type === 'document-folder';
     const isNote = data && (data.type === 'document' || data.type === 'quick-note');
     return !isFolder && !data?.isShowMoreBtn && isNote;
-  }, [selectedNodeForDetails]);
+  }, [selectedNodeForDetails, homeTabActive]);
 
   const countNotesInFolder = useCallback((folderNode) => {
     let count = 0;
@@ -531,6 +536,16 @@ const DocumentsSidebar = ({
 
   const handleOpenDocument = useCallback((node, mode = 'reuse') => {
     if (node.data?.type === 'document-folder' || node.droppable) return;
+    if (getHomeTabActive() && mode === 'reuse') {
+      window.dispatchEvent(new CustomEvent('open-home-note-panel', {
+        detail: {
+          key: node.key,
+          label: node.label,
+          data: node.data
+        }
+      }));
+      return;
+    }
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
         key: node.key,
@@ -1240,15 +1255,8 @@ const DocumentsSidebar = ({
   const handleOpenQuickNote = useCallback((node, mode = 'reuse') => {
     setSelectedNodeKey(node.key);
     setQuickNotesPanelOpen(false);
-    window.dispatchEvent(new CustomEvent('open-document-tab', {
-      detail: {
-        key: node.key,
-        label: node.label,
-        data: node.data,
-        mode
-      }
-    }));
-  }, []);
+    handleOpenDocument(node, mode);
+  }, [handleOpenDocument]);
 
   const handleCreateNoteInPanel = useCallback(() => {
     if (isQuickNoteSelected) {
@@ -1684,7 +1692,7 @@ const DocumentsSidebar = ({
       </div>
 
       <DocumentDetailsPanel
-        selectedNode={selectedNodeForDetails}
+        selectedNode={homeTabActive ? null : selectedNodeForDetails}
         uiTheme={uiTheme}
         onOpenDocument={handleOpenDocument}
         collapsed={detailsCollapsed}
