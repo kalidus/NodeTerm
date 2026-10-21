@@ -7,6 +7,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import { publishHomeSessions } from '../utils/homeSessionBus';
+import { setHomeTabActive } from '../utils/homeTabActiveBus';
 import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
@@ -2433,17 +2434,19 @@ const App = () => {
 
   // === CÁLCULOS MEMOIZADOS ===
   // Memoizar cálculos costosos que se hacen en cada render
+  const activeTab = filteredTabs[activeTabIndex] || null;
+
   const isHomeTabActive = useMemo(() => {
-    return activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;
-  }, [activeTabIndex, homeTabs.length]);
+    return activeTab?.type === TAB_TYPES.HOME || activeTab?.type === 'home';
+  }, [activeTab]);
+
+  useEffect(() => {
+    setHomeTabActive(isHomeTabActive);
+  }, [isHomeTabActive]);
 
   const localTerminalBg = useMemo(() => {
     return themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
   }, [localLinuxTerminalTheme]);
-
-
-
-  const activeTab = filteredTabs[activeTabIndex] || null;
 
   // Implementación de Broadcast
   const handleBroadcastData = useCallback((originTabId, data) => {

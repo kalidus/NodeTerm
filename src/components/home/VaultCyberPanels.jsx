@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import HomePanelWrapper from '../HomePanelWrapper';
 import { collectVaultEntries } from '../../utils/homeWidgets';
 import VaultCyberTerminal, { VaultCyberDetail } from './VaultCyberTerminal';
+
+const BASE_Z = 10000;
 
 const LIST_BOX = {
   x: 24,
   y: 24,
   width: 680,
   height: 440,
-  zIndex: 40,
+  zIndex: BASE_Z,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -19,7 +21,7 @@ const DETAIL_BOX = {
   y: 56,
   width: 360,
   height: 400,
-  zIndex: 41,
+  zIndex: BASE_Z + 1,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -41,7 +43,47 @@ export default function VaultCyberPanels({
   const [listBox, setListBox] = useState(LIST_BOX);
   const [detailEntry, setDetailEntry] = useState(null);
   const [detailBox, setDetailBox] = useState(DETAIL_BOX);
-  const zRef = useRef(41);
+  const zRef = useRef(BASE_Z + 1);
+  const passwordNodesRef = useRef(passwordNodes);
+  passwordNodesRef.current = passwordNodes;
+
+  const raise = useCallback((target) => {
+    zRef.current += 1;
+    const zIndex = zRef.current;
+    if (target === 'list') {
+      setListBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
+    } else {
+      setDetailBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
+    }
+  }, []);
+
+  const openDetail = useCallback((entry) => {
+    if (!entry) return;
+    setListDismissed(false);
+    setDetailEntry(entry);
+    raise('list');
+    raise('detail');
+  }, [raise]);
+
+  const openDetailByKey = useCallback((key) => {
+    if (key == null) return;
+    const wanted = String(key);
+    const entry = collectVaultEntries(passwordNodesRef.current)
+      .find((item) => String(item.key) === wanted);
+    if (entry) openDetail(entry);
+  }, [openDetail]);
+
+  useEffect(() => {
+    raise('list');
+  }, [raise]);
+
+  useEffect(() => {
+    const onOpen = (event) => {
+      openDetailByKey(event?.detail?.key);
+    };
+    window.addEventListener('open-home-vault-secret', onOpen);
+    return () => window.removeEventListener('open-home-vault-secret', onOpen);
+  }, [openDetailByKey]);
 
   useEffect(() => {
     if (!detailEntry) return;
@@ -62,18 +104,6 @@ export default function VaultCyberPanels({
       && fresh.secret === detailEntry.secret;
     if (!same) setDetailEntry(fresh);
   }, [detailEntry, passwordNodes, vaultLocked]);
-
-  const raise = (target) => {
-    zRef.current += 1;
-    const zIndex = zRef.current;
-    const setter = target === 'list' ? setListBox : setDetailBox;
-    setter((prev) => ({ ...prev, zIndex }));
-  };
-
-  const openDetail = (entry) => {
-    setDetailEntry(entry);
-    raise('detail');
-  };
 
   const moveBox = (setter) => (_id, next) => {
     if (!next) return;

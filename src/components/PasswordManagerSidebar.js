@@ -28,6 +28,7 @@ import {
 import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -1040,6 +1041,12 @@ const PasswordManagerSidebar = ({
   };
 
   const dispatchPasswordTab = useCallback((node, mode = 'permanent') => {
+    if (getHomeTabActive()) {
+      window.dispatchEvent(new CustomEvent('open-home-vault-secret', {
+        detail: { key: node.key }
+      }));
+      return;
+    }
     const payload = {
       key: node.key,
       label: node.label,
