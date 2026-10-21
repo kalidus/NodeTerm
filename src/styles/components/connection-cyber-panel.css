@@ -1,0 +1,62 @@
+.connection-cyber.vault-cyber {
+  background:
+    radial-gradient(1100px 460px at 8% -8%, rgba(0, 242, 255, 0.18), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(39, 201, 63, 0.12), transparent 50%),
+    #05060a;
+}
+
+.connection-cyber .vault-cyber-title {
+  color: #27c93f;
+  text-shadow: 0 0 12px rgba(39, 201, 63, 0.75), 2px 0 rgba(0, 242, 255, 0.55);
+}
+
+.connection-cyber .vault-cyber-count {
+  color: #00f2ff;
+}
+
+.connection-cyber-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+  position: relative;
+  z-index: 4;
+}
+
+.connection-cyber-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(0, 242, 255, 0.45);
+  background: rgba(0, 242, 255, 0.08);
+  color: #00f2ff;
+  padding: 0.35rem 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.connection-cyber-btn:hover {
+  background: rgba(0, 242, 255, 0.16);
+  box-shadow: 0 0 12px rgba(0, 242, 255, 0.25);
+}
+
+.connection-cyber-btn.is-connect {
+  border-color: rgba(39, 201, 63, 0.55);
+  background: rgba(39, 201, 63, 0.12);
+  color: #27c93f;
+}
+
+.connection-cyber-btn.is-connect:hover {
+  background: rgba(39, 201, 63, 0.22);
+  box-shadow: 0 0 12px rgba(39, 201, 63, 0.3);
+}
+
+.connection-cyber-type-pill {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgba(0, 242, 255, 0.4);
+  color: #00f2ff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}

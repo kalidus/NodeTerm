@@ -30,6 +30,7 @@ import { getFavorites, onUpdate as onFavoritesUpdate, removeFavorite } from '../
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import { setSidebarView } from '../utils/sidebarViewBus';
+import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import { appConfirm } from './ui/AppConfirm';
 import {
   FAVORITES_ROOT_KEY,
@@ -3286,6 +3287,19 @@ const Sidebar = React.memo(({
                 const resolvedNode = node ? resolveFavoriteShortcutNode(node, nodes) : null;
 
                 if (resolvedNode) {
+                  const connType = String(resolvedNode.data?.type || '').toLowerCase();
+                  const isHomeConnection = getHomeTabActive()
+                    && !resolvedNode.droppable
+                    && ['ssh', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole', 'sftp', 'ftp', 'scp', 'ssh-tunnel'].includes(connType);
+
+                  if (isHomeConnection) {
+                    setSelectedNodeForDetails(null);
+                    window.dispatchEvent(new CustomEvent('open-home-connection-panel', {
+                      detail: { key: resolvedNode.key || selectedKey }
+                    }));
+                    return;
+                  }
+
                   detailsPanelTimeoutRef.current = setTimeout(() => {
                     setSelectedNodeForDetails(resolvedNode);
                     detailsPanelTimeoutRef.current = null;
