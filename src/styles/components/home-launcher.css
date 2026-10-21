@@ -107,6 +107,17 @@
   padding: 3px 6px;
 }
 
+.home-fav-actions button.is-danger,
+.home-group-actions button.is-danger {
+  color: #ff8a80;
+  background: rgba(255, 82, 82, 0.12);
+}
+
+.home-fav-actions button.is-danger:hover,
+.home-group-actions button.is-danger:hover {
+  background: rgba(255, 82, 82, 0.22);
+}
+
 .home-widget-list {
   display: flex;
   flex-direction: column;
@@ -130,6 +141,26 @@
   border-radius: 8px;
   padding: 8px 10px;
   width: 100%;
+  cursor: default;
+}
+
+.home-widget-row-main {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-session-actions {
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 .home-widget-dot {
