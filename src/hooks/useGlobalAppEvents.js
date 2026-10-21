@@ -589,6 +589,8 @@ export const useGlobalAppEvents = ({
         icon: info.data?.icon || '📝',
         content: info.data?.content || '',
         markdownSource: info.data?.markdownSource || '',
+        tags: Array.isArray(info.data?.tags) ? info.data.tags : [],
+        type: info.data?.type || 'document',
         createdAt: info.data?.createdAt,
         updatedAt: info.data?.updatedAt
       };
@@ -698,11 +700,35 @@ export const useGlobalAppEvents = ({
       );
     };
 
+    const handleContent = (e) => {
+      const { key, content, markdownSource, tags } = e.detail || {};
+      if (!key) return;
+      setSshTabs(prev =>
+        prev.map(t => {
+          if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
+            return {
+              ...t,
+              documentData: {
+                ...t.documentData,
+                ...(content !== undefined ? { content } : {}),
+                ...(markdownSource !== undefined ? { markdownSource } : {}),
+                ...(Array.isArray(tags) ? { tags } : {}),
+                updatedAt: Date.now()
+              }
+            };
+          }
+          return t;
+        })
+      );
+    };
+
     window.addEventListener('document-title-updated', handleTitle);
     window.addEventListener('document-icon-updated', handleIcon);
+    window.addEventListener('document-content-updated', handleContent);
     return () => {
       window.removeEventListener('document-title-updated', handleTitle);
       window.removeEventListener('document-icon-updated', handleIcon);
+      window.removeEventListener('document-content-updated', handleContent);
     };
   }, [setSshTabs]);
 

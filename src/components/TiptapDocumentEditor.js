@@ -13,7 +13,12 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
+import Bold from '@tiptap/extension-bold';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { mergeAttributes } from '@tiptap/core';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { ContextMenu } from 'primereact/contextmenu';
 import { common, createLowlight } from 'lowlight';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
@@ -22,32 +27,195 @@ import { HiSparkles } from 'react-icons/hi';
 import { FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 import '../styles/components/documents.css';
 import { appConfirm } from './ui/AppConfirm';
+import { appPrompt } from './ui/AppPrompt';
+import NoteFindBar from './notes/NoteFindBar';
+import NoteOutlinePanel from './notes/NoteOutlinePanel';
+import NoteTagsBar from './notes/NoteTagsBar';
+import NoteBubbleMenu from './notes/NoteBubbleMenu';
+import NoteSearchHighlight, { collectSearchMatches } from '../extensions/NoteSearchHighlight';
+import connectionStore from '../utils/connectionStore';
+
+/** Bold con toDOM clásico + clase visible (el JSX de TipTap 3 a veces no pinta en Electron). */
+const NoteBold = Bold.extend({
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      HTMLAttributes: {
+        class: 'note-mark-bold'
+      }
+    };
+  },
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'strong',
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        class: 'note-mark-bold',
+        style: 'font-weight:700'
+      }),
+      0
+    ];
+  }
+});
 
 const lowlight = createLowlight(common);
 const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+const TEXT_COLORS = ['#e2e8f0', '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
 
-const TIPTAP_EXTENSIONS = [
-  StarterKit.configure({
-    codeBlock: false,
-    link: false,
-    underline: false,
-  }),
-  Placeholder.configure({
-    placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
-  }),
-  Underline,
-  Highlight,
-  Link.configure({ openOnClick: false }),
-  Image,
-  TextAlign.configure({ types: ['heading', 'paragraph'] }),
-  Table.configure({ resizable: true }),
-  TableRow,
-  TableCell,
-  TableHeader,
-  TaskList,
-  TaskItem.configure({ nested: true }),
-  CodeBlockLowlight.configure({ lowlight }),
-];
+function writeClipboardText(text) {
+  if (text == null) return Promise.resolve();
+  const value = String(text);
+  if (window.electron?.clipboard?.writeText) {
+    return window.electron.clipboard.writeText(value).catch(() => {
+      try { navigator.clipboard.writeText(value); } catch { /* ignore */ }
+    });
+  }
+  try {
+    return navigator.clipboard.writeText(value);
+  } catch {
+    return Promise.resolve();
+  }
+}
+
+function readClipboardText() {
+  if (window.electron?.clipboard?.readText) {
+    return window.electron.clipboard.readText()
+      .then((res) => (typeof res === 'string' ? res : (res?.text || '')))
+      .catch(() => '');
+  }
+  try {
+    return navigator.clipboard.readText().catch(() => '');
+  } catch {
+    return Promise.resolve('');
+  }
+}
+
+/** Aplica/quita negrita con transacción ProseMirror (no depende de chain TipTap). */
+function toggleBoldMark(editor) {
+  if (!editor || editor.isDestroyed || !editor.view) return false;
+  const boldType = editor.state.schema.marks.bold;
+  if (!boldType) {
+    console.error('[NotesEditor] schema sin mark bold');
+    return false;
+  }
+
+  const { state, view } = editor;
+  const { from, to, empty } = state.selection;
+  const mark = boldType.create();
+  let tr = state.tr;
+
+  if (empty) {
+    const stored = state.storedMarks || state.selection.$from.marks();
+    if (boldType.isInSet(stored)) {
+      tr = tr.removeStoredMark(boldType);
+    } else {
+      tr = tr.addStoredMark(mark);
+    }
+  } else if (editor.isActive('bold')) {
+    tr = tr.removeMark(from, to, boldType);
+  } else {
+    tr = tr.addMark(from, to, mark);
+  }
+
+  view.dispatch(tr.scrollIntoView());
+  return true;
+}
+
+/** Restaura un rango y aplica un comando TipTap (focus + selección + acción). */
+function runOnEditorRange(editor, from, to, commandName) {
+  if (!editor || editor.isDestroyed || !editor.view) return false;
+  try {
+    const dom = editor.view.dom;
+    if (dom && typeof dom.focus === 'function') {
+      dom.focus({ preventScroll: true });
+    }
+
+    const docSize = editor.state.doc.content.size;
+    let a = Math.max(0, Math.min(from ?? 0, docSize));
+    let b = Math.max(0, Math.min(to ?? 0, docSize));
+    if (a > b) {
+      const tmp = a;
+      a = b;
+      b = tmp;
+    }
+
+    if (commandName === 'selectAll') {
+      return editor.chain().focus().selectAll().run();
+    }
+
+    if (a !== b) {
+      editor.commands.setTextSelection({ from: a, to: b });
+    }
+
+    if (typeof commandName === 'string') {
+      if (commandName === 'bold') return toggleBoldMark(editor);
+      let chain = editor.chain().focus();
+      if (a !== b) chain = chain.setTextSelection({ from: a, to: b });
+      if (commandName === 'italic') return chain.toggleItalic().run();
+      if (commandName === 'underline') return chain.toggleUnderline().run();
+      if (commandName === 'highlight') return chain.toggleHighlight().run();
+      if (commandName === 'strike') return chain.toggleStrike().run();
+      if (commandName === 'delete') return chain.deleteSelection().run();
+      return false;
+    }
+
+    let chain = editor.chain().focus();
+    if (a !== b) chain = chain.setTextSelection({ from: a, to: b });
+    if (typeof commandName === 'function') {
+      commandName(editor, chain);
+      return true;
+    }
+    return chain.run();
+  } catch (err) {
+    console.error('[NotesEditor] runOnEditorRange:', err);
+    return false;
+  }
+}
+
+function extractHeadingsFromEditor(editorInstance) {
+  if (!editorInstance || editorInstance.isDestroyed) return [];
+  const headings = [];
+  editorInstance.state.doc.descendants((node, pos) => {
+    if (node.type.name === 'heading' && node.attrs.level <= 3) {
+      headings.push({
+        level: node.attrs.level,
+        text: node.textContent || '',
+        pos
+      });
+    }
+  });
+  return headings;
+}
+
+/** Nueva instancia de extensiones por editor (nunca reutilizar singletons entre pestañas). */
+function createNoteEditorExtensions() {
+  return [
+    StarterKit.configure({
+      codeBlock: false,
+      link: false,
+      underline: false,
+      bold: false,
+    }),
+    NoteBold.configure({}),
+    Placeholder.configure({
+      placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
+    }),
+    Underline.configure({}),
+    Highlight.configure({ multicolor: false }),
+    TextStyle.configure({}),
+    Color.configure({}),
+    Link.configure({ openOnClick: false, autolink: true }),
+    Image.configure({ allowBase64: true }),
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Table.configure({ resizable: true }),
+    TableRow.configure({}),
+    TableCell.configure({}),
+    TableHeader.configure({}),
+    TaskList.configure({}),
+    TaskItem.configure({ nested: true }),
+    CodeBlockLowlight.configure({ lowlight }),
+    NoteSearchHighlight.configure({}),
+  ];
+}
 
 // Preset Rich Templates for developers and administrators
 const NOTE_TEMPLATES = {
@@ -119,11 +287,17 @@ systemctl restart apache2</code></pre>
 
 const ToolbarButton = ({ onClick, isActive, disabled, title, children }) => (
   <button
-    onClick={onClick}
+    type="button"
     className={isActive ? 'is-active' : ''}
     disabled={disabled}
     title={title}
-    type="button"
+    onMouseDown={(e) => {
+      // Evita perder la selección Y ejecuta aquí (en Electron el click a veces no llega tras preventDefault)
+      e.preventDefault();
+      e.stopPropagation();
+      if (disabled) return;
+      if (typeof onClick === 'function') onClick(e);
+    }}
   >
     {children}
   </button>
@@ -148,16 +322,30 @@ const EditorToolbar = ({ editor }) => {
 
   if (!editor || editor.isDestroyed || !editor.schema) return null;
 
-  const addImage = () => {
-    const url = window.prompt('URL de la imagen:');
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+  const addImage = async () => {
+    const url = await appPrompt({
+      header: 'Insertar imagen',
+      message: 'URL de la imagen:',
+      defaultValue: 'https://',
+      placeholder: 'https://...'
+    });
+    if (url) editor.chain().focus().setImage({ src: url.trim() }).run();
   };
 
-  const addLink = () => {
-    const url = window.prompt('URL del enlace:');
-    if (url) {
-      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  const addLink = async () => {
+    const prev = editor.getAttributes('link').href || 'https://';
+    const url = await appPrompt({
+      header: 'Insertar enlace',
+      message: 'URL del enlace (vacío para quitar):',
+      defaultValue: prev,
+      placeholder: 'https://...'
+    });
+    if (url === null) return;
+    if (url.trim() === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
     }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
   };
 
   const getActiveHeadingLabel = () => {
@@ -178,21 +366,34 @@ const EditorToolbar = ({ editor }) => {
       {/* Grupo 1: Formato básico */}
       <div className="toolbar-group">
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          onClick={() => {
+            try {
+              editor.view?.dom?.focus?.({ preventScroll: true });
+              toggleBoldMark(editor);
+            } catch (err) {
+              console.error('[NotesEditor] bold:', err);
+            }
+          }}
           isActive={editor.isActive('bold')}
           title="Negrita (Ctrl+B)"
         >
           <FaBold size={11} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          onClick={() => {
+            const ok = editor.chain().focus().toggleItalic().run();
+            if (!ok) editor.commands.toggleItalic();
+          }}
           isActive={editor.isActive('italic')}
           title="Cursiva (Ctrl+I)"
         >
           <FaItalic size={11} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          onClick={() => {
+            const ok = editor.chain().focus().toggleUnderline().run();
+            if (!ok) editor.commands.toggleUnderline();
+          }}
           isActive={editor.isActive('underline')}
           title="Subrayado (Ctrl+U)"
         >
@@ -212,6 +413,56 @@ const EditorToolbar = ({ editor }) => {
         >
           <i className="pi pi-sun" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
+        <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
+          <button
+            className="toolbar-dropdown-btn"
+            title="Color de texto"
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setActiveDropdown(activeDropdown === 'color' ? null : 'color')}
+            style={{ display: 'flex', gap: '2px', width: '28px', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <i className="pi pi-palette" style={{ fontSize: '0.75rem', color: editor.getAttributes('textStyle').color || undefined }} />
+          </button>
+          <div
+            className={`template-dropdown-menu note-color-palette ${activeDropdown === 'color' ? 'show' : ''}`}
+            style={{ minWidth: '148px', left: 0 }}
+          >
+            {TEXT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={c}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().setColor(c).run();
+                  setActiveDropdown(null);
+                }}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: c,
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              className="note-find-action"
+              style={{ width: '100%', marginTop: 4 }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                editor.chain().focus().unsetColor().run();
+                setActiveDropdown(null);
+              }}
+            >
+              Quitar color
+            </button>
+          </div>
+        </div>
       </div>
 
       <ToolbarSeparator />
@@ -230,10 +481,10 @@ const EditorToolbar = ({ editor }) => {
             <i className="pi pi-chevron-down" style={{ fontSize: '0.55rem', opacity: 0.7 }} />
           </button>
           <div className={`template-dropdown-menu ${activeDropdown === 'styles' ? 'show' : ''}`} style={{ minWidth: '130px', left: 0 }}>
-            <div onClick={() => { editor.chain().focus().setParagraph().run(); setActiveDropdown(null); }} className={!editor.isActive('heading') ? 'active-item' : ''}>Normal</div>
-            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 1 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 1 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 1</div>
-            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 2 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 2 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 2</div>
-            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 3 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 3</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setParagraph().run(); setActiveDropdown(null); }} className={!editor.isActive('heading') ? 'active-item' : ''}>Normal</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 1 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 1</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 2 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 2</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 3 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 3 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 3</div>
           </div>
         </div>
       </div>
@@ -335,9 +586,9 @@ const EditorToolbar = ({ editor }) => {
             <i className="pi pi-chevron-down" style={{ fontSize: '0.55rem', opacity: 0.7 }} />
           </button>
           <div className={`template-dropdown-menu ${activeDropdown === 'align' ? 'show' : ''}`} style={{ minWidth: '120px', left: 0 }}>
-            <div onClick={() => { editor.chain().focus().setTextAlign('left').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'left' }) || (!editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' })) ? 'active-item' : ''}><i className="pi pi-align-left" style={{ marginRight: '6px' }} /> Izquierda</div>
-            <div onClick={() => { editor.chain().focus().setTextAlign('center').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'center' }) ? 'active-item' : ''}><i className="pi pi-align-center" style={{ marginRight: '6px' }} /> Centro</div>
-            <div onClick={() => { editor.chain().focus().setTextAlign('right').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'right' }) ? 'active-item' : ''}><i className="pi pi-align-right" style={{ marginRight: '6px' }} /> Derecha</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'left' }) || (!editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' })) ? 'active-item' : ''}><i className="pi pi-align-left" style={{ marginRight: '6px' }} /> Izquierda</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'center' }) ? 'active-item' : ''}><i className="pi pi-align-center" style={{ marginRight: '6px' }} /> Centro</div>
+            <div onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'right' }) ? 'active-item' : ''}><i className="pi pi-align-right" style={{ marginRight: '6px' }} /> Derecha</div>
           </div>
         </div>
       </div>
@@ -367,9 +618,14 @@ const EditorToolbar = ({ editor }) => {
 
 const sanitizeContent = (content) => {
   if (!content || typeof content !== 'string') return content || '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="80" viewBox="0 0 350 80" style="background:#1e1e2f; border:1px dashed #4f46e5; border-radius:8px; font-family:system-ui,-apple-system,sans-serif;"><rect width="100%" height="100%" fill="none"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="12" font-weight="600">📌 Recurso de Evernote</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-size="10">Imagen privada no disponible sin sesion</text></svg>`;
+  // Placeholder neutro (sin borde morado) para recursos Evernote inaccesibles
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="56" viewBox="0 0 280 56"><rect width="100%" height="100%" rx="6" fill="#1a1f2a" stroke="#334155" stroke-dasharray="4 3"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="11" font-family="system-ui,sans-serif">Imagen no disponible</text></svg>`;
   const evernotePlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  return content.replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder);
+  return content
+    .replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder)
+    // Sustituye placeholders antiguos con borde índigo / texto Evernote ya incrustados
+    .replace(/data:image\/svg\+xml;charset=utf-8,[^"'>\s]*Recurso%20de%20Evernote[^"'>\s]*/gi, evernotePlaceholder)
+    .replace(/data:image\/svg\+xml;charset=utf-8,[^"'>\s]*4f46e5[^"'>\s]*/gi, evernotePlaceholder);
 };
 
 const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
@@ -377,12 +633,37 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const [markdownSource, setMarkdownSource] = useState(sanitizeContent(documentData?.markdownSource || ''));
   const [saveStatus, setSaveStatus] = useState('saved');
   const saveTimerRef = useRef(null);
-  const lastSavedContentRef = useRef(sanitizeContent(documentData?.content || ''));
+  const lastSavedContentRef = useRef(
+    `${sanitizeContent(documentData?.content || '')}::${JSON.stringify(
+      Array.isArray(documentData?.tags) ? documentData.tags : []
+    )}`
+  );
+  const markdownTextareaRef = useRef(null);
+  const editorRef = useRef(null);
+  const saveContentRef = useRef(() => {});
 
   // Title & Icon Editing State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(documentData?.label || 'Sin título');
   const [showIconPicker, setShowIconPicker] = useState(false);
+
+  // Find / outline / tags / context menu
+  const editorContextMenuRef = useRef(null);
+  const [editorContextItems, setEditorContextItems] = useState([]);
+  const [findVisible, setFindVisible] = useState(false);
+  const [findReplaceMode, setFindReplaceMode] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [findReplaceText, setFindReplaceText] = useState('');
+  const [findMatches, setFindMatches] = useState([]);
+  const [findIndex, setFindIndex] = useState(0);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [headings, setHeadings] = useState([]);
+  const [noteTags, setNoteTags] = useState(() =>
+    Array.isArray(documentData?.tags) ? [...documentData.tags] : []
+  );
+  const [isFavorite, setIsFavorite] = useState(false);
+  const noteTagsRef = useRef(noteTags);
+  noteTagsRef.current = noteTags;
 
   const emojiPresets = [
     '📝', '📄', '📃', '📑', '📓', '📔',
@@ -507,31 +788,362 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     });
   };
 
+  const scheduleMarkdownSave = useCallback((val) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const html = marked(val);
+      const tags = noteTagsRef.current || [];
+      lastSavedContentRef.current = `${html}::${JSON.stringify(tags)}`;
+      setSaveStatus('saving');
+      window.dispatchEvent(new CustomEvent('document-content-updated', {
+        detail: {
+          key: documentKey,
+          content: html,
+          markdownSource: val,
+          tags
+        }
+      }));
+      if (onSave) {
+        onSave({ content: html, markdownSource: val, tags });
+      }
+      setTimeout(() => setSaveStatus('saved'), 300);
+    }, 800);
+  }, [documentKey, onSave]);
+
+  // Última selección no vacía (sobrevive al blur del clic derecho / toolbar)
+  const savedSelectionRef = useRef({ from: 0, to: 0, text: '', mdStart: 0, mdEnd: 0 });
+
+  const rememberSelection = useCallback((from, to, text, mdStart = 0, mdEnd = 0) => {
+    if (from === to && !(text && text.length)) return;
+    savedSelectionRef.current = { from, to, text: text || '', mdStart, mdEnd };
+  }, []);
+
+  const captureWysiwygSelection = useCallback((view) => {
+    if (!view) return;
+    const { from, to } = view.state.selection;
+    const text = view.state.doc.textBetween(from, to, '\n');
+    rememberSelection(from, to, text);
+  }, [rememberSelection]);
+
+  const openEditorContextMenu = useCallback((event, mode) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const ed = editorRef.current;
+    let selFrom = 0;
+    let selTo = 0;
+    let mdSelStart = 0;
+    let mdSelEnd = 0;
+    let selectedText = '';
+
+    if (mode === 'wysiwyg' && ed && !ed.isDestroyed) {
+      captureWysiwygSelection(ed.view);
+      const saved = savedSelectionRef.current;
+      const curFrom = ed.state.selection.from;
+      const curTo = ed.state.selection.to;
+      const curText = ed.state.doc.textBetween(curFrom, curTo, '\n');
+
+      if (curText && curFrom !== curTo) {
+        selFrom = curFrom;
+        selTo = curTo;
+        selectedText = curText;
+      } else if (saved.text && saved.from !== saved.to) {
+        selFrom = saved.from;
+        selTo = saved.to;
+        selectedText = saved.text;
+      } else {
+        const domText = window.getSelection?.()?.toString?.() || '';
+        if (domText) {
+          selectedText = domText;
+          selFrom = saved.from || curFrom;
+          selTo = saved.to || curTo;
+        }
+      }
+    } else {
+      const ta = markdownTextareaRef.current;
+      if (ta) {
+        mdSelStart = ta.selectionStart;
+        mdSelEnd = ta.selectionEnd;
+        selectedText = ta.value.substring(mdSelStart, mdSelEnd);
+        if (!selectedText && savedSelectionRef.current.text) {
+          selectedText = savedSelectionRef.current.text;
+          mdSelStart = savedSelectionRef.current.mdStart;
+          mdSelEnd = savedSelectionRef.current.mdEnd;
+        }
+      }
+    }
+
+    const items = [
+      {
+        label: 'Cortar',
+        icon: 'pi pi-scissors',
+        shortcut: 'Ctrl+X',
+        command: () => {
+          const s = savedSelectionRef.current;
+          const text = s.text || selectedText;
+          if (!text) return;
+          writeClipboardText(text);
+          if (mode === 'wysiwyg') {
+            runOnEditorRange(editorRef.current, s.from || selFrom, s.to || selTo, 'delete');
+          } else {
+            const ta = markdownTextareaRef.current;
+            if (!ta) return;
+            const start = s.mdStart || mdSelStart;
+            const end = s.mdEnd || mdSelEnd;
+            const next = ta.value.slice(0, start) + ta.value.slice(end);
+            setMarkdownSource(next);
+            setSaveStatus('unsaved');
+            scheduleMarkdownSave(next);
+          }
+        }
+      },
+      {
+        label: 'Copiar',
+        icon: 'pi pi-copy',
+        shortcut: 'Ctrl+C',
+        command: () => {
+          const text = savedSelectionRef.current.text || selectedText;
+          if (!text) return;
+          writeClipboardText(text);
+        }
+      },
+      {
+        label: 'Pegar',
+        icon: 'pi pi-clone',
+        shortcut: 'Ctrl+V',
+        command: () => {
+          readClipboardText().then((text) => {
+            if (!text) return;
+            const s = savedSelectionRef.current;
+            if (mode === 'wysiwyg') {
+              runOnEditorRange(editorRef.current, s.from || selFrom, s.to || selTo, (editor, chain) => {
+                chain.insertContent(text).run();
+              });
+            } else {
+              const ta = markdownTextareaRef.current;
+              if (!ta) return;
+              const start = s.mdStart || mdSelStart;
+              const end = s.mdEnd || mdSelEnd;
+              const next = ta.value.slice(0, start) + text + ta.value.slice(end);
+              setMarkdownSource(next);
+              setSaveStatus('unsaved');
+              scheduleMarkdownSave(next);
+            }
+          });
+        }
+      },
+      {
+        label: 'Seleccionar todo',
+        icon: 'pi pi-stop',
+        shortcut: 'Ctrl+A',
+        command: () => {
+          if (mode === 'wysiwyg') {
+            const ok = runOnEditorRange(editorRef.current, 0, 0, 'selectAll');
+            if (!ok && editorRef.current) {
+              const ed = editorRef.current;
+              ed.view.dom.focus();
+              ed.commands.setTextSelection({ from: 0, to: ed.state.doc.content.size });
+            }
+          } else {
+            markdownTextareaRef.current?.focus();
+            markdownTextareaRef.current?.select();
+          }
+        }
+      }
+    ];
+
+    if (mode === 'wysiwyg') {
+      items.push(
+        { separator: true },
+        {
+          label: 'Negrita',
+          icon: 'pi pi-minus',
+          command: () => {
+            const s = savedSelectionRef.current;
+            const from = s.from || selFrom;
+            const to = s.to || selTo;
+            runOnEditorRange(editorRef.current, from, to, 'bold');
+          }
+        },
+        {
+          label: 'Cursiva',
+          icon: 'pi pi-info-circle',
+          command: () => {
+            const s = savedSelectionRef.current;
+            runOnEditorRange(editorRef.current, s.from || selFrom, s.to || selTo, 'italic');
+          }
+        },
+        {
+          label: 'Subrayado',
+          icon: 'pi pi-underline',
+          command: () => {
+            const s = savedSelectionRef.current;
+            runOnEditorRange(editorRef.current, s.from || selFrom, s.to || selTo, 'underline');
+          }
+        },
+        {
+          label: 'Resaltar',
+          icon: 'pi pi-sun',
+          command: () => {
+            const s = savedSelectionRef.current;
+            runOnEditorRange(editorRef.current, s.from || selFrom, s.to || selTo, 'highlight');
+          }
+        },
+        {
+          label: 'Enlace',
+          icon: 'pi pi-link',
+          command: async () => {
+            const s = savedSelectionRef.current;
+            const from = s.from || selFrom;
+            const to = s.to || selTo;
+            const current = editorRef.current;
+            if (!current || current.isDestroyed) return;
+            runOnEditorRange(current, from, to, (editor, chain) => {
+              chain.run();
+            });
+            const ed = editorRef.current;
+            if (!ed || ed.isDestroyed) return;
+            const prev = ed.getAttributes('link').href || 'https://';
+            const url = await appPrompt({
+              header: 'Insertar enlace',
+              message: 'URL del enlace (vacío para quitar):',
+              defaultValue: prev,
+              placeholder: 'https://...'
+            });
+            if (url === null) return;
+            if (url.trim() === '') {
+              ed.chain().focus().extendMarkRange('link').unsetLink().run();
+              return;
+            }
+            runOnEditorRange(ed, from, to, (editor) => {
+              editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
+            });
+          }
+        },
+        { separator: true },
+        {
+          label: 'Copiar como Markdown',
+          icon: 'pi pi-file',
+          command: () => {
+            const current = editorRef.current;
+            if (!current || current.isDestroyed) return;
+            writeClipboardText(turndownService.turndown(current.getHTML()));
+          }
+        },
+        {
+          label: 'Buscar...',
+          icon: 'pi pi-search',
+          shortcut: 'Ctrl+F',
+          command: () => {
+            setFindVisible(true);
+            setFindReplaceMode(false);
+          }
+        }
+      );
+    } else {
+      items.push(
+        { separator: true },
+        {
+          label: 'Buscar...',
+          icon: 'pi pi-search',
+          shortcut: 'Ctrl+F',
+          command: () => {
+            setFindVisible(true);
+            setFindReplaceMode(false);
+          }
+        }
+      );
+    }
+
+    setEditorContextItems(items);
+    // Misma API PrimeReact que el árbol de documentos (fiable en Electron)
+    requestAnimationFrame(() => {
+      editorContextMenuRef.current?.show(event);
+    });
+  }, [scheduleMarkdownSave, captureWysiwygSelection]);
+
+  const openEditorContextMenuRef = useRef(openEditorContextMenu);
+  openEditorContextMenuRef.current = openEditorContextMenu;
+  const captureWysiwygSelectionRef = useRef(captureWysiwygSelection);
+  captureWysiwygSelectionRef.current = captureWysiwygSelection;
+
   const editor = useEditor({
-    extensions: TIPTAP_EXTENSIONS,
+    // React 19 / Electron: evita warnings y estados a medias al montar
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
+    extensions: createNoteEditorExtensions(),
     content: sanitizeContent(documentData?.content || ''),
-    onUpdate: ({ editor }) => {
+    editable: true,
+    editorProps: {
+      attributes: {
+        class: 'tiptap tiptap-note-editor ProseMirror',
+        spellcheck: 'false'
+      },
+      handleDOMEvents: {
+        mousedown: (view, event) => {
+          if (event.button === 2) {
+            captureWysiwygSelectionRef.current(view);
+          }
+          return false;
+        },
+        contextmenu: (_view, event) => {
+          openEditorContextMenuRef.current(event, 'wysiwyg');
+          return true;
+        }
+      }
+    },
+    onUpdate: ({ editor: ed }) => {
       setSaveStatus('unsaved');
-      updateMetrics(editor);
+      updateMetrics(ed);
+      setHeadings(extractHeadingsFromEditor(ed));
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
-        saveContent(editor);
+        saveContentRef.current(ed);
       }, 2000);
     },
+    onSelectionUpdate: ({ editor: ed }) => {
+      try {
+        const { from, to } = ed.state.selection;
+        if (from === to) return;
+        const text = ed.state.doc.textBetween(from, to, '\n');
+        if (text) {
+          savedSelectionRef.current = { from, to, text, mdStart: 0, mdEnd: 0 };
+        }
+      } catch { /* ignore */ }
+    }
   });
+
+  editorRef.current = editor;
 
   useEffect(() => {
     if (editor && !editor.isDestroyed && editor.schema) {
       updateMetrics(editor);
+      setHeadings(extractHeadingsFromEditor(editor));
     }
   }, [editor]);
+
+  useEffect(() => {
+    setNoteTags(Array.isArray(documentData?.tags) ? [...documentData.tags] : []);
+  }, [documentKey, documentData?.tags]);
+
+  useEffect(() => {
+    const noteConnection = {
+      id: documentKey,
+      type: documentData?.type || 'document',
+      name: documentData?.label || tempTitle,
+      ...(documentData || {})
+    };
+    setIsFavorite(connectionStore.isFavorite(noteConnection));
+  }, [documentKey, documentData, tempTitle]);
 
   const saveContent = useCallback((editorInstance) => {
     const ed = editorInstance || editor;
     if (!ed || ed.isDestroyed || !ed.schema) return;
 
     const html = ed.getHTML();
-    if (html === lastSavedContentRef.current) {
+    const tags = noteTagsRef.current || [];
+    const contentKey = `${html}::${JSON.stringify(tags)}`;
+    if (contentKey === lastSavedContentRef.current) {
       setSaveStatus('saved');
       return;
     }
@@ -539,22 +1151,46 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     setSaveStatus('saving');
     const md = turndownService.turndown(html);
 
-    lastSavedContentRef.current = html;
+    lastSavedContentRef.current = contentKey;
 
     window.dispatchEvent(new CustomEvent('document-content-updated', {
       detail: {
         key: documentKey,
         content: html,
-        markdownSource: md
+        markdownSource: md,
+        tags
       }
     }));
 
     if (onSave) {
-      onSave({ content: html, markdownSource: md });
+      onSave({ content: html, markdownSource: md, tags });
     }
 
     setTimeout(() => setSaveStatus('saved'), 300);
   }, [editor, documentKey, onSave]);
+
+  saveContentRef.current = saveContent;
+
+  const persistTags = useCallback((nextTags) => {
+    setNoteTags(nextTags);
+    noteTagsRef.current = nextTags;
+    setSaveStatus('unsaved');
+    const ed = editorRef.current;
+    if (ed && !ed.isDestroyed) {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => saveContent(ed), 400);
+    } else {
+      window.dispatchEvent(new CustomEvent('document-content-updated', {
+        detail: {
+          key: documentKey,
+          content: documentData?.content || '',
+          markdownSource: markdownSource || documentData?.markdownSource || '',
+          tags: nextTags
+        }
+      }));
+      setTimeout(() => setSaveStatus('saved'), 300);
+    }
+  }, [documentKey, documentData, markdownSource, saveContent]);
 
   // Save on blur / before unmount
   useEffect(() => {
@@ -562,10 +1198,12 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (editor && !editor.isDestroyed && editor.schema) {
         const html = editor.getHTML();
-        if (html !== lastSavedContentRef.current) {
+        const tags = noteTagsRef.current || [];
+        const contentKey = `${html}::${JSON.stringify(tags)}`;
+        if (contentKey !== lastSavedContentRef.current) {
           const md = turndownService.turndown(html);
           window.dispatchEvent(new CustomEvent('document-content-updated', {
-            detail: { key: documentKey, content: html, markdownSource: md }
+            detail: { key: documentKey, content: html, markdownSource: md, tags }
           }));
         }
       }
@@ -575,6 +1213,206 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     };
   }, [editor, documentKey]);
 
+  const collectMarkdownMatches = useCallback((source, query) => {
+    if (!query) return [];
+    const matches = [];
+    const lower = source.toLowerCase();
+    const q = query.toLowerCase();
+    let from = 0;
+    while (from < lower.length) {
+      const idx = lower.indexOf(q, from);
+      if (idx === -1) break;
+      matches.push({ from: idx, to: idx + query.length });
+      from = idx + Math.max(query.length, 1);
+    }
+    return matches;
+  }, []);
+
+  const applyFindHighlight = useCallback((query, index, matches) => {
+    const ed = editorRef.current;
+    if (viewMode === 'wysiwyg' && ed && !ed.isDestroyed) {
+      ed.commands.setSearchHighlight(query, index);
+      const match = matches[index];
+      if (match) {
+        ed.chain().focus().setTextSelection({ from: match.from, to: match.to }).run();
+        const dom = ed.view.domAtPos(match.from);
+        const el = dom?.node?.nodeType === 1 ? dom.node : dom?.node?.parentElement;
+        el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      }
+    } else if (viewMode === 'markdown') {
+      const ta = markdownTextareaRef.current;
+      const match = matches[index];
+      if (ta && match) {
+        ta.focus();
+        ta.setSelectionRange(match.from, match.to);
+      }
+    }
+  }, [viewMode]);
+
+  const runFind = useCallback((query, preferredIndex = 0) => {
+    const q = query || '';
+    let matches = [];
+    if (viewMode === 'wysiwyg') {
+      const ed = editorRef.current;
+      if (ed && !ed.isDestroyed) {
+        matches = collectSearchMatches(ed.state.doc, q);
+      }
+    } else {
+      matches = collectMarkdownMatches(markdownSource, q);
+    }
+    const idx = matches.length ? Math.min(Math.max(preferredIndex, 0), matches.length - 1) : 0;
+    setFindMatches(matches);
+    setFindIndex(idx);
+    if (viewMode === 'wysiwyg') {
+      const ed = editorRef.current;
+      if (ed && !ed.isDestroyed) {
+        ed.commands.setSearchHighlight(q, idx);
+      }
+    }
+    if (matches.length) {
+      applyFindHighlight(q, idx, matches);
+    }
+    return { matches, idx };
+  }, [viewMode, markdownSource, collectMarkdownMatches, applyFindHighlight]);
+
+  const handleFindQueryChange = useCallback((q) => {
+    setFindQuery(q);
+    runFind(q, 0);
+  }, [runFind]);
+
+  const handleFindNext = useCallback(() => {
+    if (!findMatches.length) {
+      runFind(findQuery, 0);
+      return;
+    }
+    const next = (findIndex + 1) % findMatches.length;
+    setFindIndex(next);
+    applyFindHighlight(findQuery, next, findMatches);
+    if (viewMode === 'wysiwyg') {
+      editorRef.current?.commands.setSearchHighlight(findQuery, next);
+    }
+  }, [findMatches, findIndex, findQuery, applyFindHighlight, runFind, viewMode]);
+
+  const handleFindPrev = useCallback(() => {
+    if (!findMatches.length) {
+      runFind(findQuery, 0);
+      return;
+    }
+    const prev = (findIndex - 1 + findMatches.length) % findMatches.length;
+    setFindIndex(prev);
+    applyFindHighlight(findQuery, prev, findMatches);
+    if (viewMode === 'wysiwyg') {
+      editorRef.current?.commands.setSearchHighlight(findQuery, prev);
+    }
+  }, [findMatches, findIndex, findQuery, applyFindHighlight, runFind, viewMode]);
+
+  const handleFindClose = useCallback(() => {
+    setFindVisible(false);
+    setFindReplaceMode(false);
+    editorRef.current?.commands.clearSearchHighlight();
+  }, []);
+
+  const handleReplaceOne = useCallback(() => {
+    if (!findQuery || !findMatches.length) return;
+    if (viewMode === 'wysiwyg') {
+      const ed = editorRef.current;
+      const match = findMatches[findIndex];
+      if (!ed || !match) return;
+      ed.chain()
+        .focus()
+        .setTextSelection({ from: match.from, to: match.to })
+        .insertContent(findReplaceText)
+        .run();
+      requestAnimationFrame(() => runFind(findQuery, findIndex));
+    } else {
+      const match = findMatches[findIndex];
+      if (!match) return;
+      const next =
+        markdownSource.slice(0, match.from) + findReplaceText + markdownSource.slice(match.to);
+      setMarkdownSource(next);
+      setSaveStatus('unsaved');
+      scheduleMarkdownSave(next);
+      requestAnimationFrame(() => {
+        const matches = collectMarkdownMatches(next, findQuery);
+        setFindMatches(matches);
+        const idx = Math.min(findIndex, Math.max(matches.length - 1, 0));
+        setFindIndex(idx);
+        const ta = markdownTextareaRef.current;
+        if (ta && matches[idx]) {
+          ta.setSelectionRange(matches[idx].from, matches[idx].to);
+        }
+      });
+    }
+  }, [
+    findQuery,
+    findMatches,
+    findIndex,
+    findReplaceText,
+    viewMode,
+    markdownSource,
+    runFind,
+    collectMarkdownMatches,
+    scheduleMarkdownSave
+  ]);
+
+  const handleReplaceAll = useCallback(() => {
+    if (!findQuery) return;
+    if (viewMode === 'wysiwyg') {
+      const ed = editorRef.current;
+      if (!ed || ed.isDestroyed) return;
+      const matches = collectSearchMatches(ed.state.doc, findQuery);
+      if (!matches.length) return;
+      let tr = ed.state.tr;
+      for (let i = matches.length - 1; i >= 0; i -= 1) {
+        const m = matches[i];
+        tr = tr.insertText(findReplaceText, m.from, m.to);
+      }
+      ed.view.dispatch(tr);
+      runFind(findQuery, 0);
+    } else {
+      if (!findQuery) return;
+      const escaped = findQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const next = markdownSource.replace(new RegExp(escaped, 'gi'), findReplaceText);
+      setMarkdownSource(next);
+      setSaveStatus('unsaved');
+      scheduleMarkdownSave(next);
+      const matches = collectMarkdownMatches(next, findQuery);
+      setFindMatches(matches);
+      setFindIndex(0);
+    }
+  }, [findQuery, findReplaceText, viewMode, markdownSource, runFind, collectMarkdownMatches, scheduleMarkdownSave]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFindVisible(true);
+        setFindReplaceMode(false);
+        return;
+      }
+      if (isMod && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        setFindVisible(true);
+        setFindReplaceMode(true);
+        return;
+      }
+      if (e.key === 'F3') {
+        e.preventDefault();
+        if (!findVisible) setFindVisible(true);
+        if (e.shiftKey) handleFindPrev();
+        else handleFindNext();
+        return;
+      }
+      if (e.key === 'Escape' && findVisible) {
+        e.preventDefault();
+        handleFindClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [findVisible, handleFindNext, handleFindPrev, handleFindClose]);
+
   const switchToMarkdown = useCallback(() => {
     if (editor && !editor.isDestroyed && editor.schema) {
       const html = editor.getHTML();
@@ -582,6 +1420,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       setMarkdownSource(md);
     }
     setViewMode('markdown');
+    editor?.commands.clearSearchHighlight();
   }, [editor]);
 
   const switchToWysiwyg = useCallback(() => {
@@ -589,6 +1428,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       const html = marked(markdownSource);
       editor.commands.setContent(sanitizeContent(html));
       updateMetrics(editor);
+      setHeadings(extractHeadingsFromEditor(editor));
     }
     setViewMode('wysiwyg');
   }, [editor, markdownSource]);
@@ -609,19 +1449,21 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       const html = marked(val);
-      lastSavedContentRef.current = html;
+      const tags = noteTagsRef.current || [];
+      lastSavedContentRef.current = `${html}::${JSON.stringify(tags)}`;
       setSaveStatus('saving');
 
       window.dispatchEvent(new CustomEvent('document-content-updated', {
         detail: {
           key: documentKey,
           content: html,
-          markdownSource: val
+          markdownSource: val,
+          tags
         }
       }));
 
       if (onSave) {
-        onSave({ content: html, markdownSource: val });
+        onSave({ content: html, markdownSource: val, tags });
       }
       setTimeout(() => setSaveStatus('saved'), 300);
     }, 2000);
@@ -1230,6 +2072,47 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
               <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><HiSparkles size={13} /></i>
             </button>
 
+            {/* Outline */}
+            <button
+              className={`toolbar-premium-btn ${outlineOpen ? 'zen-active' : ''}`}
+              onClick={() => setOutlineOpen((v) => !v)}
+              title="Outline / índice (H1–H3)"
+              type="button"
+              style={{
+                border: outlineOpen ? '1px solid #64b5f6' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: outlineOpen ? '#64b5f6' : 'var(--ui-content-text, #ccc)',
+                background: outlineOpen ? 'rgba(100, 181, 246, 0.12)' : 'transparent',
+                width: '30px',
+                height: '28px',
+                padding: 0,
+                justifyContent: 'center'
+              }}
+            >
+              <i className="pi pi-list" style={{ fontSize: '0.8rem' }} />
+            </button>
+
+            {/* Buscar */}
+            <button
+              className={`toolbar-premium-btn ${findVisible ? 'zen-active' : ''}`}
+              onClick={() => {
+                setFindVisible(true);
+                setFindReplaceMode(false);
+              }}
+              title="Buscar en la nota (Ctrl+F)"
+              type="button"
+              style={{
+                border: findVisible ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: findVisible ? '#f59e0b' : 'var(--ui-content-text, #ccc)',
+                background: findVisible ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
+                width: '30px',
+                height: '28px',
+                padding: 0,
+                justifyContent: 'center'
+              }}
+            >
+              <i className="pi pi-search" style={{ fontSize: '0.8rem' }} />
+            </button>
+
             {/* Modo Zen */}
             <button
               className={`toolbar-premium-btn ${isZenMode ? 'zen-active' : ''}`}
@@ -1300,21 +2183,108 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
         </div>
       </div>
 
+      <NoteFindBar
+        visible={findVisible}
+        replaceMode={findReplaceMode}
+        query={findQuery}
+        replaceText={findReplaceText}
+        matchCount={findMatches.length}
+        currentIndex={findIndex}
+        onQueryChange={handleFindQueryChange}
+        onReplaceTextChange={setFindReplaceText}
+        onClose={handleFindClose}
+        onNext={handleFindNext}
+        onPrev={handleFindPrev}
+        onReplace={handleReplaceOne}
+        onReplaceAll={handleReplaceAll}
+        onToggleReplace={() => setFindReplaceMode((v) => !v)}
+      />
+
+      <NoteTagsBar
+        tags={noteTags}
+        createdAt={documentData?.createdAt}
+        updatedAt={documentData?.updatedAt}
+        isFavorite={isFavorite}
+        onAddTag={(tag) => {
+          if (noteTags.includes(tag)) return;
+          persistTags([...noteTags, tag]);
+        }}
+        onRemoveTag={(tag) => persistTags(noteTags.filter((t) => t !== tag))}
+        onToggleFavorite={() => {
+          const noteConnection = {
+            id: documentKey,
+            type: documentData?.type || 'document',
+            name: documentData?.label || tempTitle,
+            ...(documentData || {})
+          };
+          connectionStore.toggleFavorite(noteConnection);
+          setIsFavorite(connectionStore.isFavorite(noteConnection));
+        }}
+      />
+
       {/* CUERPO DEL EDITOR */}
-      {viewMode === 'wysiwyg' ? (
-        <div className="document-editor-content">
-          <EditorContent editor={editor} />
-        </div>
-      ) : (
-        <div className="document-markdown-source">
-          <textarea
-            value={markdownSource}
-            onChange={handleMarkdownChange}
-            placeholder="Escribe en Markdown..."
-            spellCheck={false}
-          />
-        </div>
-      )}
+      <div className="document-editor-body-row">
+        {viewMode === 'wysiwyg' ? (
+          <div className="document-editor-content">
+            {editor && !editor.isDestroyed && (
+              <>
+                <NoteBubbleMenu editor={editor} />
+                <EditorContent editor={editor} />
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="document-markdown-source">
+            <textarea
+              ref={markdownTextareaRef}
+              value={markdownSource}
+              onChange={handleMarkdownChange}
+              onMouseDown={(e) => {
+                if (e.button !== 2) return;
+                const ta = e.currentTarget;
+                savedSelectionRef.current = {
+                  from: 0,
+                  to: 0,
+                  text: ta.value.substring(ta.selectionStart, ta.selectionEnd),
+                  mdStart: ta.selectionStart,
+                  mdEnd: ta.selectionEnd
+                };
+              }}
+              onContextMenu={(e) => openEditorContextMenu(e, 'markdown')}
+              placeholder="Escribe en Markdown..."
+              spellCheck={false}
+            />
+          </div>
+        )}
+
+        <NoteOutlinePanel
+          open={outlineOpen}
+          headings={headings}
+          onClose={() => setOutlineOpen(false)}
+          onNavigate={(h) => {
+            const ed = editorRef.current;
+            if (!ed || ed.isDestroyed) return;
+            if (viewMode !== 'wysiwyg') {
+              switchToWysiwyg();
+            }
+            requestAnimationFrame(() => {
+              const current = editorRef.current;
+              if (!current) return;
+              current.chain().focus().setTextSelection(h.pos + 1).run();
+              const dom = current.view.nodeDOM(h.pos);
+              if (dom && typeof dom.scrollIntoView === 'function') {
+                dom.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              }
+            });
+          }}
+        />
+      </div>
+
+      <ContextMenu
+        model={editorContextItems}
+        ref={editorContextMenuRef}
+        breakpoint="767px"
+      />
 
       {/* FLOATING AI ASSISTANT PANEL */}
       {showAiPanel && (

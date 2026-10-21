@@ -62,10 +62,32 @@ export function createDocumentNode(label) {
       type: 'document',
       content: '',
       markdownSource: '',
+      tags: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
     }
   };
+}
+
+/** Extrae texto plano de HTML para búsqueda. */
+function htmlToSearchText(html) {
+  if (!html || typeof html !== 'string') return '';
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/** Recolecta etiquetas únicas del árbol de documentos. */
+export function collectAllTags(tree, acc = new Set()) {
+  if (!Array.isArray(tree)) return [...acc].sort();
+  for (const node of tree) {
+    const tags = node?.data?.tags;
+    if (Array.isArray(tags)) {
+      tags.forEach((t) => {
+        if (t && typeof t === 'string') acc.add(t.toLowerCase());
+      });
+    }
+    if (node.children?.length) collectAllTags(node.children, acc);
+  }
+  return [...acc].sort();
 }
 
 export function createFolderNode(label) {
@@ -145,18 +167,58 @@ export function findNodeInTree(tree, nodeKey) {
   return null;
 }
 
-export function filterDocumentTree(tree, searchText) {
-  if (!searchText || !searchText.trim()) return tree;
-  const lower = searchText.toLowerCase();
+function nodeMatchesSearch(node, lower) {
+  if (!lower) return true;
+  if ((node.label || '').toLowerCase().includes(lower)) return true;
+  const tags = node.data?.tags;
+  if (Array.isArray(tags) && tags.some((t) => String(t).toLowerCase().includes(lower))) {
+    return true;
+  }
+  const md = (node.data?.markdownSource || '').toLowerCase();
+  if (md.includes(lower)) return true;
+  const content = htmlToSearchText(node.data?.content || '');
+  if (content.includes(lower)) return true;
+  return false;
+}
+
+function nodeHasTag(node, tagFilter) {
+  if (!tagFilter) return true;
+  const tags = node.data?.tags;
+  if (!Array.isArray(tags)) return false;
+  return tags.some((t) => String(t).toLowerCase() === tagFilter.toLowerCase());
+}
+
+/**
+ * Filtra el árbol por texto (título, tags, contenido) y/o etiqueta exacta.
+ * @param {Array} tree
+ * @param {string} searchText
+ * @param {string} [tagFilter]
+ */
+export function filterDocumentTree(tree, searchText, tagFilter = '') {
+  const lower = (searchText || '').trim().toLowerCase();
+  const tag = (tagFilter || '').trim().toLowerCase();
+  if (!lower && !tag) return tree;
 
   return tree.reduce((acc, node) => {
-    if (node.label.toLowerCase().includes(lower)) {
-      acc.push(node);
-    } else if (node.children && node.children.length > 0) {
-      const filteredChildren = filterDocumentTree(node.children, searchText);
+    const isFolder = node.droppable || node.data?.type === 'document-folder';
+    const filteredChildren =
+      node.children && node.children.length > 0
+        ? filterDocumentTree(node.children, searchText, tagFilter)
+        : [];
+
+    if (isFolder) {
       if (filteredChildren.length > 0) {
         acc.push({ ...node, children: filteredChildren });
+      } else if (!tag && lower && (node.label || '').toLowerCase().includes(lower)) {
+        acc.push(node);
       }
+      return acc;
+    }
+
+    const matchesText = nodeMatchesSearch(node, lower);
+    const matchesTag = nodeHasTag(node, tag);
+    if (matchesText && matchesTag) {
+      acc.push(node);
     }
     return acc;
   }, []);

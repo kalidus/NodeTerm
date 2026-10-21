@@ -18,8 +18,11 @@ import {
   addNodeToTree,
   removeNodeFromTree,
   updateNodeInTree,
-  findNodeInTree
+  findNodeInTree,
+  filterDocumentTree,
+  collectAllTags
 } from '../utils/documentStore';
+import TreeContextMenu from './contextmenus/TreeContextMenu';
 import {
   isDescendantInFullTree,
   isShowMoreTreeNode,
@@ -417,6 +420,10 @@ const DocumentsSidebar = ({
   const sidebarRootRef = useRef(null);
   const documentClickTimerRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
+  const [docsSearchQuery, setDocsSearchQuery] = useState('');
+  const [docsTagFilter, setDocsTagFilter] = useState('');
+  const [quickNotesCtxMenu, setQuickNotesCtxMenu] = useState(null);
+  const [quickNotesCtxItems, setQuickNotesCtxItems] = useState([]);
 
   useEffect(() => {
     return () => {
@@ -841,7 +848,12 @@ const DocumentsSidebar = ({
       items.push({
         label: 'Abrir nota',
         icon: 'pi pi-external-link',
-        command: () => handleOpenDocument(node)
+        command: () => handleOpenDocument(node, 'reuse')
+      });
+      items.push({
+        label: 'Abrir en pestaña nueva',
+        icon: 'pi pi-plus',
+        command: () => handleOpenDocument(node, 'new')
       });
       items.push({
         label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
@@ -926,9 +938,13 @@ const DocumentsSidebar = ({
     });
   };
 
+  const allDocumentTags = useMemo(() => collectAllTags(documentNodes), [documentNodes]);
+
   const filteredDocumentNodes = useMemo(() => {
-    return documentNodes.filter(node => node.key !== 'quick_note');
-  }, [documentNodes]);
+    const withoutQuick = documentNodes.filter(node => node.key !== 'quick_note');
+    if (!docsSearchQuery.trim() && !docsTagFilter) return withoutQuick;
+    return filterDocumentTree(withoutQuick, docsSearchQuery, docsTagFilter);
+  }, [documentNodes, docsSearchQuery, docsTagFilter]);
 
   const treeValue = useMemo(
     () => stripTreeNodeIcons(filteredDocumentNodes),
@@ -1099,11 +1115,16 @@ const DocumentsSidebar = ({
   // Sync external updates when a document is saved from the editor
   useEffect(() => {
     const handler = (e) => {
-      const { key, content, markdownSource } = e.detail || {};
+      const { key, content, markdownSource, tags } = e.detail || {};
       if (!key) return;
       setDocumentNodes(prev =>
         updateNodeInTree(prev, key, {
-          data: { content, markdownSource, updatedAt: Date.now() }
+          data: {
+            content,
+            markdownSource,
+            ...(Array.isArray(tags) ? { tags } : {}),
+            updatedAt: Date.now()
+          }
         })
       );
     };
@@ -1263,6 +1284,89 @@ const DocumentsSidebar = ({
       handleDelete(noteNode);
     }
   }, [isQuickNoteSelected, deleteQuickNote, handleDelete]);
+
+  const handleRenameNoteInPanel = useCallback((noteNode) => {
+    if (!noteNode) return;
+    setRenamingNode(noteNode);
+    setNewItemName(noteNode.label || '');
+    setShowRenameDialog(true);
+  }, []);
+
+  const handleQuickNotesContextMenu = useCallback((e, noteNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!noteNode) {
+      setQuickNotesCtxItems([
+        {
+          label: 'Nueva nota',
+          icon: 'pi pi-plus',
+          command: () => handleCreateNoteInPanel()
+        }
+      ]);
+      setQuickNotesCtxMenu({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    const noteConnection = {
+      id: noteNode.key,
+      type: noteNode.data?.type || 'document',
+      name: noteNode.label,
+      ...noteNode.data
+    };
+    const isFav = connectionStore.isFavorite(noteConnection);
+
+    setQuickNotesCtxItems([
+      {
+        label: 'Abrir nota',
+        icon: 'pi pi-external-link',
+        command: () => handleOpenQuickNote(noteNode, 'reuse')
+      },
+      {
+        label: 'Abrir en pestaña nueva',
+        icon: 'pi pi-plus',
+        command: () => handleOpenQuickNote(noteNode, 'new')
+      },
+      {
+        label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+        icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+        command: () => {
+          connectionStore.toggleFavorite(noteConnection);
+          showToast && showToast({
+            severity: 'success',
+            summary: isFav ? 'Quitado de favoritos' : 'Añadido a favoritos',
+            detail: `"${noteNode.label}" ${isFav ? 'quitado de' : 'añadido a'} favoritos`,
+            life: 3000
+          });
+        }
+      },
+      { separator: true },
+      {
+        label: 'Renombrar',
+        icon: 'pi pi-pencil',
+        command: () => handleRenameNoteInPanel(noteNode)
+      },
+      {
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        className: 'p-menuitem-danger',
+        command: () => handleDeleteNoteInPanel(noteNode)
+      },
+      { separator: true },
+      {
+        label: 'Nueva nota',
+        icon: 'pi pi-file',
+        command: () => handleCreateNoteInPanel()
+      }
+    ]);
+    setQuickNotesCtxMenu({ x: e.clientX, y: e.clientY });
+  }, [
+    handleCreateNoteInPanel,
+    handleOpenQuickNote,
+    handleRenameNoteInPanel,
+    handleDeleteNoteInPanel,
+    showToast
+  ]);
 
   return (
     <>
@@ -1449,6 +1553,43 @@ const DocumentsSidebar = ({
           fontSize: `${explorerFontSize}px`
         }}
       >
+        <div className="documents-search-bar">
+          <span className="p-input-icon-left" style={{ width: '100%' }}>
+            <i className="pi pi-search" />
+            <InputText
+              value={docsSearchQuery}
+              onChange={(e) => setDocsSearchQuery(e.target.value)}
+              placeholder="Buscar notas..."
+              className="documents-search-input"
+            />
+          </span>
+          {allDocumentTags.length > 0 && (
+            <select
+              className="documents-tag-filter"
+              value={docsTagFilter}
+              onChange={(e) => setDocsTagFilter(e.target.value)}
+              title="Filtrar por etiqueta"
+            >
+              <option value="">Todas las etiquetas</option>
+              {allDocumentTags.map((tag) => (
+                <option key={tag} value={tag}>#{tag}</option>
+              ))}
+            </select>
+          )}
+          {(docsSearchQuery || docsTagFilter) && (
+            <button
+              type="button"
+              className="documents-search-clear"
+              title="Limpiar filtros"
+              onClick={() => {
+                setDocsSearchQuery('');
+                setDocsTagFilter('');
+              }}
+            >
+              <i className="pi pi-times" />
+            </button>
+          )}
+        </div>
         {isLoading ? (
           <div className="documents-empty-state">
             <i className="pi pi-spin pi-spinner" />
@@ -1562,6 +1703,7 @@ const DocumentsSidebar = ({
         onOpenNote={handleOpenQuickNote}
         onCreateNote={handleCreateNoteInPanel}
         onDeleteNote={handleDeleteNoteInPanel}
+        onContextMenuNote={handleQuickNotesContextMenu}
         explorerFont={explorerFont}
         explorerFontSize={explorerFontSize}
         title={activePanelTitle}
@@ -1571,6 +1713,11 @@ const DocumentsSidebar = ({
       />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
+      <TreeContextMenu
+        treeContextMenu={quickNotesCtxMenu}
+        onClose={() => setQuickNotesCtxMenu(null)}
+        items={quickNotesCtxItems}
+      />
 
       {/* New Folder Dialog */}
       <AppDialog

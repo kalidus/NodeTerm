@@ -2,12 +2,14 @@ import React, { useMemo } from 'react';
 import { flattenVaultNodes, NOTE_TYPES } from '../../../../utils/homeWidgets';
 
 export const HomeNotesPanel = ({
-  passwordNodes = []
+  documentNodes = []
 }) => {
-  const notes = useMemo(
-    () => flattenVaultNodes(passwordNodes, NOTE_TYPES).slice(0, 12),
-    [passwordNodes]
-  );
+  const notes = useMemo(() => {
+    const flat = flattenVaultNodes(documentNodes, NOTE_TYPES);
+    return flat
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 12);
+  }, [documentNodes]);
 
   const openNote = (item) => {
     window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -22,7 +24,7 @@ export const HomeNotesPanel = ({
   if (!notes.length) {
     return (
       <div className="home-widget-empty">
-        No hay notas rapidas.
+        No hay notas rápidas.
         <div>
           <button
             type="button"
@@ -49,7 +51,11 @@ export const HomeNotesPanel = ({
             <i className="pi pi-file" style={{ color: '#64b5f6' }} />
             <div style={{ minWidth: 0, flex: 1 }}>
               <div className="home-fav-name">{item.name || item.label || 'Nota'}</div>
-              <div className="home-widget-meta">{item.type}</div>
+              <div className="home-widget-meta">
+                {Array.isArray(item.tags) && item.tags.length
+                  ? item.tags.slice(0, 2).map((t) => `#${t}`).join(' ')
+                  : (item.type || 'document')}
+              </div>
             </div>
           </button>
         ))}

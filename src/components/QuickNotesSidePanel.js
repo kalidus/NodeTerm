@@ -41,6 +41,7 @@ const QuickNotesSidePanel = ({
   onOpenNote,
   onCreateNote,
   onDeleteNote,
+  onContextMenuNote,
   explorerFont,
   explorerFontSize = 14,
   title,
@@ -127,10 +128,17 @@ const QuickNotesSidePanel = ({
         fontSize: `${explorerFontSize}px`,
       };
 
+  const handlePanelContextMenu = useCallback((e) => {
+    if (typeof onContextMenuNote === 'function') {
+      onContextMenuNote(e, null);
+    }
+  }, [onContextMenuNote]);
+
   const panel = (
     <div
       className={`quick-notes-side-panel${isOpen && rect ? ' open' : ''}`}
       style={panelStyle}
+      onContextMenu={handlePanelContextMenu}
     >
       {/* Header */}
       <div className="qnp-header">
@@ -180,6 +188,10 @@ const QuickNotesSidePanel = ({
                 className={`qnp-note-item${isSelected ? ' selected' : ''}`}
                 onClick={(e) => handleNoteClick(e, note)}
                 onDoubleClick={(e) => handleNoteDoubleClick(e, note)}
+                onContextMenu={(e) => {
+                  e.stopPropagation();
+                  onContextMenuNote?.(e, note);
+                }}
                 title={note.label}
               >
                 <div className="qnp-note-header">
@@ -194,6 +206,13 @@ const QuickNotesSidePanel = ({
                 </div>
                 {updatedAt && (
                   <span className="qnp-note-date">{formatDate(updatedAt, t)}</span>
+                )}
+                {Array.isArray(note.data?.tags) && note.data.tags.length > 0 && (
+                  <div className="qnp-note-tags">
+                    {note.data.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="qnp-note-tag">#{tag}</span>
+                    ))}
+                  </div>
                 )}
                 {preview && (
                   <p className="qnp-note-preview">{preview}</p>

@@ -106,6 +106,7 @@ const ConnectionHistory = ({
 
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
+	const [documentNodes, setDocumentNodes] = useState([]);
 	const [activeBottomView, setActiveBottomView] = useState('all');
 
 	// Split panel dentro del marco del terminal integrado
@@ -284,6 +285,50 @@ const ConnectionHistory = ({
 		};
 		window.addEventListener('storage', handleStorageChange);
 		return () => window.removeEventListener('storage', handleStorageChange);
+	}, [masterKey, secureStorage]);
+
+	// Cargar notas / documentos desde localStorage
+	useEffect(() => {
+		const loadDocuments = async () => {
+			try {
+				if (masterKey && secureStorage) {
+					const encryptedData = localStorage.getItem('documents_encrypted');
+					if (encryptedData) {
+						const decrypted = await secureStorage.decryptData(
+							JSON.parse(encryptedData),
+							masterKey
+						);
+						setDocumentNodes(Array.isArray(decrypted) ? decrypted : []);
+						return;
+					}
+				}
+				const plainData = localStorage.getItem('documentManagerNodes');
+				if (plainData) {
+					setDocumentNodes(JSON.parse(plainData) || []);
+				} else {
+					setDocumentNodes([]);
+				}
+			} catch (error) {
+				console.error('Error loading documents for home notes:', error);
+				setDocumentNodes([]);
+			}
+		};
+
+		loadDocuments();
+		const handleStorageChange = (e) => {
+			if (e.key === 'documentManagerNodes' || e.key === 'documents_encrypted') {
+				loadDocuments();
+			}
+		};
+		const handleContentUpdated = () => loadDocuments();
+		window.addEventListener('storage', handleStorageChange);
+		window.addEventListener('document-content-updated', handleContentUpdated);
+		window.addEventListener('document-title-updated', handleContentUpdated);
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('document-content-updated', handleContentUpdated);
+			window.removeEventListener('document-title-updated', handleContentUpdated);
+		};
 	}, [masterKey, secureStorage]);
 
 	// Detectar terminales disponibles para el selector
@@ -1130,7 +1175,7 @@ const ConnectionHistory = ({
 
 					{wrapHomePanel('sessions', '~/sessions', 'sessions · vivas', <HomeSessionsPanel />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-circle-fill" style={{ color: '#27c93f', fontSize: '0.7rem' }} /> })}
 					{wrapHomePanel('vault', '~/vault', 'vault · secretos', <HomeVaultPanel passwordNodes={passwordNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-lock" style={{ color: '#f59e0b', fontSize: '0.8rem' }} /> })}
-					{wrapHomePanel('notes', '~/notes', 'notes · rapidas', <HomeNotesPanel passwordNodes={passwordNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-file" style={{ color: '#64b5f6', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel('notes', '~/notes', 'notes · rapidas', <HomeNotesPanel documentNodes={documentNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-file" style={{ color: '#64b5f6', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('groups', '~/groups', 'groups · workspace', (
 						<HomeGroupWorkspacePanel
 							customGroups={favoriteGroupsMgr.customGroups}
