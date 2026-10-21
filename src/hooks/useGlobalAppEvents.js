@@ -1030,28 +1030,51 @@ export const useGlobalAppEvents = ({
 
   const handleEditConnectionFromUsers = useCallback((node) => {
     if (!node) return;
-    const type = node.type || node.data?.type;
+
+    // Recientes/favoritos pasan un serializable (originalKey/connectionId) sin key de árbol.
+    // Sin resolver al nodo real, EditConnectionTabContent trata !node.key como "nueva" y duplica.
+    const hasTreeKey = !!(node.key && !String(node.key).startsWith('temp_'));
+    let resolvedNode = node;
+    if (!hasTreeKey) {
+      const treeKey = node.originalKey || node.connectionId || node.key;
+      const found = treeKey && findNodeByKey ? findNodeByKey(nodes, treeKey) : null;
+      if (found) {
+        resolvedNode = found;
+      } else {
+        if (toast?.current?.show) {
+          toast.current.show({
+            severity: 'warn',
+            summary: 'Conexión no encontrada',
+            detail: 'Esta conexión ya no existe en el árbol lateral.',
+            life: 4000
+          });
+        }
+        return;
+      }
+    }
+
+    const type = resolvedNode.type || resolvedNode.data?.type;
 
     if (type === 'rdp' || type === 'rdp-guacamole') {
-      openEditRdpDialog(node);
+      openEditRdpDialog(resolvedNode);
       return;
     }
     if (type === 'vnc' || type === 'vnc-guacamole') {
-      openEditVncDialog(node);
+      openEditVncDialog(resolvedNode);
       return;
     }
     if (type === 'sftp' || type === 'ftp' || type === 'scp') {
-      openEditFileConnectionDialog(node);
+      openEditFileConnectionDialog(resolvedNode);
       return;
     }
     if (type === 'ssh-tunnel') {
       if (openEditSSHTunnelDialog) {
-        openEditSSHTunnelDialog(node);
+        openEditSSHTunnelDialog(resolvedNode);
       }
       return;
     }
-    openEditSSHDialog(node);
-  }, [openEditRdpDialog, openEditVncDialog, openEditFileConnectionDialog, openEditSSHTunnelDialog, openEditSSHDialog]);
+    openEditSSHDialog(resolvedNode);
+  }, [nodes, findNodeByKey, toast, openEditRdpDialog, openEditVncDialog, openEditFileConnectionDialog, openEditSSHTunnelDialog, openEditSSHDialog]);
 
   // 20. Abrir diálogo unificado de nueva conexión
   useEffect(() => {

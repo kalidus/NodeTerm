@@ -62,6 +62,7 @@ const TabContentRendererInner = React.memo(({
   handleLoadGroupFromFavorites,
   openEditRdpDialog,
   openEditSSHDialog,
+  onEditConnection,
   nodes,
   localFontFamily,
   localFontSize,
@@ -153,60 +154,7 @@ const TabContentRendererInner = React.memo(({
           // El user reportó que el explorador se abre con NodeTermStatus.
           if (onShowFileExplorer) onShowFileExplorer(null);
         }}
-        onEditConnection={(connection) => {
-          if (!connection) return;
-          const connType = (connection.type || '').toLowerCase();
-          if (connType === 'rdp-guacamole' || connType === 'rdp' || connType === 'web-rdp' || connType === 'vnc-guacamole' || connType === 'vnc' || connType === 'web-vnc') {
-            const tempNode = {
-              key: `temp_${connType}_${Date.now()}`,
-              label: connection.name || `${connection.host}:${connection.port || (connType.includes('vnc') ? 5900 : 3389)}`,
-              data: {
-                type: connType.includes('vnc') ? 'vnc' : 'rdp',
-                server: connection.host,
-                hostname: connection.host,
-                username: connection.username,
-                password: connection.password,
-                port: connection.port || (connType.includes('vnc') ? 5900 : 3389),
-                clientType: connection.clientType || (connType.includes('vnc') ? 'web-vnc' : 'web-rdp')
-              }
-            };
-            if (openEditRdpDialog) openEditRdpDialog(tempNode);
-            return;
-          }
-          if (connType === 'ssh' || connType === 'explorer') {
-            const tempNode = {
-              key: `temp_ssh_${Date.now()}`,
-              label: connection.name || `${connection.username}@${connection.host}`,
-              data: {
-                type: 'ssh',
-                host: connection.host || connection.hostname || '',
-                user: connection.username || connection.user || '',
-                username: connection.username || connection.user || '',
-                password: connection.password || '',
-                port: connection.port || 22,
-                remoteFolder: connection.remoteFolder || '',
-                useBastionWallix: connection.useBastionWallix || false,
-                bastionHost: connection.bastionHost || '',
-                bastionUser: connection.bastionUser || '',
-                targetServer: connection.targetServer || '',
-                description: connection.description || '',
-                customIcon: connection.customIcon || null
-              }
-            };
-            if (openEditSSHDialog) openEditSSHDialog(tempNode);
-            return;
-          }
-          // Fallback para sftp, ftp, scp, ssh-tunnel u otros
-          const tempNode = {
-            key: `temp_${connType || 'custom'}_${Date.now()}`,
-            label: connection.name || `${connection.username || ''}@${connection.host || ''}`,
-            data: {
-              ...connection,
-              type: connType
-            }
-          };
-          if (openEditSSHDialog) openEditSSHDialog(tempNode);
-        }}
+        onEditConnection={onEditConnection}
         sshConnectionsCount={counts?.ssh || 0}
         foldersCount={counts?.folders || 0}
         rdpConnectionsCount={counts?.rdp || 0}

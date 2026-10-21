@@ -2647,6 +2647,7 @@ const App = () => {
     handleLoadGroupFromFavorites,
     openEditRdpDialog,
     openEditSSHDialog,
+    onEditConnection: handleEditConnectionFromUsers,
     nodes,
     localFontFamily,
     localFontSize,
@@ -2703,7 +2704,7 @@ const App = () => {
     handleTabClose
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, onOpenFileConnection, handleLoadGroupFromFavorites,
-    openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
+    openEditRdpDialog, openEditSSHDialog, handleEditConnectionFromUsers, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localPowerShellTheme, setLocalPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, setExplorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu,
