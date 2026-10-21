@@ -44,6 +44,7 @@ import { iconThemes } from '../themes/icon-themes';
 // Componentes modulares de la aplicación
 import { AppHeader, AppModals } from './app/index';
 import MinimalModeExitButton from './MinimalModeExitButton';
+import TabBarRestoreButton from './TabBarRestoreButton';
 import { useMcpAgentBridge } from '../hooks/useMcpAgentBridge';
 import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 
@@ -160,6 +161,39 @@ const App = () => {
     window.addEventListener('toggle-titlebar', toggleTitlebarEvent);
     return () => window.removeEventListener('toggle-titlebar', toggleTitlebarEvent);
   }, [handleToggleTitleBar]);
+
+  // Estado para mostrar/ocultar la barra de pestañas del marco principal
+  const [tabBarCollapsed, setTabBarCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem('nodeterm_tabbar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_tabbar_collapsed', tabBarCollapsed.toString());
+    } catch {
+      // ignorar errores de persistencia
+    }
+    if (tabBarCollapsed) {
+      document.body.classList.add('tab-bar-hidden');
+    } else {
+      document.body.classList.remove('tab-bar-hidden');
+    }
+    return () => document.body.classList.remove('tab-bar-hidden');
+  }, [tabBarCollapsed]);
+
+  const handleToggleTabBar = React.useCallback(() => {
+    setTabBarCollapsed(prev => !prev);
+  }, []);
+
+  React.useEffect(() => {
+    const toggleTabbarEvent = () => handleToggleTabBar();
+    window.addEventListener('toggle-tabbar', toggleTabbarEvent);
+    return () => window.removeEventListener('toggle-tabbar', toggleTabbarEvent);
+  }, [handleToggleTabBar]);
 
   // Estado para mostrar/ocultar el marco superior del TerminalFrame principal
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = React.useState(() => {
@@ -2812,6 +2846,7 @@ const App = () => {
     <ErrorBoundary>
       <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0, background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
         <MinimalModeExitButton isMinimalMode={isMinimalMode} />
+        <TabBarRestoreButton visible={tabBarCollapsed && titleBarCollapsed && !isMinimalMode} />
         {/* Barra superior / TitleBar */}
         <AppHeader
           titleBarCollapsed={titleBarCollapsed}
@@ -3256,6 +3291,7 @@ const App = () => {
           mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
           setMainFrameHeaderCollapsed={setMainFrameHeaderCollapsed}
           titleBarCollapsed={titleBarCollapsed}
+          tabBarCollapsed={tabBarCollapsed}
           isMinimalMode={isMinimalMode}
         />
 

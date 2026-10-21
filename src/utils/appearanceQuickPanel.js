@@ -9,6 +9,7 @@ const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
 export function openAppearanceQuickPanel(anchorEl, deps = {}) {
   const {
     titleBarCollapsedRef,
+    tabBarCollapsedRef,
     mainFrameHeaderCollapsedRef,
     isMinimalModeRef,
     setMainFrameHeaderCollapsed,
@@ -189,11 +190,13 @@ export function openAppearanceQuickPanel(anchorEl, deps = {}) {
 
     const isTitleBarVisible = !titleBarCollapsedRef.current;
     const isMarcoVisible = !mainFrameHeaderCollapsedRef.current;
+    const isTabBarVisible = !(tabBarCollapsedRef && tabBarCollapsedRef.current);
     const isMinimal = isMinimalModeRef.current;
 
-    // Reordenados según petición del usuario: Barra de título, Marco superior, Modo minimalista
+    // Reordenados según petición del usuario: Barra de título, Marco superior, Barra de pestañas, Modo minimalista
     contentArea.appendChild(createToggleOption('Barra de título', null, isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
     contentArea.appendChild(createToggleOption('Marco superior', null, isMarcoVisible, () => setMainFrameHeaderCollapsed(prev => !prev)));
+    contentArea.appendChild(createToggleOption('Barra de pestañas', null, isTabBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-tabbar'))));
     contentArea.appendChild(createToggleOption('Modo Minimalista Absoluto', null, isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
   }
 

@@ -184,6 +184,9 @@ const MainContentArea = ({
   // TitleBar state
   titleBarCollapsed,
 
+  // Tab bar state
+  tabBarCollapsed,
+
   // Frame header state
   mainFrameHeaderCollapsed,
   setMainFrameHeaderCollapsed,
@@ -196,11 +199,13 @@ const MainContentArea = ({
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
   const titleBarCollapsedRef = useRef(titleBarCollapsed);
+  const tabBarCollapsedRef = useRef(tabBarCollapsed);
   const mainFrameHeaderCollapsedRef = useRef(mainFrameHeaderCollapsed);
   const isMinimalModeRef = useRef(isMinimalMode);
   const [frameSearchOpen, setFrameSearchOpen] = useState(false);
 
   titleBarCollapsedRef.current = titleBarCollapsed;
+  tabBarCollapsedRef.current = tabBarCollapsed;
   mainFrameHeaderCollapsedRef.current = mainFrameHeaderCollapsed;
   isMinimalModeRef.current = isMinimalMode;
 
@@ -211,6 +216,7 @@ const MainContentArea = ({
       if (!anchor) return;
       openAppearanceQuickPanel(anchor, {
         titleBarCollapsedRef,
+        tabBarCollapsedRef,
         mainFrameHeaderCollapsedRef,
         isMinimalModeRef,
         setMainFrameHeaderCollapsed,
@@ -1983,6 +1989,7 @@ const MainContentArea = ({
     const openPanelFromAnchor = (anchorEl) => {
       openAppearanceQuickPanel(anchorEl, {
         titleBarCollapsedRef,
+        tabBarCollapsedRef,
         mainFrameHeaderCollapsedRef,
         isMinimalModeRef,
         setMainFrameHeaderCollapsed,
