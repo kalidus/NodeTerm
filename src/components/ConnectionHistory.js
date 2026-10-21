@@ -18,6 +18,7 @@ import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../utils/homeTab
 import { getSidebarView, subscribeSidebarView } from '../utils/sidebarViewBus';
 import VaultCyberPanels from './home/VaultCyberPanels';
 import ConnectionCyberPanels from './home/ConnectionCyberPanels';
+import HomeSessionHost from './home/HomeSessionHost';
 import NotesCyberPanels from './home/NotesCyberPanels';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
@@ -921,6 +922,7 @@ const ConnectionHistory = ({
 		<div
 			className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`}
 			style={{
+				position: 'relative',
 				background: 'transparent',
 				'--ch-text': themeColors.textPrimary || '#fff',
 				'--ch-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.45)',
@@ -1244,6 +1246,12 @@ const ConnectionHistory = ({
 							frameBackground={panelFrameBg}
 						/>
 					)}
+					<HomeSessionHost
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
 				</div>
 			) : (
 				<>
@@ -1346,6 +1354,12 @@ const ConnectionHistory = ({
 						</div>
 						{renderTerminalSplit()}
 					</HomeIntegratedTerminalShell>
+					<HomeSessionHost
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
 				</>
 			)}
 

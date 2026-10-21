@@ -87,7 +87,8 @@ export const useTabManagement = (toast, {
   }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs]);
 
   const getTabsInGroup = useCallback((groupId) => {
-    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
+    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs]
+      .filter(tab => !tab.embedInHome);
     const pool = groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
     const home = pool.filter(t => t.type === 'home');
     const nonHome = pool.filter(t => t.type !== 'home');
@@ -776,6 +777,11 @@ export const useTabManagement = (toast, {
       }
       const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
       setFileExplorerTabs(newExplorerTabs);
+    }
+
+    // Una sesión embebida en Home no está en la barra: cerrarla no debe mover la pestaña activa
+    if (closedTab.embedInHome) {
+      return;
     }
 
     // Ajustar índice activo

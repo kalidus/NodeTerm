@@ -306,6 +306,39 @@
   gap: 2px !important;
 }
 
+.home-session-host {
+  z-index: 80000;
+}
+
+.home-session-host .home-panel-rnd {
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.home-session-host .react-resizable-handle {
+  z-index: 80 !important;
+  pointer-events: auto;
+}
+
+.home-session-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.home-session-fill > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+}
+
 .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row {
   display: flex;
   flex-direction: row;

@@ -92,6 +92,12 @@ export default function ConnectionCyberPanels({
   const handleConnect = useCallback((selected) => {
     if (!selected || !onConnectToHistory) return;
     const payload = toConnectPayload(selected);
+    if (payload) onConnectToHistory(payload, { embedInHome: true });
+  }, [onConnectToHistory]);
+
+  const handleConnectInTab = useCallback((selected) => {
+    if (!selected || !onConnectToHistory) return;
+    const payload = toConnectPayload(selected);
     if (payload) onConnectToHistory(payload);
   }, [onConnectToHistory]);
 
@@ -144,6 +150,7 @@ export default function ConnectionCyberPanels({
       <ConnectionCyberPanel
         node={node}
         onConnect={handleConnect}
+        onConnectInTab={handleConnectInTab}
         onInfo={handleInfo}
       />
     </HomePanelWrapper>

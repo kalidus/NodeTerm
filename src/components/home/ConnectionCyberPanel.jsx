@@ -41,6 +41,7 @@ function displayPort(data = {}, type = '') {
 export default function ConnectionCyberPanel({
   node,
   onConnect,
+  onConnectInTab,
   onInfo
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -159,6 +160,13 @@ export default function ConnectionCyberPanel({
             onClick={() => onConnect?.(node)}
           >
             conectar
+          </button>
+          <button
+            type="button"
+            className="connection-cyber-btn"
+            onClick={() => onConnectInTab?.(node)}
+          >
+            en pestaña
           </button>
           <button
             type="button"

@@ -23,6 +23,7 @@ import TerminalFrame from './TerminalFrame';
 import ConnectionSearchBar from './ConnectionSearchBar';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
+import HomeEmbeddedSessions from './home/HomeEmbeddedSessions';
 import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
@@ -3143,6 +3144,7 @@ const MainContentArea = ({
                   {/* Montar pestañas activas/MRU; SSH fuera del MRU hibernan (sesión viva en main) */}
                   {(() => {
                     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
+                      if (tab.embedInHome) return null;
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
                       const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
@@ -3222,6 +3224,24 @@ const MainContentArea = ({
                       );
                     });
                   })()}
+                  <HomeEmbeddedSessions
+                    sshTabs={sshTabs}
+                    rdpTabs={rdpTabs}
+                    guacamoleTabs={guacamoleTabs}
+                    fileExplorerTabs={fileExplorerTabs}
+                    isHomeTabActive={isHomeTabActive}
+                    onCloseTab={tabHandlers?.onTabClose}
+                    memoizedContentRendererProps={memoizedContentRendererProps}
+                    settingsTabProps={settingsTabProps}
+                    isMinimalMode={isMinimalMode}
+                    getAllTabs={getAllTabs}
+                    onStartRecording={handleStartRecording}
+                    onStopRecording={handleStopRecording}
+                    isRecordingTab={isRecordingTab}
+                    onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
+                    onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                    onToggleBroadcast={handleToggleBroadcast}
+                  />
                 </div>
               </div>
             ) : (

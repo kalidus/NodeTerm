@@ -13,6 +13,26 @@ function showConnectionWarn(toast, summary, detail) {
   } catch (_) { /* noop */ }
 }
 
+function connectionWantsEmbed(nodeOrConn) {
+  return !!(nodeOrConn && (nodeOrConn.embedInHome || nodeOrConn.data?.embedInHome));
+}
+
+function focusHomeSessionPanel(tabKey) {
+  if (!tabKey || typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('focus-home-session-panel', { detail: { key: tabKey } }));
+}
+
+function showExistingTabNotice(toast, summary) {
+  try {
+    toast?.current?.show?.({
+      severity: 'info',
+      summary,
+      detail: 'Ya existe una pestaña para esta conexión',
+      life: 3000
+    });
+  } catch (_) { /* noop */ }
+}
+
 export const useConnectionManagement = ({
   // Estados del hook de pestañas
   activeGroupId,
@@ -42,6 +62,27 @@ export const useConnectionManagement = ({
       : (typeof getConnectionTree === 'function' ? (getConnectionTree() || []) : [])
   );
 
+  const releaseActiveGroup = useCallback((embedInHome) => {
+    if (embedInHome) return;
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId]);
+
+  const publishNewTab = useCallback((tabId, embedInHome) => {
+    if (embedInHome) return;
+    setLastOpenedTabKey(tabId);
+    setOnCreateActivateTabKey(tabId);
+    setActiveTabIndex(1);
+    setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+    setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+  }, [setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices, setOpenTabOrder]);
+
   // === FUNCIÓN PARA ABRIR EXPLORADOR DE ARCHIVOS ===
   const openFileExplorer = useCallback((fileNode) => {
     // Detectar si es SSH tradicional o conexión de archivos (SFTP/FTP/SCP)
@@ -70,17 +111,34 @@ export const useConnectionManagement = ({
       }, 200);
     } catch (e) { /* noop */ }
 
+    const embedInHome = connectionWantsEmbed(fileNode);
+
     // Buscar si ya existe un explorador para este host+usuario+protocolo
-    const existingExplorerIndex = sshTabs.findIndex(tab =>
+    const existingExplorer = sshTabs.find(tab =>
       tab.isExplorerInSSH &&
       tab.sshConfig.host === fileNode.data.host &&
       tab.sshConfig.username === (fileNode.data.user || fileNode.data.username) &&
       tab.sshConfig.protocol === (isFileConnection ? protocol : undefined)
     );
 
-    if (existingExplorerIndex !== -1) {
-      // Activar la pestaña existente del explorador
-      setActiveTabIndex(existingExplorerIndex);
+    if (existingExplorer) {
+      if (embedInHome) {
+        if (existingExplorer.embedInHome) {
+          focusHomeSessionPanel(existingExplorer.key);
+        } else {
+          showExistingTabNotice(toast, 'Archivos');
+        }
+        return;
+      }
+      if (existingExplorer.embedInHome) {
+        setSshTabs(prev => prev.map(tab => (
+          tab.key === existingExplorer.key ? { ...tab, embedInHome: false } : tab
+        )));
+        publishNewTab(existingExplorer.key, false);
+        return;
+      }
+      const existingExplorerIndex = sshTabs.findIndex(tab => tab.key === existingExplorer.key);
+      if (existingExplorerIndex !== -1) setActiveTabIndex(existingExplorerIndex);
       return;
     }
 
@@ -111,30 +169,20 @@ export const useConnectionManagement = ({
       createdAt: nowTs,
       needsOwnConnection: false,
       isExplorerInSSH: true,
-      groupId: null
+      groupId: null,
+      ...(embedInHome ? { embedInHome: true } : {})
     };
 
-    // Insertar y activar como última abierta
+    // Insertar y activar como última abierta (embebida: se queda en Home)
     setSshTabs(prevSshTabs => [newExplorerTab, ...prevSshTabs]);
-    setLastOpenedTabKey(explorerTabId);
-    setOnCreateActivateTabKey(explorerTabId);
-    setActiveTabIndex(1);
-    setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-    setOpenTabOrder(prev => [explorerTabId, ...prev.filter(k => k !== explorerTabId)]);
-  }, [sshTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices, setOpenTabOrder]);
+    publishNewTab(explorerTabId, embedInHome);
+  }, [sshTabs, setSshTabs, setActiveTabIndex, publishNewTab, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES DE ARCHIVOS (SFTP/FTP/SCP) ===
   const onOpenFileConnection = useCallback((node, nodesArg) => {
     const nodes = resolveTree(nodesArg);
-    // Si no estamos en el grupo Home, cambiar a Home primero
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
+    const embedInHome = connectionWantsEmbed(node);
+    releaseActiveGroup(embedInHome);
 
     let fileNode = node;
     // Historial/favoritos sin .data: resolver credenciales desde el vault
@@ -157,6 +205,7 @@ export const useConnectionManagement = ({
       fileNode = {
         key: matched.key,
         label: node.name || node.label || matched.label,
+        ...(embedInHome ? { embedInHome: true } : {}),
         data: {
           ...matched.data,
           type: matched.data.type === 'ssh' ? 'sftp' : (matched.data.type || protocol),
@@ -194,20 +243,13 @@ export const useConnectionManagement = ({
     } catch (e) { /* noop */ }
 
     openFileExplorer(fileNode);
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, openFileExplorer, toast]);
+  }, [openFileExplorer, releaseActiveGroup, toast]);
 
   // === FUNCIÓN PARA ABRIR TÚNELES SSH ===
   const onOpenSSHTunnel = useCallback((nodeOrConn, nodesArg) => {
     const nodes = resolveTree(nodesArg);
-    // Si no estamos en el grupo Home, cambiar a Home primero
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
+    const embedInHome = connectionWantsEmbed(nodeOrConn);
+    releaseActiveGroup(embedInHome);
 
     // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
     const isSidebarNode = !!(nodeOrConn && nodeOrConn.data);
@@ -298,17 +340,13 @@ export const useConnectionManagement = ({
       tunnelConfig: tunnelConfig,
       label: label || 'Túnel SSH',
       createdAt: nowTs,
-      nodeKey: key
+      nodeKey: key,
+      ...(embedInHome ? { embedInHome: true } : {})
     };
 
-    // Insertar y activar
     setSshTabs(prevSshTabs => [newTunnelTab, ...prevSshTabs]);
-    setLastOpenedTabKey(tunnelTabId);
-    setOnCreateActivateTabKey(tunnelTabId);
-    setActiveTabIndex(1);
-    setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-    setOpenTabOrder(prev => [tunnelTabId, ...prev.filter(k => k !== tunnelTabId)]);
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
+    publishNewTab(tunnelTabId, embedInHome);
+  }, [setSshTabs, releaseActiveGroup, publishNewTab, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES SSH ===
   const onOpenSSHConnection = useCallback((nodeOrConn, nodesArg) => {
@@ -396,6 +434,7 @@ export const useConnectionManagement = ({
 
       const pseudoNode = {
         label: conn.name,
+        ...(connectionWantsEmbed(nodeOrConn) ? { embedInHome: true } : {}),
         data: {
           ...fallbackData,
           ...sourceData,
@@ -466,14 +505,8 @@ export const useConnectionManagement = ({
       }, 200);
     } catch (e) { /* noop */ }
 
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
+    const embedInHome = connectionWantsEmbed(nodeOrConn);
+    releaseActiveGroup(embedInHome);
     setSshTabs(prevTabs => {
       const nowTs = Date.now();
       const tabId = `${conn.originalKey}_${nowTs}`;
@@ -511,7 +544,8 @@ export const useConnectionManagement = ({
         sshConfig: sshConfig,
         type: 'terminal',
         createdAt: nowTs,
-        groupId: null
+        groupId: null,
+        ...(embedInHome ? { embedInHome: true } : {})
       };
 
       // Iniciar grabación automática si está habilitada global o por conexión
@@ -553,28 +587,16 @@ export const useConnectionManagement = ({
           console.error('Error iniciando grabación automática:', error);
         });
       }
-      // Activar como última abierta (índice 1) y registrar orden de apertura
-      setLastOpenedTabKey(tabId);
-      setOnCreateActivateTabKey(tabId);
-      setActiveTabIndex(1);
-      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+      publishNewTab(tabId, embedInHome);
       return [newTab, ...prevTabs];
     });
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, openFileExplorer, toast]);
+  }, [setSshTabs, openFileExplorer, releaseActiveGroup, publishNewTab, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES RDP ===
   const onOpenRdpConnection = useCallback((node, nodesArg) => {
     const nodes = resolveTree(nodesArg);
-    // Si no estamos en el grupo Home, cambiar a Home primero
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
+    const embedInHome = connectionWantsEmbed(node);
+    releaseActiveGroup(embedInHome);
 
     // Detectar si es RDP integrado (IronRDP / Guacamole) o RDP nativo externo (mstsc)
     // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
@@ -809,14 +831,10 @@ export const useConnectionManagement = ({
           rdpConfig: rdpConfig,
           type: 'rdp-guacamole',
           customIcon: node.data?.customIcon || null,
-          groupId: null
+          groupId: null,
+          ...(embedInHome ? { embedInHome: true } : {})
         };
-        // Marcar y activar usando la clave REAL creada y registrar orden de apertura
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        setActiveTabIndex(1);
-        setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-        setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+        publishNewTab(tabId, embedInHome);
         return [newTab, ...prevTabs];
       });
 
@@ -860,6 +878,26 @@ export const useConnectionManagement = ({
     );
 
     if (existingRdpTab) {
+      if (embedInHome) {
+        if (existingRdpTab.embedInHome) {
+          focusHomeSessionPanel(existingRdpTab.key);
+        } else {
+          toast.current?.show({
+            severity: 'info',
+            summary: 'Conexión RDP',
+            detail: 'Ya existe una pestaña RDP para esta conexión',
+            life: 3000
+          });
+        }
+        return;
+      }
+      if (existingRdpTab.embedInHome) {
+        setRdpTabs(prevTabs => prevTabs.map(tab => (
+          tab.key === existingRdpTab.key ? { ...tab, embedInHome: false } : tab
+        )));
+        publishNewTab(existingRdpTab.key, false);
+        return;
+      }
       // Si ya existe una pestaña RDP para esta conexión, solo activarla
       const allTabs = [...sshTabs, ...rdpTabs];
       const tabIndex = allTabs.findIndex(tab => tab.key === existingRdpTab.key);
@@ -885,16 +923,19 @@ export const useConnectionManagement = ({
         type: 'rdp',
         customIcon: node.data?.customIcon || null,
         node: node,
-        groupId: null
+        groupId: null,
+        ...(embedInHome ? { embedInHome: true } : {})
       };
 
       // Agregar la pestaña RDP y marcar para activar/mostrar tras Inicio
       setRdpTabs(prevTabs => [{ ...newRdpTab, createdAt: Date.now() }, ...prevTabs]);
-      setLastOpenedTabKey(tabId);
-      setOnCreateActivateTabKey(tabId);
-      // Activar índice 1 (después de Inicio) – el reorden virtual lo moverá visualmente
-      setActiveTabIndex(1);
-      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      if (!embedInHome) {
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        // Activar índice 1 (después de Inicio) – el reorden virtual lo moverá visualmente
+        setActiveTabIndex(1);
+        setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      }
     }
 
     // Para mstsc, conectar automáticamente
@@ -946,20 +987,13 @@ export const useConnectionManagement = ({
             life: 3000
           });
         });
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, rdpTabs, sshTabs, toast]);
+  }, [releaseActiveGroup, publishNewTab, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices, rdpTabs, sshTabs, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES VNC ===
   const onOpenVncConnection = useCallback((node, nodesArg) => {
     const nodes = resolveTree(nodesArg);
-    // Si no estamos en el grupo Home, cambiar a Home primero
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
+    const embedInHome = connectionWantsEmbed(node);
+    releaseActiveGroup(embedInHome);
 
     // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
     const nodeData = node.data || node; // Fallback para ConnectionHistory
@@ -1108,13 +1142,10 @@ export const useConnectionManagement = ({
           vncConfig: vncConfig,
           type: 'vnc-guacamole',
           customIcon: node.data?.customIcon || null,
-          groupId: null
+          groupId: null,
+          ...(embedInHome ? { embedInHome: true } : {})
         };
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        setActiveTabIndex(1);
-        setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-        setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+        publishNewTab(tabId, embedInHome);
         return [newTab, ...prevTabs];
       });
 
@@ -1163,16 +1194,13 @@ export const useConnectionManagement = ({
         vncConfig: vncConfig,
         type: 'vnc-guacamole', // Se renderiza en TabContentRenderer como LazyVncCanvasTab
         customIcon: node.data?.customIcon || null,
-        groupId: null
+        groupId: null,
+        ...(embedInHome ? { embedInHome: true } : {})
       };
-      setLastOpenedTabKey(tabId);
-      setOnCreateActivateTabKey(tabId);
-      setActiveTabIndex(1);
-      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+      publishNewTab(tabId, embedInHome);
       return [newTab, ...prevTabs];
     });
-  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
+  }, [releaseActiveGroup, publishNewTab, setRdpTabs, toast]);
 
   // === RETORNO DEL HOOK ===
   return {

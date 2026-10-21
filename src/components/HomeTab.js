@@ -1660,11 +1660,14 @@ const HomeTab = ({
     };
   }, [localLinuxTerminalTheme, localPowerShellTheme]);
 
-  const handleConnectToHistory = (connection) => {
+  const handleConnectToHistory = (connection, options) => {
     if (connection && (connection.id || connection.connectionId) && !connection.host && !['group', 'password', 'secret'].includes(connection.type)) {
       const wanted = String(connection.connectionId || connection.id);
       const resolved = (getFavorites() || []).find((fav) => String(fav.id || fav.key) === wanted);
       if (resolved) connection = resolved;
+    }
+    if (options?.embedInHome && connection && typeof connection === 'object') {
+      connection = { ...connection, embedInHome: true };
     }
     // console.log('Conectando a:', connection);
     if (connection.type === 'group') {
