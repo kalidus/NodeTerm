@@ -1,0 +1,327 @@
+.vault-cyber {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 1.25rem 1.5rem 0.9rem;
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(255, 43, 214, 0.16), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(0, 242, 255, 0.14), transparent 50%),
+    #05060a;
+  color: #d7fff8;
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: inset 0 0 80px rgba(0, 242, 255, 0.05);
+}
+
+.vault-cyber-vignette,
+.vault-cyber-scanlines,
+.vault-cyber-beam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vault-cyber-vignette {
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+  z-index: 3;
+}
+
+.vault-cyber-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.035) 0,
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.45;
+  z-index: 2;
+}
+
+.vault-cyber-beam {
+  background: linear-gradient(to bottom, transparent, rgba(0, 242, 255, 0.07), transparent);
+  height: 22%;
+  inset: auto 0 auto 0;
+  animation: vault-cyber-beam 8s linear infinite;
+  z-index: 1;
+}
+
+.vault-cyber-header,
+.vault-cyber-prompt-line,
+.vault-cyber-list,
+.vault-cyber-lock,
+.vault-cyber-footer {
+  position: relative;
+  z-index: 4;
+}
+
+.vault-cyber-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(0, 242, 255, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 43, 214, 0.35);
+}
+
+.vault-cyber-title {
+  color: #00f2ff;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(0, 242, 255, 0.75), 2px 0 rgba(255, 43, 214, 0.65);
+  animation: vault-cyber-glitch 4.5s infinite;
+}
+
+.vault-cyber-count {
+  color: #ff2bd6;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vault-cyber-prompt-line {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.vault-cyber-prompt {
+  color: #ff2bd6;
+  flex-shrink: 0;
+  text-shadow: 0 0 8px rgba(255, 43, 214, 0.45);
+}
+
+.vault-cyber-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #e8fff9;
+  font: inherit;
+  caret-color: #00f2ff;
+}
+
+.vault-cyber-input::placeholder {
+  color: rgba(215, 255, 248, 0.35);
+}
+
+.vault-cyber-cursor {
+  width: 0.55rem;
+  height: 1em;
+  background: #00f2ff;
+  box-shadow: 0 0 8px #00f2ff;
+  animation: vault-cyber-blink 1.05s steps(1) infinite;
+  flex-shrink: 0;
+}
+
+.vault-cyber-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.vault-cyber-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1.7fr) minmax(0, 1fr) 4.4rem minmax(7rem, 1.3fr) auto;
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.38rem 0.45rem;
+  border-left: 2px solid transparent;
+}
+
+.vault-cyber-row:hover,
+.vault-cyber-row.is-selected {
+  border-left-color: #00f2ff;
+  background: rgba(0, 242, 255, 0.05);
+}
+
+.vault-cyber-idx {
+  color: rgba(0, 242, 255, 0.45);
+}
+
+.vault-cyber-name,
+.vault-cyber-secret,
+.vault-cyber-copy {
+  font: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vault-cyber-name {
+  color: #f4fff9;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-cyber-name:hover {
+  color: #00f2ff;
+  text-shadow: 0 0 8px rgba(0, 242, 255, 0.45);
+}
+
+.vault-cyber-folder {
+  color: rgba(215, 255, 248, 0.45);
+}
+
+.vault-cyber-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(215, 255, 248, 0.72);
+}
+
+.vault-cyber-type {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  padding-top: 0.15rem;
+  color: #00f2ff;
+}
+
+.vault-cyber-type-api_key,
+.vault-cyber-type-crypto_wallet {
+  color: #ff2bd6;
+}
+
+.vault-cyber-type-secure_note {
+  color: #fcee0a;
+}
+
+.vault-cyber-secret {
+  color: rgba(0, 242, 255, 0.8);
+  letter-spacing: 0.12em;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.vault-cyber-secret.is-revealed {
+  letter-spacing: 0;
+  color: #ff7ae8;
+  text-shadow: 0 0 10px rgba(255, 43, 214, 0.45);
+  white-space: pre-wrap;
+  max-height: 4.6em;
+  overflow: auto;
+}
+
+.vault-cyber-secret.is-empty {
+  letter-spacing: 0;
+  color: rgba(215, 255, 248, 0.35);
+  cursor: default;
+}
+
+.vault-cyber-copy {
+  color: #fcee0a;
+  border: 1px solid rgba(252, 238, 10, 0.45);
+  padding: 0.05rem 0.4rem;
+  letter-spacing: 0.04em;
+}
+
+.vault-cyber-copy:hover {
+  background: rgba(252, 238, 10, 0.12);
+  box-shadow: 0 0 10px rgba(252, 238, 10, 0.25);
+}
+
+.vault-cyber-empty,
+.vault-cyber-lock {
+  margin: 1.5rem 0;
+  color: rgba(0, 242, 255, 0.75);
+}
+
+.vault-cyber-lock {
+  flex: 1;
+  margin: 1.5rem 0;
+  color: #fcee0a;
+  text-shadow: 0 0 10px rgba(252, 238, 10, 0.35);
+}
+
+.vault-cyber-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(0, 242, 255, 0.18);
+  color: rgba(215, 255, 248, 0.4);
+  font-size: 0.75rem;
+}
+
+.vault-cyber-status {
+  color: #00f2ff;
+  min-height: 1em;
+}
+
+.vault-cyber-fields {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.vault-cyber-field {
+  display: grid;
+  grid-template-columns: 5.2rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.vault-cyber-field-label {
+  color: rgba(0, 242, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  padding-top: 0.15rem;
+}
+
+@keyframes vault-cyber-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes vault-cyber-beam {
+  from { top: -22%; }
+  to { top: 110%; }
+}
+
+@keyframes vault-cyber-glitch {
+  0%, 86%, 100% {
+    transform: none;
+    text-shadow: 0 0 12px rgba(0, 242, 255, 0.75), 2px 0 rgba(255, 43, 214, 0.65);
+  }
+  88% {
+    transform: translate(-1px, 0);
+    text-shadow: -2px 0 #ff2bd6, 2px 0 #00f2ff;
+  }
+  90% {
+    transform: translate(1px, 0);
+    text-shadow: 2px 0 #ff2bd6, -2px 0 #00f2ff;
+  }
+  92% {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-cyber-title,
+  .vault-cyber-cursor,
+  .vault-cyber-beam {
+    animation: none;
+  }
+}

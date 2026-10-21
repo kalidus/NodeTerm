@@ -29,6 +29,7 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import { getFavorites, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
+import { setSidebarView } from '../utils/sidebarViewBus';
 import { appConfirm } from './ui/AppConfirm';
 import {
   FAVORITES_ROOT_KEY,
@@ -275,6 +276,10 @@ const Sidebar = React.memo(({
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
+
+  useEffect(() => {
+    setSidebarView(viewMode);
+  }, [viewMode]);
 
   // Límites de visualización de hijos por carpeta para optimizar renderizado de directorios muy grandes
   const [folderLimits, setFolderLimits] = useState({});

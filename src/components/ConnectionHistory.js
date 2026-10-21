@@ -15,6 +15,8 @@ import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react
 import AIClientBrandIcon from './AIClientBrandIcon';
 import HomePanelWrapper from './HomePanelWrapper';
 import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../utils/homeTabSync';
+import { getSidebarView, subscribeSidebarView } from '../utils/sidebarViewBus';
+import VaultCyberPanels from './home/VaultCyberPanels';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
 
@@ -87,6 +89,7 @@ const ConnectionHistory = ({
 	onPanelDragEnd = null,
 	onPanelResizing = null,
 	onPanelResizeEnd = null,
+	isActiveTab = false,
 	children
 }) => {
 	const canvasRef = useRef(null);
@@ -106,6 +109,8 @@ const ConnectionHistory = ({
 
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
+	const [vaultLocked, setVaultLocked] = useState(false);
+	const [sidebarView, setSidebarView] = useState(getSidebarView);
 	const [documentNodes, setDocumentNodes] = useState([]);
 	const [activeBottomView, setActiveBottomView] = useState('all');
 
@@ -249,31 +254,40 @@ const ConnectionHistory = ({
 
 	// Cargar passwords desde localStorage
 	useEffect(() => {
+		let cancelled = false;
 		const loadPasswords = async () => {
 			try {
-				if (masterKey && secureStorage) {
-					const encryptedData = localStorage.getItem('passwords_encrypted');
-					if (encryptedData) {
-						const decrypted = await secureStorage.decryptData(
-							JSON.parse(encryptedData),
-							masterKey
-						);
-						setPasswordNodes(decrypted || []);
-					} else {
-						const plainData = localStorage.getItem('passwordManagerNodes');
-						if (plainData) {
-							setPasswordNodes(JSON.parse(plainData) || []);
-						}
+				const encryptedData = localStorage.getItem('passwords_encrypted');
+				if (!masterKey && encryptedData) {
+					if (!cancelled) {
+						setPasswordNodes([]);
+						setVaultLocked(true);
 					}
-				} else {
-					const saved = localStorage.getItem('passwordManagerNodes');
-					if (saved) {
-						setPasswordNodes(JSON.parse(saved) || []);
+					return;
+				}
+				if (masterKey && secureStorage && encryptedData) {
+					const decrypted = await secureStorage.decryptData(
+						JSON.parse(encryptedData),
+						masterKey
+					);
+					if (!cancelled) {
+						setPasswordNodes(Array.isArray(decrypted) ? decrypted : []);
+						setVaultLocked(false);
 					}
+					return;
+				}
+				const plainData = localStorage.getItem('passwordManagerNodes');
+				const parsed = plainData ? JSON.parse(plainData) : [];
+				if (!cancelled) {
+					setPasswordNodes(Array.isArray(parsed) ? parsed : []);
+					setVaultLocked(false);
 				}
 			} catch (error) {
 				console.error('Error loading passwords for home search:', error);
-				setPasswordNodes([]);
+				if (!cancelled) {
+					setPasswordNodes([]);
+					setVaultLocked(Boolean(!masterKey && localStorage.getItem('passwords_encrypted')));
+				}
 			}
 		};
 
@@ -283,9 +297,17 @@ const ConnectionHistory = ({
 				loadPasswords();
 			}
 		};
+		const handleVaultChanged = () => loadPasswords();
 		window.addEventListener('storage', handleStorageChange);
-		return () => window.removeEventListener('storage', handleStorageChange);
+		window.addEventListener('password-vault-changed', handleVaultChanged);
+		return () => {
+			cancelled = true;
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('password-vault-changed', handleVaultChanged);
+		};
 	}, [masterKey, secureStorage]);
+
+	useEffect(() => subscribeSidebarView(setSidebarView), []);
 
 	// Cargar notas / documentos desde localStorage
 	useEffect(() => {
@@ -889,6 +911,8 @@ const ConnectionHistory = ({
 		);
 	};
 
+	const showVaultTerminal = isActiveTab && sidebarView === 'passwords';
+
 	return (
 		<div
 			className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`}
@@ -1186,6 +1210,16 @@ const ConnectionHistory = ({
 					), { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-th-large" style={{ color: '#a855f7', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('releaseNotes', '~/releases', 'releases · novedades', <HomeReleaseNotesPanel />, { minWidth: 480, minHeight: 280, titleIcon: <i className="pi pi-book" style={{ color: '#67e8f9', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('clock', '~/clock', 'clock · hora', <HomeClockPanel />, { minWidth: 220, minHeight: 120, titleIcon: <i className="pi pi-clock" style={{ color: '#fbbf24', fontSize: '0.8rem' }} /> })}
+					{showVaultTerminal && (
+						<VaultCyberPanels
+							passwordNodes={passwordNodes}
+							vaultLocked={vaultLocked}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							frameBackground={panelFrameBg}
+						/>
+					)}
 				</div>
 			) : (
 				<>

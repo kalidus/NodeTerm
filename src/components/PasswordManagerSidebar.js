@@ -308,6 +308,7 @@ const PasswordManagerSidebar = ({
           // SIN master key: Guardar como antes
           localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordNodes));
         }
+        window.dispatchEvent(new CustomEvent('password-vault-changed'));
       } catch (error) {
         console.error('Error saving passwords:', error);
       }

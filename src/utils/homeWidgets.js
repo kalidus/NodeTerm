@@ -267,3 +267,57 @@ export function flattenVaultNodes(nodes, types) {
 
 export const VAULT_SECRET_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'];
 export const NOTE_TYPES = ['document', 'quick-note'];
+
+const VAULT_SECRET_FIELD = {
+  password: 'password',
+  secret: 'password',
+  api_key: 'apiKey',
+  crypto_wallet: 'seedPhrase',
+  secure_note: 'noteContent'
+};
+
+function readVaultSecret(data, type) {
+  const field = VAULT_SECRET_FIELD[type] || 'password';
+  const value = data?.[field];
+  return typeof value === 'string' ? value : '';
+}
+
+/** Filas de secreto para la terminal del vault. El secreto viaja en memoria, no en atributos del DOM. */
+export function collectVaultEntries(nodes) {
+  const out = [];
+  const walk = (list, folderPath) => {
+    if (!Array.isArray(list)) return;
+    for (const node of list) {
+      if (!node || typeof node !== 'object') continue;
+      const data = node.data && typeof node.data === 'object' ? node.data : {};
+      const type = data.type || node.type;
+      const isSecret = VAULT_SECRET_TYPES.includes(type);
+      if (isSecret) {
+        const name = node.label || data.name || data.title || 'Secreto';
+        out.push({
+          key: node.key || data.id || data.key || `vault-${folderPath}-${name}-${out.length}`,
+          name,
+          folder: folderPath,
+          username: typeof data.username === 'string' ? data.username : '',
+          url: typeof data.url === 'string' ? data.url : '',
+          type,
+          secret: readVaultSecret(data, type)
+        });
+      }
+      if (Array.isArray(node.children) && node.children.length) {
+        const folderLabel = node.label || data.name || '';
+        const nextFolder = isSecret || !folderLabel
+          ? folderPath
+          : (folderPath ? `${folderPath}/${folderLabel}` : folderLabel);
+        walk(node.children, nextFolder);
+      }
+    }
+  };
+  walk(nodes, '');
+  out.sort((a, b) => {
+    const byFolder = (a.folder || '').localeCompare(b.folder || '', 'es', { sensitivity: 'base' });
+    if (byFolder) return byFolder;
+    return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });
+  });
+  return out;
+}

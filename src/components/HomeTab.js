@@ -2470,6 +2470,7 @@ const HomeTab = ({
                   sidebarNodes={sidebarNodes}
                   masterKey={masterKey}
                   secureStorage={secureStorage}
+                  isActiveTab={isActiveTab}
                   terminalView={terminalView}
                   onTerminalToggle={handleTerminalToggle}
                   terminalTheme={themes[localLinuxTerminalTheme]?.theme || themes['Nord']?.theme || {}}
