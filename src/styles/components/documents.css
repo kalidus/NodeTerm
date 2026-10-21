@@ -273,7 +273,7 @@
   color: var(--ui-content-text, #e0e0e0);
 }
 
-/* Negrita bien visible (base 400 → 700 + trazo sintético por si la fuente no tiene bold) */
+/* Negrita visible; font-synthesis debe incluir style para no matar la cursiva anidada */
 .document-editor-content .tiptap strong,
 .document-editor-content .tiptap b,
 .document-editor-content .tiptap-note-editor strong,
@@ -283,16 +283,24 @@
 .document-editor-content strong.note-mark-bold,
 .document-editor-content .note-mark-bold {
   font-weight: 700 !important;
-  font-synthesis: weight !important;
-  /* Trazo sintético: se nota aunque la UI font no tenga variante bold */
-  -webkit-text-stroke: 0.4px currentColor;
-  text-shadow: 0.55px 0 0 currentColor, -0.55px 0 0 currentColor;
+  font-synthesis: weight style !important;
+  -webkit-text-stroke: 0.35px currentColor;
+  text-shadow: 0.45px 0 0 currentColor, -0.45px 0 0 currentColor;
   letter-spacing: 0.01em;
 }
 
 .document-editor-content .tiptap em,
-.document-editor-content .tiptap i {
+.document-editor-content .tiptap i,
+.document-editor-content .tiptap-note-editor em,
+.document-editor-content .tiptap-note-editor i,
+.document-editor-content .ProseMirror em,
+.document-editor-content .ProseMirror i,
+.document-editor-content strong em,
+.document-editor-content em strong,
+.document-editor-content .note-mark-bold em,
+.document-editor-content em .note-mark-bold {
   font-style: italic !important;
+  font-synthesis: weight style !important;
 }
 
 .document-editor-content .tiptap u {

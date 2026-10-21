@@ -46,11 +46,11 @@ const NoteBold = Bold.extend({
     };
   },
   renderHTML({ HTMLAttributes }) {
+    // Sin style inline: evita choques al anidar italic/underline
     return [
       'strong',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: 'note-mark-bold',
-        style: 'font-weight:700'
+        class: 'note-mark-bold'
       }),
       0
     ];
@@ -89,35 +89,39 @@ function readClipboardText() {
   }
 }
 
-/** Aplica/quita negrita con transacción ProseMirror (no depende de chain TipTap). */
-function toggleBoldMark(editor) {
+/** Aplica/quita una mark sin tocar las demás (bold+italic pueden coexistir). */
+function toggleSchemaMark(editor, markName) {
   if (!editor || editor.isDestroyed || !editor.view) return false;
-  const boldType = editor.state.schema.marks.bold;
-  if (!boldType) {
-    console.error('[NotesEditor] schema sin mark bold');
+  const markType = editor.state.schema.marks[markName];
+  if (!markType) {
+    console.error(`[NotesEditor] schema sin mark ${markName}`);
     return false;
   }
 
   const { state, view } = editor;
   const { from, to, empty } = state.selection;
-  const mark = boldType.create();
+  const mark = markType.create();
   let tr = state.tr;
 
   if (empty) {
     const stored = state.storedMarks || state.selection.$from.marks();
-    if (boldType.isInSet(stored)) {
-      tr = tr.removeStoredMark(boldType);
+    if (markType.isInSet(stored)) {
+      tr = tr.removeStoredMark(markType);
     } else {
       tr = tr.addStoredMark(mark);
     }
-  } else if (editor.isActive('bold')) {
-    tr = tr.removeMark(from, to, boldType);
+  } else if (editor.isActive(markName)) {
+    tr = tr.removeMark(from, to, markType);
   } else {
     tr = tr.addMark(from, to, mark);
   }
 
   view.dispatch(tr.scrollIntoView());
   return true;
+}
+
+function toggleBoldMark(editor) {
+  return toggleSchemaMark(editor, 'bold');
 }
 
 /** Restaura un rango y aplica un comando TipTap (focus + selección + acción). */
@@ -147,14 +151,20 @@ function runOnEditorRange(editor, from, to, commandName) {
     }
 
     if (typeof commandName === 'string') {
-      if (commandName === 'bold') return toggleBoldMark(editor);
-      let chain = editor.chain().focus();
-      if (a !== b) chain = chain.setTextSelection({ from: a, to: b });
-      if (commandName === 'italic') return chain.toggleItalic().run();
-      if (commandName === 'underline') return chain.toggleUnderline().run();
-      if (commandName === 'highlight') return chain.toggleHighlight().run();
-      if (commandName === 'strike') return chain.toggleStrike().run();
-      if (commandName === 'delete') return chain.deleteSelection().run();
+      if (commandName === 'bold') return toggleSchemaMark(editor, 'bold');
+      if (commandName === 'italic') return toggleSchemaMark(editor, 'italic');
+      if (commandName === 'underline') return toggleSchemaMark(editor, 'underline');
+      if (commandName === 'strike') return toggleSchemaMark(editor, 'strike');
+      if (commandName === 'highlight') {
+        let chain = editor.chain().focus();
+        if (a !== b) chain = chain.setTextSelection({ from: a, to: b });
+        return chain.toggleHighlight().run();
+      }
+      if (commandName === 'delete') {
+        let chain = editor.chain().focus();
+        if (a !== b) chain = chain.setTextSelection({ from: a, to: b });
+        return chain.deleteSelection().run();
+      }
       return false;
     }
 
@@ -381,8 +391,8 @@ const EditorToolbar = ({ editor }) => {
         </ToolbarButton>
         <ToolbarButton
           onClick={() => {
-            const ok = editor.chain().focus().toggleItalic().run();
-            if (!ok) editor.commands.toggleItalic();
+            editor.view?.dom?.focus?.({ preventScroll: true });
+            toggleSchemaMark(editor, 'italic');
           }}
           isActive={editor.isActive('italic')}
           title="Cursiva (Ctrl+I)"
@@ -391,8 +401,8 @@ const EditorToolbar = ({ editor }) => {
         </ToolbarButton>
         <ToolbarButton
           onClick={() => {
-            const ok = editor.chain().focus().toggleUnderline().run();
-            if (!ok) editor.commands.toggleUnderline();
+            editor.view?.dom?.focus?.({ preventScroll: true });
+            toggleSchemaMark(editor, 'underline');
           }}
           isActive={editor.isActive('underline')}
           title="Subrayado (Ctrl+U)"
@@ -400,7 +410,10 @@ const EditorToolbar = ({ editor }) => {
           <FaUnderline size={11} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          onClick={() => {
+            editor.view?.dom?.focus?.({ preventScroll: true });
+            toggleSchemaMark(editor, 'strike');
+          }}
           isActive={editor.isActive('strike')}
           title="Tachado"
         >

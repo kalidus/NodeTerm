@@ -64,24 +64,26 @@ const NoteBubbleMenu = ({ editor }) => {
       if (from !== to) {
         chain = chain.setTextSelection({ from, to });
       }
-      if (commandName === 'bold') {
-        const boldType = editor.state.schema.marks.bold;
-        if (boldType) {
-          const { from: a, to: b, empty } = editor.state.selection;
-          let tr = editor.state.tr;
-          if (empty) {
-            const stored = editor.state.storedMarks || editor.state.selection.$from.marks();
-            if (boldType.isInSet(stored)) tr = tr.removeStoredMark(boldType);
-            else tr = tr.addStoredMark(boldType.create());
-          } else if (editor.isActive('bold')) {
-            tr = tr.removeMark(a, b, boldType);
-          } else {
-            tr = tr.addMark(a, b, boldType.create());
-          }
-          editor.view.dispatch(tr.scrollIntoView());
+      const toggleMark = (markName) => {
+        const markType = editor.state.schema.marks[markName];
+        if (!markType) return;
+        const { from: a, to: b, empty } = editor.state.selection;
+        let tr = editor.state.tr;
+        if (empty) {
+          const stored = editor.state.storedMarks || editor.state.selection.$from.marks();
+          if (markType.isInSet(stored)) tr = tr.removeStoredMark(markType);
+          else tr = tr.addStoredMark(markType.create());
+        } else if (editor.isActive(markName)) {
+          tr = tr.removeMark(a, b, markType);
+        } else {
+          tr = tr.addMark(a, b, markType.create());
         }
-      } else if (commandName === 'italic') chain.toggleItalic().run();
-      else if (commandName === 'underline') chain.toggleUnderline().run();
+        editor.view.dispatch(tr.scrollIntoView());
+      };
+
+      if (commandName === 'bold') toggleMark('bold');
+      else if (commandName === 'italic') toggleMark('italic');
+      else if (commandName === 'underline') toggleMark('underline');
       else if (commandName === 'highlight') chain.toggleHighlight().run();
       else if (typeof commandName === 'function') commandName(editor);
       rangeRef.current = {
