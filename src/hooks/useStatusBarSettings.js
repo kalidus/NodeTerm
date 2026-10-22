@@ -37,6 +37,12 @@ export const useStatusBarSettings = () => {
   }, [statusBarPollingInterval]);
 
   useEffect(() => {
+    const saved = parseInt(localStorage.getItem('basicapp_statusbar_height') || '32', 10);
+    const height = Number.isFinite(saved) ? Math.max(20, Math.min(48, saved)) : 32;
+    document.documentElement.style.setProperty('--statusbar-height', `${height}px`);
+  }, []);
+
+  useEffect(() => {
     const normalized = normalizeStatusBarLayout(statusBarLayout);
     if (JSON.stringify(normalized) !== JSON.stringify(statusBarLayout)) {
       setStatusBarLayoutState(normalized);

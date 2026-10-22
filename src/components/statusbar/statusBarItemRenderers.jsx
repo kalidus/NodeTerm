@@ -204,7 +204,7 @@ export function createStatusBarItemRenderers(ctx) {
               color: getGPUColor(gpuStats.type),
               display: 'inline-flex',
               alignItems: 'center',
-              fontSize: 'calc(var(--statusbar-height, 40px) * 0.75)',
+              fontSize: '1.15em',
               lineHeight: '1'
             }}
           >

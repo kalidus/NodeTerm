@@ -8,6 +8,8 @@ const { parseDfOutput, parseNetDev, sendToRenderer } = require('../utils');
 class SSHStatsService {
   constructor() {
     this.activeStatsTabId = null;
+    /** Sesiones SSH visibles en la Home: siguen sondeándose aunque no sean la pestaña del grupo. */
+    this.pinnedStatsTabIds = new Set();
     this.statusBarPollingIntervalMs = 5000; // 5 segundos por defecto (reducir contención SSH)
     /** @type {Map<string, string>} tabId -> último mensaje de error ya logueado */
     this._statsErrorLoggedByTab = new Map();
@@ -48,6 +50,34 @@ class SSHStatsService {
    */
   getActiveStatsTab() {
     return this.activeStatsTabId;
+  }
+
+  /**
+   * La pestaña del grupo o una sesión SSH visible en la Home.
+   */
+  shouldPollStats(tabId) {
+    if (tabId == null || tabId === '') return false;
+    const id = String(tabId);
+    if (this.activeStatsTabId != null && String(this.activeStatsTabId) === id) return true;
+    return this.pinnedStatsTabIds.has(id);
+  }
+
+  /**
+   * Sustituye las sesiones SSH de la Home que deben seguir recibiendo stats.
+   * @returns {{ next: string[], removed: string[] }}
+   */
+  setPinnedStatsTabs(tabIds) {
+    const next = new Set(
+      (Array.isArray(tabIds) ? tabIds : [])
+        .map((id) => (id == null ? '' : String(id)))
+        .filter(Boolean)
+    );
+    const removed = [];
+    this.pinnedStatsTabIds.forEach((id) => {
+      if (!next.has(id)) removed.push(id);
+    });
+    this.pinnedStatsTabIds = next;
+    return { next: [...next], removed };
   }
 
   /**
@@ -813,7 +843,7 @@ class SSHStatsService {
    * Loop principal de estadísticas para conexiones SSH directas
    */
   async startStatsLoop(tabId, conn, realHostname, finalDistroId, host, mainWindow, sshConnections) {
-    if (this.activeStatsTabId !== tabId) {
+    if (!this.shouldPollStats(tabId)) {
       if (conn) {
         conn.statsTimeout = null;
       }
@@ -837,7 +867,7 @@ class SSHStatsService {
       this.logStatsErrorOnce(tabId, e);
     } finally {
       const finalConn = sshConnections[tabId];
-      if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
+      if (this.shouldPollStats(tabId) && finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
         finalConn.statsTimeout = setTimeout(
           () => this.startStatsLoop(tabId, finalConn, realHostname, finalDistroId, host, mainWindow, sshConnections),
           this.statusBarPollingIntervalMs
@@ -855,7 +885,7 @@ class SSHStatsService {
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
 
-      if (self.activeStatsTabId !== tabId) {
+      if (!self.shouldPollStats(tabId)) {
         if (connObj) {
           connObj.statsTimeout = null;
           connObj.statsLoopRunning = false;
@@ -888,7 +918,7 @@ class SSHStatsService {
 
               // Reintentar en 5 segundos
               if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
-                !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+                !sshConnections[tabId].stream.destroyed && self.shouldPollStats(tabId)) {
                 sshConnections[tabId].statsLoopRunning = false;
                 sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
               } else {
@@ -907,7 +937,7 @@ class SSHStatsService {
 
             // Programar siguiente ejecución
             if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
-              !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+              !sshConnections[tabId].stream.destroyed && self.shouldPollStats(tabId)) {
               sshConnections[tabId].statsLoopRunning = false;
               sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000); // 5s para reducir contención en Bastion
             } else {
@@ -922,7 +952,7 @@ class SSHStatsService {
       } catch (e) {
         // Reintentar en 5 segundos
         if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream &&
-          !sshConnections[tabId].stream.destroyed && self.activeStatsTabId === tabId) {
+          !sshConnections[tabId].stream.destroyed && self.shouldPollStats(tabId)) {
           sshConnections[tabId].statsLoopRunning = false;
           sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
         } else {
@@ -951,14 +981,14 @@ class SSHStatsService {
    * Detiene todos los loops de estadísticas excepto el activo
    */
   stopInactiveStatsLoops(sshConnections, activeTabId) {
+    const activeId = activeTabId == null ? '' : String(activeTabId);
     Object.entries(sshConnections).forEach(([id, conn]) => {
-      if (id !== String(activeTabId)) {
-        if (conn.statsTimeout) {
-          clearTimeout(conn.statsTimeout);
-          conn.statsTimeout = null;
-        }
-        conn.statsLoopRunning = false;
+      if (id === activeId || this.pinnedStatsTabIds.has(id)) return;
+      if (conn.statsTimeout) {
+        clearTimeout(conn.statsTimeout);
+        conn.statsTimeout = null;
       }
+      conn.statsLoopRunning = false;
     });
   }
 }

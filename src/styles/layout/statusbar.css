@@ -9,22 +9,37 @@
   padding: 0 10px;
   margin: 0 !important;
   border: none !important;
-  height: var(--statusbar-height, 40px) !important;
+  height: var(--statusbar-height, 32px) !important;
   font-family: var(--ui-font-family, system-ui, -apple-system, sans-serif) !important;
-  /* Escalado dinámico de fuente basado en la altura de la status bar */
-  font-size: calc(var(--statusbar-height, 40px) * 0.3);
+  container-type: inline-size;
+  overflow: hidden;
 }
 
 .status-group {
   display: flex;
   align-items: center;
-  /* Escalado dinámico del gap basado en la altura de la status bar */
-  gap: calc(var(--statusbar-height, 40px) * 0.375);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  /* La letra sigue el ancho de la barra, con suelo y tope para que no se vea enorme ni ilegible */
+  font-size: clamp(9px, 1.1cqi, 12px);
+  gap: 0.85em;
 }
 
 .status-bar-metrics {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+}
+
+.status-bar-metrics-fit {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  white-space: nowrap;
+  gap: inherit;
+  width: max-content;
+  transform-origin: left center;
 }
 
 .status-bar-actions {
@@ -35,13 +50,13 @@
 .status-bar-section {
   display: flex;
   align-items: center;
-  /* Escalado dinámico del gap basado en la altura de la status bar */
-  gap: calc(var(--statusbar-height, 40px) * 0.15);
+  flex-shrink: 0;
+  white-space: nowrap;
+  gap: 0.35em;
 }
 
 .status-bar-section.version-section {
-  /* Escalado dinámico de la sección de versión */
-  font-size: calc(var(--statusbar-height, 40px) * 0.275);
+  font-size: 0.92em;
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
@@ -53,22 +68,19 @@
 .status-bar-section .disk-info {
   display: flex;
   align-items: center;
-  /* Escalado dinámico del gap para disk-info */
-  gap: calc(var(--statusbar-height, 40px) * 0.15);
+  gap: 0.35em;
 }
 
 .status-icon {
-  /* Escalado dinámico de iconos basado en la altura de la status bar */
-  font-size: calc(var(--statusbar-height, 40px) * 0.4);
+  font-size: 1.15em;
 }
 
 .sparkline-container {
-  /* Escalado dinámico del sparkline basado en la altura de la status bar */
-  width: calc(var(--statusbar-height, 40px) * 1.5);
-  height: calc(var(--statusbar-height, 40px) * 0.45);
+  width: 4.2em;
+  height: 1.15em;
   display: flex;
   align-items: flex-end;
-  margin-left: 5px;
+  margin-left: 0.35em;
   border: 1px solid var(--statusbar-border, var(--ui-statusbar-border, #2c313a)) !important;
   background-color: var(--statusbar-bg, var(--ui-statusbar-bg, #1e1e1e)) !important;
   overflow: hidden;
@@ -92,8 +104,7 @@
 }
 
 .status-bar-icon {
-  /* Escalado dinámico de iconos de status bar basado en la altura */
-  font-size: calc(var(--statusbar-height, 40px) * 0.4);
+  font-size: 1.15em;
   color: var(--statusbar-icon-color, inherit) !important;
 }
 
@@ -122,20 +133,17 @@
 }
 
 .disk-info {
-  /* Escalado dinámico del margin-right */
-  margin-right: calc(var(--statusbar-height, 40px) * 0.25);
+  margin-right: 0.6em;
 }
 
 .disk-section {
-  /* Escalado dinámico del gap para disk-section */
-  gap: calc(var(--statusbar-height, 40px) * 0.25);
+  gap: 0.55em;
 }
 
 .disk-info-item {
   display: flex;
   align-items: center;
-  /* Escalado dinámico del gap para disk-info-item */
-  gap: calc(var(--statusbar-height, 40px) * 0.15);
+  gap: 0.35em;
 }
 
 /* --- Estados de carga para Status Bar --- */
@@ -219,7 +227,7 @@
 }
 
 .status-bar-settings-icon {
-  font-size: 14px;
+  font-size: 1.15em;
 }
 
 /* Quick Theme Selector Overlay */

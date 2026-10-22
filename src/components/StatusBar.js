@@ -64,18 +64,54 @@ const StatusBar = ({
 
   const layout = normalizeStatusBarLayout(layoutProp || layoutState);
   const visibleOrder = useMemo(() => getVisibleStatusBarOrder(layout), [layout]);
+  const barRef = useRef(null);
+  const metricsRef = useRef(null);
+  const [fitScale, setFitScale] = useState(1);
+  const fitContentKey = `${isLoading ? 'loading' : 'live'}:${visibleOrder.join(',')}:${stats?.hostname || ''}:${stats?.ip || ''}`;
+
+  useEffect(() => {
+    const metrics = metricsRef.current;
+    if (!metrics || typeof ResizeObserver !== 'function') return undefined;
+
+    let frame = 0;
+    const measure = () => {
+      const fit = metrics.querySelector('.status-bar-metrics-fit');
+      const available = metrics.clientWidth;
+      const needed = fit ? fit.scrollWidth : metrics.scrollWidth;
+      if (available <= 0 || needed <= 0) return;
+      const next = needed <= available + 1
+        ? 1
+        : Math.max(0.72, available / needed);
+      setFitScale((prev) => (Math.abs(prev - next) < 0.015 ? prev : Number(next.toFixed(3))));
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+
+    schedule();
+    const observer = new ResizeObserver(schedule);
+    observer.observe(metrics);
+    if (barRef.current) observer.observe(barRef.current);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [fitContentKey]);
+
+  const metricsStyle = fitScale < 0.995
+    ? { transform: `scale(${fitScale})`, transformOrigin: 'left center' }
+    : undefined;
 
   const GPUIcon = useMemo(() => (
     <svg
       viewBox="0 0 100 60"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{
+        style={{
         display: 'block',
-        width: '1em',
-        height: '1em',
-        minWidth: '22px',
-        minHeight: '22px'
+        width: '1.15em',
+        height: '1.15em'
       }}
     >
       <rect x="2" y="20" width="4" height="35" fill="#2C5F5F" rx="0.5" />
@@ -116,9 +152,11 @@ const StatusBar = ({
 
   if (!stats || isLoading) {
     return (
-      <div className="status-bar">
-        <div className="status-group">
-          {renderStatusBarLoadingItems(layout, currentIconTheme)}
+      <div className="status-bar" ref={barRef}>
+        <div className="status-group status-bar-metrics" ref={metricsRef}>
+          <div className="status-bar-metrics-fit" style={metricsStyle}>
+            {renderStatusBarLoadingItems(layout, currentIconTheme)}
+          </div>
         </div>
       </div>
     );
@@ -170,9 +208,11 @@ const StatusBar = ({
   });
 
   return (
-    <div className="status-bar">
-      <div className="status-group status-bar-metrics">
-        {visibleOrder.map((id) => renderers[id]?.()).filter(Boolean)}
+    <div className="status-bar" ref={barRef}>
+      <div className="status-group status-bar-metrics" ref={metricsRef}>
+        <div className="status-bar-metrics-fit" style={metricsStyle}>
+          {visibleOrder.map((id) => renderers[id]?.()).filter(Boolean)}
+        </div>
       </div>
       <div className="status-group status-bar-actions">
         {renderers.settings?.()}

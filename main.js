@@ -3692,24 +3692,37 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
 // Variable local mantenida para compatibilidad con código existente
 let activeStatsTabId = null;
 
+function startStatsLoopIfIdle(tabId) {
+  const conn = sshConnections[tabId];
+  if (!conn || conn.statsTimeout || conn.statsLoopRunning) return;
+  if (conn.config && conn.config.useBastionWallix) {
+    if (typeof conn.wallixStatsLoop === 'function') {
+      conn.wallixStatsLoop();
+    }
+    return;
+  }
+  statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config && conn.config.host);
+}
+
 ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
   activeStatsTabId = tabId;
   sshStatsService.setActiveStatsTab(tabId);
 
-  // Detener loops inactivos
+  // Detener loops inactivos (las sesiones pinneadas de la Home siguen)
   sshStatsService.stopInactiveStatsLoops(sshConnections, tabId);
 
-  // Iniciar loop para la pestaña activa
-  const conn = sshConnections[tabId];
-  if (conn && !conn.statsTimeout && !conn.statsLoopRunning) {
-    if (conn.config.useBastionWallix) {
-      if (typeof conn.wallixStatsLoop === 'function') {
-        conn.wallixStatsLoop();
-      }
-    } else {
-      statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config.host);
-    }
-  }
+  startStatsLoopIfIdle(tabId);
+});
+
+// Sesiones SSH abiertas dentro de la Home: sondear todas las que estén visibles.
+ipcMain.on('ssh:set-pinned-stats-tabs', (event, tabIds) => {
+  const { next, removed } = sshStatsService.setPinnedStatsTabs(tabIds);
+  const activeId = sshStatsService.getActiveStatsTab();
+  removed.forEach((tabId) => {
+    if (activeId != null && String(activeId) === String(tabId)) return;
+    sshStatsService.stopStatsLoop(tabId, sshConnections);
+  });
+  next.forEach((tabId) => startStatsLoopIfIdle(tabId));
 });
 
 // ✅ REFACTORIZADO: Intervalo de polling ahora se maneja en SSHStatsService

@@ -247,6 +247,7 @@ contextBridge.exposeInMainWorld('electron', {
         'ssh:resize',
         'ssh:disconnect',
         'ssh:set-active-stats-tab',
+        'ssh:set-pinned-stats-tabs',
         'ssh:send-command',
         'terminal:set-hibernated',
         'statusbar:set-polling-interval',

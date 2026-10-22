@@ -75,6 +75,29 @@ export default function HomeEmbeddedSessions({
 
   useEffect(() => subscribeHomeSessionHost(setHostState), []);
 
+  const pinnedStatsKey = useMemo(() => {
+    if (!isHomeTabActive) return '';
+    return embeddedTabs
+      .filter((tab) => tab?.type === 'terminal' && tab.sshConfig && tab.key)
+      .filter((tab) => {
+        const box = boxes[panelIdFor(tab.key)];
+        return box && !box.isMinimized;
+      })
+      .map((tab) => String(tab.key))
+      .join('\n');
+  }, [isHomeTabActive, embeddedTabs, boxes]);
+
+  useEffect(() => {
+    const send = window.electron?.ipcRenderer?.send;
+    if (typeof send !== 'function') return;
+    const ids = pinnedStatsKey ? pinnedStatsKey.split('\n') : [];
+    send('ssh:set-pinned-stats-tabs', ids);
+  }, [pinnedStatsKey]);
+
+  useEffect(() => () => {
+    window.electron?.ipcRenderer?.send?.('ssh:set-pinned-stats-tabs', []);
+  }, []);
+
   useEffect(() => {
     const keys = signature ? signature.split('\n') : [];
     setBoxes((prev) => {

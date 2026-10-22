@@ -2580,7 +2580,7 @@ const HomeTab = ({
       ) : null}
       <div
         style={{
-          height: (statusBarVisible && !terminalView) ? 'calc(100% - 40px)' : '100%',
+          height: (statusBarVisible && !terminalView) ? 'calc(100% - var(--statusbar-height, 32px))' : '100%',
           width: '100%',
           position: 'relative',
           zIndex: 1,
