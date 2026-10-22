@@ -9,7 +9,7 @@ import App from './components/App';
 import { markStartup } from './utils/startup-renderer-profiler';
 import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
 import { applyUILayoutFromStorage } from './utils/appearanceLayout';
-import { applySidebarTypographyCssVariables } from './utils/sidebarFontStack';
+import { applySidebarTypographyCssVariables, migratePersistedFonts } from './utils/sidebarFontStack';
 import { applyLiteEffectsFromStorage } from './utils/uiLiteEffects';
 
 markStartup('index.js evaluado');
@@ -69,12 +69,8 @@ import './styles/main.css';
 import './styles/layout/layouts.css';
 import './styles/layout/atelier.css';
 import './styles/layout/mux.css';
-// Fuentes: solo latin/latin-ext 400+700 al arranque. El resto se carga en Ajustes.
+// Arranque: Inter, JetBrains Mono y Fira Code. El resto de familias locales entra en idle.
 import './styles/fonts-core.css';
-// import './assets/DashboardStyles.css';
-// import './assets/Dashboard.css';
-// import './assets/form-fixes.css';
-// import './assets/sidebar-theme-fixes.css';
 
 // Aplicar tema mínimo lo antes posible: evita destello blanco
 const applyEarlyBootTheme = () => {
@@ -109,6 +105,7 @@ const applyEarlyBootTheme = () => {
     applyUILayoutFromStorage();
 
     try {
+      migratePersistedFonts();
       const uiFont = localStorage.getItem('uiFont');
       const uiFontSize = localStorage.getItem('uiFontSize');
       const sidebarFont = localStorage.getItem('sidebarFont');

@@ -14,13 +14,12 @@ import { applyUILayoutFromStorage } from '../utils/appearanceLayout';
 import {
   applyAppTypography,
   buildAppFontStack,
-  shouldLoadWebFont,
+  migrateStoredFont,
   clampUiFontSize,
   deriveUiIconSize,
   iconSizeToUiFontSize,
   UI_FONT_SIZE_DEFAULT
 } from '../utils/sidebarFontStack';
-import { fontLoader } from '../utils/fontLoader';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 
 
@@ -45,7 +44,7 @@ export const useThemeManagement = () => {
 
   // Font states
   const [fontFamily, setFontFamily] = useState(() =>
-    localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value
+    migrateStoredFont(localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value)
   );
 
   const [fontSize, setFontSize] = useState(() => {
@@ -54,7 +53,7 @@ export const useThemeManagement = () => {
   });
 
   const [localFontFamily, setLocalFontFamily] = useState(() =>
-    localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace'
+    migrateStoredFont(localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace')
   );
 
   const [localFontSize, setLocalFontSize] = useState(() => {
@@ -174,7 +173,7 @@ export const useThemeManagement = () => {
 
   const [explorerFont, setExplorerFontState] = useState(() => {
     try {
-      return localStorage.getItem('uiFont') || localStorage.getItem('explorerFont') || explorerFonts[0];
+      return migrateStoredFont(localStorage.getItem('uiFont') || localStorage.getItem('explorerFont') || explorerFonts[0]);
     } catch {
       return explorerFonts[0];
     }
@@ -199,7 +198,7 @@ export const useThemeManagement = () => {
 
   const [sidebarFont, setSidebarFontState] = useState(() => {
     try {
-      return localStorage.getItem('sidebarFont') || explorerFonts[0];
+      return migrateStoredFont(localStorage.getItem('sidebarFont') || explorerFonts[0]);
     } catch {
       return explorerFonts[0];
     }
@@ -207,7 +206,7 @@ export const useThemeManagement = () => {
 
   const [uiFont, setUiFontState] = useState(() => {
     try {
-      return localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0];
+      return migrateStoredFont(localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0]);
     } catch {
       return explorerFonts[0];
     }
@@ -445,9 +444,6 @@ export const useThemeManagement = () => {
       explorerFont: effectiveUiFont,
       explorerFontSize: uiFontSize || explorerFontSize
     });
-    if (shouldLoadWebFont(effectiveUiFont)) {
-      fontLoader.loadGoogleFont(effectiveUiFont, [400, 500, 600, 700]).catch(() => {});
-    }
   }, [uiFont, uiFontSize, sidebarFont, sidebarFontSize, explorerFont, explorerFontSize]);
 
   useEffect(() => {
@@ -521,7 +517,7 @@ export const useThemeManagement = () => {
   // Función para actualizar temas desde sincronización
   const updateThemesFromSync = () => {
     const updatedStatusBarTheme = localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
-    const updatedLocalFontFamily = localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
+    const updatedLocalFontFamily = migrateStoredFont(localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
     const updatedLocalFontSize = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
     const updatedLocalTerminalTheme = localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark';
     const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
@@ -529,15 +525,15 @@ export const useThemeManagement = () => {
     const updatedLocalDockerTerminalTheme = localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
 
     // UI Fonts
-    const updatedFontFamily = localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value;
+    const updatedFontFamily = migrateStoredFont(localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value);
     const updatedFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
 
-    const updatedUiFont = localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0];
+    const updatedUiFont = migrateStoredFont(localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0]);
     const updatedUiFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-    const updatedExplorerFont = localStorage.getItem('explorerFont') || updatedUiFont;
+    const updatedExplorerFont = migrateStoredFont(localStorage.getItem('explorerFont') || updatedUiFont);
     const updatedExplorerFontSize = localStorage.getItem('explorerFontSize') || updatedUiFontSize;
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
-    const updatedSidebarFont = localStorage.getItem('sidebarFont') || updatedUiFont;
+    const updatedSidebarFont = migrateStoredFont(localStorage.getItem('sidebarFont') || updatedUiFont);
     const updatedSidebarFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || updatedUiFontSize;
     const updatedSidebarFontColor = localStorage.getItem('sidebarFontColor') || '';
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';

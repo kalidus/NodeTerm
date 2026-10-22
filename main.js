@@ -398,9 +398,6 @@ function getDocker() {
 // Módulos con lazy loading (se cargan bajo demanda)
 let _SSH2Promise = null;
 let _SSH2Client = null;
-let _NodeSSH = null;
-let _SftpClient = null;
-let _si = null;
 let _GuacamoleLite = null;
 
 // Getters para módulos con lazy loading
@@ -435,21 +432,6 @@ function getSSH2Promise() {
 function getSSH2Client() {
   if (!_SSH2Client) _SSH2Client = require('ssh2').Client;
   return _SSH2Client;
-}
-
-function getNodeSSH() {
-  if (!_NodeSSH) _NodeSSH = require('node-ssh').NodeSSH;
-  return _NodeSSH;
-}
-
-function getSftpClient() {
-  if (!_SftpClient) _SftpClient = require('ssh2-sftp-client');
-  return _SftpClient;
-}
-
-function getSystemInfo() {
-  if (!_si) _si = require('systeminformation');
-  return _si;
 }
 
 function getGuacamoleLite() {

@@ -5,8 +5,10 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 const packageJson = require('./package.json');
 
-module.exports = {
-  mode: 'development',
+module.exports = (env, argv = {}) => {
+  const isProd = argv.mode === 'production' || process.env.NODE_ENV === 'production';
+  return {
+  mode: isProd ? 'production' : 'development',
   // 🚀 Limpiar consola: solo mostrar compilación y avisos/errores, sin volcar la lista de todos los assets
   stats: 'minimal',
   entry: './src/index.js',
@@ -135,15 +137,7 @@ module.exports = {
         { from: 'CHANGELOG.md', to: 'CHANGELOG.md' },
         { from: 'preload.js', to: 'preload.js' },
         { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' },
-        { from: 'testing/splash-preview.html', to: 'splash-preview.html', noErrorOnMissing: true },
-        {
-          from: 'src/assets/fonts',
-          to: 'assets/fonts',
-          noErrorOnMissing: true,
-          globOptions: {
-            ignore: ['**/.gitkeep']
-          }
-        }
+        { from: 'testing/splash-preview.html', to: 'splash-preview.html', noErrorOnMissing: true }
       ]
     }),
     new webpack.DefinePlugin({
@@ -201,5 +195,6 @@ module.exports = {
     'bufferutil': 'commonjs bufferutil'
   },
   // Desactivar source maps en producción. En dev: eval-cheap-module evita .map en disco → menos I/O en la 1.ª carga
-  devtool: process.env.NODE_ENV === 'production' ? false : 'eval-cheap-module-source-map'
+  devtool: isProd ? false : 'eval-cheap-module-source-map'
+  };
 }; 

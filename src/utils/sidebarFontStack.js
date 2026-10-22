@@ -1,31 +1,24 @@
-import { MONOSPACE_FONT_NAMES } from './fontsList';
+import catalog from './fontCatalog.js';
+import { MONOSPACE_FONT_NAMES, migrateStoredFont } from './fontsList';
 
-/** Families declared in src/styles/fonts.css (npm run download-fonts). */
-const BUNDLED_FONT_FAMILIES = new Set([
-  'Anonymous Pro',
-  'B612 Mono',
-  'Cousine',
-  'Droid Sans Mono',
-  'Fira Code',
-  'Fira Mono',
-  'IBM Plex Mono',
-  'Inconsolata',
-  'JetBrains Mono',
-  'Major Mono Display',
-  'Noto Sans Mono',
-  'Nova Mono',
-  'Overpass Mono',
-  'Oxygen Mono',
-  'PT Mono',
-  'Recursive',
-  'Red Hat Mono',
-  'Roboto Mono',
-  'Share Tech Mono',
-  'Source Code Pro',
-  'Space Mono',
-  'Ubuntu Mono',
-  'Victor Mono'
-]);
+export { migrateStoredFont };
+
+/** Families shipped in src/styles/fonts.css (npm run download-fonts). */
+const BUNDLED_FONT_FAMILIES = new Set(
+  catalog.fonts.filter((font) => font.source === 'bundled').map((font) => font.family)
+);
+
+const PERSISTED_FONT_KEYS = [
+  'uiFont',
+  'sidebarFont',
+  'explorerFont',
+  'homeTabFont',
+  'basicapp_font_family',
+  'basicapp_terminal_font_family',
+  'basicapp_local_terminal_font_family',
+  'nodeterm_linux_font_family',
+  'nodeterm_docker_font_family'
+];
 
 const GENERIC_CSS_FAMILIES = new Set([
   'sans-serif',
@@ -43,33 +36,6 @@ const GENERIC_CSS_FAMILIES = new Set([
   'inherit',
   'initial',
   'unset'
-]);
-
-const SYSTEM_OR_LOCAL_FONTS = new Set([
-  'arial',
-  'helvetica',
-  'helvetica neue',
-  'segoe ui',
-  'sf pro display',
-  'sf mono',
-  'consolas',
-  'courier new',
-  'menlo',
-  'monaco',
-  'lucida console',
-  'cascadia code',
-  'andale mono',
-  'dejavu sans mono',
-  'liberation mono',
-  'hack',
-  'operator mono',
-  'dank mono',
-  'monoid',
-  'firacode nerd font',
-  'ubuntu',
-  'clash grotesk',
-  'geist',
-  'satoshi'
 ]);
 
 const DEFAULT_SANS_STACK = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -128,7 +94,8 @@ export function buildAppFontStack(fontFamily) {
   if (!fontFamily || typeof fontFamily !== 'string') {
     return DEFAULT_SANS_STACK;
   }
-  const trimmed = fontFamily.trim();
+  const migrated = migrateStoredFont(fontFamily);
+  const trimmed = typeof migrated === 'string' ? migrated.trim() : '';
   if (!trimmed) {
     return DEFAULT_SANS_STACK;
   }
@@ -179,18 +146,27 @@ export function isMonospaceUiFont(fontFamily) {
   return MONOSPACE_LOOKUP.has(primary.toLowerCase());
 }
 
-export function shouldLoadWebFont(fontFamily) {
-  if (!fontFamily || typeof fontFamily !== 'string') return false;
-  const primary = normalizeFamilyName(fontFamily.split(',')[0]);
-  if (!primary) return false;
-  if (isBundledSidebarFont(primary)) return false;
-  const lower = primary.toLowerCase();
-  if (GENERIC_CSS_FAMILIES.has(lower)) return false;
-  if (SYSTEM_OR_LOCAL_FONTS.has(lower)) return false;
-  return true;
+/**
+ * Reescribe en localStorage las familias que ya no se ofrecen.
+ */
+export function migratePersistedFonts() {
+  if (typeof localStorage === 'undefined') return;
+  for (const key of PERSISTED_FONT_KEYS) {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(key);
+    } catch {
+      continue;
+    }
+    if (!raw) continue;
+    const next = migrateStoredFont(raw);
+    if (next && next !== raw) {
+      try {
+        localStorage.setItem(key, next);
+      } catch { /* ignore */ }
+    }
+  }
 }
-
-export const shouldLoadWebFontForSidebar = shouldLoadWebFont;
 
 /**
  * Writes unified application typography variables on :root.
