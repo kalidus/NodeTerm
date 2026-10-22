@@ -1,14 +1,15 @@
 /**
  * Resuelve la familia de fuente del terminal.
  * "FiraCode Nerd Font" es systemOnly: si no está instalada se usa Fira Code
- * embebida. "Symbols Nerd Font Mono" va siempre de fallback para iconos PUA
- * (eza/ll, powerline) sin depender de una Nerd completa en el sistema.
+ * embebida. "Symbols Nerd Font" (doble celda, no Mono) va siempre de fallback
+ * para iconos PUA (eza/ll) sin depender de una Nerd completa en el sistema.
  */
 
 const NERD_FONT_RE = /FiraCode\s+Nerd\s+Font/i;
-const NERD_SYMBOLS_FAMILY = 'Symbols Nerd Font Mono';
+const NERD_SYMBOLS_FAMILY = 'Symbols Nerd Font';
 const NERD_SYMBOLS = `"${NERD_SYMBOLS_FAMILY}"`;
 const EMBEDDED_PRIMARY = '"Fira Code", "JetBrains Mono"';
+const SYMBOLS_FAMILY_RE = /^symbols\s+nerd\s+font(\s+mono)?$/i;
 
 let nerdFontAvailableCache = null;
 let fontsCssLoadPromise = null;
@@ -47,7 +48,7 @@ export function resetNerdFontAvailabilityCache() {
 }
 
 /**
- * Carga fonts.css (incluye Symbols Nerd Font Mono) si aún no está en el bundle.
+ * Carga fonts.css (incluye Symbols Nerd Font) si aún no está en el bundle.
  * Idempotente; seguro llamar al montar un terminal.
  * @returns {Promise<void>}
  */
@@ -61,7 +62,7 @@ export function ensureTerminalFontsLoaded() {
 }
 
 /**
- * Inserta "Symbols Nerd Font Mono" antes de monospace / al final de la pila.
+ * Inserta "Symbols Nerd Font" antes de monospace / al final de la pila.
  * @param {string} stack
  * @returns {string}
  */
@@ -74,7 +75,7 @@ export function withNerdSymbols(stack) {
   const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
   const filtered = parts.filter((part) => {
     const name = part.replace(/^["']|["']$/g, '');
-    return name.toLowerCase() !== NERD_SYMBOLS_FAMILY.toLowerCase();
+    return !SYMBOLS_FAMILY_RE.test(name);
   });
 
   const monoIdx = filtered.findIndex((part) => {

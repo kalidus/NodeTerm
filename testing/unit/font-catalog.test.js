@@ -22,19 +22,19 @@ describe('Catálogo de fuentes locales', () => {
     }
   });
 
-  it('Symbols Nerd Font Mono va empaquetada y no sale en los selectores', async () => {
+  it('Symbols Nerd Font va empaquetada y no sale en los selectores', async () => {
     catalog = (await import('../../src/utils/fontCatalog.js')).default;
-    const symbols = catalog.fonts.find((font) => font.family === 'Symbols Nerd Font Mono');
+    const symbols = catalog.fonts.find((font) => font.family === 'Symbols Nerd Font');
     assert.ok(symbols);
     assert.strictEqual(symbols.source, 'bundled');
     assert.strictEqual(symbols.download, 'nerd-symbols');
     assert.strictEqual(symbols.terminalPicker, false);
 
     const { getAvailableFonts, getExplorerFonts, MONOSPACE_FONT_NAMES } = await import('../../src/utils/fontsList.js');
-    assert.strictEqual(MONOSPACE_FONT_NAMES.includes('Symbols Nerd Font Mono'), false);
-    assert.strictEqual(getExplorerFonts().includes('Symbols Nerd Font Mono'), false);
+    assert.strictEqual(MONOSPACE_FONT_NAMES.includes('Symbols Nerd Font'), false);
+    assert.strictEqual(getExplorerFonts().includes('Symbols Nerd Font'), false);
     assert.strictEqual(
-      getAvailableFonts().some((font) => font.label === 'Symbols Nerd Font Mono'),
+      getAvailableFonts().some((font) => font.label === 'Symbols Nerd Font'),
       false
     );
   });
@@ -50,7 +50,7 @@ describe('Catálogo de fuentes locales', () => {
     assert.strictEqual(explorer.includes('Geist Mono'), true);
   });
 
-  it('resolveTerminalFontFamily añade Symbols Nerd Font Mono a la pila', async () => {
+  it('resolveTerminalFontFamily añade Symbols Nerd Font a la pila', async () => {
     const {
       resolveTerminalFontFamily,
       withNerdSymbols
@@ -58,20 +58,24 @@ describe('Catálogo de fuentes locales', () => {
 
     assert.match(
       resolveTerminalFontFamily('"JetBrains Mono", monospace'),
-      /Symbols Nerd Font Mono/
+      /Symbols Nerd Font/
     );
     assert.match(
       resolveTerminalFontFamily('Geist Mono'),
-      /Geist Mono.*"Symbols Nerd Font Mono".*monospace/
+      /Geist Mono.*"Symbols Nerd Font".*monospace/
     );
     assert.match(
       withNerdSymbols('"Fira Code", monospace'),
-      /"Fira Code", "Symbols Nerd Font Mono", monospace/
+      /"Fira Code", "Symbols Nerd Font", monospace/
     );
-    // No duplicar si ya está
+    // No duplicar si ya está; sustituye Mono antigua
+    assert.strictEqual(
+      withNerdSymbols('"JetBrains Mono", "Symbols Nerd Font", monospace'),
+      '"JetBrains Mono", "Symbols Nerd Font", monospace'
+    );
     assert.strictEqual(
       withNerdSymbols('"JetBrains Mono", "Symbols Nerd Font Mono", monospace'),
-      '"JetBrains Mono", "Symbols Nerd Font Mono", monospace'
+      '"JetBrains Mono", "Symbols Nerd Font", monospace'
     );
   });
 
@@ -82,8 +86,9 @@ describe('Catálogo de fuentes locales', () => {
     assert.match(fontsCss, /font-family:\s*['"]Inter['"]/);
     assert.match(fontsCss, /font-family:\s*['"]Geist Mono['"]/);
     assert.match(fontsCss, /font-family:\s*['"]Martian Mono['"]/);
-    assert.match(fontsCss, /font-family:\s*['"]Symbols Nerd Font Mono['"]/);
-    assert.match(fontsCss, /SymbolsNerdFontMono-Regular\.ttf/);
+    assert.match(fontsCss, /font-family:\s*['"]Symbols Nerd Font['"]/);
+    assert.match(fontsCss, /SymbolsNerdFont-Regular\.ttf/);
+    assert.doesNotMatch(fontsCss, /Symbols Nerd Font Mono/);
     assert.doesNotMatch(fontsCss, /U\+0460-052F/);
     assert.doesNotMatch(fontsCss, /fonts\.gstatic\.com/);
     assert.doesNotMatch(fontsCss, /fonts\.googleapis\.com/);
@@ -107,7 +112,7 @@ describe('Catálogo de fuentes locales', () => {
     ));
     assert.deepStrictEqual(missing, []);
     assert.ok(
-      fs.existsSync(path.join(__dirname, '..', '..', 'src', 'assets', 'fonts', 'SymbolsNerdFontMono-Regular.ttf'))
+      fs.existsSync(path.join(__dirname, '..', '..', 'src', 'assets', 'fonts', 'SymbolsNerdFont-Regular.ttf'))
     );
   });
 });

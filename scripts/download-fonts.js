@@ -19,8 +19,10 @@ let fontsToDownload = [];
 
 const NERD_SYMBOLS_ZIP_URL =
   'https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/NerdFontsSymbolsOnly.zip';
-const NERD_SYMBOLS_ZIP_ENTRY = 'SymbolsNerdFontMono-Regular.ttf';
-const NERD_SYMBOLS_LOCAL_FILE = 'SymbolsNerdFontMono-Regular.ttf';
+// Variante no-Mono: iconos de doble celda (como esperan eza/ll); la Mono
+// comprime a 1 celda y deja el glifo pegado al nombre.
+const NERD_SYMBOLS_ZIP_ENTRY = 'SymbolsNerdFont-Regular.ttf';
+const NERD_SYMBOLS_LOCAL_FILE = 'SymbolsNerdFont-Regular.ttf';
 
 const stats = {
   skipped: 0,
@@ -140,7 +142,7 @@ function localizeCss(css) {
 
 function nerdSymbolsFontFaceCss() {
   return `@font-face {
-  font-family: 'Symbols Nerd Font Mono';
+  font-family: 'Symbols Nerd Font';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -286,7 +288,7 @@ async function main() {
     process.exit(1);
   }
 
-  const fullCss = `${cssHeader('Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font Mono).')}${allFontFaces.join('\n\n')}\n`;
+  const fullCss = `${cssHeader('Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font).')}${allFontFaces.join('\n\n')}\n`;
   const coreCss = `${cssHeader('Subconjunto de arranque: Inter, JetBrains Mono y Fira Code, pesos 400 y 700.')}${coreFontFaces.join('\n\n')}\n`;
 
   fs.writeFileSync(fontsCSSFile, fullCss);

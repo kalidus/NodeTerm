@@ -128,6 +128,18 @@ export const useThemeManagement = () => {
     return () => window.removeEventListener('terminal-theme-changed', handleTerminalThemeChanged);
   }, []);
 
+  // Escuchar cambio de tipografía desde menú rápido SSH
+  useEffect(() => {
+    const handleTerminalFontChanged = (e) => {
+      const nextFont = e.detail?.fontFamily;
+      const terminalType = e.detail?.terminalType;
+      if (!nextFont || terminalType !== 'ssh') return;
+      setFontFamily(nextFont);
+    };
+    window.addEventListener('terminal-font-changed', handleTerminalFontChanged);
+    return () => window.removeEventListener('terminal-font-changed', handleTerminalFontChanged);
+  }, []);
+
   // Icon and explorer theme states
   const [iconTheme, setIconTheme] = useState(() => {
     try {

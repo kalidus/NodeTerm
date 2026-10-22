@@ -269,7 +269,7 @@ const catalog = {
       ]
     },
     {
-      "family": "Symbols Nerd Font Mono",
+      "family": "Symbols Nerd Font",
       "role": "mono",
       "source": "bundled",
       "download": "nerd-symbols",

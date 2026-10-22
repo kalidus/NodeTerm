@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -118,7 +118,7 @@ const DockerTerminal = forwardRef(({
         const stableFit = beginMount();
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
-        term.current.loadAddon(new Unicode11Addon());
+        attachUnicode11(term.current, Unicode11Addon);
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
         writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });

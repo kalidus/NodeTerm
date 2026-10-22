@@ -156,14 +156,8 @@ export function createAiCliTerminalOptions({
   };
 }
 
-/** Ancho Unicode 11, el mismo que usan los CLI modernos para emoji, braille y caja. */
-export function attachUnicode11(term, Unicode11Addon) {
-  if (!term || typeof Unicode11Addon !== 'function') return;
-  try {
-    term.loadAddon(new Unicode11Addon());
-    term.unicode.activeVersion = '11';
-  } catch (_) {}
-}
+/** Unicode 11 + iconos Nerd Font a 2 celdas (eza/ll sin solapar el nombre). */
+export { attachNerdAwareUnicode as attachUnicode11 } from './nerdFontCellWidth';
 
 /**
  * Ajusta cols/rows al contenedor.

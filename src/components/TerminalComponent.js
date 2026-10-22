@@ -8,6 +8,7 @@ import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import {
     attachTerminalRenderer,
+    attachUnicode11,
     attachVisibleTerminalRenderer,
     createStableTerminalFit,
     getTerminalScrollback,
@@ -29,6 +30,7 @@ import {
     getDefaultLocalTerminalFontFamily,
     ensureTerminalFontsLoaded
 } from '../utils/resolveTerminalFontFamily';
+import { getAvailableFonts } from '../utils/fontsList';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -75,6 +77,12 @@ const TerminalComponent = forwardRef(({
     const themeMenuRef = useRef(null);
     // En split: tema solo para este panel (no se guarda en localStorage ni afecta al global)
     const [splitThemeOverride, setSplitThemeOverride] = useState(null);
+    // Menú rápido de tipografía SSH
+    const [fontMenuOpen, setFontMenuOpen] = useState(false);
+    const fontMenuRef = useRef(null);
+    // En split: fuente solo para este panel
+    const [splitFontOverride, setSplitFontOverride] = useState(null);
+    const availableFonts = useMemo(() => getAvailableFonts(), []);
 
     // Detectar si es terminal local de forma robusta
     const isLocalTerminal = useMemo(() => {
@@ -111,17 +119,20 @@ const TerminalComponent = forwardRef(({
         return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
     }, []);
 
-    // Cerrar menú de tema al hacer clic fuera
+    // Cerrar menús rápidos al hacer clic fuera
     useEffect(() => {
-        if (!themeMenuOpen) return;
+        if (!themeMenuOpen && !fontMenuOpen) return;
         const handleClickOutside = (e) => {
-            if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
+            if (themeMenuOpen && themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
                 setThemeMenuOpen(false);
+            }
+            if (fontMenuOpen && fontMenuRef.current && !fontMenuRef.current.contains(e.target)) {
+                setFontMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [themeMenuOpen]);
+    }, [themeMenuOpen, fontMenuOpen]);
 
     // Tema efectivo: en split con override local usa ese; si no, el que viene por props
     const effectiveTheme = useMemo(() => {
@@ -130,6 +141,12 @@ const TerminalComponent = forwardRef(({
         }
         return theme || {};
     }, [isSplit, splitThemeOverride, theme]);
+
+    // Fuente efectiva: en split con override local usa esa; si no, la prop global
+    const effectiveFontFamily = useMemo(() => {
+        if (isSplit && splitFontOverride) return splitFontOverride;
+        return fontFamily;
+    }, [isSplit, splitFontOverride, fontFamily]);
 
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -293,11 +310,11 @@ const TerminalComponent = forwardRef(({
         // Importante: NO quitar hibernación aquí. Si se hace antes de registrar
         // ssh:data:*, el stdout se pierde (ni ring ni listener) y el terminal queda en blanco.
 
-        // Symbols Nerd Font Mono (iconos eza/ll) vive en fonts.css diferido
+        // Symbols Nerd Font (iconos eza/ll) vive en fonts.css diferido
         ensureTerminalFontsLoaded();
 
         // Detectar si es terminal local (inicio) de forma robusta
-        let defaultFont = resolveTerminalFontFamily(fontFamily || 'monospace');
+        let defaultFont = resolveTerminalFontFamily(effectiveFontFamily || fontFamily || 'monospace');
         let defaultFontSize = fontSize;
         if (isLocalTerminal) {
             defaultFont = getDefaultLocalTerminalFontFamily();
@@ -354,8 +371,7 @@ const TerminalComponent = forwardRef(({
         stableFitRef.current = stableFit;
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
-        term.current.loadAddon(new Unicode11Addon());
-        term.current.unicode.activeVersion = '11';
+        attachUnicode11(term.current, Unicode11Addon);
 
         // SerializeAddon: snapshot con ANSI/SGR (imprescindible para htop al hibernar pestañas)
         let serializeAddon = null;
@@ -803,8 +819,8 @@ const TerminalComponent = forwardRef(({
 
     // Effect to update font family dynamically
     useEffect(() => {
-        if (term.current && fontFamily) {
-            term.current.options.fontFamily = resolveTerminalFontFamily(fontFamily);
+        if (term.current && effectiveFontFamily) {
+            term.current.options.fontFamily = resolveTerminalFontFamily(effectiveFontFamily);
 
             // CR??TICO: Re-aplicar opciones de nitidez al cambiar de fuente
             // xterm.js a veces resetea o recalcula el renderizado internamente
@@ -818,7 +834,7 @@ const TerminalComponent = forwardRef(({
             stableFitRef.current?.reset();
             fitStable();
         }
-    }, [fontFamily]);
+    }, [effectiveFontFamily]);
 
     // Effect to update font size dynamically
     useEffect(() => {
@@ -1120,7 +1136,11 @@ const TerminalComponent = forwardRef(({
                             return (
                                 <div ref={themeMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); setThemeMenuOpen((v) => !v); }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFontMenuOpen(false);
+                                            setThemeMenuOpen((v) => !v);
+                                        }}
                                         title="Tema de la terminal SSH"
                                         className="quick-action-btn"
                                         style={{
@@ -1204,6 +1224,129 @@ const TerminalComponent = forwardRef(({
                                                             }}
                                                         />
                                                         <span style={{ fontSize: '12px', color: 'var(--ui-dialog-text)', fontWeight: isSelected ? 600 : 400, flex: 1 }}>{themeKey}</span>
+                                                        {isSelected && <i className="pi pi-check" style={{ fontSize: '10px', color: '#4fc3f7' }} />}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Tipografía SSH - menú rápido; en split solo aplica a este panel */}
+                        {(() => {
+                            const SSH_FONT_KEY = 'basicapp_font_family';
+                            const SSH_FONT_KEY_ALIAS = 'basicapp_terminal_font_family';
+                            const currentFontValue = isSplit
+                                ? (splitFontOverride || fontFamily || '')
+                                : (fontFamily || (typeof localStorage !== 'undefined' ? localStorage.getItem(SSH_FONT_KEY) : '') || '');
+                            const applyFont = (fontValue) => {
+                                try {
+                                    setFontMenuOpen(false);
+                                    if (isSplit) {
+                                        setSplitFontOverride(fontValue);
+                                    } else {
+                                        localStorage.setItem(SSH_FONT_KEY, fontValue);
+                                        localStorage.setItem(SSH_FONT_KEY_ALIAS, fontValue);
+                                        window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+                                            detail: { fontFamily: fontValue, terminalType: 'ssh' }
+                                        }));
+                                    }
+                                } catch (err) { /* noop */ }
+                            };
+                            return (
+                                <div ref={fontMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setThemeMenuOpen(false);
+                                            setFontMenuOpen((v) => !v);
+                                        }}
+                                        title="Tipografía de la terminal SSH"
+                                        className="quick-action-btn"
+                                        style={{
+                                            background: fontMenuOpen ? 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))' : 'transparent',
+                                            border: 'none',
+                                            color: 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))',
+                                            cursor: 'pointer',
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            letterSpacing: '-0.02em',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '3px 4px',
+                                            borderRadius: '4px',
+                                            transition: 'all 0.2s',
+                                            lineHeight: 1,
+                                            minWidth: '18px'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            if (!fontMenuOpen) e.currentTarget.style.background = 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))';
+                                            e.currentTarget.style.color = 'var(--primary-color, #fff)';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            if (!fontMenuOpen) e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = 'var(--ui-dialog-text, rgba(255, 255, 255, 0.8))';
+                                        }}
+                                    >
+                                        Aa
+                                    </button>
+                                    {fontMenuOpen && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                marginTop: '4px',
+                                                minWidth: '200px',
+                                                maxHeight: '280px',
+                                                overflowY: 'auto',
+                                                background: 'var(--ui-dialog-bg, rgba(20, 20, 22, 0.98))',
+                                                border: '1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.15))',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                                padding: '6px 0',
+                                                zIndex: 9999
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {availableFonts.map((fontOpt) => {
+                                                const isSelected = fontOpt.value === currentFontValue;
+                                                return (
+                                                    <div
+                                                        key={fontOpt.value}
+                                                        onClick={() => applyFont(fontOpt.value)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px',
+                                                            padding: '6px 10px',
+                                                            cursor: 'pointer',
+                                                            borderRadius: '4px',
+                                                            margin: '0 4px',
+                                                            background: isSelected ? 'rgba(79, 195, 247, 0.15)' : 'transparent',
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                        }}
+                                                    >
+                                                        <span
+                                                            style={{
+                                                                fontSize: '12px',
+                                                                color: 'var(--ui-dialog-text)',
+                                                                fontWeight: isSelected ? 600 : 400,
+                                                                flex: 1,
+                                                                fontFamily: fontOpt.value
+                                                            }}
+                                                        >
+                                                            {fontOpt.label}
+                                                        </span>
                                                         {isSelected && <i className="pi pi-check" style={{ fontSize: '10px', color: '#4fc3f7' }} />}
                                                     </div>
                                                 );

@@ -1,5 +1,5 @@
 /**
- * Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font Mono).
+ * Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font).
  * Generado automáticamente - NO EDITAR MANUALMENTE
  * Ejecutar: npm run download-fonts
  */
@@ -1192,11 +1192,11 @@
 }
 
 @font-face {
-  font-family: 'Symbols Nerd Font Mono';
+  font-family: 'Symbols Nerd Font';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../assets/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
+  src: url('../assets/fonts/SymbolsNerdFont-Regular.ttf') format('truetype');
 }
 
 @font-face {
