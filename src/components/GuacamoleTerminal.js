@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import AppDialog from './ui/AppDialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
@@ -2401,42 +2401,41 @@ const GuacamoleTerminal = forwardRef(({
             )}
 
             {/* Dialogo para inyectar texto al portapapeles RDP remoto */}
-            <Dialog
-                header="Enviar Texto a la Sesión RDP"
+            <AppDialog
+                headerTitle="Enviar Texto a la Sesión RDP"
+                headerIcon="pi pi-clipboard"
                 visible={showClipboardDialog}
+                size="md"
                 style={{ width: '420px' }}
                 onHide={() => setShowClipboardDialog(false)}
-                footer={
-                    <div className="flex justify-content-end gap-2">
-                        <Button label="Cancelar" icon="pi pi-times" className="p-button-text p-button-sm" onClick={() => setShowClipboardDialog(false)} />
-                        <Button label="Enviar" icon="pi pi-check" className="p-button-primary p-button-sm" onClick={() => {
-                            if (guacamoleClientRef.current && clipboardText) {
-                                try {
-                                    const stream = guacamoleClientRef.current.createClipboardStream('text/plain');
-                                    const writer = new Guacamole.StringWriter(stream);
-                                    writer.sendText(clipboardText);
-                                    writer.sendEnd();
-                                    setShowClipboardDialog(false);
-                                    setClipboardText('');
-                                } catch (e) {
-                                    console.error('Error enviando portapapeles:', e);
-                                }
-                            }
-                        }} />
-                    </div>
-                }
+                confirmLabel="Enviar"
+                confirmIcon="pi pi-check"
+                onConfirm={() => {
+                    if (guacamoleClientRef.current && clipboardText) {
+                        try {
+                            const stream = guacamoleClientRef.current.createClipboardStream('text/plain');
+                            const writer = new Guacamole.StringWriter(stream);
+                            writer.sendText(clipboardText);
+                            writer.sendEnd();
+                            setShowClipboardDialog(false);
+                            setClipboardText('');
+                        } catch (e) {
+                            console.error('Error enviando portapapeles:', e);
+                        }
+                    }
+                }}
             >
-                <div className="flex flex-column gap-2 pt-2">
+                <div className="flex flex-column gap-2">
                     <label className="text-xs text-color-secondary">Escribe o pega el texto que deseas enviar a la máquina remota:</label>
                     <InputTextarea
                         value={clipboardText}
                         onChange={(e) => setClipboardText(e.target.value)}
                         rows={4}
                         autoFocus
-                        style={{ width: '100%', resize: 'none', backgroundColor: '#1e1e1e', color: '#fff', borderColor: '#444' }}
+                        style={{ width: '100%', resize: 'none' }}
                     />
                 </div>
-            </Dialog>
+            </AppDialog>
         </div>
     );
 });

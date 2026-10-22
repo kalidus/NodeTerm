@@ -50,7 +50,7 @@ export const ConnectionHistoryDialogs = ({
 		<>
 			{/* Filter Configuration Dialog */}
 			{showFilterConfig && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
+				<div className="create-group-overlay app-dialog-portal-mask" onClick={() => setShowFilterConfig(false)}>
 					<div className="app-dialog create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
 							<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
@@ -117,7 +117,7 @@ export const ConnectionHistoryDialogs = ({
 
 			{/* Create Group Dialog */}
 			{showCreateGroupDialog && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
+				<div className="create-group-overlay app-dialog-portal-mask" onClick={() => setShowCreateGroupDialog(false)}>
 					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
 							<h3>Crear Grupo</h3>
@@ -167,7 +167,7 @@ export const ConnectionHistoryDialogs = ({
 
 			{/* Edit/Delete Group Menu */}
 			{editingGroup && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
+				<div className="create-group-overlay app-dialog-portal-mask" onClick={() => setEditingGroup(null)}>
 					<div className="app-dialog create-group-dialog small" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
 							<h3>Opciones de "{editingGroup.name}"</h3>
@@ -193,7 +193,7 @@ export const ConnectionHistoryDialogs = ({
 
 			{/* Group Selector Dialog */}
 			{showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
+				<div className="create-group-overlay app-dialog-portal-mask" onClick={() => setShowGroupSelector(false)}>
 					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
 							<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
@@ -267,7 +267,7 @@ export const ConnectionHistoryDialogs = ({
 
 			{/* Edit Favorite Groups Dialog */}
 			{showEditFavGroups && editingFavorite && ReactDOM.createPortal(
-				<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
+				<div className="create-group-overlay app-dialog-portal-mask" onClick={() => setShowEditFavGroups(false)}>
 					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 						<div className="dialog-header">
 							<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>

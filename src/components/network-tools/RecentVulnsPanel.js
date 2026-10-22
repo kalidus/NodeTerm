@@ -241,22 +241,6 @@ const RecentVulnsPanel = () => {
           font-weight: 700 !important;
           border: 1px solid rgba(6, 182, 212, 0.4) !important;
         }
-        .cyberpunk-dialog .p-dialog-header {
-          background: rgba(15, 20, 30, 0.98) !important;
-          border-bottom: 1px solid rgba(6, 182, 212, 0.25) !important;
-          color: #fff !important;
-        }
-        .cyberpunk-dialog .p-dialog-content {
-          background: rgba(10, 12, 18, 0.98) !important;
-          color: #cbd5e1 !important;
-        }
-        .cyberpunk-dialog .p-dialog-header .p-dialog-header-icon {
-          color: #94a3b8 !important;
-        }
-        .cyberpunk-dialog .p-dialog-header .p-dialog-header-icon:hover {
-          color: #fff !important;
-          background: rgba(255,255,255,0.05) !important;
-        }
         /* Custom scrollbar para la tabla scrollable */
         .recent-vulns-table .p-datatable-wrapper::-webkit-scrollbar {
           width: 6px;
@@ -556,7 +540,6 @@ const RecentVulnsPanel = () => {
         cancelLabel={false}
         draggable={false}
         resizable={false}
-        className="cyberpunk-dialog"
       >
         {selectedVuln && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

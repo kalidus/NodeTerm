@@ -2455,8 +2455,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--ui-dialog-shadow, #000) 55%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2465,11 +2464,11 @@
 }
 
 .create-group-dialog {
-  background: var(--ui-dialog-bg, rgba(25, 30, 40, 0.98));
-  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.1));
+  background: var(--ui-dialog-bg);
+  border: 1px solid var(--ui-dialog-border);
   border-radius: var(--ui-radius-lg, 16px);
-  color: var(--ui-dialog-text, #fff);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  color: var(--ui-dialog-text);
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow));
   width: 100%;
   max-width: 400px;
   overflow: hidden;
@@ -2497,7 +2496,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--ui-dialog-border);
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
 }
 
 .dialog-header h3 {
@@ -2512,14 +2513,16 @@
   border: none;
   padding: 8px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ui-dialog-text);
+  opacity: 0.7;
   border-radius: 6px;
   transition: all 0.2s;
 }
 
 .dialog-close:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--ui-context-hover, rgba(127, 127, 127, 0.15));
+  color: var(--ui-dialog-text);
+  opacity: 1;
 }
 
 .dialog-body {
@@ -2590,16 +2593,16 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--ui-dialog-border);
+  background: var(--ui-dialog-bg);
 }
 
 .btn-cancel {
   padding: 10px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--ui-dialog-border);
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--ui-dialog-text);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -2607,8 +2610,8 @@
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--ui-context-hover, rgba(127, 127, 127, 0.15));
+  color: var(--ui-dialog-text);
 }
 
 .btn-create {
@@ -2618,8 +2621,8 @@
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #4fc3f7, #2196F3);
-  color: #fff;
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;

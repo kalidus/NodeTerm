@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader, AppDialogFooter } from './ui/AppDialog';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { ProgressBar } from 'primereact/progressbar';
@@ -689,16 +690,6 @@ const ImportDialog = ({
     onHide();
   };
 
-  const headerTemplate = (options) => {
-    return (
-      <div className="flex align-items-center">
-        <i className="pi pi-upload mr-2" style={{ fontSize: '1.2rem' }}></i>
-        <span className="font-bold">Importar sesiones</span>
-      </div>
-    );
-  };
-
-
   return (
     <>
       <Toast ref={toast} />
@@ -707,20 +698,16 @@ const ImportDialog = ({
         style={{ width: '900px', maxWidth: '95vw' }}
         contentStyle={{ padding: '0' }}
         className="app-dialog import-dialog"
-        header={headerTemplate()}
+        header={<AppDialogHeader icon="pi pi-upload" title="Importar sesiones" />}
         modal
         onHide={handleClose}
         closable={!importing}
         footer={
-          <div className="flex justify-content-end">
-            <Button
-              label="Cerrar"
-              icon="pi pi-times"
-              onClick={handleClose}
-              className="p-button-text"
-              disabled={importing}
-            />
-          </div>
+          <AppDialogFooter
+            cancelLabel="Cerrar"
+            onCancel={handleClose}
+            cancelDisabled={importing}
+          />
         }
       >
         <div style={{ padding: '0 16px 16px 16px' }}>

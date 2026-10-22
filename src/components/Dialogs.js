@@ -16,7 +16,7 @@ import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from '
 import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import AppDialog from './ui/AppDialog';
+import AppDialog, { AppDialogHeader } from './ui/AppDialog';
 import {
   EnhancedRDPForm,
   RdpTerminalDialogHeader,
@@ -99,14 +99,11 @@ export function SSHDialog({
   const { t: tCommon } = useTranslation('common');
   
   return (
-    <Dialog 
-      header={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <i className="pi pi-terminal" style={{ fontSize: '1.25rem', color: 'var(--ui-button-primary)' }}></i>
-          <span>{isEdit ? t('ssh.title.edit') : t('ssh.title.new')}</span>
-        </div>
-      }
-      visible={visible} 
+    <AppDialog
+      headerIcon="pi pi-terminal"
+      headerTitle={isEdit ? t('ssh.title.edit') : t('ssh.title.new')}
+      visible={visible}
+      size="lg"
       style={{
         width: '600px',
         maxWidth: '95vw',
@@ -114,17 +111,19 @@ export function SSHDialog({
         height: 'auto',
         maxHeight: '90vh',
         minHeight: '420px'
-      }} 
-      modal 
+      }}
       resizable
       onHide={onHide}
       className="ssh-connection-dialog"
       contentStyle={{
-        background: 'var(--ui-dialog-bg)',
-        color: 'var(--ui-dialog-text)',
-        padding: '0',
+        padding: 0,
         overflow: 'auto'
       }}
+      cancelLabel={tCommon('buttons.cancel')}
+      confirmLabel={isEdit ? tCommon('buttons.save') : tCommon('buttons.create')}
+      confirmIcon="pi pi-check"
+      onConfirm={onConfirm}
+      loading={loading}
     >
       <div className="general-settings-container" style={{ padding: '2rem' }}>
         {/* Sección: Conexión */}
@@ -262,26 +261,8 @@ export function SSHDialog({
           </div>
         </div>
 
-        {/* Botones de acción */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)' }}>
-          <Button 
-            label={tCommon('buttons.cancel')} 
-            icon="pi pi-times" 
-            className="p-button-text" 
-            onClick={onHide} 
-            style={{ minWidth: '120px' }} 
-          />
-          <Button 
-            label={isEdit ? tCommon('buttons.save') : tCommon('buttons.create')} 
-            icon="pi pi-check" 
-            className="p-button-primary" 
-            onClick={onConfirm} 
-            style={{ minWidth: '120px' }} 
-            loading={loading} 
-          />
-        </div>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -704,20 +685,19 @@ export function EditSSHConnectionDialog({
   }, [setSSHIcon]);
 
   const headerTemplate = (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
-        <button 
+    <AppDialogHeader
+      icon={(
+        <button
           type="button"
-          onClick={() => setShowIconSelector(true)} 
-          className="terminal-header-icon-btn"
+          onClick={() => setShowIconSelector(true)}
+          className="app-dialog-header-icon-btn"
           title="Cambiar Icono"
         >
           {renderSSHDialogHeaderIconContent(currentIconPreset, themeSSHIcon)}
         </button>
-        <span className="terminal-header-title">{t('ssh.title.edit').toUpperCase()}</span>
-      </div>
-      <div className="terminal-header-accent"></div>
-    </div>
+      )}
+      title={t('ssh.title.edit').toUpperCase()}
+    />
   );
 
   return (
@@ -2396,10 +2376,10 @@ export function EnhancedSSHForm({
               <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
             </button>
             <div className="flex gap-2">
-              <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+              <button type="button" className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide}>CANCELAR</button>
               <button
                 type="button"
-                className="terminal-btn-outline terminal-btn-submit"
+                className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
                 onClick={handleSubmit}
                 disabled={!isFormValid() || sshLoading}
               >
@@ -2681,10 +2661,10 @@ export function EnhancedSSHForm({
               <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
             </button>
             <div className="flex gap-2">
-              <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+              <button type="button" className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide}>CANCELAR</button>
               <button
                 type="button"
-                className="terminal-btn-outline terminal-btn-submit"
+                className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
                 onClick={handleSubmit}
                 disabled={!isFormValid() || sshLoading}
               >
@@ -2801,9 +2781,9 @@ export function EnhancedSSHForm({
             <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
           </button>
           <div className="flex gap-2">
-            <button className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+            <button className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide}>CANCELAR</button>
             <button
-              className="terminal-btn-outline terminal-btn-submit"
+              className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
               onClick={handleSubmit}
               disabled={!isFormValid() || sshLoading}
             >
@@ -2902,20 +2882,19 @@ export function NewSSHConnectionDialog({
   }, [setSSHIcon]);
 
   const headerTemplate = (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
+    <AppDialogHeader
+      icon={(
         <button
           type="button"
           onClick={() => setShowIconSelector(true)}
-          className="terminal-header-icon-btn"
+          className="app-dialog-header-icon-btn"
           title="Cambiar Icono"
         >
           {renderSSHDialogHeaderIconContent(currentIconPreset, themeSSHIcon)}
         </button>
-        <span className="terminal-header-title">{t('ssh.title.new').toUpperCase()}</span>
-      </div>
-      <div className="terminal-header-accent"></div>
-    </div>
+      )}
+      title={t('ssh.title.new').toUpperCase()}
+    />
   );
 
   return (
@@ -3478,15 +3457,7 @@ export function ProtocolSelectionDialog({
   const headerTitle = String(t('protocolSelection.headerTitle') || t('protocolSelection.title')).toUpperCase();
 
   const headerTemplate = (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
-        <div className="terminal-header-icon-mini">
-          <i className="pi pi-plus" aria-hidden="true" />
-        </div>
-        <span className="terminal-header-title">{headerTitle}</span>
-      </div>
-      <div className="terminal-header-accent" aria-hidden="true" />
-    </div>
+    <AppDialogHeader icon="pi pi-plus" title={headerTitle} />
   );
 
   return (

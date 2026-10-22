@@ -7,9 +7,8 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
+import AppDialog from './AppDialog';
 
 let hostRoot = null;
 let hostEl = null;
@@ -41,24 +40,20 @@ function PromptDialog({ header, message, defaultValue, placeholder, acceptLabel,
   const accept = () => onDone(value);
   const reject = () => onDone(null);
 
-  const footer = (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-      <Button type="button" label={rejectLabel} className="p-button-text" onClick={reject} />
-      <Button type="button" label={acceptLabel} onClick={accept} />
-    </div>
-  );
-
   return (
-    <Dialog
+    <AppDialog
       visible
-      modal
-      header={header}
-      footer={footer}
+      headerTitle={header}
+      headerIcon="pi pi-pencil"
       onHide={reject}
+      size="sm"
       className="app-confirm-dialog"
       style={{ width: 'min(420px, 92vw)' }}
       dismissableMask
-      closable
+      cancelLabel={rejectLabel}
+      confirmLabel={acceptLabel}
+      confirmIcon="pi pi-check"
+      onConfirm={accept}
     >
       {message ? <p style={{ margin: '0 0 10px', opacity: 0.85, fontSize: '0.9rem' }}>{message}</p> : null}
       <InputText
@@ -78,7 +73,7 @@ function PromptDialog({ header, message, defaultValue, placeholder, acceptLabel,
         autoFocus
         style={{ width: '100%' }}
       />
-    </Dialog>
+    </AppDialog>
   );
 }
 

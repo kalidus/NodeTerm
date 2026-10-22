@@ -9,7 +9,6 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tooltip } from 'primereact/tooltip';
 import { Tag } from 'primereact/tag';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { cvssV4Service } from '../../services/cvss/CvssV4Service';
 import { cvssV31Service } from '../../services/cvss/CvssV31Service';
 import { cvssStore } from '../../stores/cvssStore';
@@ -1233,7 +1232,6 @@ const CvssCalculatorPanel = () => {
           padding: 0.7rem 0.75rem 0.6rem !important;
         }
       `}</style>
-      <ConfirmDialog className="app-confirm-dialog" />
 
       {feedback && (
         <Message severity={feedback.severity} text={feedback.text} style={{ borderRadius: '8px' }} />

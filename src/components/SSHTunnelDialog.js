@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader, AppDialogFooter } from './ui/AppDialog';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { RadioButton } from 'primereact/radiobutton';
@@ -489,29 +490,43 @@ export function SSHTunnelDialog({
     sshPort: sshPort || 22
   };
 
-  const headerTemplate = (
-    <div className="protocol-dialog-header-custom">
-      <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #89b4fa 0%, #74c7ec 100%)', boxShadow: '0 2px 8px rgba(137, 180, 250, 0.3)' }}>
-        <i className="pi pi-share-alt"></i>
-      </div>
-      <span className="protocol-dialog-header-title">
-        {mode === 'edit' 
-          ? (t('sshTunnel.title.edit') || 'Editar Túnel SSH')
-          : (t('sshTunnel.title.new') || 'Nuevo Túnel SSH')
-        }
-      </span>
-    </div>
-  );
-
   return (
     <Dialog
-      header={headerTemplate}
+      header={
+        <AppDialogHeader
+          icon="pi pi-share-alt"
+          title={mode === 'edit'
+            ? (t('sshTunnel.title.edit') || 'Editar Túnel SSH')
+            : (t('sshTunnel.title.new') || 'Nuevo Túnel SSH')}
+        />
+      }
       visible={visible}
       onHide={onHide}
       style={{ width: '90vw', maxWidth: '900px' }}
       modal
-      className="app-dialog ssh-tunnel-dialog protocol-selection-dialog-new"
+      className="app-dialog ssh-tunnel-dialog"
       contentStyle={{ padding: '0', overflow: 'hidden' }}
+      footer={
+        <AppDialogFooter
+          extra={onGoBack ? (
+            <Button
+              label={tCommon('buttons.back') || 'Volver'}
+              icon="pi pi-arrow-left"
+              className="p-button-text"
+              onClick={onGoBack}
+            />
+          ) : null}
+          cancelLabel={tCommon('buttons.cancel') || 'Cancelar'}
+          onCancel={onHide}
+          confirmLabel={mode === 'edit'
+            ? (tCommon('buttons.save') || 'Guardar')
+            : (tCommon('buttons.create') || 'Crear')}
+          confirmIcon={mode === 'edit' ? 'pi pi-check' : 'pi pi-plus'}
+          onConfirm={handleConfirm}
+          loading={loading}
+          confirmDisabled={!isValid()}
+        />
+      }
     >
       <div className="tunnel-form-content" style={{ padding: '1rem', maxHeight: '70vh', overflowY: 'auto' }}>
         {/* Selector de tipo de túnel */}
@@ -844,38 +859,6 @@ export function SSHTunnelDialog({
           </div>
         </div>
 
-        {/* Botones */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--ui-content-border)' }}>
-          <div>
-            {onGoBack && (
-              <Button
-                label={tCommon('buttons.back') || 'Volver'}
-                icon="pi pi-arrow-left"
-                className="p-button-text"
-                onClick={onGoBack}
-              />
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button
-              label={tCommon('buttons.cancel') || 'Cancelar'}
-              icon="pi pi-times"
-              className="p-button-text"
-              onClick={onHide}
-            />
-            <Button
-              label={mode === 'edit' 
-                ? (tCommon('buttons.save') || 'Guardar')
-                : (tCommon('buttons.create') || 'Crear')
-              }
-              icon={mode === 'edit' ? 'pi pi-check' : 'pi pi-plus'}
-              className="p-button-primary"
-              onClick={handleConfirm}
-              disabled={!isValid() || loading}
-              loading={loading}
-            />
-          </div>
-        </div>
       </div>
     </Dialog>
   );

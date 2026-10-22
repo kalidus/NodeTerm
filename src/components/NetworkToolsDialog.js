@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader } from './ui/AppDialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { ProgressSpinner } from 'primereact/progressspinner';
@@ -393,32 +394,15 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       {styleBlock}
       <Dialog
         header={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.3) 0%, rgba(33, 150, 243, 0.1) 100%)',
-                border: '1px solid rgba(33, 150, 243, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <i className="pi pi-globe" style={{ color: '#2196f3', fontSize: '0.9rem' }} />
-            </div>
-            <div>
-              <span style={{ fontSize: '1rem', fontWeight: '700' }}>Herramientas de Red y Seguridad</span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)', marginLeft: '0.75rem', fontWeight: 'normal' }}>
-                Diagnóstico, escaneo y análisis
-              </span>
-            </div>
-          </div>
+          <AppDialogHeader
+            icon="pi pi-globe"
+            title="Herramientas de Red y Seguridad"
+            subtitle="Diagnóstico, escaneo y análisis"
+          />
         }
         visible={visible}
         onHide={onHide}
-        className="network-tools-dialog"
+        className="app-dialog network-tools-dialog"
         resizable
         maximizable
         modal

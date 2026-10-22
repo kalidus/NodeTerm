@@ -569,7 +569,7 @@
 
 /* Estilos para TODOS los diálogos */
 .p-dialog-mask {
-  background: rgba(0, 0, 0, 0.4) !important;
+  background: color-mix(in srgb, var(--ui-dialog-shadow, #000) 55%, transparent) !important;
 }
 
 .p-dialog {
@@ -585,10 +585,9 @@
 }
 
 .settings-dialog .p-dialog-header {
-  background: rgba(0, 0, 0, 0.3) !important;
+  background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   border-bottom: 1px solid var(--ui-dialog-border) !important;
-  padding: 0 !important;
 }
 
 /* Header personalizado del diálogo de configuración */
@@ -607,16 +606,16 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 6px;
-  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-  color: white;
+  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent);
+  color: var(--ui-button-primary);
   font-size: 0.9rem;
-  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.3);
+  box-shadow: none;
   padding: 0;
 }
 
 .settings-dialog-header-icon i {
   font-size: 1rem;
-  color: white;
+  color: var(--ui-button-primary);
 }
 
 .settings-dialog-header-title {
@@ -905,10 +904,10 @@
   width: 2rem;
   height: 2rem;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-  color: white;
+  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent);
+  color: var(--ui-button-primary);
   font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -1980,11 +1979,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%) !important;
+  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
   border-radius: 12px;
-  color: white !important;
+  color: var(--ui-button-primary) !important;
   font-size: 1.4rem;
-  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   animation: iconPulse 3s ease-in-out infinite;
@@ -2006,7 +2005,7 @@
 
 .protocol-dialog-header-icon:hover {
   transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.5);
+  box-shadow: none;
 }
 
 .protocol-dialog-header-icon:hover::before {

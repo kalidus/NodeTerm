@@ -195,6 +195,76 @@
   margin-top: var(--ui-space-3);
 }
 
+.app-dialog-header-icon-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.app-dialog-portal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--ui-dialog-shadow, #000) 55%, transparent);
+}
+
+.app-dialog-portal {
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow-2, 0 8px 28px var(--ui-dialog-shadow));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-width: 95vw;
+}
+
+.app-dialog-portal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border-bottom: 1px solid var(--ui-dialog-border);
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+}
+
+.app-dialog-portal-header .app-dialog-header {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-dialog-portal-close {
+  margin-left: auto;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--ui-radius-md);
+  background: transparent;
+  color: var(--ui-dialog-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-dialog-portal-close:hover {
+  background: var(--ui-context-hover, rgba(127, 127, 127, 0.15));
+}
+
 /* ===== AppConfirm ===== */
 .p-confirm-dialog.app-confirm-dialog,
 .p-dialog.app-confirm-dialog {

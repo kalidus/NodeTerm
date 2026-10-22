@@ -11,6 +11,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader } from './ui/AppDialog';
 import { Button } from 'primereact/button';
 import { Steps } from 'primereact/steps';
 import { Toast } from 'primereact/toast';
@@ -2508,8 +2509,8 @@ const ImportWizardDialog = ({
 
     // Footer del diálogo
     const renderFooter = () => (
-        <div className="import-wizard-footer">
-            <div className="import-wizard-footer-left">
+        <div className="app-dialog-footer">
+            <div className="app-dialog-footer-extra">
                 {currentStep > 0 && currentStep < 3 && (
                     <Button
                         label="Atrás"
@@ -2520,11 +2521,11 @@ const ImportWizardDialog = ({
                     />
                 )}
             </div>
-            <div className="import-wizard-footer-right">
+            <div className="app-dialog-footer-actions">
                 <Button
                     label="Cancelar"
                     icon="pi pi-times"
-                    className="p-button-text"
+                    className="p-button-text app-dialog-btn-cancel"
                     onClick={handleClose}
                     disabled={importing}
                 />
@@ -2533,14 +2534,16 @@ const ImportWizardDialog = ({
                         label="Siguiente"
                         icon="pi pi-arrow-right"
                         iconPos="right"
+                        className="p-button-primary app-dialog-btn-confirm"
                         onClick={handleNext}
                         disabled={!canGoNext()}
                     />
                 )}
                 {currentStep === 2 && (
                     <Button
-                        label={selectedSource === 'export_nodeterm' ? "Exportar" : "Importar"}
+                        label={selectedSource === 'export_nodeterm' ? 'Exportar' : 'Importar'}
                         icon="pi pi-download"
+                        className="p-button-primary app-dialog-btn-confirm"
                         onClick={handleImport}
                         disabled={selectedSource === 'export_nodeterm' ? !canGoNext() : (!previewData || previewError)}
                     />
@@ -2549,6 +2552,7 @@ const ImportWizardDialog = ({
                     <Button
                         label="Cerrar"
                         icon="pi pi-check"
+                        className="p-button-primary app-dialog-btn-confirm"
                         onClick={handleClose}
                     />
                 )}
@@ -2585,12 +2589,7 @@ const ImportWizardDialog = ({
             <Dialog
                 visible={visible}
                 onHide={handleClose}
-                header={
-                    <div className="import-wizard-header">
-                        <i className="pi pi-download" />
-                        <span>Importar a NodeTerm</span>
-                    </div>
-                }
+                header={<AppDialogHeader icon="pi pi-download" title="Importar a NodeTerm" />}
                 footer={renderFooter()}
                 style={{ width: '700px', maxWidth: '95vw' }}
                 modal

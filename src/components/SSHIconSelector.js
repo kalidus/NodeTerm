@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { AppDialogHeader } from './ui/AppDialog';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -925,39 +926,17 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
   if (!visible) return null;
 
   return createPortal(
-    <div
-      onClick={onHide}
-      style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        zIndex: 10000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}
-    >
+    <div className="app-dialog-portal-mask" onClick={onHide}>
       <div
+        className="app-dialog app-dialog-portal"
         onClick={e => e.stopPropagation()}
-        style={{
-          backgroundColor: themeColors.dialogBg,
-          color: themeColors.dialogText,
-          borderRadius: '16px',
-          border: `1px solid ${themeColors.border}`,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-          width: '880px',
-          maxWidth: '95vw',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          zIndex: 10001,
-          pointerEvents: 'auto'
-        }}
+        style={{ width: '880px', maxHeight: '90vh', overflowY: 'auto' }}
       >
-        {/* Header */}
-        <div style={{ padding: '1.5rem', borderBottom: `1px solid ${themeColors.border}`, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <i className="pi pi-server" style={{ fontSize: '1.5rem', color: themeColors.buttonPrimary }}/>
-          <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{t('dialogs.sshIconSelector.title', 'Selecciona el icono de la conexión SSH')}</span>
-          <button
-            onClick={onHide}
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: themeColors.dialogText, fontSize: '1.5rem', cursor: 'pointer', padding: 0, width: '32px', height: '32px' }}
-          >✕</button>
+        <div className="app-dialog-portal-header">
+          <AppDialogHeader icon="pi pi-server" title={t('dialogs.sshIconSelector.title', 'Selecciona el icono de la conexión SSH')} />
+          <button type="button" className="app-dialog-portal-close" onClick={onHide} aria-label="Cerrar">
+            <i className="pi pi-times" />
+          </button>
         </div>
 
         {/* Pestañas de categorías */}

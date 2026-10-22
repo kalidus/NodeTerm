@@ -266,9 +266,27 @@ body.layout-mux .app-dialog-header-title::before {
   font-family: var(--mux-mono);
 }
 
-body.layout-mux .p-dialog.app-dialog .p-dialog-footer {
+body.layout-mux .p-dialog.app-dialog .p-dialog-footer,
+body.layout-mux .app-dialog-portal .app-dialog-footer,
+body.layout-mux .create-group-dialog .dialog-footer {
   font-family: var(--mux-mono);
   border-top: 1px solid var(--mux-pane-border) !important;
+}
+
+body.layout-mux .app-dialog-portal,
+body.layout-mux .p-confirm-dialog.app-confirm-dialog,
+body.layout-mux .create-group-dialog {
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid var(--mux-pane-border) !important;
+  box-shadow: var(--ui-shadow-2, 0 16px 48px rgba(0, 0, 0, 0.38)) !important;
+}
+
+body.layout-mux .app-dialog-portal-header,
+body.layout-mux .create-group-dialog .dialog-header {
+  min-height: var(--mux-header-h);
+  font-family: var(--mux-mono);
+  background: color-mix(in srgb, var(--ui-button-primary, #7dcea0) 8%, var(--ui-dialog-bg)) !important;
+  border-bottom: 1px solid var(--mux-pane-border) !important;
 }
 
 body.layout-mux .app-surface,

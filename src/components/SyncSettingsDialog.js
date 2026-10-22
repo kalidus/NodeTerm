@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader, AppDialogFooter } from './ui/AppDialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
@@ -306,12 +307,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
 
   return (
     <Dialog
-      header={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="pi pi-cloud" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }}></i>
-          <span>Sincronización en la Nube</span>
-        </div>
-      }
+      header={<AppDialogHeader icon="pi pi-cloud" title="Sincronización en la Nube" />}
       visible={visible}
       className="app-dialog sync-settings-dialog"
       style={{
@@ -325,32 +321,10 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
         color: 'var(--ui-dialog-text)',
         padding: '1.25rem'
       }}
-      headerStyle={{
-        background: 'var(--ui-dialog-bg)',
-        color: 'var(--ui-dialog-text)',
-        borderBottom: '1px solid var(--ui-dialog-border)',
-        padding: '1rem 1.25rem'
-      }}
       onHide={onHide}
       modal
       maximizable
-      footer={
-        <div style={{
-          background: 'var(--ui-dialog-bg)',
-          color: 'var(--ui-dialog-text)',
-          borderTop: '1px solid var(--ui-dialog-border)',
-          padding: '0.75rem 1.25rem',
-          display: 'flex',
-          justifyContent: 'flex-end'
-        }}>
-          <Button
-            label="Cerrar"
-            icon="pi pi-times"
-            onClick={onHide}
-            className="p-button-text"
-          />
-        </div>
-      }
+      footer={<AppDialogFooter cancelLabel="Cerrar" onCancel={onHide} />}
     >
       <div>
         {/* Mensaje de estado */}

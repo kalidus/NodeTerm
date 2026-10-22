@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import AppDialog from './ui/AppDialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressBar } from 'primereact/progressbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
@@ -3444,63 +3444,62 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       )}
 
       {/* Diálogo para inyectar texto */}
-      <Dialog
-        header="Enviar Texto a la Sesión RDP"
+      <AppDialog
+        headerTitle="Enviar Texto a la Sesión RDP"
+        headerIcon="pi pi-clipboard"
         visible={showClipboardDialog}
+        size="md"
         style={{ width: '420px' }}
         onHide={() => setShowClipboardDialog(false)}
-        footer={
-          <div className="flex justify-content-end gap-2">
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-text p-button-sm" onClick={() => setShowClipboardDialog(false)} />
-            <Button label="Enviar" icon="pi pi-check" className="p-button-primary p-button-sm" onClick={async () => {
-              if (sessionRef.current && clipboardText) {
-                try {
-                  const text = limitClipboardPayload(clipboardText);
-                  if (!text) {
-                    toastRef.current?.show({
-                      severity: 'warn',
-                      summary: 'Texto demasiado grande',
-                      detail: 'No se envía: cerraría la sesión RDP.',
-                      life: 4000
-                    });
-                    return;
-                  }
-                  localClipboardCacheRef.current = text;
-                  await enqueueClipboardSend(text, 'diálogo manual');
-
-                  const transaction = new Backend.InputTransaction();
-                  for (const char of text) {
-                    transaction.addEvent(Backend.DeviceEvent.unicodePressed(char));
-                    transaction.addEvent(Backend.DeviceEvent.unicodeReleased(char));
-                  }
-                  sessionRef.current.applyInputs(transaction);
-                  setShowClipboardDialog(false);
-                  setClipboardText('');
-                  toastRef.current?.show({
-                    severity: 'success',
-                    summary: 'Texto Enviado',
-                    detail: 'Texto transmitido a la sesión RDP',
-                    life: 2500
-                  });
-                } catch (e) {
-                  console.error('Error enviando texto:', e);
-                }
+        confirmLabel="Enviar"
+        confirmIcon="pi pi-check"
+        onConfirm={async () => {
+          if (sessionRef.current && clipboardText) {
+            try {
+              const text = limitClipboardPayload(clipboardText);
+              if (!text) {
+                toastRef.current?.show({
+                  severity: 'warn',
+                  summary: 'Texto demasiado grande',
+                  detail: 'No se envía: cerraría la sesión RDP.',
+                  life: 4000
+                });
+                return;
               }
-            }} />
-          </div>
-        }
+              localClipboardCacheRef.current = text;
+              await enqueueClipboardSend(text, 'diálogo manual');
+
+              const transaction = new Backend.InputTransaction();
+              for (const char of text) {
+                transaction.addEvent(Backend.DeviceEvent.unicodePressed(char));
+                transaction.addEvent(Backend.DeviceEvent.unicodeReleased(char));
+              }
+              sessionRef.current.applyInputs(transaction);
+              setShowClipboardDialog(false);
+              setClipboardText('');
+              toastRef.current?.show({
+                severity: 'success',
+                summary: 'Texto Enviado',
+                detail: 'Texto transmitido a la sesión RDP',
+                life: 2500
+              });
+            } catch (e) {
+              console.error('Error enviando texto:', e);
+            }
+          }
+        }}
       >
-        <div className="flex flex-column gap-2 pt-2">
+        <div className="flex flex-column gap-2">
           <label className="text-xs text-color-secondary">Escribe el texto a enviar a la máquina remota:</label>
           <InputTextarea
             value={clipboardText}
             onChange={(e) => setClipboardText(e.target.value)}
             rows={4}
             autoFocus
-            style={{ width: '100%', resize: 'none', backgroundColor: '#1e1e1e', color: '#fff', borderColor: '#444' }}
+            style={{ width: '100%', resize: 'none' }}
           />
         </div>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 });

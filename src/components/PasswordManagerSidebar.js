@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader, AppDialogFooter } from './ui/AppDialog';
 import { Divider } from 'primereact/divider';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
@@ -2256,33 +2257,18 @@ const PasswordManagerSidebar = ({
       {/* Dialog para crear/editar secreto */}
       <Dialog
         header={
-          <div className="protocol-dialog-header-custom">
-            <div 
-              className="protocol-dialog-header-icon" 
-              style={{ 
-                background: selectedSecretType === 'password' ? 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)' :
-                            selectedSecretType === 'crypto_wallet' ? 'linear-gradient(135deg, #F7931A 0%, #D27B0F 100%)' :
-                            selectedSecretType === 'api_key' ? 'linear-gradient(135deg, #00BCD4 0%, #0097A7 100%)' :
-                            'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                boxShadow: selectedSecretType === 'password' ? '0 2px 8px rgba(233, 30, 99, 0.3)' :
-                           selectedSecretType === 'crypto_wallet' ? '0 2px 8px rgba(247, 147, 26, 0.3)' :
-                           selectedSecretType === 'api_key' ? '0 2px 8px rgba(0, 188, 212, 0.3)' :
-                           '0 2px 8px rgba(156, 39, 176, 0.3)'
-              }}
-            >
-              <i className={
-                selectedSecretType === 'password' ? 'pi pi-lock' :
-                selectedSecretType === 'crypto_wallet' ? 'pi pi-wallet' :
-                selectedSecretType === 'api_key' ? 'pi pi-key' : 'pi pi-file-edit'
-              }></i>
-            </div>
-            <span className="protocol-dialog-header-title" style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: '0.05em' }}>
-              {editingPassword ? 'EDITAR ' : 'NUEVO '}
-              {selectedSecretType === 'password' ? 'CONTRASEÑA' :
-               selectedSecretType === 'crypto_wallet' ? 'BILLETERA CRYPTO' :
-               selectedSecretType === 'api_key' ? 'CLAVE DE API' : 'NOTA SEGURA'}
-            </span>
-          </div>
+          <AppDialogHeader
+            icon={
+              selectedSecretType === 'password' ? 'pi pi-lock' :
+              selectedSecretType === 'crypto_wallet' ? 'pi pi-wallet' :
+              selectedSecretType === 'api_key' ? 'pi pi-key' : 'pi pi-file-edit'
+            }
+            title={`${editingPassword ? 'Editar ' : 'Nuevo '}${
+              selectedSecretType === 'password' ? 'contraseña' :
+              selectedSecretType === 'crypto_wallet' ? 'billetera crypto' :
+              selectedSecretType === 'api_key' ? 'clave de API' : 'nota segura'
+            }`}
+          />
         }
         visible={showPasswordDialog}
         style={{ width: '90vw', maxWidth: '550px' }}
@@ -2291,8 +2277,20 @@ const PasswordManagerSidebar = ({
           resetForm();
         }}
         modal
-        className="app-dialog ssh-tunnel-dialog protocol-selection-dialog-new"
+        className="app-dialog password-secret-dialog"
         contentStyle={{ padding: '0', overflow: 'hidden' }}
+        footer={
+          <AppDialogFooter
+            cancelLabel={tCommon('buttons.cancel')}
+            onCancel={() => {
+              setShowPasswordDialog(false);
+              resetForm();
+            }}
+            confirmLabel={editingPassword ? tCommon('buttons.save') : tCommon('buttons.create')}
+            confirmIcon="pi pi-check"
+            onConfirm={handleSavePassword}
+          />
+        }
       >
         <div className="tunnel-form-content" style={{ padding: '1.25rem', maxHeight: '75vh', overflowY: 'auto' }}>
           <div className="secret-form tunnel-form-section" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -2731,24 +2729,6 @@ const PasswordManagerSidebar = ({
             )}
           </div>
 
-          {/* Botones de acción */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--ui-content-border)' }}>
-            <Button
-              label={tCommon('buttons.cancel')}
-              icon="pi pi-times"
-              className="p-button-text"
-              onClick={() => {
-                setShowPasswordDialog(false);
-                resetForm();
-              }}
-            />
-            <Button
-              label={editingPassword ? tCommon('buttons.save') : tCommon('buttons.create')}
-              icon="pi pi-check"
-              className="p-button-primary"
-              onClick={handleSavePassword}
-            />
-          </div>
         </div>
       </Dialog>
 
@@ -2818,23 +2798,22 @@ const PasswordManagerSidebar = ({
     {/* ─ Portal modal papelera contraseñas ─ */}
     {showPwdTrashModal && ReactDOM.createPortal(
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', animation: 'trashModalIn 0.18s ease' }}
+        className="app-dialog-portal-mask"
         onClick={e => { if (e.target === e.currentTarget) { setShowPwdTrashModal(false); setPwdTrashConfirm(null); } }}
       >
         <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .ptrash-item:hover{background:rgba(255,255,255,0.06)!important} .ptrash-restore:hover{background:rgba(34,197,94,0.22)!important} .ptrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
-        <div className="app-dialog" style={{ background: 'var(--ui-dialog-bg)', border: '1px solid var(--ui-dialog-border)', borderRadius: 'var(--ui-radius-lg)', color: 'var(--ui-dialog-text)', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
-          {/* Header */}
-          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="pi pi-trash" style={{ color: '#f87171', fontSize: '16px' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: '#f1f5f9' }}>Papelera de contraseñas</div>
-              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                {trashedPasswords.length === 0 ? 'Vacía' : `${trashedPasswords.length} elemento${trashedPasswords.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+        <div className="app-dialog app-dialog-portal" style={{ width: '460px', maxHeight: '560px' }}>
+          <div className="app-dialog-portal-header">
+            <div className="app-dialog-header">
+              <span className="app-dialog-header-icon" aria-hidden="true"><i className="pi pi-trash" /></span>
+              <div className="app-dialog-header-text">
+                <span className="app-dialog-header-title">Papelera de contraseñas</span>
+                <span className="app-dialog-header-subtitle">
+                  {trashedPasswords.length === 0 ? 'Vacía' : `${trashedPasswords.length} elemento${trashedPasswords.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+                </span>
               </div>
             </div>
-            <button onClick={() => { setShowPwdTrashModal(false); setPwdTrashConfirm(null); }} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+            <button type="button" className="app-dialog-portal-close" onClick={() => { setShowPwdTrashModal(false); setPwdTrashConfirm(null); }}>
               <i className="pi pi-times" />
             </button>
           </div>

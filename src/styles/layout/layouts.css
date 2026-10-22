@@ -183,6 +183,8 @@ body.layout-cyberpunk .p-inputtext,
 body.layout-cyberpunk .p-dropdown,
 body.layout-cyberpunk .p-card,
 body.layout-cyberpunk .p-dialog,
+body.layout-cyberpunk .p-confirm-dialog,
+body.layout-cyberpunk .app-dialog-portal,
 body.layout-cyberpunk .p-menu,
 body.layout-cyberpunk .p-tabview-nav-link,
 body.layout-cyberpunk .sidebar-container,
@@ -245,6 +247,8 @@ body.layout-cyberpunk .p-button:not(.p-button-text):not(.p-button-danger):not(.p
 }
 
 body.layout-cyberpunk .p-dialog,
+body.layout-cyberpunk .p-confirm-dialog,
+body.layout-cyberpunk .app-dialog-portal,
 body.layout-cyberpunk .p-menu,
 body.layout-cyberpunk .general-setting-card:hover {
   box-shadow: 0 0 8px var(--ui-button-primary) !important;

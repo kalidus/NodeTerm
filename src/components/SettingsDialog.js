@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader } from './ui/AppDialog';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Toast } from 'primereact/toast';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -815,14 +816,7 @@ const SettingsContent = ({
   return (
     <Dialog
       ref={dialogRef}
-      header={
-        <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div className="settings-dialog-header-icon">
-            <i className="pi pi-cog"></i>
-          </div>
-          <span className="settings-dialog-header-title">{t('title')}</span>
-        </div>
-      }
+      header={<AppDialogHeader icon="pi pi-cog" title={t('title')} />}
       visible={visible}
       className="app-dialog settings-dialog"
       style={{
@@ -844,11 +838,6 @@ const SettingsContent = ({
         padding: '0',
         overflow: 'hidden',
         position: 'relative'
-      }}
-      headerStyle={{
-        background: 'rgba(0, 0, 0, 0.3) !important',
-        color: 'var(--ui-dialog-text)',
-        borderBottom: '1px solid var(--ui-dialog-border)'
       }}
       onHide={onHide}
       modal

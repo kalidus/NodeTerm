@@ -42,6 +42,7 @@ export function AppDialogFooter({
   onConfirm,
   loading = false,
   confirmDisabled = false,
+  cancelDisabled = false,
   confirmSeverity = 'primary',
   confirmIcon,
   cancelIcon = 'pi pi-times',
@@ -61,7 +62,7 @@ export function AppDialogFooter({
             icon={cancelIcon}
             className="p-button-text app-dialog-btn-cancel"
             onClick={onCancel}
-            disabled={loading}
+            disabled={cancelDisabled || loading}
           />
         ) : null}
         {onConfirm ? (

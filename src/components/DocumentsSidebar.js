@@ -1825,23 +1825,22 @@ const DocumentsSidebar = ({
     {/* ─ Portal modal papelera documentos ─ */}
     {showDocTrashModal && ReactDOM.createPortal(
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', animation: 'trashModalIn 0.18s ease' }}
+        className="app-dialog-portal-mask"
         onClick={e => { if (e.target === e.currentTarget) { setShowDocTrashModal(false); setDocTrashConfirm(null); } }}
       >
         <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .dtrash-item:hover{background:rgba(255,255,255,0.06)!important} .dtrash-restore:hover{background:rgba(34,197,94,0.22)!important} .dtrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
-        <div className="app-dialog" style={{ background: 'var(--ui-dialog-bg)', border: '1px solid var(--ui-dialog-border)', borderRadius: 'var(--ui-radius-lg)', color: 'var(--ui-dialog-text)', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
-          {/* Header */}
-          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="pi pi-trash" style={{ color: '#f87171', fontSize: '16px' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: '#f1f5f9' }}>Papelera de notas</div>
-              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                {trashedDocuments.length === 0 ? 'Vacía' : `${trashedDocuments.length} elemento${trashedDocuments.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+        <div className="app-dialog app-dialog-portal" style={{ width: '460px', maxHeight: '560px' }}>
+          <div className="app-dialog-portal-header">
+            <div className="app-dialog-header">
+              <span className="app-dialog-header-icon" aria-hidden="true"><i className="pi pi-trash" /></span>
+              <div className="app-dialog-header-text">
+                <span className="app-dialog-header-title">Papelera de notas</span>
+                <span className="app-dialog-header-subtitle">
+                  {trashedDocuments.length === 0 ? 'Vacía' : `${trashedDocuments.length} elemento${trashedDocuments.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+                </span>
               </div>
             </div>
-            <button onClick={() => { setShowDocTrashModal(false); setDocTrashConfirm(null); }} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+            <button type="button" className="app-dialog-portal-close" onClick={() => { setShowDocTrashModal(false); setDocTrashConfirm(null); }}>
               <i className="pi pi-times" />
             </button>
           </div>

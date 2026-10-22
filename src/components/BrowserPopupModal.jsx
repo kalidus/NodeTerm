@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { AppDialogHeader } from './ui/AppDialog';
 import { Button } from 'primereact/button';
 import {
   BROWSER_WEBVIEW_PARTITION,
@@ -135,10 +136,9 @@ const BrowserPopupModal = () => {
   }, []);
 
   const header = (
-    <div className="browser-popup-header">
-      <span className="browser-popup-title" title={title}>{title}</span>
-      {loading && <span className="pi pi-spin pi-spinner browser-popup-spinner" />}
-    </div>
+    <AppDialogHeader icon="pi pi-window-maximize" title={title}>
+      {loading ? <span className="pi pi-spin pi-spinner browser-popup-spinner" /> : null}
+    </AppDialogHeader>
   );
 
   return (
@@ -151,7 +151,7 @@ const BrowserPopupModal = () => {
       resizable={true}
       draggable={true}
       maximizable={true}
-      className="browser-popup-dialog"
+      className="app-dialog browser-popup-dialog"
       style={{ width: '84vw', height: '82vh', maxWidth: '1400px', minWidth: '480px', minHeight: '360px' }}
       contentStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}
       keepInViewport={true}

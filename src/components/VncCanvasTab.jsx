@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import AppDialog from './ui/AppDialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
@@ -599,18 +599,16 @@ const VncCanvasTab = forwardRef(({
       />
 
       {/* Diálogo para Enviar Portapapeles */}
-      <Dialog
-        header="Enviar Texto al Portapapeles Remoto"
+      <AppDialog
+        headerTitle="Enviar Texto al Portapapeles Remoto"
+        headerIcon="pi pi-clipboard"
         visible={showClipboardDialog}
         onHide={() => setShowClipboardDialog(false)}
+        size="md"
         style={{ width: '450px' }}
-        modal
-        footer={
-          <div className="flex justify-content-end gap-2">
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={() => setShowClipboardDialog(false)} />
-            <Button label="Enviar" icon="pi pi-send" className="p-button-success" onClick={handlePasteClipboard} />
-          </div>
-        }
+        confirmLabel="Enviar"
+        confirmIcon="pi pi-send"
+        onConfirm={handlePasteClipboard}
       >
         <p className="text-sm text-color-secondary mb-2">
           El texto introducido se sincronizará con el portapapeles del servidor VNC remoto:
@@ -623,21 +621,19 @@ const VncCanvasTab = forwardRef(({
           placeholder="Escribe o pega el texto aquí..."
           autoFocus
         />
-      </Dialog>
+      </AppDialog>
 
       {/* Diálogo para Autenticación interactiva (si no se proveyó contraseña o requiere credenciales) */}
-      <Dialog
-        header="Autenticación VNC Requerida"
+      <AppDialog
+        headerTitle="Autenticación VNC Requerida"
+        headerIcon="pi pi-lock"
         visible={showPasswordDialog}
         onHide={() => setShowPasswordDialog(false)}
+        size="sm"
         style={{ width: '400px' }}
-        modal
-        footer={
-          <div className="flex justify-content-end gap-2">
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={() => setShowPasswordDialog(false)} />
-            <Button label="Conectar" icon="pi pi-check" className="p-button-success" onClick={handleSubmitPassword} />
-          </div>
-        }
+        confirmLabel="Conectar"
+        confirmIcon="pi pi-check"
+        onConfirm={handleSubmitPassword}
       >
         <p className="text-sm text-color-secondary mb-3">
           El servidor VNC en {host}:{port} requiere credenciales para autorizar el acceso:
@@ -665,7 +661,7 @@ const VncCanvasTab = forwardRef(({
             autoFocus
           />
         </div>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 });

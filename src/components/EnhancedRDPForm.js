@@ -3,6 +3,7 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { InputSwitch } from 'primereact/inputswitch';
 import { TerminalOptionHelp } from './TerminalOptionHelp';
+import { AppDialogHeader } from './ui/AppDialog';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   RDP_COLOR_DEPTHS,
@@ -159,17 +160,7 @@ export function isRdpFormValid(formData) {
 
 export function RdpTerminalDialogHeader({ title }) {
   const display = title != null && typeof title === 'string' ? title.toUpperCase() : title;
-  return (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
-        <div className="terminal-header-icon-mini">
-          <i className="pi pi-desktop" aria-hidden="true"></i>
-        </div>
-        <span className="terminal-header-title">{display}</span>
-      </div>
-      <div className="terminal-header-accent" aria-hidden="true"></div>
-    </div>
-  );
+  return <AppDialogHeader icon="pi pi-desktop" title={display} />;
 }
 
 function TerminalOptionSection({ title, children }) {
@@ -1448,12 +1439,12 @@ export function EnhancedRDPForm({
               ) : null}
             </div>
             <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-              <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+              <button type="button" className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide} disabled={busy}>
                 {tCommon('buttons.cancel').toUpperCase()}
               </button>
               <button
                 type="submit"
-                className="terminal-btn-outline terminal-btn-submit"
+                className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
                 disabled={!valid || busy}
               >
                 <i className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'} aria-hidden="true"></i>
@@ -1516,12 +1507,12 @@ export function EnhancedRDPForm({
               ) : null}
             </div>
             <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-              <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+              <button type="button" className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide} disabled={busy}>
                 {tCommon('buttons.cancel').toUpperCase()}
               </button>
               <button
                 type="submit"
-                className="terminal-btn-outline terminal-btn-submit"
+                className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
                 disabled={!valid || busy}
               >
                 <i
@@ -1616,12 +1607,12 @@ export function EnhancedRDPForm({
             ) : null}
           </div>
           <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-            <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+            <button type="button" className="terminal-btn-text app-dialog-btn-cancel" onClick={onHide} disabled={busy}>
               {tCommon('buttons.cancel').toUpperCase()}
             </button>
             <button
               type="submit"
-              className="terminal-btn-outline terminal-btn-submit"
+              className="terminal-btn-outline terminal-btn-submit app-dialog-btn-confirm"
               disabled={!valid || busy}
             >
               <i
