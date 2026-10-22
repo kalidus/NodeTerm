@@ -1498,6 +1498,9 @@ body.minimalist-terminal-mode .p-tabview-nav-content {
     display: none !important;
     height: 0 !important;
     overflow: hidden !important;
+    pointer-events: none !important;
+    -webkit-app-region: no-drag !important;
+    app-region: no-drag !important;
 }
 
 body.minimalist-terminal-mode .main-content-frame {
@@ -1620,6 +1623,14 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view.p-tabview 
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 11px;
     position: relative;
+    -webkit-app-region: drag;
+    app-region: drag;
+}
+
+.minimal-mode-toolbar-btn,
+.minimal-mode-toolbar-handle {
+    -webkit-app-region: no-drag !important;
+    app-region: no-drag !important;
 }
 
 .minimal-mode-toolbar-bar::before {
@@ -1815,36 +1826,32 @@ body.minimalist-terminal-mode .connection-history-root .hero-splash-header {
 }
 
 /*
- * Minimalista + terminal integrado (Home): barra tipo título para arrastrar la ventana
- * (titlebar nativo oculto / frameless). Los controles siguen con no-drag.
+ * Minimalista: el contenido de Home/terminal debe ser siempre clicable.
+ * Electron a veces conserva hit-tests de regiones drag ocultas (nav display:none);
+ * forzamos no-drag en el área útil. La ventana se mueve desde la barra superior
+ * auto-ocultable del modo minimalista.
  */
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header {
-    -webkit-app-region: drag;
-}
-
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .traffic-lights,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .traffic-lights *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .gnome-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .gnome-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .kde-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .kde-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .windows-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .windows-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .orchis-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .orchis-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .fluent-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .fluent-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .matcha-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .matcha-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .futuristic-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .futuristic-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .modern-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .modern-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .retro-controls,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .retro-controls *,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right,
-body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right * {
-    -webkit-app-region: no-drag;
+body.minimalist-terminal-mode .app-container,
+body.minimalist-terminal-mode .main-splitter,
+body.minimalist-terminal-mode .main-content-frame,
+body.minimalist-terminal-mode .main-content-frame-content,
+body.minimalist-terminal-mode .p-tabview,
+body.minimalist-terminal-mode .p-tabview-panels,
+body.minimalist-terminal-mode .p-tabview-panel,
+body.minimalist-terminal-mode .connection-history-root,
+body.minimalist-terminal-mode .home-panels-canvas,
+body.minimalist-terminal-mode .home-panel-rnd,
+body.minimalist-terminal-mode .home-panel-frame,
+body.minimalist-terminal-mode .home-panel-body,
+body.minimalist-terminal-mode .home-panel-drag-handle,
+body.minimalist-terminal-mode .recents-terminal-frame,
+body.minimalist-terminal-mode .recents-terminal-header,
+body.minimalist-terminal-mode .recents-terminal-body,
+body.minimalist-terminal-mode .xterm,
+body.minimalist-terminal-mode .xterm-viewport,
+body.minimalist-terminal-mode .xterm-screen {
+    -webkit-app-region: no-drag !important;
+    app-region: no-drag !important;
 }
 
 /* En minimalista absoluto ocultar accesos rápidos de Recientes/Favoritos (reloj + estrella). */

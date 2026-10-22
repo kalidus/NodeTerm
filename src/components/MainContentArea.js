@@ -2769,7 +2769,7 @@ const MainContentArea = ({
           <TerminalFrame
             className={`main-content-frame ${mainFrameHeaderCollapsed ? 'main-content-frame--header-collapsed' : ''}`}
             contentClassName="main-content-frame-content"
-            isDraggable={true}
+            isDraggable={!isMinimalMode}
             hideHeader={mainFrameHeaderCollapsed || isMinimalMode}
             showFloatingHeaderExtra={false}
             isMaximized={isWindowMaximized}
@@ -2900,14 +2900,16 @@ const MainContentArea = ({
                               '--home-tab-theme-bg': 'var(--ui-content-bg, #1a1b26)',
                               borderBottom: 'none',
                               opacity: 1.0,
-                              WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'drag' : 'inherit'
+                              // En minimalista la nav queda display:none; si conserva drag, Electron
+                              // puede capturar clics de toda la ventana y moverla.
+                              WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed && !isMinimalMode) ? 'drag' : 'no-drag'
                             }
                           },
                           nav: {
-                            style: (titleBarCollapsed && mainFrameHeaderCollapsed) ? { WebkitAppRegion: 'drag' } : {}
+                            style: { WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed && !isMinimalMode) ? 'drag' : 'no-drag' }
                           },
                           navcontent: {
-                            style: (titleBarCollapsed && mainFrameHeaderCollapsed) ? { WebkitAppRegion: 'drag' } : {}
+                            style: { WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed && !isMinimalMode) ? 'drag' : 'no-drag' }
                           }
                         }}
                       >
@@ -2955,7 +2957,7 @@ const MainContentArea = ({
                                   onTabDragEnd={tabHandlers.onTabDragEnd}
                                   onTabContextMenu={tabHandlers.onTabContextMenu}
                                   onTabClose={tabHandlers.onTabClose}
-                                  isDraggable={titleBarCollapsed && mainFrameHeaderCollapsed}
+                                  isDraggable={titleBarCollapsed && mainFrameHeaderCollapsed && !isMinimalMode}
                                 />
                               )}
                             />
@@ -2992,7 +2994,7 @@ const MainContentArea = ({
                                 color: 'var(--ui-tab-text) !important',
                                 background: 'rgba(0, 0, 0, 0.3) !important',
                                 border: 'none !important',
-                                WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit'
+                                WebkitAppRegion: 'no-drag'
                               }
                             },
                             icon: {
@@ -3042,7 +3044,7 @@ const MainContentArea = ({
                                 color: 'var(--ui-tab-text) !important',
                                 background: 'rgba(0, 0, 0, 0.3) !important',
                                 border: 'none !important',
-                                WebkitAppRegion: (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit'
+                                WebkitAppRegion: 'no-drag'
                               }
                             },
                             icon: {
