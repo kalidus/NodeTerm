@@ -11,6 +11,10 @@ import { writeText as clipboardWriteText, readText as clipboardReadText } from '
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { sendPtyUserInput } from '../utils/terminalInputSend';
+import {
+    resolveTerminalFontFamily,
+    ensureTerminalFontsLoaded
+} from '../utils/resolveTerminalFontFamily';
 
 const CygwinTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -136,13 +140,15 @@ const CygwinTerminal = forwardRef(({
         if (!xtermLib) return;
         const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
 
+        ensureTerminalFontsLoaded();
+
         // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
         const scrollbackLines = getTerminalScrollback();
 
         // Initialize Terminal con tema moderno estilo MobaXterm
         term.current = new Terminal({
             cursorBlink: true,
-            fontFamily: fontFamily,
+            fontFamily: resolveTerminalFontFamily(fontFamily),
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
@@ -321,7 +327,7 @@ const CygwinTerminal = forwardRef(({
     // Update font/theme dynamically
     useEffect(() => {
         if (term.current && fontFamily) {
-            term.current.options.fontFamily = fontFamily;
+            term.current.options.fontFamily = resolveTerminalFontFamily(fontFamily);
             invalidate();
             fitStable();
         }

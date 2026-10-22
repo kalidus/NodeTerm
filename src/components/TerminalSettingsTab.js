@@ -8,6 +8,7 @@ import { Slider } from 'primereact/slider';
 import { themes } from '../themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getTerminalScrollback, DEFAULT_SCROLLBACK_LINES } from '../utils/xtermRenderer';
+import { resolveTerminalFontFamily } from '../utils/resolveTerminalFontFamily';
 import '../styles/components/terminal-settings.css';
 
 // Storage keys
@@ -665,7 +666,7 @@ const TerminalSettingsTab = ({
                   className="terminal-preview-window"
                   style={{
                     background: theme.background,
-                    fontFamily: `"${previewFont}", monospace`,
+                    fontFamily: resolveTerminalFontFamily(`"${previewFont}", monospace`),
                     fontSize: `${previewSize}px`
                   }}
                 >

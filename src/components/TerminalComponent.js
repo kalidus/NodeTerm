@@ -26,7 +26,8 @@ import { useSshTabStats } from '../services/SshStatsStore';
 import { sendSshUserInput, deferNonCritical } from '../utils/terminalInputSend';
 import {
     resolveTerminalFontFamily,
-    getDefaultLocalTerminalFontFamily
+    getDefaultLocalTerminalFontFamily,
+    ensureTerminalFontsLoaded
 } from '../utils/resolveTerminalFontFamily';
 
 const TerminalComponent = forwardRef(({
@@ -291,6 +292,9 @@ const TerminalComponent = forwardRef(({
 
         // Importante: NO quitar hibernación aquí. Si se hace antes de registrar
         // ssh:data:*, el stdout se pierde (ni ring ni listener) y el terminal queda en blanco.
+
+        // Symbols Nerd Font Mono (iconos eza/ll) vive en fonts.css diferido
+        ensureTerminalFontsLoaded();
 
         // Detectar si es terminal local (inicio) de forma robusta
         let defaultFont = resolveTerminalFontFamily(fontFamily || 'monospace');

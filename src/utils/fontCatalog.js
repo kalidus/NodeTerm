@@ -269,6 +269,13 @@ const catalog = {
       ]
     },
     {
+      "family": "Symbols Nerd Font Mono",
+      "role": "mono",
+      "source": "bundled",
+      "download": "nerd-symbols",
+      "terminalPicker": false
+    },
+    {
       "family": "DM Sans",
       "role": "sans",
       "source": "bundled",

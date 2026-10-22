@@ -9,6 +9,10 @@ import { attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrol
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
+import {
+    resolveTerminalFontFamily,
+    ensureTerminalFontsLoaded
+} from '../utils/resolveTerminalFontFamily';
 
 const DockerTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -92,12 +96,14 @@ const DockerTerminal = forwardRef(({
         if (!terminalRef.current || !xtermLib) return;
         const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
 
+        ensureTerminalFontsLoaded();
+
         // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
         const scrollbackLines = getTerminalScrollback();
 
         // Crear terminal
         term.current = new Terminal({
-            fontFamily: fontFamily,
+            fontFamily: resolveTerminalFontFamily(fontFamily),
             fontSize: fontSize,
             theme: isIntegrated ? { ...theme, background: 'rgba(0,0,0,0)' } : theme,
             cursorBlink: true,
@@ -251,7 +257,7 @@ const DockerTerminal = forwardRef(({
     // Update font family dynamically
     useEffect(() => {
         if (term.current && fontFamily) {
-            term.current.options.fontFamily = fontFamily;
+            term.current.options.fontFamily = resolveTerminalFontFamily(fontFamily);
             invalidate();
             fitStable();
         }

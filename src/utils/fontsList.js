@@ -9,8 +9,12 @@ const sortNames = (names) => (
   [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }))
 );
 
+const isPickerFont = (font) => font.terminalPicker !== false;
+
 export const MONOSPACE_FONT_NAMES = sortNames(
-  catalog.fonts.filter((font) => font.role === 'mono').map((font) => font.family)
+  catalog.fonts
+    .filter((font) => font.role === 'mono' && isPickerFont(font))
+    .map((font) => font.family)
 );
 
 export const ADDITIONAL_FONTS = sortNames(
@@ -68,5 +72,5 @@ export const getAvailableFonts = () => {
 };
 
 export const getExplorerFonts = () => (
-  sortNames(catalog.fonts.map((font) => font.family))
+  sortNames(catalog.fonts.filter(isPickerFont).map((font) => font.family))
 );

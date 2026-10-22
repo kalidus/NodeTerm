@@ -14,6 +14,10 @@ import {
   useTerminalMemoryGuards
 } from './xtermRenderer';
 import { setupTerminalClipboard, pasteToTerminal } from './terminalClipboard';
+import {
+  resolveTerminalFontFamily,
+  ensureTerminalFontsLoaded
+} from './resolveTerminalFontFamily';
 
 /**
  * Factory de terminales AI CLI (Claude, OpenCode, Codex, Antigravity, Hermes).
@@ -102,9 +106,10 @@ export function createAiCliTerminalComponent(config) {
       if (!xtermLib) return undefined;
       const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
       hasStartedRef.current = false;
+      ensureTerminalFontsLoaded();
 
       term.current = new Terminal(createAiCliTerminalOptions({
-        fontFamily,
+        fontFamily: resolveTerminalFontFamily(fontFamily),
         fontSize,
         theme,
         background: terminalBg,

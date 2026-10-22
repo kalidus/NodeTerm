@@ -2,19 +2,25 @@
  * Descarga las fuentes del catálogo y genera el CSS local.
  * Ejecutar: node scripts/download-fonts.js
  *
- * Solo entran los bloques latin y latin-ext. La app no vuelve a pedir
- * estas familias a Google Fonts en runtime.
+ * Google Fonts: solo latin y latin-ext.
+ * Nerd Symbols: zip oficial de nerd-fonts (iconos PUA para eza/ll).
  */
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const unzipper = require('unzipper');
 
 const fontsDir = path.join(__dirname, '../src/assets/fonts');
 const fontsCSSFile = path.join(__dirname, '../src/styles/fonts.css');
 const fontsCoreCSSFile = path.join(__dirname, '../src/styles/fonts-core.css');
 let fontsToDownload = [];
+
+const NERD_SYMBOLS_ZIP_URL =
+  'https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/NerdFontsSymbolsOnly.zip';
+const NERD_SYMBOLS_ZIP_ENTRY = 'SymbolsNerdFontMono-Regular.ttf';
+const NERD_SYMBOLS_LOCAL_FILE = 'SymbolsNerdFontMono-Regular.ttf';
 
 const stats = {
   skipped: 0,
@@ -132,7 +138,48 @@ function localizeCss(css) {
   });
 }
 
-async function downloadFont(font) {
+function nerdSymbolsFontFaceCss() {
+  return `@font-face {
+  font-family: 'Symbols Nerd Font Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/${NERD_SYMBOLS_LOCAL_FILE}') format('truetype');
+}`;
+}
+
+async function downloadNerdSymbols(font) {
+  const localPath = path.join(fontsDir, NERD_SYMBOLS_LOCAL_FILE);
+  if (fs.existsSync(localPath) && fs.statSync(localPath).size > 100000) {
+    stats.skipped++;
+    console.log(`  ${font.family}: ya existe`);
+    return { name: font.family, css: nerdSymbolsFontFaceCss(), coreCss: '' };
+  }
+
+  const { statusCode, body } = await request(NERD_SYMBOLS_ZIP_URL, {
+    'User-Agent': 'NodeTerm-FontDownload'
+  });
+  if (statusCode !== 200) {
+    throw new Error(`GitHub respondió ${statusCode} al pedir Symbols Nerd Font`);
+  }
+
+  const directory = await unzipper.Open.buffer(body);
+  const entry = directory.files.find((file) => (
+    file.path === NERD_SYMBOLS_ZIP_ENTRY || file.path.endsWith(`/${NERD_SYMBOLS_ZIP_ENTRY}`)
+  ));
+  if (!entry) {
+    throw new Error(`el zip no contiene ${NERD_SYMBOLS_ZIP_ENTRY}`);
+  }
+
+  const ttfBuffer = await entry.buffer();
+  fs.writeFileSync(localPath, ttfBuffer);
+  stats.downloaded++;
+  console.log(`  ${font.family}: 1 archivo nuevo (${Math.round(ttfBuffer.length / 1024)} KB)`);
+
+  return { name: font.family, css: nerdSymbolsFontFaceCss(), coreCss: '' };
+}
+
+async function downloadGoogleFont(font) {
   const css = await getFontCSS(font.family, font.weights);
   const latinCss = splitFontFaces(css).filter(isLatinFace).join('\n\n');
   if (!latinCss || latinCss.length < 40) {
@@ -168,6 +215,16 @@ async function downloadFont(font) {
     : '';
 
   return { name: font.family, css: localCss, coreCss };
+}
+
+async function downloadFont(font) {
+  if (font.download === 'nerd-symbols') {
+    return downloadNerdSymbols(font);
+  }
+  if (!font.weights || font.weights.length === 0) {
+    throw new Error(`faltan weights para ${font.family}`);
+  }
+  return downloadGoogleFont(font);
 }
 
 function referencedFontFiles(css) {
@@ -229,7 +286,7 @@ async function main() {
     process.exit(1);
   }
 
-  const fullCss = `${cssHeader('Fuentes integradas en NodeTerm (latin y latin-ext).')}${allFontFaces.join('\n\n')}\n`;
+  const fullCss = `${cssHeader('Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font Mono).')}${allFontFaces.join('\n\n')}\n`;
   const coreCss = `${cssHeader('Subconjunto de arranque: Inter, JetBrains Mono y Fira Code, pesos 400 y 700.')}${coreFontFaces.join('\n\n')}\n`;
 
   fs.writeFileSync(fontsCSSFile, fullCss);
