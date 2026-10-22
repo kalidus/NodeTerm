@@ -9,8 +9,6 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
-import { STORAGE_KEYS } from '../utils/constants';
-import { persistHomeTabSetting } from '../utils/homeTabSync';
 import {
   UI_LAYOUT_OPTIONS,
   getCurrentUILayoutId,
@@ -53,17 +51,9 @@ const IconSidebarLeft = () => (
   </svg>
 );
 
-const IconPanelBottom = () => (
+const IconMinimal = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
-    <path d="M2 10.5h12" {...LAYOUT_STROKE} />
-  </svg>
-);
-
-const IconSidebarRight = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
-    <path d="M10 2v12" {...LAYOUT_STROKE} />
   </svg>
 );
 
@@ -104,7 +94,7 @@ const TitleBar = ({
   secureStorage,
   onToggleTitleBar,
   sidebarCollapsed = false,
-  mainFrameHeaderCollapsed = true,
+  isMinimalMode = false,
   tabBarCollapsed = false,
 }) => {
   // Hook de internacionalización
@@ -127,37 +117,10 @@ const TitleBar = ({
   const layoutBtnRef = useRef(null);
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
   const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
-  const [statusBarVisible, setStatusBarVisible] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE);
-      return saved !== null ? saved === 'true' : true;
-    } catch {
-      return true;
-    }
-  });
 
   useEffect(() => {
     setLocalFilter(sidebarFilter || '');
   }, [sidebarFilter]);
-
-  useEffect(() => {
-    const onStatusBarVisibility = (e) => {
-      if (e?.detail && typeof e.detail.visible === 'boolean') {
-        setStatusBarVisible(e.detail.visible);
-      }
-    };
-    const onStorage = (e) => {
-      if (e.key === STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE) {
-        setStatusBarVisible(e.newValue === 'true');
-      }
-    };
-    window.addEventListener('statusbar-visibility-changed', onStatusBarVisibility);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener('statusbar-visibility-changed', onStatusBarVisibility);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
 
   useEffect(() => {
     const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
@@ -182,19 +145,6 @@ const TitleBar = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [layoutPopoverOpen]);
-
-  const handleToggleStatusBar = useCallback(() => {
-    setStatusBarVisible((prev) => {
-      const next = !prev;
-      try {
-        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, next.toString());
-      } catch { /* ignore */ }
-      window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', {
-        detail: { visible: next }
-      }));
-      return next;
-    });
-  }, []);
 
   const handleSelectUiLayout = useCallback((layoutId) => {
     setUILayout(layoutId);
@@ -1336,25 +1286,18 @@ const TitleBar = ({
             <IconSidebarLeft />
           </TitleBarIconButton>
           <TitleBarIconButton
-            title={statusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
-            active={statusBarVisible}
-            onClick={handleToggleStatusBar}
-          >
-            <IconPanelBottom />
-          </TitleBarIconButton>
-          <TitleBarIconButton
-            title={mainFrameHeaderCollapsed ? 'Mostrar marco superior' : 'Ocultar marco superior'}
-            active={!mainFrameHeaderCollapsed}
-            onClick={() => window.dispatchEvent(new CustomEvent('toggle-main-frame-header'))}
-          >
-            <IconSidebarRight />
-          </TitleBarIconButton>
-          <TitleBarIconButton
             title={tabBarCollapsed ? 'Mostrar barra de pestañas' : 'Ocultar barra de pestañas'}
             active={!tabBarCollapsed}
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-tabbar'))}
           >
             <IconPanelTop />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={isMinimalMode ? 'Salir del modo minimalista (Ctrl+Alt+M)' : 'Modo minimalista (Ctrl+Alt+M)'}
+            active={isMinimalMode}
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))}
+          >
+            <IconMinimal />
           </TitleBarIconButton>
         </div>
 

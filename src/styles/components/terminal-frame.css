@@ -1570,37 +1570,163 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view.p-tabview 
     flex: 0 0 auto !important;
 }
 
-/* Boton global para salir del modo minimalista (cualquier vista) */
-.minimal-mode-exit-btn {
+/* Barra superior auto-ocultable del modo minimalista (estilo RDP nativo) */
+.minimal-mode-toolbar-wrapper {
     position: fixed;
-    top: 10px;
-    left: 10px;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 20000;
-    width: 32px;
-    height: 32px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
-    background: rgba(18, 22, 32, 0.72);
-    color: rgba(255, 255, 255, 0.88);
-    opacity: 0.45;
-    cursor: pointer;
+    transition: margin-top 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+    pointer-events: auto;
+    overflow: visible;
     -webkit-app-region: no-drag;
     app-region: no-drag;
 }
 
-.minimal-mode-exit-btn:hover,
-.minimal-mode-exit-btn:focus-visible {
-    opacity: 1;
-    background: rgba(28, 34, 48, 0.92);
-    border-color: rgba(255, 255, 255, 0.32);
+.minimal-mode-toolbar-wrapper.is-hidden {
+    margin-top: -30px;
+    opacity: 0.9;
 }
 
-.minimal-mode-exit-btn i {
-    font-size: 13px;
+.minimal-mode-toolbar-wrapper.is-visible {
+    margin-top: 0;
+    opacity: 1;
+}
+
+.minimal-mode-toolbar-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 3px 10px;
+    height: 30px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    background: linear-gradient(180deg, rgba(10, 15, 26, 0.96) 0%, rgba(6, 10, 18, 0.94) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.7),
+        0 0 12px rgba(0, 240, 255, 0.15),
+        inset 0 1px 0 rgba(0, 240, 255, 0.4);
+    color: #f1f5f9;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    position: relative;
+}
+
+.minimal-mode-toolbar-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #00f0ff, #38bdf8, transparent);
+    box-shadow: 0 0 6px #00f0ff;
+    opacity: 0.8;
+}
+
+.minimal-mode-toolbar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 7px;
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    color: #38bdf8;
+    font-weight: 600;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    box-sizing: border-box;
+}
+
+.minimal-mode-toolbar-badge i {
+    color: #00f0ff;
+    font-size: 11px;
+}
+
+.minimal-mode-toolbar-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(0, 240, 255, 0.25);
+    flex-shrink: 0;
+}
+
+.minimal-mode-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.minimal-mode-toolbar-btn i {
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.minimal-mode-toolbar-btn:hover,
+.minimal-mode-toolbar-btn:focus-visible {
+    background: rgba(0, 240, 255, 0.14);
+    border-color: rgba(0, 240, 255, 0.45);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+    outline: none;
+}
+
+.minimal-mode-toolbar-btn-pin.is-active {
+    border-color: rgba(56, 189, 248, 0.55);
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+}
+
+.minimal-mode-toolbar-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 12px;
+    background: linear-gradient(180deg, rgba(10, 15, 26, 0.96) 0%, rgba(6, 10, 18, 0.94) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    cursor: pointer;
+    color: #00f0ff;
+    font-size: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px rgba(0, 240, 255, 0.25);
+    transition: all 0.2s ease;
+}
+
+.minimal-mode-toolbar-handle:hover,
+.minimal-mode-toolbar-handle:focus-visible {
+    background: rgba(0, 240, 255, 0.18);
+    border-color: #00f0ff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+    color: #ffffff;
+    outline: none;
+}
+
+.minimal-mode-toolbar-handle i {
+    font-size: 8px;
     pointer-events: none;
 }
 
