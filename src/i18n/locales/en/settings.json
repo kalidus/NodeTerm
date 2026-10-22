@@ -87,7 +87,21 @@
       "webapps": "AI WEB",
       "themes": "Themes",
       "styles": "Styles",
-      "presets": "Presets"
+      "presets": "Presets",
+      "global": "Global",
+      "typography": "Typography"
+    },
+    "terminal": {
+      "cursor": "Cursor",
+      "blink": "Blink",
+      "history": "History",
+      "localEcho": "SSH local echo",
+      "logHighlight": "Highlight logs",
+      "font": "Font",
+      "fontSize": "Size",
+      "cursorBar": "Bar",
+      "cursorBlock": "Block",
+      "cursorUnderline": "Underline"
     },
     "groups": {
       "appearance": "Appearance",

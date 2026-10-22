@@ -3,13 +3,11 @@ import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from './presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList } from './tabThemeLoader';
 import { setUILayout, UI_LAYOUT_OPTIONS, getCurrentUILayoutId } from './appearanceLayout';
+import { getAvailableFonts } from './fontsList';
 import { themes } from '../themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemeManager } from './statusBarThemeManager';
-import { treeThemeOptions } from '../themes/tree-themes';
-import { iconThemes } from '../themes/icon-themes';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
 import i18n from '../i18n';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
@@ -28,6 +26,28 @@ const TERMINAL_DEFAULTS = {
   linux: 'Dark',
   docker: 'Default Dark'
 };
+
+const TERMINAL_FONT_KEYS = {
+  ssh: { family: 'basicapp_terminal_font_family', size: 'basicapp_terminal_font_size', catalogFamily: 'font-ssh', catalogSize: 'fontSize-ssh' },
+  powershell: { family: 'basicapp_local_terminal_font_family', size: 'basicapp_local_terminal_font_size', catalogFamily: 'font-powershell', catalogSize: 'fontSize-powershell' },
+  linux: { family: 'nodeterm_linux_font_family', size: 'nodeterm_linux_font_size', catalogFamily: 'font-linux', catalogSize: 'fontSize-linux' },
+  docker: { family: 'nodeterm_docker_font_family', size: 'nodeterm_docker_font_size', catalogFamily: 'font-docker', catalogSize: 'fontSize-docker' }
+};
+
+const TERMINAL_TYPE_CHIPS = [
+  { id: 'ssh', labelKey: 'settings.quickPanel.chips.ssh' },
+  { id: 'powershell', labelKey: 'settings.quickPanel.chips.powershell' },
+  { id: 'linux', labelKey: 'settings.quickPanel.chips.linux' },
+  { id: 'docker', labelKey: 'settings.quickPanel.chips.docker' }
+];
+
+const CURSOR_STYLES = [
+  { id: 'bar', labelKey: 'settings.quickPanel.terminal.cursorBar' },
+  { id: 'block', labelKey: 'settings.quickPanel.terminal.cursorBlock' },
+  { id: 'underline', labelKey: 'settings.quickPanel.terminal.cursorUnderline' }
+];
+
+const SCROLLBACK_OPTIONS = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
 
 const LAYOUT_STYLE_CLASS = {
   solid: 'solid',
@@ -90,10 +110,9 @@ const RAIL_GROUPS = [
         icon: 'pi-code',
         labelKey: 'settings.sidebar.terminal',
         chips: [
-          { id: 'ssh', labelKey: 'settings.quickPanel.chips.ssh' },
-          { id: 'powershell', labelKey: 'settings.quickPanel.chips.powershell' },
-          { id: 'linux', labelKey: 'settings.quickPanel.chips.linux' },
-          { id: 'docker', labelKey: 'settings.quickPanel.chips.docker' }
+          { id: 'themes', labelKey: 'settings.quickPanel.chips.themes' },
+          { id: 'global', labelKey: 'settings.quickPanel.chips.global' },
+          { id: 'typography', labelKey: 'settings.quickPanel.chips.typography' }
         ]
       },
       {
@@ -103,16 +122,6 @@ const RAIL_GROUPS = [
         chips: [
           { id: 'colors', labelKey: 'settings.quickPanel.chips.colors' },
           { id: 'icons', labelKey: 'settings.quickPanel.chips.icons' }
-        ]
-      },
-      {
-        id: 'sessions',
-        icon: 'pi-sitemap',
-        labelKey: 'settings.sidebar.sessionExplorer',
-        chips: [
-          { id: 'tree', labelKey: 'settings.quickPanel.chips.tree' },
-          { id: 'icons', labelKey: 'settings.quickPanel.chips.icons' },
-          { id: 'actions', labelKey: 'settings.quickPanel.chips.actions' }
         ]
       }
     ]
@@ -279,12 +288,12 @@ export function openAppearanceQuickPanel(anchorEl) {
   const terminalList = namedEntries(themes);
   const statusColorList = namedEntries(statusBarThemes);
   const statusIconList = namedEntries(statusBarIconThemes);
-  const sidebarIconList = namedEntries(iconThemes);
-  const sessionActionList = namedEntries(sessionActionIconThemes);
   const picked = {};
+  const availableFonts = getAvailableFonts();
   const state = {
     section: 'ui',
     chip: 'themes',
+    termType: 'ssh',
     query: ''
   };
 
@@ -359,10 +368,6 @@ export function openAppearanceQuickPanel(anchorEl) {
     if (sectionId === 'statusbar') {
       const id = remembered('statusbar-theme', 'basicapp_statusbar_theme', 'Default Dark');
       return statusColorList.find(item => item.id === id)?.name || id;
-    }
-    if (sectionId === 'sessions') {
-      const id = remembered('tree-theme', 'nodeterm_tree_theme', 'cursorCompact');
-      return treeThemeOptions.find(item => item.value === id)?.label || id;
     }
     if (sectionId === 'apps') {
       const enabled = readAppsConfig();
@@ -507,30 +512,55 @@ export function openAppearanceQuickPanel(anchorEl) {
       });
       head.append(chips);
     }
+
+    const showTermTypes = section.id === 'terminal' && (state.chip === 'themes' || state.chip === 'typography');
+    if (showTermTypes) {
+      if (!TERMINAL_TYPE_CHIPS.some(chip => chip.id === state.termType)) {
+        state.termType = 'ssh';
+      }
+      const typeChips = el('div', 'aqp-chips aqp-chips--secondary');
+      TERMINAL_TYPE_CHIPS.forEach((chip) => {
+        const button = el('button', `aqp-chip${chip.id === state.termType ? ' is-active' : ''}`, t(chip.labelKey));
+        button.type = 'button';
+        button.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          state.termType = chip.id;
+          state.query = '';
+          renderStage();
+          positionPanel();
+        });
+        typeChips.append(button);
+      });
+      head.append(typeChips);
+    }
     stage.append(head);
 
-    const search = el('div', 'aqp-search');
-    search.append(el('i', 'pi pi-search'));
-    const input = document.createElement('input');
-    input.type = 'search';
-    input.className = 'aqp-search-input';
-    input.placeholder = t('settings.quickPanel.search');
-    input.value = state.query;
-    input.addEventListener('click', (ev) => ev.stopPropagation());
-    input.addEventListener('input', () => {
-      state.query = input.value;
-      fillGrid();
-      positionPanel();
-    });
-    search.append(input);
-    stage.append(search);
+    const hideSearch = section.id === 'terminal' && state.chip === 'global';
+    let input = null;
+    if (!hideSearch) {
+      const search = el('div', 'aqp-search');
+      search.append(el('i', 'pi pi-search'));
+      input = document.createElement('input');
+      input.type = 'search';
+      input.className = 'aqp-search-input';
+      input.placeholder = t('settings.quickPanel.search');
+      input.value = state.query;
+      input.addEventListener('click', (ev) => ev.stopPropagation());
+      input.addEventListener('input', () => {
+        state.query = input.value;
+        fillGrid();
+        positionPanel();
+      });
+      search.append(input);
+      stage.append(search);
+    }
 
     gridEl = el('div', 'aqp-gallery aqp-gallery--grid');
     const body = el('div', 'aqp-body');
     body.append(gridEl);
     stage.append(body);
     fillGrid();
-    setTimeout(() => input.focus(), 0);
+    if (input) setTimeout(() => input.focus(), 0);
   }
 
   function refreshSelection() {
@@ -561,6 +591,160 @@ export function openAppearanceQuickPanel(anchorEl) {
       onPick();
     });
     return card;
+  }
+
+  function formRow(label, control) {
+    const row = el('div', 'aqp-form-row');
+    row.append(el('span', 'aqp-form-label', label));
+    row.append(control);
+    return row;
+  }
+
+  function buildToggle(isOn, onToggle) {
+    const track = el('button', `aqp-switch${isOn ? ' is-on' : ''}`);
+    track.type = 'button';
+    track.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onToggle(!isOn);
+    });
+    return track;
+  }
+
+  function buildTerminalGlobalForm() {
+    const form = el('div', 'aqp-form-card');
+    form.addEventListener('click', (ev) => ev.stopPropagation());
+
+    let cursorStyle = readStorage('nodeterm_cursor_style', 'bar');
+    let cursorBlink = readStorage('nodeterm_cursor_blink', 'true') !== 'false';
+    let scrollback = parseInt(readStorage('nodeterm_scrollback_lines', '2000'), 10) || 2000;
+    let localEcho = readStorage('nodeterm_ssh_local_echo', 'false') === 'true';
+    let logHighlight = readStorage('nodeterm_ssh_log_highlight', 'true') !== 'false';
+
+    const cursorGroup = el('div', 'aqp-option-group');
+    CURSOR_STYLES.forEach((style) => {
+      const button = el('button', `aqp-option-btn${style.id === cursorStyle ? ' is-active' : ''}`, t(style.labelKey));
+      button.type = 'button';
+      button.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        cursorStyle = style.id;
+        localStorage.setItem('nodeterm_cursor_style', style.id);
+        window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { cursorStyle: style.id } }));
+        refreshSelection();
+      });
+      cursorGroup.append(button);
+    });
+    form.append(formRow(t('settings.quickPanel.terminal.cursor'), cursorGroup));
+
+    form.append(formRow(
+      t('settings.quickPanel.terminal.blink'),
+      buildToggle(cursorBlink, (value) => {
+        localStorage.setItem('nodeterm_cursor_blink', String(value));
+        window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { cursorBlink: value } }));
+        refreshSelection();
+      })
+    ));
+
+    const historySelect = document.createElement('select');
+    historySelect.className = 'aqp-select';
+    SCROLLBACK_OPTIONS.forEach((value) => {
+      const option = document.createElement('option');
+      option.value = String(value);
+      option.textContent = value.toLocaleString();
+      if (value === scrollback) option.selected = true;
+      historySelect.append(option);
+    });
+    if (!SCROLLBACK_OPTIONS.includes(scrollback)) {
+      const option = document.createElement('option');
+      option.value = String(scrollback);
+      option.textContent = scrollback.toLocaleString();
+      option.selected = true;
+      historySelect.append(option);
+    }
+    historySelect.addEventListener('change', () => {
+      const value = parseInt(historySelect.value, 10);
+      localStorage.setItem('nodeterm_scrollback_lines', String(value));
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { scrollback: value } }));
+      refreshSelection();
+    });
+    form.append(formRow(t('settings.quickPanel.terminal.history'), historySelect));
+
+    form.append(formRow(
+      t('settings.quickPanel.terminal.localEcho'),
+      buildToggle(localEcho, (value) => {
+        localStorage.setItem('nodeterm_ssh_local_echo', String(value));
+        window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { sshLocalEcho: value } }));
+        refreshSelection();
+      })
+    ));
+
+    form.append(formRow(
+      t('settings.quickPanel.terminal.logHighlight'),
+      buildToggle(logHighlight, (value) => {
+        localStorage.setItem('nodeterm_ssh_log_highlight', String(value));
+        window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { sshLogHighlight: value } }));
+        refreshSelection();
+      })
+    ));
+
+    return form;
+  }
+
+  function buildTerminalTypographyCatalog() {
+    const type = state.termType || 'ssh';
+    const keys = TERMINAL_FONT_KEYS[type];
+    const currentFont = remembered(`font-${type}`, keys.family, availableFonts[0]?.value || 'Consolas');
+    const currentSize = parseInt(remembered(`fontSize-${type}`, keys.size, '14'), 10) || 14;
+
+    const sizeWrap = el('div', 'aqp-form-card aqp-form-card--compact');
+    sizeWrap.addEventListener('click', (ev) => ev.stopPropagation());
+    const sizeLabel = el('div', 'aqp-form-label', `${t('settings.quickPanel.terminal.fontSize')}: ${currentSize}px`);
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '8';
+    slider.max = '32';
+    slider.value = String(currentSize);
+    slider.className = 'aqp-range';
+    slider.addEventListener('input', () => {
+      const value = parseInt(slider.value, 10);
+      sizeLabel.textContent = `${t('settings.quickPanel.terminal.fontSize')}: ${value}px`;
+    });
+    slider.addEventListener('change', () => {
+      const value = parseInt(slider.value, 10);
+      picked[`fontSize-${type}`] = String(value);
+      localStorage.setItem(keys.size, String(value));
+      publishCatalog(keys.catalogSize, value);
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
+        detail: { fontSize: value, terminalType: type }
+      }));
+      refreshSelection();
+    });
+    sizeWrap.append(sizeLabel, slider);
+
+    const fontCards = availableFonts
+      .filter(font => matchesQuery([font.label, font.value]))
+      .map((font) => {
+        const preview = el('div', 'aqp-font-preview', 'Aa Bb 123');
+        preview.style.fontFamily = font.value;
+        return makeCard({
+          active: font.value === currentFont,
+          name: font.label,
+          preview,
+          onPick: () => {
+            picked[`font-${type}`] = font.value;
+            localStorage.setItem(keys.family, font.value);
+            publishCatalog(keys.catalogFamily, font.value);
+            window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
+              detail: { fontFamily: font.value, terminalType: type }
+            }));
+            refreshSelection();
+          }
+        });
+      });
+
+    return {
+      mode: 'typography',
+      cards: [sizeWrap, ...fontCards]
+    };
   }
 
   function currentCatalog() {
@@ -664,8 +848,16 @@ export function openAppearanceQuickPanel(anchorEl) {
       };
     }
 
+    if (section === 'terminal' && chip === 'global') {
+      return { mode: 'form', cards: [buildTerminalGlobalForm()] };
+    }
+
+    if (section === 'terminal' && chip === 'typography') {
+      return buildTerminalTypographyCatalog();
+    }
+
     if (section === 'terminal') {
-      const type = chip || 'ssh';
+      const type = state.termType || 'ssh';
       const current = remembered(`terminal-${type}`, TERMINAL_STORAGE[type], TERMINAL_DEFAULTS[type]);
       return {
         stacked: false,
@@ -715,61 +907,6 @@ export function openAppearanceQuickPanel(anchorEl) {
             statusBarThemeManager.applyTheme(item.id);
             picked['statusbar-theme'] = item.id;
             publishCatalog('statusbar-theme', item.id);
-            refreshSelection();
-          }
-        }))
-      };
-    }
-
-    if (section === 'sessions' && chip === 'icons') {
-      const current = remembered('icon-theme-sidebar', 'iconThemeSidebar', 'nord');
-      return {
-        stacked: false,
-        cards: sidebarIconList.filter(item => matchesQuery([item.name])).map(item => makeCard({
-          active: item.id === current,
-          name: item.name,
-          preview: colorSwatch('color-mix(in srgb, var(--primary-color, #5b8def) 28%, transparent)'),
-          onPick: () => {
-            picked['icon-theme-sidebar'] = item.id;
-            publishCatalog('icon-theme-sidebar', item.id);
-            refreshSelection();
-          }
-        }))
-      };
-    }
-
-    if (section === 'sessions' && chip === 'actions') {
-      const current = remembered('session-action-icons', 'sessionActionIconTheme', 'classic');
-      return {
-        stacked: true,
-        cards: sessionActionList.filter(item => matchesQuery([item.name, item.description])).map(item => makeCard({
-          active: item.id === current,
-          row: true,
-          name: item.name,
-          description: item.description,
-          preview: colorSwatch('color-mix(in srgb, var(--primary-color, #5b8def) 28%, transparent)'),
-          onPick: () => {
-            picked['session-action-icons'] = item.id;
-            publishCatalog('session-action-icons', item.id);
-            refreshSelection();
-          }
-        }))
-      };
-    }
-
-    if (section === 'sessions') {
-      const current = remembered('tree-theme', 'nodeterm_tree_theme', 'cursorCompact');
-      return {
-        stacked: true,
-        cards: treeThemeOptions.filter(item => matchesQuery([item.label, item.description])).map(item => makeCard({
-          active: item.value === current,
-          row: true,
-          name: item.label,
-          description: item.description,
-          preview: colorSwatch('color-mix(in srgb, var(--ui-tab-text, #fff) 10%, transparent)'),
-          onPick: () => {
-            picked['tree-theme'] = item.value;
-            publishCatalog('tree-theme', item.value);
             refreshSelection();
           }
         }))
@@ -832,9 +969,17 @@ export function openAppearanceQuickPanel(anchorEl) {
   function fillGrid() {
     if (!gridEl) return;
     const catalog = currentCatalog();
-    gridEl.className = catalog.mode === 'apps'
-      ? 'aqp-gallery aqp-gallery--apps'
-      : (catalog.stacked ? 'aqp-gallery aqp-gallery--stack' : 'aqp-gallery aqp-gallery--grid');
+    if (catalog.mode === 'apps') {
+      gridEl.className = 'aqp-gallery aqp-gallery--apps';
+    } else if (catalog.mode === 'form') {
+      gridEl.className = 'aqp-gallery aqp-gallery--form';
+    } else if (catalog.mode === 'typography') {
+      gridEl.className = 'aqp-gallery aqp-gallery--typography';
+    } else if (catalog.stacked) {
+      gridEl.className = 'aqp-gallery aqp-gallery--stack';
+    } else {
+      gridEl.className = 'aqp-gallery aqp-gallery--grid';
+    }
     gridEl.replaceChildren();
     if (!catalog.cards.length) {
       gridEl.append(el('div', 'aqp-empty', t('settings.quickPanel.noResults')));

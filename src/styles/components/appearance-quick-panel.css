@@ -763,6 +763,111 @@
   padding-top: 8px;
 }
 
+.aqp-chips--secondary {
+  padding-top: 6px;
+}
+
+.aqp-chips--secondary .aqp-chip {
+  opacity: 0.92;
+  font-size: 10.5px;
+  padding: 3px 9px;
+}
+
+.aqp-gallery--form {
+  display: block;
+}
+
+.aqp-gallery--typography {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.aqp-gallery--typography > .aqp-form-card {
+  grid-column: 1 / -1;
+}
+
+.aqp-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.1));
+  background: color-mix(in srgb, var(--ui-tab-text, #fff) 3.5%, transparent);
+}
+
+.aqp-form-card--compact {
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.aqp-form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aqp-form-label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.aqp-option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aqp-option-btn {
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.14));
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.aqp-option-btn.is-active {
+  border-color: var(--primary-color, #5b8def);
+  background: color-mix(in srgb, var(--primary-color, #5b8def) 18%, transparent);
+}
+
+.aqp-select,
+.aqp-range {
+  font: inherit;
+  color: inherit;
+}
+
+.aqp-select {
+  min-width: 120px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.14));
+  background: color-mix(in srgb, var(--ui-tab-text, #fff) 6%, transparent);
+  padding: 0 8px;
+}
+
+.aqp-range {
+  width: 100%;
+  accent-color: var(--primary-color, #5b8def);
+}
+
+.aqp-font-preview {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--ui-tab-text, #fff) 5%, transparent);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
 .aqp-chip {
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.14));
   border-radius: 999px;

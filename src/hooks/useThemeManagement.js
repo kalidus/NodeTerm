@@ -680,6 +680,24 @@ export const useThemeManagement = () => {
         case 'terminal-docker':
           setLocalDockerTerminalTheme(value);
           break;
+        case 'font-ssh':
+          setFontFamily(value);
+          break;
+        case 'font-powershell':
+          setLocalFontFamily(value);
+          break;
+        case 'font-docker':
+          setDockerFontFamily(value);
+          break;
+        case 'fontSize-ssh':
+          setFontSize(Number(value));
+          break;
+        case 'fontSize-powershell':
+          setLocalFontSize(Number(value));
+          break;
+        case 'fontSize-docker':
+          setDockerFontSize(Number(value));
+          break;
         case 'statusbar-theme':
           setStatusBarTheme(value);
           break;

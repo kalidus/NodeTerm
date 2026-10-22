@@ -87,7 +87,21 @@
       "webapps": "IA WEB",
       "themes": "Temas",
       "styles": "Estilos",
-      "presets": "Presets"
+      "presets": "Presets",
+      "global": "Global",
+      "typography": "Tipografía"
+    },
+    "terminal": {
+      "cursor": "Cursor",
+      "blink": "Parpadeo",
+      "history": "Historial",
+      "localEcho": "Echo local SSH",
+      "logHighlight": "Resaltar logs",
+      "font": "Fuente",
+      "fontSize": "Tamaño",
+      "cursorBar": "Barra",
+      "cursorBlock": "Bloque",
+      "cursorUnderline": "Subrayado"
     },
     "groups": {
       "appearance": "Apariencia",
