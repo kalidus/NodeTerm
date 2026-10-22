@@ -661,6 +661,51 @@ export const useThemeManagement = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const onCatalog = (event) => {
+      const { key, value } = event.detail || {};
+      if (!key || value == null) return;
+      switch (key) {
+        case 'terminal-ssh': {
+          const themeObj = themes && themes[value] ? themes[value] : { name: value, theme: {} };
+          setTerminalTheme(themeObj);
+          break;
+        }
+        case 'terminal-powershell':
+          setLocalPowerShellTheme(value);
+          break;
+        case 'terminal-linux':
+          setLocalLinuxTerminalTheme(value);
+          break;
+        case 'terminal-docker':
+          setLocalDockerTerminalTheme(value);
+          break;
+        case 'statusbar-theme':
+          setStatusBarTheme(value);
+          break;
+        case 'tree-theme':
+          setTreeTheme(value);
+          break;
+        case 'icon-theme':
+          setIconTheme(value);
+          break;
+        case 'icon-theme-sidebar':
+          setIconThemeSidebar(value);
+          break;
+        case 'explorer-color':
+          setExplorerColorTheme(value);
+          break;
+        case 'session-action-icons':
+          setSessionActionIconTheme(value);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('appearance-catalog-changed', onCatalog);
+    return () => window.removeEventListener('appearance-catalog-changed', onCatalog);
+  }, []);
+
   return {
     // Font states and setters
     fontFamily,

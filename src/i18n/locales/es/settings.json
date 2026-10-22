@@ -64,6 +64,40 @@
     "integrations": "Integraciones con herramientas externas",
     "mcp": "Servidor MCP para IA y automatización"
   },
+  "quickPanel": {
+    "themes": "Temas",
+    "moreSettings": "Más ajustes",
+    "openSettings": "Abrir configuración",
+    "search": "Buscar…",
+    "activeTheme": "Interfaz · {name}",
+    "noResults": "Sin resultados",
+    "chips": {
+      "ssh": "SSH",
+      "powershell": "PowerShell",
+      "linux": "Linux",
+      "docker": "Docker",
+      "colors": "Colores",
+      "icons": "Iconos",
+      "tree": "Árbol",
+      "actions": "Acciones",
+      "bar": "Barra",
+      "all": "Todas",
+      "services": "Servicios",
+      "cli": "IA CLI",
+      "webapps": "IA WEB",
+      "themes": "Temas",
+      "styles": "Estilos",
+      "presets": "Presets"
+    },
+    "groups": {
+      "appearance": "Apariencia",
+      "system": "Sistema"
+    },
+    "appsActive": "{count} activas",
+    "enabled": "Activa",
+    "disabled": "Inactiva",
+    "openInSettings": "Abrir en configuración"
+  },
   "general": {
     "title": "Configuración General",
     "sections": {

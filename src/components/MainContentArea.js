@@ -214,17 +214,11 @@ const MainContentArea = ({
     const onOpenAppearanceQuickPanel = (ev) => {
       const anchor = ev?.detail?.anchor;
       if (!anchor) return;
-      openAppearanceQuickPanel(anchor, {
-        titleBarCollapsedRef,
-        tabBarCollapsedRef,
-        mainFrameHeaderCollapsedRef,
-        isMinimalModeRef,
-        setMainFrameHeaderCollapsed,
-      });
+      openAppearanceQuickPanel(anchor);
     };
     window.addEventListener('open-appearance-quick-panel', onOpenAppearanceQuickPanel);
     return () => window.removeEventListener('open-appearance-quick-panel', onOpenAppearanceQuickPanel);
-  }, [setMainFrameHeaderCollapsed]);
+  }, []);
 
   const handleFrameSearchClose = useCallback(() => {
     setFrameSearchOpen(false);
@@ -1987,13 +1981,7 @@ const MainContentArea = ({
       }
     });
     const openPanelFromAnchor = (anchorEl) => {
-      openAppearanceQuickPanel(anchorEl, {
-        titleBarCollapsedRef,
-        tabBarCollapsedRef,
-        mainFrameHeaderCollapsedRef,
-        isMinimalModeRef,
-        setMainFrameHeaderCollapsed,
-      });
+      openAppearanceQuickPanel(anchorEl);
     };
 
     appearanceButton.addEventListener('click', (e) => {

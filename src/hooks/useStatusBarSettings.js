@@ -37,6 +37,16 @@ export const useStatusBarSettings = () => {
   }, [statusBarPollingInterval]);
 
   useEffect(() => {
+    const onCatalog = (event) => {
+      if (event.detail?.key === 'statusbar-icons' && event.detail.value) {
+        setStatusBarIconTheme(event.detail.value);
+      }
+    };
+    window.addEventListener('appearance-catalog-changed', onCatalog);
+    return () => window.removeEventListener('appearance-catalog-changed', onCatalog);
+  }, [setStatusBarIconTheme]);
+
+  useEffect(() => {
     const saved = parseInt(localStorage.getItem('basicapp_statusbar_height') || '32', 10);
     const height = Number.isFinite(saved) ? Math.max(20, Math.min(48, saved)) : 32;
     document.documentElement.style.setProperty('--statusbar-height', `${height}px`);

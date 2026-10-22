@@ -64,6 +64,40 @@
     "integrations": "Integrations with external tools",
     "mcp": "MCP server for AI and automation"
   },
+  "quickPanel": {
+    "themes": "Themes",
+    "moreSettings": "More settings",
+    "openSettings": "Open settings",
+    "search": "Search…",
+    "activeTheme": "Interface · {name}",
+    "noResults": "No results",
+    "chips": {
+      "ssh": "SSH",
+      "powershell": "PowerShell",
+      "linux": "Linux",
+      "docker": "Docker",
+      "colors": "Colors",
+      "icons": "Icons",
+      "tree": "Tree",
+      "actions": "Actions",
+      "bar": "Bar",
+      "all": "All",
+      "services": "Services",
+      "cli": "AI CLI",
+      "webapps": "AI WEB",
+      "themes": "Themes",
+      "styles": "Styles",
+      "presets": "Presets"
+    },
+    "groups": {
+      "appearance": "Appearance",
+      "system": "System"
+    },
+    "appsActive": "{count} active",
+    "enabled": "On",
+    "disabled": "Off",
+    "openInSettings": "Open in settings"
+  },
   "general": {
     "title": "General Settings",
     "sections": {

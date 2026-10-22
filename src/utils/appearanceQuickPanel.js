@@ -2,509 +2,857 @@ import { themeManager } from './themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from './presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList } from './tabThemeLoader';
+import { setUILayout, UI_LAYOUT_OPTIONS, getCurrentUILayoutId } from './appearanceLayout';
+import { themes } from '../themes';
+import { statusBarThemes } from '../themes/status-bar-themes';
+import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
+import { statusBarThemeManager } from './statusBarThemeManager';
+import { treeThemeOptions } from '../themes/tree-themes';
+import { iconThemes } from '../themes/icon-themes';
+import { sessionActionIconThemes } from '../themes/session-action-icons';
+import i18n from '../i18n';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
 
-export function openAppearanceQuickPanel(anchorEl, deps = {}) {
-  const {
-    titleBarCollapsedRef,
-    tabBarCollapsedRef,
-    mainFrameHeaderCollapsedRef,
-    isMinimalModeRef,
-    setMainFrameHeaderCollapsed,
-  } = deps;
+const TERMINAL_STORAGE = {
+  ssh: 'basicapp_terminal_theme',
+  powershell: 'localPowerShellTheme',
+  linux: 'localLinuxTerminalTheme',
+  docker: 'localDockerTerminalTheme'
+};
+
+const TERMINAL_DEFAULTS = {
+  ssh: 'Default Dark',
+  powershell: 'Dark',
+  linux: 'Dark',
+  docker: 'Default Dark'
+};
+
+const LAYOUT_STYLE_CLASS = {
+  solid: 'solid',
+  underline: 'underline',
+  boxed: 'boxed',
+  minimal: 'minimal',
+  vscode: 'vscode',
+  browser: 'browser',
+  retro: 'retro',
+  pills: 'pills',
+  classicBrowser: 'classic',
+  chrome: 'chrome'
+};
+
+const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
+
+const APP_CATALOG = [
+  { id: 'guacamole', category: 'services', name: 'Guacamole', short: 'GU', color: '#059669', description: 'Proxy RDP/VNC con Docker, WSL o nativo.' },
+  { id: 'cygwin', category: 'services', name: 'Cygwin Terminal', short: 'CY', color: '#00AA00', description: 'Runtime Unix portable para Windows.' },
+  { id: 'browser', category: 'services', name: 'Navegador Web', short: 'WB', color: '#38bdf8', description: 'Navegador integrado en pestañas.' },
+  { id: 'claude', category: 'cli', name: 'Claude Code', short: 'CL', color: '#f59e0b', description: 'CLI de Anthropic con terminal dedicada.' },
+  { id: 'opencode', category: 'cli', name: 'OpenCode', short: 'OC', color: '#6366f1', description: 'Agente open-source multi-proveedor.' },
+  { id: 'codexcli', category: 'cli', name: 'Codex CLI', short: 'CX', color: '#10b981', description: 'CLI de OpenAI Codex.' },
+  { id: 'antigravitycli', category: 'cli', name: 'Antigravity CLI', short: 'AG', color: '#4285f4', description: 'CLI de Google con subagentes.' },
+  { id: 'hermescli', category: 'cli', name: 'Hermes Agent', short: 'HM', color: '#14b8a6', description: 'Agente autónomo con memoria y TUI.' },
+  { id: 'anythingllm', category: 'webapps', name: 'AnythingLLM', short: 'AL', color: '#4CAF50', description: 'RAG multi-modelo con Docker.' },
+  { id: 'openwebui', category: 'webapps', name: 'Open WebUI', short: 'OW', color: '#2196F3', description: 'Chat tipo ChatGPT para Ollama.' },
+  { id: 'librechat', category: 'webapps', name: 'LibreChat', short: 'LC', color: '#9C27B0', description: 'Chat multi-proveedor avanzado.' },
+  { id: 'agentzero', category: 'webapps', name: 'Agent Zero', short: 'AZ', color: '#E91E63', description: 'Agentes autónomos con Docker.' },
+  { id: 'openclaw', category: 'webapps', name: 'OpenClaw', short: 'CW', color: '#FF6B35', description: 'Gateway de agentes con sandbox.' },
+  { id: 'opennotebook', category: 'webapps', name: 'Open Notebook', short: 'ON', color: '#10B981', description: 'NotebookLM local auto-hospedado.' }
+];
+
+const RAIL_GROUPS = [
+  {
+    id: 'appearance',
+    labelKey: 'settings.quickPanel.groups.appearance',
+    sections: [
+      {
+        id: 'ui',
+        icon: 'pi-desktop',
+        labelKey: 'settings.sidebar.interface',
+        chips: [
+          { id: 'themes', labelKey: 'settings.quickPanel.chips.themes' },
+          { id: 'styles', labelKey: 'settings.quickPanel.chips.styles' },
+          { id: 'presets', labelKey: 'settings.quickPanel.chips.presets' }
+        ]
+      },
+      {
+        id: 'tabs',
+        icon: 'pi-palette',
+        labelKey: 'settings.sidebar.tabs',
+        chips: [
+          { id: 'themes', labelKey: 'settings.quickPanel.chips.themes' },
+          { id: 'styles', labelKey: 'settings.quickPanel.chips.styles' }
+        ]
+      },
+      {
+        id: 'terminal',
+        icon: 'pi-code',
+        labelKey: 'settings.sidebar.terminal',
+        chips: [
+          { id: 'ssh', labelKey: 'settings.quickPanel.chips.ssh' },
+          { id: 'powershell', labelKey: 'settings.quickPanel.chips.powershell' },
+          { id: 'linux', labelKey: 'settings.quickPanel.chips.linux' },
+          { id: 'docker', labelKey: 'settings.quickPanel.chips.docker' }
+        ]
+      },
+      {
+        id: 'statusbar',
+        icon: 'pi-sliders-h',
+        labelKey: 'settings.sidebar.statusBar',
+        chips: [
+          { id: 'colors', labelKey: 'settings.quickPanel.chips.colors' },
+          { id: 'icons', labelKey: 'settings.quickPanel.chips.icons' }
+        ]
+      },
+      {
+        id: 'sessions',
+        icon: 'pi-sitemap',
+        labelKey: 'settings.sidebar.sessionExplorer',
+        chips: [
+          { id: 'tree', labelKey: 'settings.quickPanel.chips.tree' },
+          { id: 'icons', labelKey: 'settings.quickPanel.chips.icons' },
+          { id: 'actions', labelKey: 'settings.quickPanel.chips.actions' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'system',
+    labelKey: 'settings.quickPanel.groups.system',
+    sections: [
+      {
+        id: 'apps',
+        icon: 'pi-th-large',
+        labelKey: 'settings.sidebar.apps',
+        chips: [
+          { id: 'all', labelKey: 'settings.quickPanel.chips.all' },
+          { id: 'services', labelKey: 'settings.quickPanel.chips.services' },
+          { id: 'cli', labelKey: 'settings.quickPanel.chips.cli' },
+          { id: 'webapps', labelKey: 'settings.quickPanel.chips.webapps' }
+        ]
+      },
+      {
+        id: 'import',
+        icon: 'pi-arrow-right-arrow-left',
+        labelKey: 'settings.sidebar.importExport',
+        descKey: 'settings.sidebarDescriptions.importExport',
+        linkTab: 'importar-exportar'
+      }
+    ]
+  }
+];
+
+const SECTIONS = RAIL_GROUPS.flatMap(group => group.sections);
+
+function t(key, params) {
+  return i18n.t(key, params);
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function norm(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function readStorage(key, fallback) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function namedEntries(record) {
+  return Object.entries(record || {})
+    .filter(([, item]) => item && (item.name || item.label))
+    .map(([id, item]) => ({
+      id,
+      name: item.name || item.label || id,
+      description: item.description || '',
+      raw: item
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getUiThemeList() {
+  return Array.from(
+    new Map(
+      Object.values(uiThemes || {})
+        .filter(theme => theme?.name)
+        .map(theme => [theme.name, theme])
+    ).values()
+  );
+}
+
+function themePreviewBackground(theme) {
+  const side = theme.colors?.sidebarBackground || '#2b2f33';
+  const content = theme.colors?.contentBackground
+    || theme.colors?.menuBarBackground
+    || theme.colors?.tabActiveBackground
+    || '#1e1e1e';
+  if (String(side).includes('gradient') || String(content).includes('gradient')) {
+    return side;
+  }
+  return `linear-gradient(135deg, ${side} 0%, ${content} 100%)`;
+}
+
+function colorSwatch(background) {
+  const swatch = el('div', 'aqp-swatch');
+  swatch.style.background = background || '#333';
+  return swatch;
+}
+
+function applyTabSwatch(node, preview) {
+  node.style.background = preview?.background || 'var(--ui-tab-active-bg, #333)';
+  node.style.borderRadius = preview?.borderRadius || '7px';
+  if (preview?.border) node.style.border = preview.border;
+  if (preview?.boxShadow) node.style.boxShadow = preview.boxShadow;
+}
+
+function createLayoutMock(borderStyle, compact) {
+  const style = LAYOUT_STYLE_CLASS[borderStyle] || 'solid';
+  const mock = el('div', `aqp-layout-mock aqp-layout-mock--${style}${compact ? ' aqp-layout-mock--compact' : ''}`);
+  mock.append(el('span'), el('span'), el('span'));
+  return mock;
+}
+
+function terminalSwatch(theme) {
+  const colors = theme?.theme || {};
+  const box = el('div', 'aqp-term-swatch');
+  box.style.background = colors.background || '#1e1e1e';
+  box.style.color = colors.foreground || '#d4d4d4';
+  const cursor = el('span', 'aqp-term-cursor');
+  cursor.style.background = colors.cursor || colors.foreground || '#d4d4d4';
+  box.append(el('span', 'aqp-term-prompt', 'user@host:~$'), cursor);
+  return box;
+}
+
+function dotSwatch(colors, background) {
+  const box = el('div', background ? 'aqp-status-swatch' : 'aqp-dots-swatch');
+  if (background) {
+    box.style.background = background;
+    box.style.borderColor = 'transparent';
+  }
+  const list = (colors && Object.values(colors).slice(0, 5)) || [];
+  if (!list.length) {
+    const dot = el('span');
+    dot.style.background = 'var(--primary-color, #5b8def)';
+    box.append(dot);
+    return box;
+  }
+  list.forEach((color) => {
+    const dot = el('span');
+    dot.style.background = color;
+    box.append(dot);
+  });
+  return box;
+}
+
+function publishCatalog(key, value) {
+  window.dispatchEvent(new CustomEvent('appearance-catalog-changed', {
+    detail: { key, value }
+  }));
+}
+
+export function openAppearanceQuickPanel(anchorEl) {
   if (!anchorEl) return;
+
   const existingPanel = document.getElementById('tab-appearance-quick-panel');
   if (existingPanel) {
+    existingPanel._aqpCleanup?.();
     existingPanel.remove();
     return;
   }
-  const rect = anchorEl.getBoundingClientRect();
-  const currentTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
-  const currentLayout = localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default';
+
   const themeList = getTabThemeList();
   const layoutList = getTabLayoutList();
+  const uiThemeList = getUiThemeList();
+  const terminalList = namedEntries(themes);
+  const statusColorList = namedEntries(statusBarThemes);
+  const statusIconList = namedEntries(statusBarIconThemes);
+  const sidebarIconList = namedEntries(iconThemes);
+  const sessionActionList = namedEntries(sessionActionIconThemes);
+  const picked = {};
+  const state = {
+    section: 'ui',
+    chip: 'themes',
+    query: ''
+  };
 
   const panel = document.createElement('div');
   panel.id = 'tab-appearance-quick-panel';
-  panel.style.cssText = `
-    position: fixed;
-    right: 8px;
-    top: ${rect.bottom + 4}px;
-    width: 280px;
-    max-height: 420px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    background: var(--ui-dialog-bg, var(--ui-card-bg, #2d2d30));
-    border: 1px solid var(--ui-tab-border, rgba(255,255,255,0.12));
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-    z-index: 10000;
-    font-size: 12px;
-  `;
+  panel.className = 'aqp';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', t('settings.sidebar.appearance'));
+
+  const header = el('div', 'aqp-header');
+  const studio = el('div', 'aqp-studio');
+  const rail = el('nav', 'aqp-rail');
+  const stage = el('div', 'aqp-stage');
+  studio.append(rail, stage);
+  panel.append(header, studio);
 
   const openedAt = Date.now();
-  const closeOutside = (ev) => {
-    // Evitar que el mismo click que abre el panel lo cierre al instante
-    if (Date.now() - openedAt < 150) return;
-    if (!panel.contains(ev.target) && !(anchorEl && anchorEl.contains(ev.target))) {
-      if (panel.parentNode) panel.remove();
-      document.removeEventListener('click', closeOutside);
-    }
+  let gridEl = null;
+
+  const close = () => {
+    panel._aqpCleanup?.();
+    panel.remove();
+  };
+  panel._aqpCleanup = () => {
+    document.removeEventListener('click', onOutside);
+    document.removeEventListener('keydown', onKey);
   };
 
-  const contentArea = document.createElement('div');
-  contentArea.style.cssText = 'flex: 1; overflow: auto; padding: 8px;';
+  const onOutside = (ev) => {
+    if (Date.now() - openedAt < 150) return;
+    if (!panel.contains(ev.target) && !anchorEl.contains(ev.target)) close();
+  };
 
-  const choiceBtnStyle = (active) => `
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 10px;
-    margin-bottom: 6px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--ui-tab-text, rgba(255,255,255,0.9));
-    background: ${active ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'};
-    transition: background 0.15s;
-  `;
+  const onKey = (ev) => {
+    if (ev.key === 'Escape') close();
+  };
 
-  function showChoice() {
-    contentArea.innerHTML = '';
-    contentArea.style.padding = '8px';
-
-    const optThemes = document.createElement('button');
-    optThemes.type = 'button';
-    optThemes.style.cssText = choiceBtnStyle(false);
-    optThemes.innerHTML = '<i class="pi pi-palette" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Tema de pestañas</span>';
-    optThemes.addEventListener('mouseenter', () => { optThemes.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
-    optThemes.addEventListener('mouseleave', () => { optThemes.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
-    optThemes.addEventListener('click', (ev) => { ev.stopPropagation(); showThemeList(); });
-
-    const optLayout = document.createElement('button');
-    optLayout.type = 'button';
-    optLayout.style.cssText = choiceBtnStyle(false);
-    optLayout.innerHTML = '<i class="pi pi-th-large" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Diseño / layout</span>';
-    optLayout.addEventListener('mouseenter', () => { optLayout.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
-    optLayout.addEventListener('mouseleave', () => { optLayout.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
-    optLayout.addEventListener('click', (ev) => { ev.stopPropagation(); showLayoutList(); });
-
-    const optUiTheme = document.createElement('button');
-    optUiTheme.type = 'button';
-    optUiTheme.style.cssText = choiceBtnStyle(false);
-    optUiTheme.innerHTML = '<i class="pi pi-desktop" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Tema de apariencia</span>';
-    optUiTheme.addEventListener('mouseenter', () => { optUiTheme.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
-    optUiTheme.addEventListener('mouseleave', () => { optUiTheme.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
-    optUiTheme.addEventListener('click', (ev) => { ev.stopPropagation(); showUiThemeList(); });
-
-    const optPresets = document.createElement('button');
-    optPresets.type = 'button';
-    optPresets.style.cssText = choiceBtnStyle(false);
-    optPresets.innerHTML = '<i class="pi pi-star" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Presets de temas</span>';
-    optPresets.addEventListener('mouseenter', () => { optPresets.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
-    optPresets.addEventListener('mouseleave', () => { optPresets.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
-    optPresets.addEventListener('click', (ev) => { ev.stopPropagation(); showPresetList(); });
-
-    contentArea.appendChild(optThemes);
-    contentArea.appendChild(optLayout);
-    contentArea.appendChild(optUiTheme);
-    contentArea.appendChild(optPresets);
-
-    const separator = document.createElement('div');
-    separator.style.cssText = 'height: 1px; background: var(--ui-tab-border, rgba(255,255,255,0.1)); margin: 8px 4px;';
-    contentArea.appendChild(separator);
-
-    const titleVentana = document.createElement('div');
-    titleVentana.textContent = 'Ventana';
-    titleVentana.style.cssText = 'font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.5; margin: 4px 10px 8px; letter-spacing: 0.05em; color: var(--ui-tab-text);';
-    contentArea.appendChild(titleVentana);
-
-    const createToggleOption = (label, iconClass, isActive, onToggle) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.style.cssText = choiceBtnStyle(false);
-      btn.style.justifyContent = 'space-between';
-      btn.style.padding = '10px 12px';
-      
-      const leftSide = document.createElement('div');
-      leftSide.style.cssText = 'display: flex; align-items: center; gap: 12px;';
-      // Si no hay icono, el texto se alinea a la izquierda
-      if (iconClass) {
-        leftSide.innerHTML = `<i class="pi ${iconClass}" style="font-size: 1.1rem; opacity: 0.9;"></i><span style="font-weight: 500;">${label}</span>`;
-      } else {
-        leftSide.innerHTML = `<span style="font-weight: 500;">${label}</span>`;
-      }
-      
-      // Switch Track (Estilo de la imagen)
-      const track = document.createElement('div');
-      track.style.cssText = `
-        width: 38px;
-        height: 20px;
-        border-radius: 12px;
-        background: ${isActive ? '#4d79c7' : '#323d4d'};
-        position: relative;
-        transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        flex-shrink: 0;
-      `;
-      
-      // Switch Thumb (Círculo blanco)
-      const thumb = document.createElement('div');
-      thumb.style.cssText = `
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: white;
-        position: absolute;
-        top: 2px;
-        left: ${isActive ? '20px' : '2px'};
-        transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-      `;
-      
-      track.appendChild(thumb);
-      btn.appendChild(leftSide);
-      btn.appendChild(track);
-      
-      btn.addEventListener('mouseenter', () => { 
-        btn.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))';
-      });
-      btn.addEventListener('mouseleave', () => { 
-        btn.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
-      });
-      btn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        onToggle();
-        // Feedback visual inmediato
-        const willBeActive = !isActive;
-        track.style.background = willBeActive ? '#4d79c7' : '#323d4d';
-        thumb.style.left = willBeActive ? '20px' : '2px';
-        setTimeout(() => showChoice(), 150);
-      });
-      return btn;
-    };
-
-    const isTitleBarVisible = !titleBarCollapsedRef.current;
-    const isMarcoVisible = !mainFrameHeaderCollapsedRef.current;
-    const isTabBarVisible = !(tabBarCollapsedRef && tabBarCollapsedRef.current);
-    const isMinimal = isMinimalModeRef.current;
-
-    // Reordenados según petición del usuario: Barra de título, Marco superior, Barra de pestañas, Modo minimalista
-    contentArea.appendChild(createToggleOption('Barra de título', null, isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
-    contentArea.appendChild(createToggleOption('Marco superior', null, isMarcoVisible, () => setMainFrameHeaderCollapsed(prev => !prev)));
-    contentArea.appendChild(createToggleOption('Barra de pestañas', null, isTabBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-tabbar'))));
-    contentArea.appendChild(createToggleOption('Modo Minimalista Absoluto', null, isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
+  function positionPanel() {
+    const margin = 8;
+    const rect = anchorEl.getBoundingClientRect();
+    const width = panel.offsetWidth;
+    const height = panel.offsetHeight;
+    let left = rect.right - width;
+    if (left < margin) left = margin;
+    if (left + width > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - margin - width);
+    }
+    let top = rect.bottom + 6;
+    if (top + height > window.innerHeight - margin) {
+      const above = rect.top - 6 - height;
+      top = above >= margin ? above : margin;
+    }
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
   }
 
-  function addBackBar(title, onBack) {
-    const bar = document.createElement('div');
-    bar.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--ui-tab-border, rgba(255,255,255,0.12));
-    `;
-    const backBtn = document.createElement('button');
-    backBtn.type = 'button';
-    backBtn.innerHTML = '<i class="pi pi-arrow-left" style="font-size: 0.85rem;"></i>';
-    backBtn.style.cssText = `
-      padding: 4px 6px;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: var(--ui-tab-text, rgba(255,255,255,0.8));
-      cursor: pointer;
-    `;
-    backBtn.addEventListener('click', onBack);
-    const titleEl = document.createElement('span');
-    titleEl.textContent = title;
-    titleEl.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ui-tab-text, rgba(255,255,255,0.7));';
-    bar.appendChild(backBtn);
-    bar.appendChild(titleEl);
-    contentArea.insertBefore(bar, contentArea.firstChild);
+  function remembered(key, storageKey, fallback) {
+    if (picked[key] != null) return picked[key];
+    return readStorage(storageKey, fallback);
   }
 
-  function showThemeList() {
-    contentArea.innerHTML = '';
-    contentArea.style.padding = '8px';
-    addBackBar('Tema de pestañas', showChoice);
+  function sectionValue(sectionId) {
+    if (sectionId === 'tabs') {
+      const id = readStorage(TAB_THEME_STORAGE_KEY, 'default');
+      return themeList.find(item => item.id === id)?.name || id;
+    }
+    if (sectionId === 'ui') return remembered('ui', 'ui_theme', 'Light');
+    if (sectionId === 'terminal') {
+      const id = remembered('terminal-ssh', TERMINAL_STORAGE.ssh, TERMINAL_DEFAULTS.ssh);
+      return terminalList.find(item => item.id === id)?.name || id;
+    }
+    if (sectionId === 'statusbar') {
+      const id = remembered('statusbar-theme', 'basicapp_statusbar_theme', 'Default Dark');
+      return statusColorList.find(item => item.id === id)?.name || id;
+    }
+    if (sectionId === 'sessions') {
+      const id = remembered('tree-theme', 'nodeterm_tree_theme', 'cursorCompact');
+      return treeThemeOptions.find(item => item.value === id)?.label || id;
+    }
+    if (sectionId === 'apps') {
+      const enabled = readAppsConfig();
+      const count = APP_CATALOG.filter(app => enabled[app.id]).length;
+      return t('settings.quickPanel.appsActive', { count });
+    }
+    if (sectionId === 'import') {
+      const section = SECTIONS.find(item => item.id === sectionId);
+      return section?.descKey ? t(section.descKey) : '';
+    }
+    return '';
+  }
 
-    themeList.forEach(({ id, name, preview }) => {
-      const item = document.createElement('div');
-      item.dataset.themeId = id;
-      item.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: var(--ui-tab-text, rgba(255,255,255,0.9));
-        background: ${id === currentTheme ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
-      `;
-      const swatch = document.createElement('div');
-      swatch.style.cssText = `
-        width: 28px;
-        height: 18px;
-        flex-shrink: 0;
-        border-radius: ${preview.borderRadius || '4px 4px 0 0'};
-        background: ${preview.background};
-        border: ${preview.border || '1px solid rgba(255,255,255,0.2)'};
-        box-shadow: ${preview.boxShadow || 'none'};
-      `;
-      const label = document.createElement('span');
-      label.textContent = name;
-      label.style.flex = '1';
-      label.style.overflow = 'hidden';
-      label.style.textOverflow = 'ellipsis';
-      label.style.whiteSpace = 'nowrap';
-      item.appendChild(swatch);
-      item.appendChild(label);
-      if (id === currentTheme) {
-        const check = document.createElement('i');
-        check.className = 'pi pi-check';
-        check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
-        item.appendChild(check);
-      }
-      item.addEventListener('mouseenter', () => {
-        if (id !== currentTheme) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+  function readAppsConfig() {
+    if (picked.apps) return picked.apps;
+    try {
+      const parsed = JSON.parse(localStorage.getItem(AI_CLIENTS_STORAGE_KEY) || '{}');
+      return {
+        guacamole: !!parsed.guacamole,
+        cygwin: !!parsed.cygwin,
+        browser: parsed.browser !== false,
+        claude: !!parsed.claude,
+        opencode: !!parsed.opencode,
+        codexcli: !!parsed.codexcli,
+        antigravitycli: !!parsed.antigravitycli,
+        hermescli: !!parsed.hermescli,
+        anythingllm: !!parsed.anythingllm,
+        openwebui: !!parsed.openwebui,
+        librechat: !!parsed.librechat,
+        agentzero: !!parsed.agentzero,
+        openclaw: !!parsed.openclaw,
+        opennotebook: !!parsed.opennotebook
+      };
+    } catch {
+      return { browser: true };
+    }
+  }
+
+  function saveAppsConfig(next) {
+    picked.apps = next;
+    try {
+      localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(next));
+    } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('ai-clients-config-changed', {
+      detail: { config: next }
+    }));
+  }
+
+  function toggleApp(appId) {
+    const current = { ...readAppsConfig() };
+    const nextEnabled = !current[appId];
+    current[appId] = nextEnabled;
+    if (appId === 'guacamole') current.rdp = nextEnabled;
+    saveAppsConfig(current);
+    if (appId === 'guacamole' && window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.invoke(nextEnabled ? 'guacamole:start' : 'guacamole:stop').catch(() => {});
+    }
+    refreshSelection();
+  }
+
+  function openSettingsTab(tab) {
+    close();
+    window.dispatchEvent(new CustomEvent('open-settings-tab', {
+      detail: { tab, mainTab: tab }
+    }));
+  }
+
+  function activeSection() {
+    return SECTIONS.find(section => section.id === state.section) || SECTIONS[0];
+  }
+
+  function matchesQuery(parts) {
+    const needle = norm(state.query).trim();
+    if (!needle) return true;
+    return parts.some(part => norm(part).includes(needle));
+  }
+
+  function renderHeader() {
+    header.replaceChildren();
+    const text = el('div', 'aqp-header-text');
+    text.append(el('div', 'aqp-title', t('settings.sidebar.appearance')));
+    text.append(el('div', 'aqp-subtitle', t(activeSection().labelKey)));
+    const closeBtn = el('button', 'aqp-icon-btn');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', t('common.buttons.close'));
+    closeBtn.append(el('i', 'pi pi-times'));
+    closeBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      close();
+    });
+    header.append(text, closeBtn);
+  }
+
+  function renderRail() {
+    rail.replaceChildren();
+    RAIL_GROUPS.forEach((group) => {
+      rail.append(el('div', 'aqp-rail-group', t(group.labelKey)));
+      group.sections.forEach((section) => {
+        const button = el('button', `aqp-rail-item${section.id === state.section ? ' is-active' : ''}`);
+        button.type = 'button';
+        button.append(el('i', `pi ${section.icon}`));
+        const copy = el('span', 'aqp-rail-copy');
+        copy.append(el('span', 'aqp-rail-label', t(section.labelKey)));
+        copy.append(el('span', 'aqp-rail-value', sectionValue(section.id)));
+        button.append(copy);
+        button.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          state.section = section.id;
+          state.chip = section.chips ? section.chips[0].id : null;
+          state.query = '';
+          renderHeader();
+          renderRail();
+          renderStage();
+          positionPanel();
+        });
+        rail.append(button);
       });
-      item.addEventListener('mouseleave', () => {
-        if (id !== currentTheme) item.style.background = 'transparent';
-      });
-      item.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        applyTabTheme(id);
-        localStorage.setItem(TAB_THEME_STORAGE_KEY, id);
-        panel.remove();
-        document.removeEventListener('click', closeOutside);
-      });
-      contentArea.appendChild(item);
     });
   }
 
-  function showLayoutList() {
-    contentArea.innerHTML = '';
-    contentArea.style.padding = '8px';
-    addBackBar('Diseño / layout', showChoice);
-
-    layoutList.forEach(({ id, name, description, preview }) => {
-      const item = document.createElement('div');
-      item.dataset.layoutId = id;
-      item.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: var(--ui-tab-text, rgba(255,255,255,0.9));
-        background: ${id === currentLayout ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
-      `;
-      const swatch = document.createElement('div');
-      const previewBorderStyle = preview?.borderStyle;
-      const isMinimalPreview = previewBorderStyle === 'minimal';
-      const isUnderlinePreview = previewBorderStyle === 'underline';
-      const isBoxedPreview = previewBorderStyle === 'boxed';
-      const isVscodePreview = previewBorderStyle === 'vscode';
-      const isBrowserPreview = previewBorderStyle === 'browser';
-      const isRetroPreview = previewBorderStyle === 'retro';
-      const isPillsPreview = previewBorderStyle === 'pills';
-      const isClassicBrowserPreview = previewBorderStyle === 'classicBrowser';
-      const isChromePreview = previewBorderStyle === 'chrome';
-      swatch.style.cssText = `
-        width: 28px;
-        height: ${preview?.tabHeight || '30px'};
-        flex-shrink: 0;
-        border-radius: ${preview?.borderRadius || '4px 4px 0 0'};
-        border: ${isVscodePreview || isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
-        border-right: ${isVscodePreview ? '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))' : 'none'};
-        border-top: ${isVscodePreview ? '2px solid var(--primary-color, #2196f3)' : (isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
-        background: ${isMinimalPreview ? 'transparent' : 'var(--ui-tab-bg, rgba(255,255,255,0.05))'};
-        box-shadow: ${isBoxedPreview ? 'inset 0 0 0 1px var(--ui-tab-border, rgba(255,255,255,0.35))' : 'none'};
-        border-bottom: ${isUnderlinePreview ? '2px solid var(--primary-color, #2196f3)' : (isClassicBrowserPreview || isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
-        margin-top: ${isBrowserPreview || isChromePreview ? '2px' : '0'};
-        font-family: ${isRetroPreview ? '"Consolas","Courier New",monospace' : 'inherit'};
-        border-radius: ${isPillsPreview ? '999px' : (preview?.borderRadius || '4px 4px 0 0')};
-      `;
-      const textWrap = document.createElement('div');
-      textWrap.style.cssText = 'display: flex; flex-direction: column; min-width: 0; flex: 1;';
-      const label = document.createElement('span');
-      label.textContent = name;
-      label.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-      const subLabel = document.createElement('span');
-      subLabel.textContent = description || '';
-      subLabel.style.cssText = 'font-size: 10px; opacity: 0.72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-      textWrap.appendChild(label);
-      textWrap.appendChild(subLabel);
-      item.appendChild(swatch);
-      item.appendChild(textWrap);
-      if (id === currentLayout) {
-        const check = document.createElement('i');
-        check.className = 'pi pi-check';
-        check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
-        item.appendChild(check);
+  function renderStage() {
+    stage.replaceChildren();
+    const section = activeSection();
+    const head = el('div', 'aqp-stage-head');
+    head.append(el('div', 'aqp-title', t(section.labelKey)));
+    if (section.chips) {
+      if (!section.chips.some(chip => chip.id === state.chip)) {
+        state.chip = section.chips[0].id;
       }
-      item.addEventListener('mouseenter', () => {
-        if (id !== currentLayout) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+      const chips = el('div', 'aqp-chips');
+      section.chips.forEach((chip) => {
+        const button = el('button', `aqp-chip${chip.id === state.chip ? ' is-active' : ''}`, t(chip.labelKey));
+        button.type = 'button';
+        button.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          state.chip = chip.id;
+          state.query = '';
+          renderStage();
+          positionPanel();
+        });
+        chips.append(button);
       });
-      item.addEventListener('mouseleave', () => {
-        if (id !== currentLayout) item.style.background = 'transparent';
-      });
-      item.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        applyTabLayout(id);
-        localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, id);
-        panel.remove();
-        document.removeEventListener('click', closeOutside);
-      });
-      contentArea.appendChild(item);
+      head.append(chips);
+    }
+    stage.append(head);
+
+    const search = el('div', 'aqp-search');
+    search.append(el('i', 'pi pi-search'));
+    const input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'aqp-search-input';
+    input.placeholder = t('settings.quickPanel.search');
+    input.value = state.query;
+    input.addEventListener('click', (ev) => ev.stopPropagation());
+    input.addEventListener('input', () => {
+      state.query = input.value;
+      fillGrid();
+      positionPanel();
     });
+    search.append(input);
+    stage.append(search);
+
+    gridEl = el('div', 'aqp-gallery aqp-gallery--grid');
+    const body = el('div', 'aqp-body');
+    body.append(gridEl);
+    stage.append(body);
+    fillGrid();
+    setTimeout(() => input.focus(), 0);
   }
 
-  function showUiThemeList() {
-    contentArea.innerHTML = '';
-    contentArea.style.padding = '8px';
-    addBackBar('Tema de apariencia', showChoice);
-
-    const currentUiTheme = localStorage.getItem('ui_theme') || 'Light';
-    const uiThemeList = Array.from(
-      new Map(
-        Object.values(uiThemes || {})
-          .filter(theme => theme?.name)
-          .map(theme => [theme.name, theme])
-      ).values()
-    );
-
-    uiThemeList.forEach((theme) => {
-      const isActive = theme.name === currentUiTheme;
-      const item = document.createElement('div');
-      item.dataset.uiThemeName = theme.name;
-      item.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: var(--ui-tab-text, rgba(255,255,255,0.9));
-        background: ${isActive ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
-      `;
-
-      const swatch = document.createElement('div');
-      swatch.style.cssText = `
-        width: 28px;
-        height: 18px;
-        flex-shrink: 0;
-        border-radius: 4px;
-        border: 1px solid rgba(255,255,255,0.2);
-        background: linear-gradient(135deg, ${theme.colors?.sidebarBackground || '#2b2f33'} 0%, ${theme.colors?.contentBackground || '#1e1e1e'} 100%);
-      `;
-
-      const label = document.createElement('span');
-      label.textContent = theme.name;
-      label.style.cssText = 'flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-
-      item.appendChild(swatch);
-      item.appendChild(label);
-      if (isActive) {
-        const check = document.createElement('i');
-        check.className = 'pi pi-check';
-        check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
-        item.appendChild(check);
-      }
-
-      item.addEventListener('mouseenter', () => {
-        if (!isActive) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
-      });
-      item.addEventListener('mouseleave', () => {
-        if (!isActive) item.style.background = 'transparent';
-      });
-      item.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        themeManager.applyTheme(theme.name);
-        panel.remove();
-        document.removeEventListener('click', closeOutside);
-      });
-
-      contentArea.appendChild(item);
-    });
+  function refreshSelection() {
+    renderHeader();
+    renderRail();
+    fillGrid();
+    positionPanel();
   }
 
-  function showPresetList() {
-    contentArea.innerHTML = '';
-    contentArea.style.padding = '8px';
-    addBackBar('Presets de temas', showChoice);
-
-    const allPresets = presetManager.getAllPresets();
-    const activePresetId = presetManager.getActivePresetId();
-
-    allPresets.forEach((preset) => {
-      const isActive = preset.id === activePresetId;
-      const item = document.createElement('div');
-      item.dataset.presetId = preset.id;
-      item.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: var(--ui-tab-text, rgba(255,255,255,0.9));
-        background: ${isActive ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
-      `;
-
-      const icon = document.createElement('span');
-      icon.textContent = preset.icon || '🎨';
-      icon.style.cssText = 'font-size: 0.95rem; line-height: 1; width: 16px; text-align: center; flex-shrink: 0;';
-
-      const textWrap = document.createElement('div');
-      textWrap.style.cssText = 'display: flex; flex-direction: column; min-width: 0; flex: 1;';
-      const label = document.createElement('span');
-      label.textContent = preset.name;
-      label.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-      const subLabel = document.createElement('span');
-      subLabel.textContent = preset.description || '';
-      subLabel.style.cssText = 'font-size: 10px; opacity: 0.72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-      textWrap.appendChild(label);
-      textWrap.appendChild(subLabel);
-
-      item.appendChild(icon);
-      item.appendChild(textWrap);
-
-      if (isActive) {
-        const check = document.createElement('i');
-        check.className = 'pi pi-check';
-        check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
-        item.appendChild(check);
-      }
-
-      item.addEventListener('mouseenter', () => {
-        if (!isActive) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
-      });
-      item.addEventListener('mouseleave', () => {
-        if (!isActive) item.style.background = 'transparent';
-      });
-      item.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        presetManager.applyPreset(preset);
-        panel.remove();
-        document.removeEventListener('click', closeOutside);
-      });
-
-      contentArea.appendChild(item);
+  function makeCard({ active, preview, name, description, row, onPick }) {
+    const card = el('button', `aqp-gallery-card${row ? ' aqp-gallery-card--row' : ''}`);
+    card.type = 'button';
+    if (active) card.classList.add('is-active');
+    if (row) {
+      const copy = el('div', 'aqp-gallery-copy');
+      copy.append(el('span', 'aqp-gallery-name', name));
+      if (description) copy.append(el('span', 'aqp-gallery-desc', description));
+      card.append(preview, copy);
+      if (active) card.append(el('i', 'pi pi-check aqp-check'));
+    } else {
+      const label = el('div', 'aqp-gallery-label');
+      label.append(el('span', 'aqp-gallery-name', name));
+      if (active) label.append(el('i', 'pi pi-check aqp-check'));
+      card.append(preview, label);
+    }
+    card.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onPick();
     });
+    return card;
   }
 
-  panel.appendChild(contentArea);
-  showChoice();
+  function currentCatalog() {
+    const section = state.section;
+    const chip = state.chip;
+
+    if (section === 'tabs' && chip === 'styles') {
+      const current = readStorage(TAB_LAYOUT_STORAGE_KEY, 'default');
+      return {
+        stacked: true,
+        cards: layoutList.filter(item => matchesQuery([item.name, item.description])).map(item => makeCard({
+          active: item.id === current,
+          row: true,
+          name: item.name,
+          description: item.description,
+          preview: createLayoutMock(item.preview?.borderStyle, false),
+          onPick: () => {
+            applyTabLayout(item.id);
+            localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'tabs') {
+      const current = readStorage(TAB_THEME_STORAGE_KEY, 'default');
+      return {
+        stacked: false,
+        cards: themeList.filter(item => matchesQuery([item.name, item.id])).map(item => makeCard({
+          active: item.id === current,
+          name: item.name,
+          preview: (() => {
+            const swatch = el('div', 'aqp-swatch');
+            applyTabSwatch(swatch, item.preview);
+            return swatch;
+          })(),
+          onPick: () => {
+            applyTabTheme(item.id);
+            localStorage.setItem(TAB_THEME_STORAGE_KEY, item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'ui' && chip === 'styles') {
+      const current = remembered('ui-layout', 'ui_layout', getCurrentUILayoutId());
+      return {
+        stacked: false,
+        cards: UI_LAYOUT_OPTIONS.filter(item => matchesQuery([item.name, item.id])).map(item => makeCard({
+          active: item.id === current,
+          name: item.name,
+          preview: (() => {
+            const swatch = el('div', 'aqp-swatch aqp-preset-mark');
+            swatch.append(el('i', `pi ${item.icon || 'pi-th-large'}`));
+            return swatch;
+          })(),
+          onPick: () => {
+            setUILayout(item.id);
+            picked['ui-layout'] = item.id;
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'ui' && chip === 'presets') {
+      const current = presetManager.getActivePresetId();
+      return {
+        stacked: true,
+        cards: presetManager.getAllPresets().filter(preset => matchesQuery([preset.name, preset.description])).map(preset => makeCard({
+          active: preset.id === current,
+          row: true,
+          name: preset.name,
+          description: preset.description,
+          preview: el('span', 'aqp-preset-mark', preset.icon || '🎨'),
+          onPick: () => {
+            presetManager.applyPreset(preset);
+            Object.keys(picked).forEach(key => { delete picked[key]; });
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'ui') {
+      const current = remembered('ui', 'ui_theme', 'Light');
+      return {
+        stacked: false,
+        cards: uiThemeList.filter(theme => matchesQuery([theme.name])).map(theme => makeCard({
+          active: theme.name === current,
+          name: theme.name,
+          preview: colorSwatch(themePreviewBackground(theme)),
+          onPick: () => {
+            themeManager.applyTheme(theme.name);
+            picked.ui = theme.name;
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'terminal') {
+      const type = chip || 'ssh';
+      const current = remembered(`terminal-${type}`, TERMINAL_STORAGE[type], TERMINAL_DEFAULTS[type]);
+      return {
+        stacked: false,
+        cards: terminalList.filter(item => matchesQuery([item.name])).map(item => makeCard({
+          active: item.id === current || item.name === current,
+          name: item.name,
+          preview: terminalSwatch(item.raw),
+          onPick: () => {
+            picked[`terminal-${type}`] = item.id;
+            publishCatalog(`terminal-${type}`, item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'statusbar' && chip === 'icons') {
+      const current = remembered('statusbar-icons', 'basicapp_statusbar_icon_theme', 'classic');
+      return {
+        stacked: false,
+        cards: statusIconList.filter(item => matchesQuery([item.name])).map(item => makeCard({
+          active: item.id === current,
+          name: item.name,
+          preview: dotSwatch(item.raw.colors),
+          onPick: () => {
+            picked['statusbar-icons'] = item.id;
+            publishCatalog('statusbar-icons', item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'statusbar') {
+      const current = remembered('statusbar-theme', 'basicapp_statusbar_theme', 'Default Dark');
+      return {
+        stacked: false,
+        cards: statusColorList.filter(item => matchesQuery([item.name])).map(item => makeCard({
+          active: item.id === current,
+          name: item.name,
+          preview: dotSwatch({
+            cpu: item.raw.colors?.cpuBarColor,
+            memory: item.raw.colors?.memoryBarColor,
+            disk: item.raw.colors?.diskBarColor
+          }, item.raw.colors?.background),
+          onPick: () => {
+            statusBarThemeManager.applyTheme(item.id);
+            picked['statusbar-theme'] = item.id;
+            publishCatalog('statusbar-theme', item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'sessions' && chip === 'icons') {
+      const current = remembered('icon-theme-sidebar', 'iconThemeSidebar', 'nord');
+      return {
+        stacked: false,
+        cards: sidebarIconList.filter(item => matchesQuery([item.name])).map(item => makeCard({
+          active: item.id === current,
+          name: item.name,
+          preview: colorSwatch('color-mix(in srgb, var(--primary-color, #5b8def) 28%, transparent)'),
+          onPick: () => {
+            picked['icon-theme-sidebar'] = item.id;
+            publishCatalog('icon-theme-sidebar', item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'sessions' && chip === 'actions') {
+      const current = remembered('session-action-icons', 'sessionActionIconTheme', 'classic');
+      return {
+        stacked: true,
+        cards: sessionActionList.filter(item => matchesQuery([item.name, item.description])).map(item => makeCard({
+          active: item.id === current,
+          row: true,
+          name: item.name,
+          description: item.description,
+          preview: colorSwatch('color-mix(in srgb, var(--primary-color, #5b8def) 28%, transparent)'),
+          onPick: () => {
+            picked['session-action-icons'] = item.id;
+            publishCatalog('session-action-icons', item.id);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'sessions') {
+      const current = remembered('tree-theme', 'nodeterm_tree_theme', 'cursorCompact');
+      return {
+        stacked: true,
+        cards: treeThemeOptions.filter(item => matchesQuery([item.label, item.description])).map(item => makeCard({
+          active: item.value === current,
+          row: true,
+          name: item.label,
+          description: item.description,
+          preview: colorSwatch('color-mix(in srgb, var(--ui-tab-text, #fff) 10%, transparent)'),
+          onPick: () => {
+            picked['tree-theme'] = item.value;
+            publishCatalog('tree-theme', item.value);
+            refreshSelection();
+          }
+        }))
+      };
+    }
+
+    if (section === 'apps') {
+      const enabled = readAppsConfig();
+      const filter = chip && chip !== 'all' ? chip : null;
+      const apps = APP_CATALOG
+        .filter(app => !filter || app.category === filter)
+        .filter(app => matchesQuery([app.name, app.description, app.category]));
+      return {
+        mode: 'apps',
+        cards: apps.map((app) => {
+          const active = !!enabled[app.id];
+          const card = el('button', `aqp-app-card${active ? ' is-active' : ''}`);
+          card.type = 'button';
+          card.style.setProperty('--aqp-app-color', app.color);
+          const top = el('div', 'aqp-app-top');
+          const badge = el('span', 'aqp-app-badge', app.short);
+          badge.style.background = app.color;
+          const copy = el('div', 'aqp-app-copy');
+          copy.append(el('span', 'aqp-app-name', app.name));
+          copy.append(el('span', 'aqp-app-desc', app.description));
+          top.append(badge, copy);
+          const foot = el('div', 'aqp-app-foot');
+          foot.append(el('span', 'aqp-app-tag', active
+            ? t('settings.quickPanel.enabled')
+            : t('settings.quickPanel.disabled')));
+          const sw = el('span', `aqp-switch${active ? ' is-on' : ''}`);
+          foot.append(sw);
+          card.append(top, foot);
+          card.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            toggleApp(app.id);
+          });
+          return card;
+        })
+      };
+    }
+
+    if (section === 'import') {
+      const card = el('button', 'aqp-link-card');
+      card.type = 'button';
+      card.append(el('i', 'pi pi-arrow-right-arrow-left'));
+      card.append(el('span', 'aqp-app-name', t('settings.sidebar.importExport')));
+      card.append(el('span', 'aqp-app-desc', t('settings.sidebarDescriptions.importExport')));
+      card.append(el('span', 'aqp-app-tag', t('settings.quickPanel.openInSettings')));
+      card.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openSettingsTab('importar-exportar');
+      });
+      return { mode: 'apps', cards: [card] };
+    }
+
+    return { stacked: false, cards: [] };
+  }
+
+  function fillGrid() {
+    if (!gridEl) return;
+    const catalog = currentCatalog();
+    gridEl.className = catalog.mode === 'apps'
+      ? 'aqp-gallery aqp-gallery--apps'
+      : (catalog.stacked ? 'aqp-gallery aqp-gallery--stack' : 'aqp-gallery aqp-gallery--grid');
+    gridEl.replaceChildren();
+    if (!catalog.cards.length) {
+      gridEl.append(el('div', 'aqp-empty', t('settings.quickPanel.noResults')));
+      return;
+    }
+    catalog.cards.forEach(card => gridEl.append(card));
+  }
+
+  function render() {
+    renderHeader();
+    renderRail();
+    renderStage();
+    positionPanel();
+  }
+
   document.body.appendChild(panel);
-  setTimeout(() => document.addEventListener('click', closeOutside), 0);
-}
+  render();
 
+  setTimeout(() => document.addEventListener('click', onOutside), 0);
+  document.addEventListener('keydown', onKey);
+}

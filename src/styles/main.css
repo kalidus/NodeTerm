@@ -36,6 +36,7 @@
 @import './components/sync-settings-dialog.css';
 @import './components/status-bar-settings.css';
 @import './components/settings-sidebar.css';
+@import './components/appearance-quick-panel.css';
 @import './components/theme-selector.css';
 @import './components/update-notification.css';
 @import './components/iron-rdp-toolbar.css';
