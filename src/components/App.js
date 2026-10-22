@@ -2874,6 +2874,7 @@ const App = () => {
           expandedKeys={expandedKeys}
           sidebarCollapsed={sidebarCollapsed}
           mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
+          tabBarCollapsed={tabBarCollapsed}
         />
 
         <DialogsManager

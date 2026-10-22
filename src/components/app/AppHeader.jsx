@@ -30,7 +30,8 @@ export const AppHeader = ({
   iconTheme,
   expandedKeys,
   sidebarCollapsed = false,
-  mainFrameHeaderCollapsed = true
+  mainFrameHeaderCollapsed = true,
+  tabBarCollapsed = false
 }) => {
   if (titleBarCollapsed || isMinimalMode) {
     return null;
@@ -137,6 +138,7 @@ export const AppHeader = ({
       expandedKeys={expandedKeys}
       sidebarCollapsed={sidebarCollapsed}
       mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
+      tabBarCollapsed={tabBarCollapsed}
     />
   );
 };

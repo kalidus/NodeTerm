@@ -67,6 +67,13 @@ const IconSidebarRight = () => (
   </svg>
 );
 
+const IconPanelTop = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M2 5.5h12" {...LAYOUT_STROKE} />
+  </svg>
+);
+
 const IconLayout = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="1.5" y="1.5" width="5" height="13" rx="1.2" {...LAYOUT_STROKE} />
@@ -98,6 +105,7 @@ const TitleBar = ({
   onToggleTitleBar,
   sidebarCollapsed = false,
   mainFrameHeaderCollapsed = true,
+  tabBarCollapsed = false,
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -1340,6 +1348,13 @@ const TitleBar = ({
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-main-frame-header'))}
           >
             <IconSidebarRight />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={tabBarCollapsed ? 'Mostrar barra de pestañas' : 'Ocultar barra de pestañas'}
+            active={!tabBarCollapsed}
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-tabbar'))}
+          >
+            <IconPanelTop />
           </TitleBarIconButton>
         </div>
 
