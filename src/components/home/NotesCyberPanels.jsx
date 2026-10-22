@@ -82,7 +82,7 @@ export default function NotesCyberPanels({
     });
   }, [documentNodes]);
 
-  const handleOpen = useCallback((selected) => {
+  const handleOpenInTab = useCallback((selected) => {
     if (!selected) return;
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
@@ -134,7 +134,7 @@ export default function NotesCyberPanels({
       onDragEnd={moveBox}
       onResizeEnd={moveBox}
     >
-      <NotesCyberPanel node={node} onOpen={handleOpen} />
+      <NotesCyberPanel node={node} onOpenInTab={handleOpenInTab} />
     </HomePanelWrapper>
   );
 }

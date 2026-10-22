@@ -28,6 +28,74 @@
   z-index: 4;
 }
 
+.notes-cyber-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(100, 181, 246, 0.25);
+  background: rgba(0, 0, 0, 0.45);
+  position: relative;
+  z-index: 4;
+}
+
+.notes-cyber-editor > * {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.notes-cyber-editor .document-editor-container {
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+}
+
+.notes-cyber-editor .document-editor-header {
+  height: auto;
+  min-height: 40px;
+  padding: 4px 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.notes-cyber-editor .document-editor-toolbar-center,
+.notes-cyber-editor .document-editor-toolbar-items {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.notes-cyber-editor .document-editor-content {
+  min-height: 0;
+  overflow: auto;
+}
+
+.notes-cyber-editor .document-editor-content .tiptap,
+.notes-cyber-editor .document-editor-content .tiptap-note-editor,
+.notes-cyber-editor .document-editor-content .ProseMirror {
+  font-size: 0.82rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.notes-cyber-editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: rgba(215, 255, 248, 0.5);
+  font-size: 0.82rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.notes-cyber.is-editing .vault-cyber-vignette,
+.notes-cyber.is-editing .vault-cyber-scanlines,
+.notes-cyber.is-editing .vault-cyber-beam {
+  pointer-events: none;
+  opacity: 0.35;
+}
+
 .notes-cyber-preview p {
   margin: 0 0 0.55rem;
 }
