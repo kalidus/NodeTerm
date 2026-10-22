@@ -444,7 +444,7 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(state.cliprdrServerReady, true);
   });
 
-  test('FORMAT_DATA_REQUEST no llega a WASM: FAIL local (evita Ready crash)', () => {
+  test('FORMAT_DATA_REQUEST antes del acuse: FAIL local (evita Ready crash)', () => {
     const { describeCliprdrPdu } = require('../../src/main/services/rdp-channel-filter');
     const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
     const state = createChannelFilterState();
@@ -452,6 +452,7 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     state.cliprdrChannelId = 1004;
     state.clientInitiator = 1002;
     state.cliprdrServerReady = true;
+    state.cliprdrClientFormatListAccepted = false;
     state.cliprdrHealth = { pendingRequest: 'data', failed: false, dataRequested: 1 };
 
     const reqUd = Buffer.alloc(20);
@@ -475,6 +476,46 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     const mcs = parseMcsSendData(proc.replies[0]);
     assert.match(describeCliprdrPdu(mcs.userData), /CB_FORMAT_DATA_RESPONSE/);
     assert.match(describeCliprdrPdu(mcs.userData), /flags=0x2/);
+  });
+
+  test('FORMAT_LIST_RESPONSE OK abre el pegado: FORMAT_DATA_REQUEST llega a WASM', () => {
+    const state = createChannelFilterState();
+    learnFromServerGcc(state, f1);
+    state.cliprdrChannelId = 1004;
+    state.clientInitiator = 1002;
+    state.cliprdrServerReady = true;
+
+    const respUd = Buffer.alloc(16);
+    respUd.writeUInt32LE(8, 0);
+    respUd.writeUInt32LE(3, 4);
+    respUd.writeUInt16LE(3, 8); // CB_FORMAT_LIST_RESPONSE
+    respUd.writeUInt16LE(1, 10); // CB_RESPONSE_OK
+    respUd.writeUInt32LE(0, 12);
+    const respPdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 30, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 16]),
+      respUd
+    ]);
+    const procResp = processServerFrame(state, respPdu);
+    assert.equal(procResp.dropped, false);
+    assert.ok(procResp.forward);
+    assert.equal(state.cliprdrClientFormatListAccepted, true);
+
+    const reqUd = Buffer.alloc(20);
+    reqUd.writeUInt32LE(12, 0);
+    reqUd.writeUInt32LE(3, 4);
+    reqUd.writeUInt16LE(4, 8); // CB_FORMAT_DATA_REQUEST
+    reqUd.writeUInt16LE(0, 10);
+    reqUd.writeUInt32LE(4, 12);
+    reqUd.writeUInt32LE(0x0d, 16);
+    const reqPdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 34, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 20]),
+      reqUd
+    ]);
+    const procReq = processServerFrame(state, reqPdu);
+    assert.notEqual(procReq.forward, null);
+    assert.equal(procReq.dropped, false);
+    assert.equal(procReq.cliprdrLocalFail, undefined);
+    assert.equal((procReq.replies || []).length, 0);
   });
 
   test('CAPS servidor raw 0x2 marca fileClipUnavailable y se reenvia sin boost', () => {

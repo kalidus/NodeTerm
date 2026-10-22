@@ -1721,6 +1721,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     ? val
                     : (val instanceof Uint8Array ? new TextDecoder('utf-8').decode(val) : String(val || ''));
                   if (text) {
+                    const echoedLocal = text === lastSentClipboardTextRef.current;
                     lastReceivedClipboardTextRef.current = text;
                     lastSentClipboardTextRef.current = text;
                     localClipboardCacheRef.current = text;
@@ -1732,7 +1733,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                       console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
                     }
                     await writeLocalClipboardText(text);
-                    // Texto: sync en silencio. Ruta/file:// sin FileGroupDescriptorW → un warn.
+                    // El eco del texto que acabamos de anunciar no es una copia nueva.
+                    if (!echoedLocal) {
+                      const preview = text.length > 50 ? `${text.slice(0, 50)}...` : text;
+                      toastRef.current?.show({
+                        severity: 'success',
+                        summary: 'Portapapeles Remoto',
+                        detail: `Texto copiado al portapapeles: "${preview}"`,
+                        life: 2500
+                      });
+                    }
+                    // Ruta/file:// sin FileGroupDescriptorW: el texto sí se copió, el fichero no.
                     if (looksLikeRemoteFilePathAsText(text) && !filePathAsTextToastShownRef.current) {
                       filePathAsTextToastShownRef.current = true;
                       toastRef.current?.show({

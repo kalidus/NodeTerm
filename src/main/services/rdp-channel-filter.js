@@ -668,6 +668,9 @@ function createChannelFilterState() {
     // true tras forward de DynVC CAPS hacia WASM (fin hop pre-caps).
     dvcCapsSeen: false,
     cliprdrServerReady: false,
+    // IronRDP pasa a Ready al procesar CB_FORMAT_LIST_RESPONSE(OK). Hasta entonces
+    // un FORMAT_DATA_REQUEST se contesta con FAIL local (KRdp tumba la sesion).
+    cliprdrClientFormatListAccepted: false,
     // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
     // CB_MONITOR_READY en la misma conexion. IronRDP ya esta en Ready y no
     // reenvia CAPS. Se guarda el primer handshake del cliente para repetirlo.
@@ -1848,7 +1851,20 @@ function isNamedCliprdrPreGreetPdu(desc) {
 const CB_MSG_CLIP_CAPS = 0x0007;
 const CB_MSG_TEMP_DIRECTORY = 0x0006;
 const CB_MSG_FORMAT_DATA_RESPONSE = 0x0005;
+const CB_RESPONSE_OK = 0x0001;
 const CB_RESPONSE_FAIL = 0x0002;
+
+/** msgFlags del CLIPRDR_HEADER (no los flags del CHANNEL_PDU). */
+function readCliprdrMsgFlags(userData) {
+  if (!Buffer.isBuffer(userData) || !isChannelPduHeader(userData)) return null;
+  const payload = userData.subarray(CHANNEL_PDU_HEADER_LEN);
+  if (payload.length < 4) return null;
+  return payload.readUInt16LE(2);
+}
+
+function isCliprdrResponseOk(userData) {
+  return readCliprdrMsgFlags(userData) === CB_RESPONSE_OK;
+}
 /** IronRDP-like: long names + file clip + lock + huge files. */
 const DEFAULT_CLIPRDR_GENERAL_FLAGS = 0x3e;
 const CLIPRDR_TEMPDIR_BYTES = 520;
@@ -2373,10 +2389,15 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     retryConfirmAppCliprdrWrite(state);
     retryConfirmRdpCliprdrWrite(state);
   }
-  // Windows/KRdp pide datos tras el FORMAT_LIST del cliente. IronRDP 0.7 a menudo
-  // no esta Ready y cierra la sesion entera; FAIL local mantiene EGFX vivo.
-  // No marcar unhealthy: el FAIL es intencional (no un fallo de canal).
-  if (desc && desc.includes('CB_FORMAT_DATA_REQUEST')) {
+  // IronRDP pasa a Ready al procesar este OK (antes que cualquier PDU posterior).
+  if (desc && desc.includes('CB_FORMAT_LIST_RESPONSE') && isCliprdrResponseOk(userData)) {
+    state.cliprdrClientFormatListAccepted = true;
+  }
+  // Windows/KRdp pide datos antes de ese acuse. IronRDP 0.7 no esta Ready y
+  // submit_format_data cierra la sesion; FAIL local mantiene EGFX vivo.
+  // Tras el OK el request es el pegado real (bastion APP): hay que entregarlo a WASM.
+  // No marcar unhealthy: el FAIL pre-acuse es intencional (no un fallo de canal).
+  if (desc && desc.includes('CB_FORMAT_DATA_REQUEST') && !state.cliprdrClientFormatListAccepted) {
     const reply = buildCliprdrFormatDataResponseFail(channelId, {
       initiator: state.clientInitiator || 0
     });
