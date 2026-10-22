@@ -128,13 +128,17 @@ export const useThemeManagement = () => {
     return () => window.removeEventListener('terminal-theme-changed', handleTerminalThemeChanged);
   }, []);
 
-  // Escuchar cambio de tipografía desde menú rápido SSH
+  // Escuchar cambio de tipografía/tamaño desde menú rápido SSH
   useEffect(() => {
     const handleTerminalFontChanged = (e) => {
-      const nextFont = e.detail?.fontFamily;
       const terminalType = e.detail?.terminalType;
-      if (!nextFont || terminalType !== 'ssh') return;
-      setFontFamily(nextFont);
+      if (terminalType !== 'ssh') return;
+      const nextFont = e.detail?.fontFamily;
+      const nextSize = e.detail?.fontSize;
+      if (nextFont) setFontFamily(nextFont);
+      if (nextSize != null && !Number.isNaN(Number(nextSize))) {
+        setFontSize(Number(nextSize));
+      }
     };
     window.addEventListener('terminal-font-changed', handleTerminalFontChanged);
     return () => window.removeEventListener('terminal-font-changed', handleTerminalFontChanged);
