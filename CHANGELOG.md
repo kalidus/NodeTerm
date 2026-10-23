@@ -8,6 +8,47 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.7.8] - 2026-10-23
+
+### Home y paneles flotantes
+- **Paneles cyber**: Vault, detalle de conexion, notas y herramientas de red como paneles flotantes desde Home/sidebar.
+- **Sesiones embebidas**: Abrir sesiones desde el detalle de conexion; acciones ir/cerrar; barras de estado SSH y tipografia ajustada.
+- **Notas in-panel**: Edicion desde la vista previa cyber; TipTap estilo Joplin con negrita/cursiva fiables.
+- **Estabilidad Home**: No duplicar al editar recientes; paneles que permanecen al cambiar sidebar o pestana.
+
+### Apariencia y TitleBar
+- **Quick Panel**: Studio visual a dos columnas, secciones mas compactas, colores del tema UI, redimensionable con tamano persistido.
+- **Barra de pestanas**: Interruptor para ocultar la barra de sesiones (TitleBar y ajustes).
+- **TitleBar**: Chrome estilo Cursor, engranaje de apariencia, modo minimalista mejorado; Home usable en minimalista.
+- **Marcos**: Variantes de color synthwave para bordes de ventana.
+
+### Fuentes y tipografia
+- **Offline**: Familias UI y mono embebidas; builds de produccion mas ligeros.
+- **Nerd Font**: Symbols Nerd Font Mono para iconos de terminal; celdas dobles para no pegar nombres.
+- **SSH**: Tema y tipografia unificados en el menu de apariencia del terminal.
+
+### Layouts, apps y UI
+- **Layouts**: Mux (multiplexor TTY) y Atelier con superficie compartida.
+- **Browser**: Cliente integrado activable/desactivable desde Apps.
+- **Dialogos**: AppDialog compartido para tema y layout coherentes.
+- **Sidebar**: Hover a ancho completo, menos flicker al expandir, toggler Classic mas compacto.
+
+### RDP IronRDP y clipboard
+- **EGFX por defecto**: Sesiones IronRDP con graficos EGFX; anuncio V10.7 sin thin-client.
+- **Clipboard**: File-clip CLIPRDR alineado a mstsc en bastion; paste APP tras format-list OK; UX KRdp mas clara.
+- **Estabilidad**: Multitransport/clipboard; JoinConfirms WASM en bastion; WASM como binario aparte del glue JS; menos ruido de diagnostico.
+
+### Terminal, SSH y rendimiento
+- **Logs**: URLs completas y timestamps de locale en el colorizer; htop tras hibernacion.
+- **PTY / AI CLI**: PTYs locales mas robustos; redibujados TUI/AI CLI estables; mount compartido.
+- **SSH**: Stats via `/bin/sh` para no romper fish.
+- **Rendimiento**: Pausa de pestanas ocultas, pintados mas baratos; perfil GPU mas ligero en Linux.
+
+### Seguridad, limpieza y CI
+- **Vault / historial**: Restaurar credenciales RDP/VNC desde favoritos y al reconectar; secretos redactados en historial.
+- **Limpieza**: Codigo muerto, deps y CSS/IPC huerfanos retirados.
+- **CI**: Extraccion estable de release notes desde CHANGELOG para GitHub Releases.
+
 ## [1.7.7] - 2026-10-16
 
 ### RDP IronRDP, EGFX y Wallix
