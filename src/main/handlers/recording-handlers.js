@@ -64,7 +64,8 @@ async function getRecordingsDirectory() {
  */
 function resolveRecordingPaths(recordingsDir, recordingId) {
   if (!recordingId || typeof recordingId !== 'string') return null;
-  const safeId = path.basename(recordingId.trim());
+  // Normalizar \ → / para que basename sea multiplataforma (POSIX no trata \ como sep).
+  const safeId = path.basename(recordingId.trim().replace(/\\/g, '/'));
   if (!safeId || safeId === '.' || safeId === '..') return null;
 
   const root = path.resolve(recordingsDir);
