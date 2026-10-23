@@ -4,7 +4,6 @@ import CloudRestoreMasterKeyDialog from '../CloudRestoreMasterKeyDialog';
 import ConnectionSearchPalette from '../ConnectionSearchPalette';
 import DialogsManager from '../DialogsManager';
 import WallixRefreshDialog from '../WallixRefreshDialog';
-import UpdateNotificationToast from '../UpdateNotificationToast';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
 import BrowserPopupModal from '../BrowserPopupModal';
@@ -218,13 +217,6 @@ export const AppModals = ({
           toast={toast}
         />
       </Suspense>
-
-      {/* Notificación flotante de actualización estilo Cursor */}
-      <UpdateNotificationToast
-        onOpenUpdateSettings={() => {
-          setShowSettingsDialog(true);
-        }}
-      />
 
       {/* ConfirmDialog para confirmaciones globales */}
       <ConfirmDialog className="app-confirm-dialog" />

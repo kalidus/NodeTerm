@@ -71,3 +71,136 @@
 .title-bar-icon-btn i {
   font-size: 0.85rem;
 }
+
+/* Icono de actualización (solo visible cuando hay versión nueva) */
+.title-bar-update-btn {
+  opacity: 1;
+}
+
+.title-bar-update-btn.is-available {
+  color: var(--ui-button-primary, #3b82f6);
+}
+
+.title-bar .title-bar-update-btn.is-ready,
+.title-bar .title-bar-update-btn.is-ready i {
+  color: #3ba55d !important;
+  opacity: 1;
+}
+
+.title-bar-update-btn.is-ready i {
+  animation: titlebar-update-pulse 2.2s ease-in-out infinite;
+}
+
+.title-bar-update-btn.is-downloading {
+  opacity: 1;
+  cursor: default;
+}
+
+.title-bar-update-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3ba55d;
+  box-shadow: 0 0 0 1.5px var(--ui-titlebar-accent, #1a1d24);
+  pointer-events: none;
+}
+
+.title-bar-update-menu {
+  position: fixed;
+  z-index: 10000;
+  width: 280px;
+  box-sizing: border-box;
+  background: var(--ui-dialog-bg, #1e2430);
+  color: var(--ui-dialog-text, #e8eaed);
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  padding: 12px 12px 10px;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-update-menu-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  color: var(--ui-dialog-text, #e8eaed);
+}
+
+.title-bar-update-menu-version {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.12));
+  margin-bottom: 6px;
+  color: var(--ui-button-primary, #3b82f6);
+}
+
+.title-bar-update-menu-text {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0 0 12px;
+  color: var(--ui-dialog-text, #e8eaed);
+  opacity: 0.85;
+}
+
+.title-bar-update-menu-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.title-bar-update-menu-btn {
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.title-bar-update-menu-btn--ghost {
+  background: transparent;
+  color: var(--ui-dialog-text, #e8eaed);
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.15));
+}
+
+.title-bar-update-menu-btn--ghost:hover {
+  background: var(--ui-sidebar-hover, rgba(255, 255, 255, 0.08));
+}
+
+.title-bar-update-menu-btn--primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ui-button-primary, #3b82f6);
+  color: var(--ui-button-primary-text, #ffffff);
+  border: none;
+  font-weight: 600;
+}
+
+.title-bar-update-menu-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.title-bar-update-menu-btn--primary i {
+  font-size: 0.75rem;
+}
+
+@keyframes titlebar-update-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-bar-update-btn.is-ready i {
+    animation: none;
+  }
+}

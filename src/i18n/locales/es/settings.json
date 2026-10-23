@@ -398,7 +398,15 @@
     "autoInstallDisabled": "Instalación automática desactivada",
     "download": "Descargar Actualización",
     "install": "Instalar y Reiniciar",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "readyTitle": "Actualización lista",
+    "readyDetail": "NodeTerm {version} se ha descargado y está lista para instalar.",
+    "readyTooltip": "Actualización {version} lista para instalar",
+    "availableTooltip": "Nueva versión {version} disponible",
+    "downloadingTooltip": "Descargando actualización… {percent}%",
+    "later": "Más tarde",
+    "restartAndUpdate": "Reiniciar y actualizar",
+    "managedDetail": "Nueva versión {version} disponible. Actualiza desde tu gestor de aplicaciones."
   },
   "guacdOptions": {
     "dockerDesktop": "Docker Desktop",

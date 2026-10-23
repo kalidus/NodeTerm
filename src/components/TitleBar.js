@@ -9,6 +9,7 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import TitleBarUpdateButton from './TitleBarUpdateButton';
 
 const TitleBarIconButton = ({
   title,
@@ -1284,6 +1285,8 @@ const TitleBar = ({
             <i className="pi pi-cog" />
           </TitleBarIconButton>
         </div>
+
+        <TitleBarUpdateButton />
 
         <div className="title-bar-action-sep" aria-hidden="true" />
 

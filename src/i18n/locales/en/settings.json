@@ -295,7 +295,15 @@
     "autoInstallDisabled": "Automatic install disabled",
     "download": "Download Update",
     "install": "Install and Restart",
-    "retry": "Retry"
+    "retry": "Retry",
+    "readyTitle": "Update ready",
+    "readyDetail": "NodeTerm {version} has been downloaded and is ready to install.",
+    "readyTooltip": "Update {version} is ready to install",
+    "availableTooltip": "New version {version} available",
+    "downloadingTooltip": "Downloading update… {percent}%",
+    "later": "Later",
+    "restartAndUpdate": "Restart and update",
+    "managedDetail": "New version {version} is available. Update it from your application manager."
   },
   "guacdOptions": {
     "dockerDesktop": "Docker Desktop",
