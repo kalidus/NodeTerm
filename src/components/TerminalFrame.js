@@ -160,7 +160,7 @@ const TerminalFrame = ({
                                         <div className="holo-btn maximize" onClick={onMaximize} title={isMaximized ? "Restaurar HUD" : "Maximizar HUD"}>{isMaximized ? "◈" : "⬡"}</div>
                                         <div className="holo-btn close" onClick={onClose} title="Cerrar HUD">✕</div>
                                     </div>
-                                ) : frameStyle === 'synthwave' ? (
+                                ) : ['synthwave', 'synthwave-sunset', 'synthwave-ocean', 'synthwave-emerald', 'synthwave-crimson', 'synthwave-arctic'].includes(frameStyle) ? (
                                     <div className="terminal-frame-controls synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ marginRight: 0, marginLeft: '8px', ...(isDraggable ? { WebkitAppRegion: 'no-drag' } : {}) }}>
                                         <div className="synth-dot min" onClick={onMinimize} title="Minimizar" />
                                         <div className="synth-dot max" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} />

@@ -884,18 +884,139 @@
 /* --- Synthwave Style (Neon Outrun 80s) --- */
 .terminal-frame-synthwave,
 .recents-terminal-frame.synthwave,
-.top-terminal-frame.synthwave {
-    border: 1px solid #d946ef !important;
-    box-shadow: 0 0 20px rgba(217, 70, 239, 0.3), 0 0 40px rgba(236, 72, 153, 0.15) !important;
-    background: rgba(18, 11, 31, 0.88) !important;
+.top-terminal-frame.synthwave,
+.terminal-frame-synthwave-sunset,
+.recents-terminal-frame.synthwave-sunset,
+.top-terminal-frame.synthwave-sunset,
+.terminal-frame-synthwave-ocean,
+.recents-terminal-frame.synthwave-ocean,
+.top-terminal-frame.synthwave-ocean,
+.terminal-frame-synthwave-emerald,
+.recents-terminal-frame.synthwave-emerald,
+.top-terminal-frame.synthwave-emerald,
+.terminal-frame-synthwave-crimson,
+.recents-terminal-frame.synthwave-crimson,
+.top-terminal-frame.synthwave-crimson,
+.terminal-frame-synthwave-arctic,
+.recents-terminal-frame.synthwave-arctic,
+.top-terminal-frame.synthwave-arctic {
+    --synth-border: #d946ef;
+    --synth-glow: rgba(217, 70, 239, 0.3);
+    --synth-glow-2: rgba(236, 72, 153, 0.15);
+    --synth-bg: rgba(18, 11, 31, 0.88);
+    --synth-header-a: rgba(236, 72, 153, 0.2);
+    --synth-header-b: rgba(139, 92, 246, 0.2);
+    --synth-header-c: rgba(6, 182, 212, 0.15);
+    --synth-header-line: rgba(217, 70, 239, 0.4);
+    --synth-dot-min: #06b6d4;
+    --synth-dot-max: #8b5cf6;
+    --synth-dot-close: #ec4899;
+    border: 1px solid var(--synth-border) !important;
+    box-shadow: 0 0 20px var(--synth-glow), 0 0 40px var(--synth-glow-2) !important;
+    background: var(--synth-bg) !important;
     border-radius: 12px !important;
+}
+
+.terminal-frame-synthwave-sunset,
+.recents-terminal-frame.synthwave-sunset,
+.top-terminal-frame.synthwave-sunset {
+    --synth-border: #fb923c;
+    --synth-glow: rgba(251, 146, 60, 0.32);
+    --synth-glow-2: rgba(236, 72, 153, 0.16);
+    --synth-bg: rgba(32, 14, 18, 0.88);
+    --synth-header-a: rgba(251, 191, 36, 0.22);
+    --synth-header-b: rgba(249, 115, 22, 0.2);
+    --synth-header-c: rgba(236, 72, 153, 0.16);
+    --synth-header-line: rgba(251, 146, 60, 0.45);
+    --synth-dot-min: #fbbf24;
+    --synth-dot-max: #f97316;
+    --synth-dot-close: #ec4899;
+}
+
+.terminal-frame-synthwave-ocean,
+.recents-terminal-frame.synthwave-ocean,
+.top-terminal-frame.synthwave-ocean {
+    --synth-border: #38bdf8;
+    --synth-glow: rgba(56, 189, 248, 0.32);
+    --synth-glow-2: rgba(99, 102, 241, 0.16);
+    --synth-bg: rgba(8, 16, 32, 0.88);
+    --synth-header-a: rgba(34, 211, 238, 0.2);
+    --synth-header-b: rgba(59, 130, 246, 0.2);
+    --synth-header-c: rgba(129, 140, 248, 0.16);
+    --synth-header-line: rgba(56, 189, 248, 0.45);
+    --synth-dot-min: #22d3ee;
+    --synth-dot-max: #3b82f6;
+    --synth-dot-close: #818cf8;
+}
+
+.terminal-frame-synthwave-emerald,
+.recents-terminal-frame.synthwave-emerald,
+.top-terminal-frame.synthwave-emerald {
+    --synth-border: #34d399;
+    --synth-glow: rgba(52, 211, 153, 0.32);
+    --synth-glow-2: rgba(45, 212, 191, 0.15);
+    --synth-bg: rgba(6, 18, 14, 0.88);
+    --synth-header-a: rgba(163, 230, 53, 0.2);
+    --synth-header-b: rgba(34, 197, 94, 0.2);
+    --synth-header-c: rgba(45, 212, 191, 0.16);
+    --synth-header-line: rgba(52, 211, 153, 0.45);
+    --synth-dot-min: #a3e635;
+    --synth-dot-max: #22c55e;
+    --synth-dot-close: #2dd4bf;
+}
+
+.terminal-frame-synthwave-crimson,
+.recents-terminal-frame.synthwave-crimson,
+.top-terminal-frame.synthwave-crimson {
+    --synth-border: #f43f5e;
+    --synth-glow: rgba(244, 63, 94, 0.32);
+    --synth-glow-2: rgba(232, 121, 249, 0.16);
+    --synth-bg: rgba(28, 8, 14, 0.88);
+    --synth-header-a: rgba(251, 113, 133, 0.2);
+    --synth-header-b: rgba(239, 68, 68, 0.2);
+    --synth-header-c: rgba(232, 121, 249, 0.16);
+    --synth-header-line: rgba(244, 63, 94, 0.45);
+    --synth-dot-min: #fb7185;
+    --synth-dot-max: #ef4444;
+    --synth-dot-close: #e879f9;
+}
+
+.terminal-frame-synthwave-arctic,
+.recents-terminal-frame.synthwave-arctic,
+.top-terminal-frame.synthwave-arctic {
+    --synth-border: #7dd3fc;
+    --synth-glow: rgba(125, 211, 252, 0.3);
+    --synth-glow-2: rgba(167, 139, 250, 0.16);
+    --synth-bg: rgba(10, 18, 28, 0.88);
+    --synth-header-a: rgba(224, 242, 254, 0.18);
+    --synth-header-b: rgba(56, 189, 248, 0.2);
+    --synth-header-c: rgba(167, 139, 250, 0.16);
+    --synth-header-line: rgba(125, 211, 252, 0.45);
+    --synth-dot-min: #e0f2fe;
+    --synth-dot-max: #38bdf8;
+    --synth-dot-close: #a78bfa;
 }
 
 .terminal-frame-synthwave .terminal-frame-header,
 .recents-terminal-frame.synthwave .recents-terminal-header,
-.top-terminal-frame.synthwave .top-terminal-header {
-    background: linear-gradient(90deg, rgba(236, 72, 153, 0.2) 0%, rgba(139, 92, 246, 0.2) 50%, rgba(6, 182, 212, 0.15) 100%) !important;
-    border-bottom: 1px solid rgba(217, 70, 239, 0.4) !important;
+.top-terminal-frame.synthwave .top-terminal-header,
+.terminal-frame-synthwave-sunset .terminal-frame-header,
+.recents-terminal-frame.synthwave-sunset .recents-terminal-header,
+.top-terminal-frame.synthwave-sunset .top-terminal-header,
+.terminal-frame-synthwave-ocean .terminal-frame-header,
+.recents-terminal-frame.synthwave-ocean .recents-terminal-header,
+.top-terminal-frame.synthwave-ocean .top-terminal-header,
+.terminal-frame-synthwave-emerald .terminal-frame-header,
+.recents-terminal-frame.synthwave-emerald .recents-terminal-header,
+.top-terminal-frame.synthwave-emerald .top-terminal-header,
+.terminal-frame-synthwave-crimson .terminal-frame-header,
+.recents-terminal-frame.synthwave-crimson .recents-terminal-header,
+.top-terminal-frame.synthwave-crimson .top-terminal-header,
+.terminal-frame-synthwave-arctic .terminal-frame-header,
+.recents-terminal-frame.synthwave-arctic .recents-terminal-header,
+.top-terminal-frame.synthwave-arctic .top-terminal-header {
+    background: linear-gradient(90deg, var(--synth-header-a) 0%, var(--synth-header-b) 50%, var(--synth-header-c) 100%) !important;
+    border-bottom: 1px solid var(--synth-header-line) !important;
 }
 
 .synthwave-controls {
@@ -913,18 +1034,18 @@
 }
 
 .synth-dot.min {
-    background: #06b6d4;
-    box-shadow: 0 0 6px #06b6d4;
+    background: var(--synth-dot-min, #06b6d4);
+    box-shadow: 0 0 6px var(--synth-dot-min, #06b6d4);
 }
 
 .synth-dot.max {
-    background: #8b5cf6;
-    box-shadow: 0 0 6px #8b5cf6;
+    background: var(--synth-dot-max, #8b5cf6);
+    box-shadow: 0 0 6px var(--synth-dot-max, #8b5cf6);
 }
 
 .synth-dot.close {
-    background: #ec4899;
-    box-shadow: 0 0 6px #ec4899;
+    background: var(--synth-dot-close, #ec4899);
+    box-shadow: 0 0 6px var(--synth-dot-close, #ec4899);
 }
 
 .synth-dot:hover {

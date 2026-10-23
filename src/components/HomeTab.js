@@ -74,7 +74,12 @@ const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
   // Modernos & Efectos
   { id: 'aurora-glass', label: 'Aurora Glass (Liquid)', rounded: true, color: '#93c5fd', aurora: true, right: true },
   { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, dots: ['#06b6d4', '#8b5cf6', '#ec4899'], right: true },
+  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, rounded: true, color: '#d946ef', glow: 'rgba(217,70,239,0.5)', dots: ['#06b6d4', '#8b5cf6', '#ec4899'], right: true },
+  { id: 'synthwave-sunset', label: 'Synthwave Atardecer (Outrun)', synthwave: true, rounded: true, color: '#fb923c', glow: 'rgba(251,146,60,0.55)', dots: ['#fbbf24', '#f97316', '#ec4899'], right: true },
+  { id: 'synthwave-ocean', label: 'Synthwave Océano (Neón Azul)', synthwave: true, rounded: true, color: '#38bdf8', glow: 'rgba(56,189,248,0.55)', dots: ['#22d3ee', '#3b82f6', '#818cf8'], right: true },
+  { id: 'synthwave-emerald', label: 'Synthwave Esmeralda (Neón Verde)', synthwave: true, rounded: true, color: '#34d399', glow: 'rgba(52,211,153,0.55)', dots: ['#a3e635', '#22c55e', '#2dd4bf'], right: true },
+  { id: 'synthwave-crimson', label: 'Synthwave Carmesí (Neón Rojo)', synthwave: true, rounded: true, color: '#f43f5e', glow: 'rgba(244,63,94,0.55)', dots: ['#fb7185', '#ef4444', '#e879f9'], right: true },
+  { id: 'synthwave-arctic', label: 'Synthwave Ártico (Hielo)', synthwave: true, rounded: true, color: '#7dd3fc', glow: 'rgba(125,211,252,0.55)', dots: ['#e0f2fe', '#38bdf8', '#a78bfa'], right: true },
   { id: 'stealth', label: 'Stealth Ops (Matte)', color: '#ff6b00', stealth: true, right: true },
   { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true, right: true }
 ];
@@ -2372,7 +2377,7 @@ const HomeTab = ({
                     borderTop: style.line ? `2px solid ${style.line}` : (style.cyberBorder ? '2px solid #fcee0a' : undefined),
                     borderRadius: style.rounded ? '8px' : (style.frameless ? '2px' : '4px'),
                     background: style.aurora ? 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.25))' : undefined,
-                    boxShadow: style.hud ? `0 0 6px ${style.color || 'rgba(0,229,255,0.4)'}` : (style.synthwave ? '0 0 6px rgba(217,70,239,0.5)' : undefined)
+                    boxShadow: style.hud ? `0 0 6px ${style.color || 'rgba(0,229,255,0.4)'}` : (style.synthwave ? `0 0 6px ${style.glow || 'rgba(217,70,239,0.5)'}` : undefined)
                   }}
                 >
                   {style.id === 'macos' ? (

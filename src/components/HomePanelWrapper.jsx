@@ -585,6 +585,11 @@ const HomePanelWrapper = ({
       }
 
       case 'synthwave':
+      case 'synthwave-sunset':
+      case 'synthwave-ocean':
+      case 'synthwave-emerald':
+      case 'synthwave-crimson':
+      case 'synthwave-arctic':
         return (
           <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <div className="synth-dot min" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
