@@ -915,10 +915,9 @@ const ConnectionHistory = ({
 		);
 	};
 
-	const showVaultTerminal = isActiveTab && sidebarView === 'passwords';
-	const showConnectionCyber = isActiveTab && sidebarView === 'connections';
-	const showNotesCyber = isActiveTab && sidebarView === 'documents';
-	const showToolsCyber = isActiveTab && sidebarView === 'tools';
+	// Los cyber panels se mantienen montados aunque Inicio no sea la pestaña activa
+	// (p. ej. al abrir otra pestaña); el contenedor ya oculta el DOM inactivo.
+	const vaultAutoShowList = sidebarView === 'passwords';
 
 	return (
 		<div
@@ -1218,44 +1217,37 @@ const ConnectionHistory = ({
 					), { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-th-large" style={{ color: '#a855f7', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('releaseNotes', '~/releases', 'releases · novedades', <HomeReleaseNotesPanel />, { minWidth: 480, minHeight: 280, titleIcon: <i className="pi pi-book" style={{ color: '#67e8f9', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('clock', '~/clock', 'clock · hora', <HomeClockPanel />, { minWidth: 220, minHeight: 120, titleIcon: <i className="pi pi-clock" style={{ color: '#fbbf24', fontSize: '0.8rem' }} /> })}
-					{showVaultTerminal && (
-						<VaultCyberPanels
-							passwordNodes={passwordNodes}
-							vaultLocked={vaultLocked}
-							terminalFrameStyle={terminalFrameStyle}
-							snapToGrid={snapToGrid}
-							smartSnap={smartSnap}
-							frameBackground={panelFrameBg}
-						/>
-					)}
-					{showConnectionCyber && (
-						<ConnectionCyberPanels
-							sidebarNodes={sidebarNodes}
-							onConnectToHistory={onConnectToHistory}
-							onEdit={onEdit}
-							terminalFrameStyle={terminalFrameStyle}
-							snapToGrid={snapToGrid}
-							smartSnap={smartSnap}
-							frameBackground={panelFrameBg}
-						/>
-					)}
-					{showNotesCyber && (
-						<NotesCyberPanels
-							documentNodes={documentNodes}
-							terminalFrameStyle={terminalFrameStyle}
-							snapToGrid={snapToGrid}
-							smartSnap={smartSnap}
-							frameBackground={panelFrameBg}
-						/>
-					)}
-					{showToolsCyber && (
-						<ToolsCyberPanels
-							terminalFrameStyle={terminalFrameStyle}
-							snapToGrid={snapToGrid}
-							smartSnap={smartSnap}
-							frameBackground={panelFrameBg}
-						/>
-					)}
+					<VaultCyberPanels
+						passwordNodes={passwordNodes}
+						vaultLocked={vaultLocked}
+						autoShowList={vaultAutoShowList}
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
+					<ConnectionCyberPanels
+						sidebarNodes={sidebarNodes}
+						onConnectToHistory={onConnectToHistory}
+						onEdit={onEdit}
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
+					<NotesCyberPanels
+						documentNodes={documentNodes}
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
+					<ToolsCyberPanels
+						terminalFrameStyle={terminalFrameStyle}
+						snapToGrid={snapToGrid}
+						smartSnap={smartSnap}
+						frameBackground={panelFrameBg}
+					/>
 					<HomeSessionHost
 						terminalFrameStyle={terminalFrameStyle}
 						snapToGrid={snapToGrid}

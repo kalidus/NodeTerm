@@ -34,12 +34,13 @@ function patchBox(setter, updates) {
 export default function VaultCyberPanels({
   passwordNodes = [],
   vaultLocked = false,
+  autoShowList = false,
   terminalFrameStyle = 'macos',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null
 }) {
-  const [listDismissed, setListDismissed] = useState(false);
+  const [listDismissed, setListDismissed] = useState(true);
   const [listBox, setListBox] = useState(LIST_BOX);
   const [detailEntry, setDetailEntry] = useState(null);
   const [detailBox, setDetailBox] = useState(DETAIL_BOX);
@@ -73,9 +74,12 @@ export default function VaultCyberPanels({
     if (entry) openDetail(entry);
   }, [openDetail]);
 
+  // Abrir la lista al entrar en Contraseñas; al salir no se fuerza el cierre.
   useEffect(() => {
+    if (!autoShowList) return;
+    setListDismissed(false);
     raise('list');
-  }, [raise]);
+  }, [autoShowList, raise]);
 
   useEffect(() => {
     const onOpen = (event) => {
