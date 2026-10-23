@@ -1140,10 +1140,12 @@ class RdpNativeBridgeService extends EventEmitter {
             // Upgrade TCP socket to TLS.
             // Para evadir el chequeo estricto de KEY_USAGE_BIT_INCORRECT en certificados
             // autofirmados de Windows RDP bajo BoringSSL/Electron, se usan ciphers RSA en TLS 1.2
+            // verifyTls=true → TLS estricto; por defecto se permite cert autofirmado de Windows RDP
+            const verifyTls = session.verifyTls === true;
             const tlsOptions = {
               socket: targetSocket,
-              rejectUnauthorized: false,
-              checkServerIdentity: () => undefined,
+              rejectUnauthorized: verifyTls,
+              checkServerIdentity: verifyTls ? undefined : () => undefined,
               minVersion: 'TLSv1',
               maxVersion: 'TLSv1.2',
               ciphers: 'ALL:DEFAULT:!ECDHE:!DHE:RSA'

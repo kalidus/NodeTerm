@@ -295,6 +295,11 @@ const GuacamoleTerminal = forwardRef(({
                     rdpConfig.colorDepth = normalizeRdpColorDepth(rdpConfig.colorDepth, 32);
                 } catch { }
 
+                // ignoreCert: por defecto true (RDP Windows autofirmado); pasar false para verificar TLS
+                if (rdpConfig.ignoreCert === undefined) {
+                    rdpConfig.ignoreCert = true;
+                }
+
                 // Crear token de conexión nativo sin guacd ni Docker
                 const tokenResponse = isNativeBridge
                     ? await window.electron.ipcRenderer.invoke('rdp:create-native-bridge-token', rdpConfig)

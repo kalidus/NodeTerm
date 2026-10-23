@@ -299,7 +299,7 @@ export const useConnectionManagement = ({
       localPort: data?.localPort || 0,
       remoteHost: data?.remoteHost || '',
       remotePort: data?.remotePort || 0,
-      bindHost: data?.bindHost || '0.0.0.0',
+      bindHost: data?.bindHost || '127.0.0.1',
       nodeKey: key
     };
 
@@ -553,7 +553,8 @@ export const useConnectionManagement = ({
         || localStorage.getItem('audit_auto_recording') === 'true';
       if (autoRecordingEnabled && window.electron?.ipcRenderer) {
         const recordingQuality = localStorage.getItem('audit_recording_quality') || 'medium';
-        const encryptRecordings = localStorage.getItem('audit_encrypt_recordings') === 'true';
+        // Por defecto cifrar (UI: distinto de 'false'); coherente con AuditSubTab
+        const encryptRecordings = localStorage.getItem('audit_encrypt_recordings') !== 'false';
 
         const recordingMetadata = {
           host: sshConfig.useBastionWallix ? sshConfig.bastionHost : sshConfig.host,
@@ -567,7 +568,8 @@ export const useConnectionManagement = ({
           title: `${sshConfig.username}@${sshConfig.host}`,
           cols: 80,
           rows: 24,
-          shell: '/bin/bash'
+          shell: '/bin/bash',
+          encrypt: encryptRecordings
         };
 
         // Iniciar grabación de forma asíncrona

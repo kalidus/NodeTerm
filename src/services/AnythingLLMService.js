@@ -376,7 +376,7 @@ class AnythingLLMService {
       '--name', this.containerName,
       '--restart', 'unless-stopped',
       '--network', 'nodeterm-network',
-      '-p', `${this.hostPort}:${this.containerPort}`,
+      '-p', `127.0.0.1:${this.hostPort}:${this.containerPort}`,
       '-v', `${volumeHostPath}:/app/server/storage`
     ];
     

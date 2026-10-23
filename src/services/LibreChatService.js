@@ -545,12 +545,12 @@ class LibreChatService {
       `-e CREDS_IV=${secrets.CREDS_IV}`,
       `-e JWT_SECRET=${secrets.JWT_SECRET}`,
       `-e JWT_REFRESH_SECRET=${secrets.JWT_REFRESH_SECRET}`,
-      '-e ALLOW_REGISTRATION=true',
+      '-e ALLOW_REGISTRATION=false',
       '-e ALLOW_SOCIAL_LOGIN=false',
       '-e ALLOW_EMAIL_LOGIN=true',
       '-e ALLOW_PASSWORD_RESET=false',
       '-e SHOW_BIRTHDAY_FIELD=false',
-      '-e DEBUG_LOGGING=true',
+      '-e DEBUG_LOGGING=false',
       '-e ANY_LLM_URL=http://nodeterm-anythingllm:3001/api/v1', // Integración opcional con AnythingLLM
       '-e HELP_AND_FAQ_URL=https://librechat.ai'
     ];
@@ -560,7 +560,7 @@ class LibreChatService {
       `--name ${this.containerName}`,
       '--restart unless-stopped',
       `--network nodeterm-network`,
-      `-p ${this.hostPort}:${this.containerPort}`,
+      `-p 127.0.0.1:${this.hostPort}:${this.containerPort}`,
       `-v "${volumeHostPath}/images:/app/client/public/images"`,
       `-v "${volumeHostPath}/logs:/app/api/logs"`,
       `-v "${configHostPath}/librechat.yaml:/app/librechat.yaml"`,

@@ -307,8 +307,16 @@ const PasswordManagerSidebar = ({
           // Limpiar datos sin encriptar
           localStorage.removeItem('passwordManagerNodes');
         } else {
-          // SIN master key: Guardar como antes
-          localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordNodes));
+          // ✅ SEGURIDAD: no persistir el vault en claro sin master key
+          console.warn('[PasswordVault] Guardado omitido: se requiere master key para cifrar el vault');
+          if (showToast) {
+            showToast({
+              severity: 'warn',
+              summary: 'Vault bloqueado',
+              detail: 'Desbloquea la master key para guardar contraseñas de forma segura',
+              life: 4000
+            });
+          }
         }
         window.dispatchEvent(new CustomEvent('password-vault-changed'));
       } catch (error) {
@@ -317,7 +325,7 @@ const PasswordManagerSidebar = ({
     };
 
     savePasswords();
-  }, [passwordNodes, masterKey, secureStorage, isLoading]);
+  }, [passwordNodes, masterKey, secureStorage, isLoading, showToast]);
 
   // Escuchar importación desde el diálogo unificado (pestaña Passwords)
   useEffect(() => {

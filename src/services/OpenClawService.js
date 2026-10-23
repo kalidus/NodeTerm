@@ -303,7 +303,9 @@ class OpenClawService {
       throw new Error('Token del gateway no inicializado');
     }
 
-    const strictDevice = /^(1|true|yes)$/i.test((process.env.NODETERM_OPENCLAW_STRICT_DEVICE_AUTH || '').trim());
+    // ✅ SEGURIDAD: device auth estricto por defecto; desactivar con NODETERM_OPENCLAW_STRICT_DEVICE_AUTH=0
+    const strictEnv = (process.env.NODETERM_OPENCLAW_STRICT_DEVICE_AUTH || '1').trim();
+    const strictDevice = !/^(0|false|no)$/i.test(strictEnv);
 
     const required = [
       `http://127.0.0.1:${this.hostPort}`,
@@ -343,7 +345,9 @@ class OpenClawService {
       : [];
     data.gateway.controlUi.allowedOrigins = [...new Set([...existing, ...required])];
     data.gateway.controlUi.allowInsecureAuth = true;
-    if (!strictDevice) {
+    if (strictDevice) {
+      delete data.gateway.controlUi.dangerouslyDisableDeviceAuth;
+    } else {
       data.gateway.controlUi.dangerouslyDisableDeviceAuth = true;
     }
 
@@ -458,7 +462,7 @@ class OpenClawService {
       '--restart unless-stopped',
       '--pull never',
       '--network nodeterm-network',
-      `-p ${this.hostPort}:${this.containerPort}`,
+      `-p 127.0.0.1:${this.hostPort}:${this.containerPort}`,
       ...(process.platform === 'linux' ? ['--add-host host.docker.internal:host-gateway'] : []),
       `-v "${dataHostPath}:/home/node/.openclaw"`,
       ...envArgs,

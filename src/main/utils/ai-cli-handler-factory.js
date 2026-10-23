@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile, exec } = require('child_process');
@@ -24,7 +24,42 @@ function readJsonFile(filePath) {
 
 function writeJsonFile(filePath, data) {
   ensureConfigDir();
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
+  try { fs.chmodSync(filePath, 0o600); } catch (_) { /* win */ }
+}
+
+function readSecuritySecret(security, field) {
+  if (!security || !field) return '';
+  const encField = `${field}Encrypted`;
+  if (security[encField] && safeStorage && safeStorage.isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(Buffer.from(security[encField], 'base64')) || '';
+    } catch (e) {
+      console.warn(`[AI-CLI] No se pudo descifrar ${field}:`, e?.message || e);
+    }
+  }
+  return typeof security[field] === 'string' ? security[field] : '';
+}
+
+function writeSecuritySecret(security, field, value) {
+  const encField = `${field}Encrypted`;
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) {
+    delete security[field];
+    delete security[encField];
+    return;
+  }
+  if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    try {
+      security[encField] = safeStorage.encryptString(trimmed).toString('base64');
+      delete security[field];
+      return;
+    } catch (e) {
+      console.warn(`[AI-CLI] safeStorage falló para ${field}:`, e?.message || e);
+    }
+  }
+  security[field] = trimmed;
+  delete security[encField];
 }
 
 function execFileAsync(command, args = [], options = {}) {
@@ -133,7 +168,8 @@ function createAiCliHandler(options) {
     }
 
     if (securityKeyField && securityKeyOutputName) {
-      result[securityKeyOutputName] = security[securityKeyField] || '';
+      // Main process (ClaudeProcessManager, etc.) necesita el secreto en claro
+      result[securityKeyOutputName] = readSecuritySecret(security, securityKeyField);
     }
 
     return result;
@@ -288,13 +324,9 @@ function createAiCliHandler(options) {
           updatedAt: new Date().toISOString()
         });
 
-        if (securityKeyField && typeof secValue === 'string') {
+        if (securityKeyField && typeof secValue === 'string' && secValue !== '********') {
           const security = readJsonFile(SECURITY_CONFIG_PATH);
-          if (secValue.trim()) {
-            security[securityKeyField] = secValue.trim();
-          } else {
-            delete security[securityKeyField];
-          }
+          writeSecuritySecret(security, securityKeyField, secValue);
           security.updatedAt = new Date().toISOString();
           writeJsonFile(SECURITY_CONFIG_PATH, security);
         }

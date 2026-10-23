@@ -388,7 +388,7 @@ export function SSHTunnelDialog({
   const [localPort, setLocalPort] = useState('');
   const [remoteHost, setRemoteHost] = useState('');
   const [remotePort, setRemotePort] = useState('');
-  const [bindHost, setBindHost] = useState('0.0.0.0');
+  const [bindHost, setBindHost] = useState('127.0.0.1');
   
   // Carpeta destino
   const [targetFolder, setTargetFolder] = useState(null);
@@ -413,7 +413,7 @@ export function SSHTunnelDialog({
       setLocalPort(initialData.localPort?.toString() || '');
       setRemoteHost(initialData.remoteHost || '');
       setRemotePort(initialData.remotePort?.toString() || '');
-      setBindHost(initialData.bindHost || '0.0.0.0');
+      setBindHost(initialData.bindHost || '127.0.0.1');
     } else if (visible && !initialData) {
       // Reset para nuevo túnel
       setTunnelName('');
@@ -429,7 +429,7 @@ export function SSHTunnelDialog({
       setLocalPort('');
       setRemoteHost('');
       setRemotePort('');
-      setBindHost('0.0.0.0');
+      setBindHost('127.0.0.1');
       setTargetFolder(null);
     }
   }, [visible, initialData]);

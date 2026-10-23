@@ -235,8 +235,8 @@ class OpenWebUIService {
     if (process.env.NODETERM_OPENWEBUI_WEBUI_AUTH !== undefined) {
       envVars.push(`-e WEBUI_AUTH=${process.env.NODETERM_OPENWEBUI_WEBUI_AUTH}`);
     } else {
-      // Por defecto, desactivar autenticación para desarrollo local
-      envVars.push('-e WEBUI_AUTH=false');
+      // ✅ SEGURIDAD: autenticación activa por defecto (desactivar solo con env=false)
+      envVars.push('-e WEBUI_AUTH=true');
     }
 
     if (process.env.NODETERM_OPENWEBUI_OPENAI_API_BASE_URL) {
@@ -247,7 +247,7 @@ class OpenWebUIService {
       'run -d',
       `--name ${this.containerName}`,
       '--restart unless-stopped',
-      `-p ${this.hostPort}:${this.containerPort}`,
+      `-p 127.0.0.1:${this.hostPort}:${this.containerPort}`,
       `-v "${volumeHostPath}:/app/backend/data"`,
       ...envVars,
       this.imageName

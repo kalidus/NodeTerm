@@ -7,6 +7,11 @@ const path = require('path');
 const fs = require('fs').promises;
 
 const { getNodeTermDataDir } = require('../utils/file-utils');
+const {
+  encryptRecordingContent,
+  decryptRecordingContent,
+  isEncryptedRecordingContent
+} = require('../utils/recording-crypto');
 
 /**
  * Instancia global del SessionRecorder (se inicializa en main.js)
@@ -97,9 +102,15 @@ async function stopAndPersistRecording(tabId) {
     await fs.mkdir(recordingsDir, { recursive: true });
 
     const asciicastContent = sessionRecorder.toAsciicast(recording);
+    const shouldEncrypt = recording.metadata?.encrypt === true
+      || recording.metadata?.encryptRecordings === true;
+    const payloadToWrite = shouldEncrypt
+      ? encryptRecordingContent(asciicastContent)
+      : asciicastContent;
+
     const filename = `${recordingId}.cast`;
     const filepath = path.join(recordingsDir, filename);
-    await fs.writeFile(filepath, asciicastContent, 'utf-8');
+    await fs.writeFile(filepath, payloadToWrite, 'utf-8');
 
     const metadataPath = path.join(recordingsDir, `${recordingId}.meta.json`);
     const metadata = {
@@ -107,6 +118,7 @@ async function stopAndPersistRecording(tabId) {
       filepath,
       filename,
       ...recording.metadata,
+      encrypted: shouldEncrypt,
       duration: recording.duration,
       endTime: recording.endTime,
       eventCount: recording.eventCount,
@@ -115,7 +127,7 @@ async function stopAndPersistRecording(tabId) {
     };
 
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
-    console.log(`💾 Grabación guardada: ${filepath}`);
+    console.log(`💾 Grabación guardada${shouldEncrypt ? ' (cifrada)' : ''}: ${filepath}`);
 
     return {
       success: true,
@@ -389,7 +401,10 @@ function registerRecordingHandlers() {
 
       const metaContent = await fs.readFile(paths.metaPath, 'utf-8');
       const metadata = JSON.parse(metaContent);
-      const castContent = await fs.readFile(paths.castPath, 'utf-8');
+      let castContent = await fs.readFile(paths.castPath, 'utf-8');
+      if (metadata.encrypted || isEncryptedRecordingContent(castContent)) {
+        castContent = decryptRecordingContent(castContent);
+      }
       
       return {
         success: true,
@@ -448,7 +463,11 @@ function registerRecordingHandlers() {
         return { success: false, error: 'exportPath inválido' };
       }
       
-      const castContent = await fs.readFile(paths.castPath, 'utf-8');
+      let castContent = await fs.readFile(paths.castPath, 'utf-8');
+      // Exportar siempre en claro (asciicast estándar) tras descifrar si hace falta
+      if (isEncryptedRecordingContent(castContent)) {
+        castContent = decryptRecordingContent(castContent);
+      }
       
       // Copiar a la ruta de exportación
       await fs.writeFile(exportPath, castContent, 'utf-8');

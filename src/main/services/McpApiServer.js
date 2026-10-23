@@ -41,7 +41,7 @@ class McpApiServer {
   constructor() {
     this.server = null;
     this.port = 19800;
-    this.config = { enabled: false, apiKey: '', port: 19800 };
+    this.config = { enabled: false, apiKey: '', port: 19800, allowRemoteExec: false };
     this.sshPool = new Map(); // Pool de conexiones SSH efímeras
     this.sshPoolTimers = new Map(); // Timers de inactividad
     this.requestCount = 0;
@@ -72,7 +72,9 @@ class McpApiServer {
         this.config = {
           enabled: parsed.enabled || false,
           apiKey: parsed.apiKey || '',
-          port: parsed.port || 19800
+          port: parsed.port || 19800,
+          // ✅ SEGURIDAD: exec remoto desactivado por defecto
+          allowRemoteExec: parsed.allowRemoteExec === true
         };
       }
     } catch (err) {
@@ -89,9 +91,13 @@ class McpApiServer {
       this.config = {
         enabled: config.enabled !== undefined ? config.enabled : this.config.enabled,
         apiKey: config.apiKey !== undefined ? config.apiKey : this.config.apiKey,
-        port: config.port !== undefined ? config.port : this.config.port
+        port: config.port !== undefined ? config.port : this.config.port,
+        allowRemoteExec: config.allowRemoteExec !== undefined
+          ? config.allowRemoteExec === true
+          : this.config.allowRemoteExec === true
       };
-      fs.writeFileSync(MCP_CONFIG_PATH, JSON.stringify(this.config, null, 2), 'utf8');
+      fs.writeFileSync(MCP_CONFIG_PATH, JSON.stringify(this.config, null, 2), { encoding: 'utf8', mode: 0o600 });
+      try { fs.chmodSync(MCP_CONFIG_PATH, 0o600); } catch (_) { /* win */ }
       return { success: true };
     } catch (err) {
       console.error('❌ [MCP-API] Error guardando mcp-config.json:', err.message);
@@ -686,6 +692,13 @@ class McpApiServer {
       return;
     }
 
+    if (!this.config.allowRemoteExec) {
+      this._sendJson(res, 403, {
+        error: 'Remote exec disabled. Enable allowRemoteExec in MCP settings.'
+      });
+      return;
+    }
+
     // Limitar longitud del comando
     if (command.length > 10000) {
       this._sendJson(res, 400, { error: 'Command too long (max 10000 chars)' });
@@ -882,6 +895,12 @@ class McpApiServer {
     }
     if (!body.terminalId || body.command == null) {
       this._sendJson(res, 400, { error: 'Missing terminalId or command' });
+      return;
+    }
+    if (!this.config.allowRemoteExec) {
+      this._sendJson(res, 403, {
+        error: 'Remote exec disabled. Enable allowRemoteExec in MCP settings.'
+      });
       return;
     }
     try {

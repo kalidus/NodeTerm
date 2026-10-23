@@ -18,7 +18,7 @@ const NC_BUNDLE_FAVORITES = [
 ];
 const NC_BUNDLE_PASSWORDS_META = [
   'passwords_encrypted',
-  'passwordManagerNodes',
+  // passwordManagerNodes (claro) no se sincroniza — solo vault cifrado
   'passwords_expanded_keys',
   'passwords_all_expanded',
   'passwords_count'
@@ -642,10 +642,11 @@ class SyncManager {
                 message: `Subidos ${counts.total} secreto(s) a Nextcloud`
               };
             } else {
+              // ✅ SEGURIDAD: no sincronizar vault en claro sin master key
               passwordsResult = {
-                success: true,
-                count: 'unknown',
-                message: 'Contraseñas en texto plano incluidas en nodeterm-passwords-meta.json'
+                success: false,
+                count: 0,
+                message: 'Master key requerida para sincronizar contraseñas de forma cifrada'
               };
             }
           } else {

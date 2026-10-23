@@ -276,7 +276,7 @@ class AgentZeroService {
       `--name ${this.containerName}`,
       '--restart unless-stopped',
       `--network nodeterm-network`,
-      `-p ${this.hostPort}:${this.containerPort}`,
+      `-p 127.0.0.1:${this.hostPort}:${this.containerPort}`,
       ...(process.platform === 'linux' ? ['--add-host host.docker.internal:host-gateway'] : []),
       `-e OLLAMA_API_BASE=${this.ollamaBaseUrl}`,
       `-e OLLAMA_BASE_URL=${this.ollamaBaseUrl}`,

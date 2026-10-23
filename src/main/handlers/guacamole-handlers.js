@@ -499,7 +499,9 @@ function registerGuacamoleHandlers({
           password: config.password,
           port: config.port || 3389,
           security: config.security || "any",
-          "ignore-cert": true,
+          // ✅ SEGURIDAD: ignorar cert solo si se pide explícitamente (default: verificar)
+          // Nota: muchos servidores RDP usan cert autofirmado → pasar ignoreCert: true desde la UI
+          "ignore-cert": config.ignoreCert === true,
           // Drive redirection
           ...driveSettings,
           "enable-wallpaper": config.enableWallpaper === true ? true : false,

@@ -38,6 +38,8 @@ class OpenNotebookService {
     this._dockerCommand = null;
     this._dockerCheckedAt = 0;
     this._encryptionKey = null;
+    this._surrealUser = 'root';
+    this._surrealPassword = null;
 
     this.status = {
       isRunning: false,
@@ -221,6 +223,7 @@ class OpenNotebookService {
     await fs.promises.mkdir(notebookDataDir, { recursive: true });
     await fs.promises.mkdir(surrealDataDir, { recursive: true });
     await this.ensureEncryptionKey();
+    await this.ensureSurrealCredentials();
   }
 
   async ensureEncryptionKey() {
@@ -238,10 +241,33 @@ class OpenNotebookService {
 
     if (!key) {
       key = crypto.randomBytes(24).toString('hex');
-      await fs.promises.writeFile(keyPath, key, 'utf8');
+      await fs.promises.writeFile(keyPath, key, { encoding: 'utf8', mode: 0o600 });
+      try { await fs.promises.chmod(keyPath, 0o600); } catch (_) { /* win */ }
     }
 
     this._encryptionKey = key;
+  }
+
+  async ensureSurrealCredentials() {
+    const credPath = path.join(this.dataDir, '.nodeterm-surreal-creds.json');
+    try {
+      const raw = await fs.promises.readFile(credPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed?.password && typeof parsed.password === 'string') {
+        this._surrealUser = parsed.user || 'root';
+        this._surrealPassword = parsed.password;
+        return;
+      }
+    } catch (_) { /* generar */ }
+
+    this._surrealUser = 'root';
+    this._surrealPassword = crypto.randomBytes(18).toString('base64url');
+    await fs.promises.writeFile(
+      credPath,
+      JSON.stringify({ user: this._surrealUser, password: this._surrealPassword }, null, 2),
+      { encoding: 'utf8', mode: 0o600 }
+    );
+    try { await fs.promises.chmod(credPath, 0o600); } catch (_) { /* win */ }
   }
 
   getEncryptionKey() {
@@ -292,7 +318,17 @@ class OpenNotebookService {
       await execAsync(this.buildDockerCommand('network create nodeterm-network'), { timeout: 10_000 });
     } catch (_) {}
 
-    const encKey = this._encryptionKey || 'nodeterm-default-key';
+    if (!this._encryptionKey) {
+      await this.ensureEncryptionKey();
+    }
+    const encKey = this._encryptionKey;
+    if (!encKey) {
+      throw new Error('No se pudo obtener la clave de cifrado de Open Notebook');
+    }
+
+    if (!this._surrealPassword) {
+      await this.ensureSurrealCredentials();
+    }
 
     const args = [
       'run -d',
@@ -300,15 +336,15 @@ class OpenNotebookService {
       '--restart unless-stopped',
       '--pull never',
       '--network nodeterm-network',
-      `-p ${this.hostPort}:${this.containerPort}`,
-      `-p ${this.apiHostPort}:${this.apiContainerPort}`,
+      `-p 127.0.0.1:${this.hostPort}:${this.containerPort}`,
+      `-p 127.0.0.1:${this.apiHostPort}:${this.apiContainerPort}`,
       ...(process.platform === 'linux' ? ['--add-host host.docker.internal:host-gateway'] : []),
       `-v "${toDockerPath(notebookDataDir)}:/app/data"`,
       `-v "${toDockerPath(surrealDataDir)}:/mydata"`,
       `-e OPEN_NOTEBOOK_ENCRYPTION_KEY=${encKey}`,
       `-e SURREAL_URL=ws://localhost:8000/rpc`,
-      `-e SURREAL_USER=root`,
-      `-e SURREAL_PASSWORD=root`,
+      `-e SURREAL_USER=${this._surrealUser || 'root'}`,
+      `-e SURREAL_PASSWORD=${this._surrealPassword}`,
       `-e SURREAL_NAMESPACE=open_notebook`,
       `-e SURREAL_DATABASE=open_notebook`,
       this.imageName

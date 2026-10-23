@@ -12,7 +12,7 @@ export const IntegrationsSettingsTab = ({
 }) => {
   const { t } = useTranslation('settings');
   const [integrationsActiveIndex, setIntegrationsActiveIndex] = useState(0);
-  const [mcpConfig, setMcpConfig] = useState({ enabled: false, apiKey: '', port: 19800 });
+  const [mcpConfig, setMcpConfig] = useState({ enabled: false, apiKey: '', port: 19800, allowRemoteExec: false });
   const [mcpStatus, setMcpStatus] = useState({ running: false, port: 19800, uptime: 0, requestCount: 0 });
 
   // Load MCP config and status
@@ -197,6 +197,36 @@ export const IntegrationsSettingsTab = ({
                     min={1024}
                     max={65535}
                     style={{ width: '120px' }}
+                  />
+                </div>
+              </div>
+
+              <div className="settings-option-item" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--ui-dialog-border)' }}>
+                <div className="settings-option-text">
+                  <label>{t('mcp.allowRemoteExec') || 'Permitir ejecución remota (SSH/terminal)'}</label>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                    Desactivado por defecto. Si lo activas, los clientes MCP podrán ejecutar comandos vía /api/ssh/exec y /api/terminals/exec.
+                  </div>
+                </div>
+                <div className="settings-option-control">
+                  <InputSwitch
+                    checked={Boolean(mcpConfig.allowRemoteExec)}
+                    onChange={(e) => {
+                      const enable = e.value;
+                      if (enable) {
+                        appConfirm({
+                          message: 'Los agentes MCP podrán ejecutar comandos SSH y en terminales abiertas. ¿Continuar?',
+                          header: 'Confirmar riesgo',
+                          severity: 'warn',
+                          acceptLabel: 'Activar',
+                          rejectLabel: 'Cancelar'
+                        }).then((ok) => {
+                          if (ok) saveMcpConfig({ ...mcpConfig, allowRemoteExec: true });
+                        });
+                      } else {
+                        saveMcpConfig({ ...mcpConfig, allowRemoteExec: false });
+                      }
+                    }}
                   />
                 </div>
               </div>

@@ -327,7 +327,8 @@ class SSHTunnelService extends EventEmitter {
         this.addLog(tunnelId, 'info', `Conexión SSH establecida con ${config.sshHost}`);
         
         // Solicitar al servidor SSH que escuche en el puerto remoto
-        sshClient.forwardIn(config.bindHost || '0.0.0.0', config.remotePort, (err) => {
+        // ✅ SEGURIDAD: por defecto solo loopback en el servidor remoto
+        sshClient.forwardIn(config.bindHost || '127.0.0.1', config.remotePort, (err) => {
           if (err) {
             this.addLog(tunnelId, 'error', `Error al crear forward remoto: ${err.message}`);
             this.updateStatus(tunnelId, 'error', err.message);
