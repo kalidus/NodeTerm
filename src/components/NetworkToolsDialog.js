@@ -19,7 +19,7 @@ import {
   findToolMetadata
 } from './network-tools/toolRegistry';
 
-const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null }) => {
+const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null, compact = null }) => {
   // Categoría y herramienta seleccionada
   const [selectedCategory, setSelectedCategory] = useState(() => {
     if (toolId) {
@@ -69,17 +69,23 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
   const [themeVersion, setThemeVersion] = useState(0);
 
-  // Escuchar cambios de tema y resize
+  // Escuchar cambios de tema y resize. En el panel de inicio, compact manda sobre el ancho de la ventana.
   useEffect(() => {
     const onThemeChanged = () => setThemeVersion(v => v + 1);
-    const onResize = () => setIsMobile(window.innerWidth < 900);
     window.addEventListener('theme-changed', onThemeChanged);
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('theme-changed', onThemeChanged);
-      window.removeEventListener('resize', onResize);
-    };
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
+
+  useEffect(() => {
+    if (typeof compact === 'boolean') {
+      setIsMobile(compact);
+      return undefined;
+    }
+    const onResize = () => setIsMobile(window.innerWidth < 900);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [compact]);
 
   const currentTheme = useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];

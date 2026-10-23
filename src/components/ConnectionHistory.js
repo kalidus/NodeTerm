@@ -20,6 +20,7 @@ import VaultCyberPanels from './home/VaultCyberPanels';
 import ConnectionCyberPanels from './home/ConnectionCyberPanels';
 import HomeSessionHost from './home/HomeSessionHost';
 import NotesCyberPanels from './home/NotesCyberPanels';
+import ToolsCyberPanels from './home/ToolsCyberPanels';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
 
@@ -917,6 +918,7 @@ const ConnectionHistory = ({
 	const showVaultTerminal = isActiveTab && sidebarView === 'passwords';
 	const showConnectionCyber = isActiveTab && sidebarView === 'connections';
 	const showNotesCyber = isActiveTab && sidebarView === 'documents';
+	const showToolsCyber = isActiveTab && sidebarView === 'tools';
 
 	return (
 		<div
@@ -1240,6 +1242,14 @@ const ConnectionHistory = ({
 					{showNotesCyber && (
 						<NotesCyberPanels
 							documentNodes={documentNodes}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							frameBackground={panelFrameBg}
+						/>
+					)}
+					{showToolsCyber && (
+						<ToolsCyberPanels
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}

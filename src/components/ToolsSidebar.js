@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Tree } from 'primereact/tree';
 import { iconThemes } from '../themes/icon-themes';
 import { themeManager, getThemeGroupColorPalette } from '../utils/themeManager';
+import { getHomeTabActive } from '../utils/homeTabActiveBus';
 
 const TOOL_CATEGORIES = [
   {
@@ -265,6 +266,16 @@ const ToolsSidebar = ({
           }
           toolClickTimerRef.current = setTimeout(() => {
             toolClickTimerRef.current = null;
+            if (getHomeTabActive()) {
+              window.dispatchEvent(new CustomEvent('open-home-tool-panel', {
+                detail: {
+                  toolId: node.key,
+                  toolLabel: node.label,
+                  toolIcon: node.toolIcon
+                }
+              }));
+              return;
+            }
             if (onOpenTool) {
               onOpenTool(node.key, node.label, 'reuse');
             }
