@@ -80,15 +80,23 @@ describe('alineacion baseline mstsc', () => {
   test('RDP_INJECTED_CHANNELS default = rdpdr+rdpsnd (orden mstsc)', () => {
     process.env.NODETERM_RDP_INJECT_CHANNELS = '';
     assert.deepEqual(RDP_INJECTED_CHANNELS, { before: ['rdpdr', 'rdpsnd'], after: [] });
-    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr', 'rdpsnd'], after: [] });
+    // Sin sesión: RDP directo — no inyectar por defecto.
+    assert.equal(resolveInjectedChannels(), null);
+    assert.deepEqual(
+      resolveInjectedChannels({ useBastionWallix: true }),
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
+    );
     assert.deepEqual(MSTSC_CS_NET_PREFIX, ['rdpdr', 'rdpsnd', 'cliprdr']);
   });
 
   test('prepare+inject produce prefijo rdpdr,rdpsnd,cliprdr', () => {
     process.env.NODETERM_RDP_INJECT_CHANNELS = '';
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000], ['drdynvc', 0xc0a00000]]);
+    const inject = resolveInjectedChannels({ useBastionWallix: true });
+    assert.deepEqual(inject, { before: ['rdpdr', 'rdpsnd'], after: [] });
     const res = prepareMcsConnectInitial(frame, 0x01, {
-      injectChannels: resolveInjectedChannels()
+      injectChannels: inject,
+      isBastion: true
     });
     const chs = findClientNetworkChannels(res.buf);
     assert.ok(csNetMatchesMstsc(chs), `got [${chs.join(',')}]`);

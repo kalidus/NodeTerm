@@ -389,8 +389,12 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     assert.equal(kept.length, 0);
     assert.equal(kept.injected.length, 0, 'sin synthAck prematuro antes del saludo');
-    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
-    assert.equal(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0, true);
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps), 'CAPS cacheados para rehandshake');
+    // FORMAT_LIST se encola hasta CB_MONITOR_READY (IronRDP Ready); no synthAck.
+    assert.ok(
+      Array.isArray(state.pendingClientCliprdr) && state.pendingClientCliprdr.length >= 1,
+      'FORMAT_LIST encolado hasta MONITOR_READY'
+    );
     assert.equal(state.cliprdrFormatListAcked, undefined);
   });
 

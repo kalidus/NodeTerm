@@ -171,12 +171,14 @@ describe('CLIPRDR: filtrado de frames del servidor', () => {
     assert.equal(resCaps.isCliprdr, true);
     assert.equal(resCaps.channelId, 1004);
     assert.deepEqual(resCaps.forward, caps);
-    assert.equal(state.cliprdrServerReady, true);
+    // IronRDP Ready = CB_MONITOR_READY; CAPS solo no basta.
+    assert.equal(state.cliprdrServerReady, false);
 
     const monitorReady = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
     const resMon = processServerFrame(state, monitorReady);
     assert.equal(resMon.dropped, false);
     assert.deepEqual(resMon.forward, monitorReady);
+    assert.equal(state.cliprdrServerReady, true);
 
     const formatList = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
     const resList = processServerFrame(state, formatList);
@@ -241,9 +243,10 @@ describe('CLIPRDR: filtrado de frames del servidor', () => {
     assert.equal(seen.length, 1);
     assert.match(seen[0], /ch=1005 \(rdpsnd\) len=16B hex=abababababababababababababababab/);
 
-    processServerFrame(state, buildMcsIndication(1006, Buffer.alloc(8, 0x11)));
+    // Evitar 0x11…: flags LE 0x1111 incluyen SEC_AUTODETECT_REQ y consumeAutodetect lo absorbe.
+    processServerFrame(state, buildMcsIndication(1006, Buffer.alloc(16, 0x22)));
     assert.equal(seen.length, 2);
-    assert.match(seen[1], /ch=1006 \(sin-nombre\) len=8B/);
+    assert.match(seen[1], /ch=1006 \(sin-nombre\) len=16B/);
   });
 
   test('en 1001 solo se anota el primer CAPS y el primer FORMAT_LIST', () => {
@@ -271,6 +274,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
   // Se remapea hacia el VC negociado para que IronRDP vea MONITOR_READY; no se escribe en 1001.
   test('remapea el saludo cliprdr que llega por el canal de usuario 1001', () => {
     const state = stateWithCliprdr();
+    state.isBastion = true;
 
     const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
     const resCaps = processServerFrame(state, caps);
@@ -281,13 +285,14 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(resCaps.forward.readUInt16BE(10), 1004);
     assert.equal(state.serverCliprdrChannelId, 1001);
     assert.equal(state.cliprdrOnUnsafeChannel, 1001);
-    assert.equal(state.cliprdrServerReady, true);
+    assert.equal(state.cliprdrServerReady, false);
 
     const monitorReady = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
     const resReady = processServerFrame(state, monitorReady);
     assert.equal(resReady.dropped, false);
     assert.equal(resReady.isCliprdr, true);
     assert.equal(resReady.forward.readUInt16BE(10), 1004);
+    assert.equal(state.cliprdrServerReady, true);
 
     const formatList = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
     const resList = processServerFrame(state, formatList);
@@ -540,6 +545,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
   // descartado como 'invalid-share-control-0x0' con tamanos 46B / 30B / 94B.
   test('rescata el saludo cliprdr que el bastion entrega por el canal IO', () => {
     const state = stateWithCliprdr();
+    state.isBastion = true;
 
     const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
     const resCaps = processServerFrame(state, caps);
@@ -548,10 +554,11 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(resCaps.channelId, 1004);
     assert.equal(resCaps.serverChannelId, 1003);
     assert.equal(resCaps.forward.readUInt16BE(10), 1004);
-    assert.equal(state.cliprdrServerReady, true);
+    assert.equal(state.cliprdrServerReady, false);
 
     const monitorReady = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1)));
     assert.equal(processServerFrame(state, monitorReady).forward.readUInt16BE(10), 1004);
+    assert.equal(state.cliprdrServerReady, true);
 
     const formatList = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
     assert.equal(processServerFrame(state, formatList).forward.readUInt16BE(10), 1004);
@@ -1037,6 +1044,8 @@ describe('CLIPRDR: robustez del filtro', () => {
   test('n/a + servidor habla cliprdr en VC nombrado promueve a RDP sin READY en IO', () => {
     const state = stateWithCliprdr();
     state.wallixService = 'n/a';
+    // Promote solo si ya es bastion/virtual (RDP directo también usa service=n/a).
+    state.isBastion = true;
     state.ioChannelId = 1003;
     state.allowed = new Set([1003, 1004, 1005, 1006]);
     state.channelIdToName = new Map([
