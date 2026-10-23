@@ -87,6 +87,22 @@ function registerMcpApiHandlers() {
       return { success: false, error: error.message };
     }
   });
+
+  // Si MCP quedó enabled en disco, arrancar en NODETERM_PORT (default 19800)
+  // sin obligar a re-guardar en Settings tras cada reinicio de la app.
+  try {
+    const bootConfig = mcpApiServer.loadConfig();
+    if (bootConfig.enabled && !mcpApiServer.getStatus().running) {
+      const port = bootConfig.port || 19800;
+      mcpApiServer.start(port).then(() => {
+        console.log(`✅ [MCP-API] Auto-arrancado en 127.0.0.1:${mcpApiServer.getStatus().port || port}`);
+      }).catch((err) => {
+        console.error('❌ [MCP-API] Auto-arranque falló:', err?.message || err);
+      });
+    }
+  } catch (bootErr) {
+    console.warn('⚠️ [MCP-API] Auto-arranque omitido:', bootErr?.message || bootErr);
+  }
 }
 
 module.exports = {
