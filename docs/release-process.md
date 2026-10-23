@@ -83,6 +83,7 @@ npm run fix-release-notes
 ## Checklist de Verificación antes de una Release
 
 - [ ] Estar en la rama `main` con todos los cambios integrados y probados.
+- [ ] Comprobar que el workflow **CI** de `main` está en verde (unit / RDP / VNC en Ubuntu).
 - [ ] Verificar que `CHANGELOG.md` contiene los cambios notables de la versión.
 - [ ] Ejecutar `npm run release:patch` o `npm run release:minor`.
-- [ ] Comprobar en la pestaña **Actions** de GitHub que el build se ejecuta sin errores.
+- [ ] Comprobar en la pestaña **Actions** de GitHub que el build de release multiplataforma se ejecuta sin errores.
