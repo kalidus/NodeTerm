@@ -17,7 +17,6 @@ function sanitizeContent(content) {
   const replaced = content.replace(/en-cache:\/\/[^\s"'>\)]*/gi, placeholder);
   return DOMPurify.sanitize(replaced, {
     USE_PROFILES: { html: true },
-    ADD_TAGS: ['style'],
     ADD_ATTR: ['target']
   });
 }

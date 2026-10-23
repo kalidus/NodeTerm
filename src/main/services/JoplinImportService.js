@@ -3,8 +3,32 @@ const path = require('path');
 const os = require('os');
 const tar = require('tar');
 const { marked } = require('marked');
+const { sanitizeHtml } = require('../utils/html-sanitize');
 
 class JoplinImportService {
+  /**
+   * Rechaza entradas tar con path traversal (tar-slip).
+   * @param {import('tar').ReadEntry} entry
+   * @param {string} tempDir
+   * @returns {boolean}
+   */
+  static isSafeTarEntry(entry, tempDir) {
+    const name = entry?.path || entry?.header?.path || '';
+    if (!name || typeof name !== 'string') return false;
+    if (path.isAbsolute(name)) return false;
+    if (name.includes('\0')) return false;
+    const normalized = path.normalize(name);
+    if (normalized.startsWith('..') || normalized.includes(`${path.sep}..${path.sep}`) || normalized === '..') {
+      return false;
+    }
+    const resolved = path.resolve(tempDir, normalized);
+    const root = path.resolve(tempDir) + path.sep;
+    if (resolved !== path.resolve(tempDir) && !resolved.startsWith(root)) {
+      return false;
+    }
+    return true;
+  }
+
   static async importJex(filePath) {
     let tempDir = null;
     try {
@@ -15,10 +39,11 @@ class JoplinImportService {
       // 1. Crear directorio temporal
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nodeterm-joplin-'));
 
-      // 2. Extraer el archivo JEX (tar)
+      // 2. Extraer el archivo JEX (tar) con filtro anti tar-slip
       await tar.x({
         file: filePath,
-        cwd: tempDir
+        cwd: tempDir,
+        filter: (p, entry) => JoplinImportService.isSafeTarEntry(entry || { path: p }, tempDir)
       });
 
       // 3. Leer todos los archivos .md en el directorio temporal
@@ -96,7 +121,7 @@ class JoplinImportService {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="80" viewBox="0 0 350 80" style="background:#1e1e2f; border:1px dashed #4f46e5; border-radius:8px; font-family:system-ui,-apple-system,sans-serif;"><rect width="100%" height="100%" fill="none"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="12" font-weight="600">📌 Recurso de Evernote</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-size="10">Imagen privada no disponible sin sesion</text></svg>`;
         const evernotePlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         const cleanBody = (note.body || '').replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder);
-        const htmlContent = marked.parse(cleanBody);
+        const htmlContent = sanitizeHtml(marked.parse(cleanBody));
         const noteNode = {
           key: 'doc_' + note.id,
           label: note.title || 'Sin Título',

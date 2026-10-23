@@ -184,7 +184,8 @@ class NextcloudService {
         const response = await window.electron.ipcRenderer.invoke('nextcloud:http-request', {
           url,
           options,
-          ignoreSSLErrors: true
+          ignoreSSLErrors: true,
+          baseUrl: this.baseUrl
         });
         
         // Convertir la respuesta al formato de fetch

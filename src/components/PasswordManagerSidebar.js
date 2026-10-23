@@ -1406,10 +1406,21 @@ const PasswordManagerSidebar = ({
     }
   };
 
-  // Función para abrir URL
+  // Función para abrir URL (vía openExternal validado en main)
   const handleOpenUrl = (url) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-      window.open(url, '_blank');
+      if (window.electron?.import?.openExternal) {
+        window.electron.import.openExternal(url);
+      } else if (window.electronAPI?.openExternal) {
+        window.electronAPI.openExternal(url);
+      } else {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'No disponible',
+          detail: 'No se pudo abrir la URL en el navegador del sistema',
+          life: 3000
+        });
+      }
     } else {
       showToast && showToast({
         severity: 'warn',

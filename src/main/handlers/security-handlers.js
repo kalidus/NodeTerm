@@ -32,8 +32,15 @@ function safeHandle(channel, handler) {
 }
 
 function registerSecurityHandlers(dependencies) {
-  safeHandle('security:get-master-key', async () => {
+  safeHandle('security:get-master-key', async (event) => {
     try {
+      const { assertTrustedIpcSender } = require('../utils/ipc-trust');
+      const trust = assertTrustedIpcSender(event);
+      if (!trust.ok) {
+        console.warn('⚠️ [Security] get-master-key rechazado:', trust.error);
+        return null;
+      }
+
       const config = readSecurityConfig();
 
       // Si el usuario desactivó recordar contraseña, no debe haber clave persistida en memoria de disco

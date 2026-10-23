@@ -263,12 +263,23 @@ function registerSystemMonitoringHandlers() {
   // Handler para importar desde Joplin JEX (tar)
   ipcMain.handle('import:joplin-jex', async (event, filePath) => {
     try {
-      if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
-        return { ok: false, error: 'Ruta de archivo no proporcionada o inválida' };
+      const { assertTrustedIpcSender } = require('../utils/ipc-trust');
+      const trust = assertTrustedIpcSender(event);
+      if (!trust.ok) {
+        return { ok: false, error: `IPC no autorizado: ${trust.error}` };
       }
+
+      const validation = validateImportFilePath(filePath);
+      if (!validation.ok) {
+        return { ok: false, error: validation.error };
+      }
+      if (path.extname(validation.safePath).toLowerCase() !== '.jex') {
+        return { ok: false, error: 'Solo se permiten archivos .jex para importación Joplin' };
+      }
+
       // Lazy require: tar/marked no deben impedir registrar clipboard al cargar este modulo
       const JoplinImportService = require('../services/JoplinImportService');
-      const result = await JoplinImportService.importJex(filePath.trim());
+      const result = await JoplinImportService.importJex(validation.safePath);
       return { ok: true, result };
     } catch (e) {
       console.error('Error en handler import:joplin-jex:', e);
@@ -278,22 +289,33 @@ function registerSystemMonitoringHandlers() {
 
   // Handler para obtener información de archivo
   ipcMain.handle('import:get-file-info', async (event, filePath) => {
-    // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
-    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
-      return { ok: false, error: 'filePath inválido o vacío' };
+    const validation = validateImportFilePath(filePath);
+    if (!validation.ok) {
+      return { ok: false, error: validation.error };
     }
-    const stat = safeStatSync(filePath.trim());
+    const stat = safeStatSync(validation.safePath);
     if (!stat) return { ok: false, error: 'No se pudo obtener información del archivo' };
     return { ok: true, mtimeMs: stat.mtimeMs, size: stat.size };
   });
 
   // Handler para obtener hash de archivo
   ipcMain.handle('import:get-file-hash', async (event, filePath) => {
-    // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
-    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
-      return { ok: false, error: 'filePath inválido o vacío' };
+    const validation = validateImportFilePath(filePath);
+    if (!validation.ok) {
+      return { ok: false, error: validation.error };
     }
-    const hash = hashFileSync(filePath.trim());
+
+    try {
+      const stats = fs.statSync(validation.safePath);
+      const MAX_HASH_BYTES = 50 * 1024 * 1024; // 50 MB
+      if (stats.size > MAX_HASH_BYTES) {
+        return { ok: false, error: 'El archivo excede el tamaño máximo para hash (50 MB)' };
+      }
+    } catch {
+      return { ok: false, error: 'No se pudo acceder al archivo' };
+    }
+
+    const hash = hashFileSync(validation.safePath);
     if (!hash) return { ok: false, error: 'No se pudo calcular el hash del archivo' };
     return { ok: true, hash };
   });
@@ -653,18 +675,37 @@ function registerSystemMonitoringHandlers() {
   // Esto permite subir archivos arrastrados sin necesidad de tener el path
   ipcMain.handle('file:save-temp-file', async (event, { fileName, arrayBuffer }) => {
     try {
-      const path = require('path');
+      const pathMod = require('path');
       const os = require('os');
-      const fs = require('fs').promises;
+      const fsPromises = require('fs').promises;
+
+      if (!fileName || typeof fileName !== 'string') {
+        return { ok: false, error: 'fileName inválido' };
+      }
+      if (!arrayBuffer) {
+        return { ok: false, error: 'arrayBuffer requerido' };
+      }
 
       // ✅ VALIDACIÓN DE SEGURIDAD: Sanear el nombre del archivo para evitar path traversal
-      const safeFileName = path.basename(fileName);
+      const safeFileName = pathMod.basename(fileName).replace(/[^\w.\- ()[\]]+/g, '_');
+      if (!safeFileName || safeFileName === '.' || safeFileName === '..') {
+        return { ok: false, error: 'Nombre de archivo no permitido' };
+      }
+
+      const MAX_TEMP_BYTES = 100 * 1024 * 1024; // 100 MB
+      const byteLength = arrayBuffer.byteLength != null
+        ? arrayBuffer.byteLength
+        : (Buffer.isBuffer(arrayBuffer) ? arrayBuffer.length : 0);
+      if (byteLength > MAX_TEMP_BYTES) {
+        return { ok: false, error: 'El archivo temporal excede el tamaño máximo (100 MB)' };
+      }
+
       const tempDir = os.tmpdir();
-      const tempFilePath = path.join(tempDir, `nodeterm-upload-${Date.now()}-${safeFileName}`);
+      const tempFilePath = pathMod.join(tempDir, `nodeterm-upload-${Date.now()}-${safeFileName}`);
 
       // Convertir ArrayBuffer a Buffer y escribir
       const buffer = Buffer.from(arrayBuffer);
-      await fs.writeFile(tempFilePath, buffer);
+      await fsPromises.writeFile(tempFilePath, buffer);
 
       return { ok: true, path: tempFilePath };
     } catch (e) {

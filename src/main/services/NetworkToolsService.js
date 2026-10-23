@@ -30,8 +30,20 @@ try {
 
 const execAsync = promisify(exec);
 const sslCertAnalyzer = require('./ssl/sslCertAnalyzer');
+const { assertSafeOutboundUrl } = require('../utils/ssrf-guard');
 
 class NetworkToolsService {
+  /**
+   * Valida URL de herramientas HTTP (permite LAN; bloquea metadata cloud).
+   * @private
+   */
+  _assertHttpToolUrl(url) {
+    return assertSafeOutboundUrl(url, {
+      allowPrivate: true,
+      allowLoopback: true
+    });
+  }
+
   constructor() {
     this.platform = process.platform;
     this.commandCache = new Map(); // Cache para comandos disponibles
@@ -1400,6 +1412,11 @@ class NetworkToolsService {
       sanitizedUrl = 'https://' + sanitizedUrl;
     }
 
+    const urlGuard = this._assertHttpToolUrl(sanitizedUrl);
+    if (!urlGuard.ok) {
+      return { success: false, error: `URL bloqueada: ${urlGuard.error}` };
+    }
+
     const startTime = Date.now();
     const results = {
       success: false,
@@ -1451,7 +1468,15 @@ class NetworkToolsService {
       const isRedirect = response.statusCode >= 300 && response.statusCode < 400 && response.location;
       if (isRedirect && hop < maxHops - 1) {
         try {
-          currentUrl = new URL(response.location, currentUrl).toString();
+          const nextUrl = new URL(response.location, currentUrl).toString();
+          const redirectGuard = this._assertHttpToolUrl(nextUrl);
+          if (!redirectGuard.ok) {
+            results.error = `Redirección bloqueada: ${redirectGuard.error}`;
+            results.finalUrl = currentUrl;
+            results.timing.responseTime = Date.now() - startTime;
+            return results;
+          }
+          currentUrl = nextUrl;
           method = 'HEAD';
           triedGetFallback = false;
           continue;
@@ -3746,6 +3771,11 @@ class NetworkToolsService {
       sanitizedUrl = 'https://' + sanitizedUrl;
     }
 
+    const urlGuard = this._assertHttpToolUrl(sanitizedUrl);
+    if (!urlGuard.ok) {
+      return { success: false, error: `URL bloqueada: ${urlGuard.error}` };
+    }
+
     const startTime = Date.now();
     
     const results = {
@@ -4256,7 +4286,12 @@ class NetworkToolsService {
   async _fetchWithDetails(url, timeout = 10000) {
     return new Promise((resolve) => {
       try {
-        const parsedUrl = new URL(url);
+        const urlGuard = this._assertHttpToolUrl(url);
+        if (!urlGuard.ok) {
+          resolve({ success: false, error: `URL bloqueada: ${urlGuard.error}` });
+          return;
+        }
+        const parsedUrl = urlGuard.parsed;
         const protocol = parsedUrl.protocol === 'https:' ? https : http;
 
         const options = {

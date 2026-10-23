@@ -22,6 +22,7 @@ import { ContextMenu } from 'primereact/contextmenu';
 import { common, createLowlight } from 'lowlight';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { FaBold, FaItalic, FaUnderline } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 import { FiMaximize2, FiMinimize2 } from 'react-icons/fi';
@@ -629,16 +630,28 @@ const EditorToolbar = ({ editor }) => {
   );
 };
 
+const NOTE_HTML_SANITIZE = {
+  USE_PROFILES: { html: true },
+  ADD_ATTR: ['target']
+};
+
 const sanitizeContent = (content) => {
   if (!content || typeof content !== 'string') return content || '';
   // Placeholder neutro (sin borde morado) para recursos Evernote inaccesibles
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="56" viewBox="0 0 280 56"><rect width="100%" height="100%" rx="6" fill="#1a1f2a" stroke="#334155" stroke-dasharray="4 3"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="11" font-family="system-ui,sans-serif">Imagen no disponible</text></svg>`;
   const evernotePlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  return content
+  const replaced = content
     .replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder)
     // Sustituye placeholders antiguos con borde índigo / texto Evernote ya incrustados
     .replace(/data:image\/svg\+xml;charset=utf-8,[^"'>\s]*Recurso%20de%20Evernote[^"'>\s]*/gi, evernotePlaceholder)
     .replace(/data:image\/svg\+xml;charset=utf-8,[^"'>\s]*4f46e5[^"'>\s]*/gi, evernotePlaceholder);
+  return DOMPurify.sanitize(replaced, NOTE_HTML_SANITIZE);
+};
+
+/** Convierte markdown a HTML sanitizado antes de insertar en el editor / persistir. */
+const markedToSafeHtml = (markdown) => {
+  const raw = marked(markdown || '');
+  return DOMPurify.sanitize(typeof raw === 'string' ? raw : String(raw), NOTE_HTML_SANITIZE);
 };
 
 const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
@@ -804,7 +817,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const scheduleMarkdownSave = useCallback((val) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const html = marked(val);
+      const html = markedToSafeHtml(val);
       const tags = noteTagsRef.current || [];
       lastSavedContentRef.current = `${html}::${JSON.stringify(tags)}`;
       setSaveStatus('saving');
@@ -1438,8 +1451,8 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   const switchToWysiwyg = useCallback(() => {
     if (editor && !editor.isDestroyed && editor.schema && markdownSource) {
-      const html = marked(markdownSource);
-      editor.commands.setContent(sanitizeContent(html));
+      const html = markedToSafeHtml(markdownSource);
+      editor.commands.setContent(html);
       updateMetrics(editor);
       setHeadings(extractHeadingsFromEditor(editor));
     }
@@ -1461,7 +1474,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const html = marked(val);
+      const html = markedToSafeHtml(val);
       const tags = noteTagsRef.current || [];
       lastSavedContentRef.current = `${html}::${JSON.stringify(tags)}`;
       setSaveStatus('saving');
@@ -1718,8 +1731,8 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const handleInsertAiResult = () => {
     if (!editor || editor.isDestroyed || !editor.schema || !aiResult) return;
     
-    // Convert markdown response to HTML using marked
-    const formattedHtml = marked(aiResult);
+    // Convert markdown response to HTML using marked + DOMPurify
+    const formattedHtml = markedToSafeHtml(aiResult);
     
     editor.chain().focus().insertContent(`<hr />${formattedHtml}<br />`).run();
     updateMetrics(editor);
@@ -1800,7 +1813,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = ev.target.result;
-        const html = marked(text);
+        const html = markedToSafeHtml(text);
         if (editor && !editor.isDestroyed && editor.schema) {
           editor.commands.setContent(html);
           updateMetrics(editor);

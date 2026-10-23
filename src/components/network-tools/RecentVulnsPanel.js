@@ -577,10 +577,10 @@ const RecentVulnsPanel = () => {
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          if (window.electron?.ipcRenderer) {
-                            window.electron.ipcRenderer.send('window:open-external-url', url);
-                          } else {
-                            window.open(url, '_blank');
+                          if (window.electron?.import?.openExternal) {
+                            window.electron.import.openExternal(url);
+                          } else if (window.electronAPI?.openExternal) {
+                            window.electronAPI.openExternal(url);
                           }
                         }}
                         style={{ color: themeColors.primary, textDecoration: 'none', wordBreak: 'break-all' }}
