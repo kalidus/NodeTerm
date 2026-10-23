@@ -12,6 +12,63 @@ import i18n from '../i18n';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
+const AQP_SIZE_STORAGE_KEY = 'nodeterm_aqp_size';
+const AQP_DEFAULT_SIZE = { width: 920, height: 720 };
+const AQP_MIN_SIZE = { width: 560, height: 400 };
+const AQP_MARGIN = 8;
+
+const AQP_RESIZE_DIRECTIONS = [
+  'right',
+  'left',
+  'bottom',
+  'top',
+  'bottom-right',
+  'bottom-left',
+  'top-right',
+  'top-left'
+];
+
+function clampAqpSize(width, height) {
+  const maxWidth = Math.max(AQP_MIN_SIZE.width, window.innerWidth - AQP_MARGIN * 2);
+  const maxHeight = Math.max(AQP_MIN_SIZE.height, window.innerHeight - AQP_MARGIN * 2);
+  return {
+    width: Math.round(Math.min(maxWidth, Math.max(AQP_MIN_SIZE.width, width))),
+    height: Math.round(Math.min(maxHeight, Math.max(AQP_MIN_SIZE.height, height)))
+  };
+}
+
+function loadAqpSize() {
+  try {
+    const raw = localStorage.getItem(AQP_SIZE_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.width === 'number' && typeof parsed.height === 'number') {
+        return clampAqpSize(parsed.width, parsed.height);
+      }
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  return clampAqpSize(AQP_DEFAULT_SIZE.width, AQP_DEFAULT_SIZE.height);
+}
+
+function saveAqpSize(width, height) {
+  try {
+    localStorage.setItem(AQP_SIZE_STORAGE_KEY, JSON.stringify(clampAqpSize(width, height)));
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function aqpResizeCursor(direction) {
+  if (direction.includes('top') && direction.includes('left')) return 'nw-resize';
+  if (direction.includes('top') && direction.includes('right')) return 'ne-resize';
+  if (direction.includes('bottom') && direction.includes('left')) return 'sw-resize';
+  if (direction.includes('bottom') && direction.includes('right')) return 'se-resize';
+  if (direction.includes('top') || direction.includes('bottom')) return 'ns-resize';
+  if (direction.includes('left') || direction.includes('right')) return 'ew-resize';
+  return 'default';
+}
 
 const TERMINAL_STORAGE = {
   ssh: 'basicapp_terminal_theme',
@@ -303,6 +360,10 @@ export function openAppearanceQuickPanel(anchorEl) {
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', t('settings.sidebar.appearance'));
 
+  const initialSize = loadAqpSize();
+  panel.style.width = `${initialSize.width}px`;
+  panel.style.height = `${initialSize.height}px`;
+
   const header = el('div', 'aqp-header');
   const studio = el('div', 'aqp-studio');
   const rail = el('nav', 'aqp-rail');
@@ -312,6 +373,21 @@ export function openAppearanceQuickPanel(anchorEl) {
 
   const openedAt = Date.now();
   let gridEl = null;
+  let resizeState = null;
+  let resizedAt = 0;
+  let onResizeMove = null;
+  let onResizeEnd = null;
+
+  const stopResizeListeners = () => {
+    if (onResizeMove) document.removeEventListener('mousemove', onResizeMove);
+    if (onResizeEnd) document.removeEventListener('mouseup', onResizeEnd);
+    onResizeMove = null;
+    onResizeEnd = null;
+    resizeState = null;
+    panel.classList.remove('is-resizing');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
 
   const close = () => {
     panel._aqpCleanup?.();
@@ -320,10 +396,12 @@ export function openAppearanceQuickPanel(anchorEl) {
   panel._aqpCleanup = () => {
     document.removeEventListener('click', onOutside);
     document.removeEventListener('keydown', onKey);
+    stopResizeListeners();
   };
 
   const onOutside = (ev) => {
     if (Date.now() - openedAt < 150) return;
+    if (resizeState || Date.now() - resizedAt < 200) return;
     if (!panel.contains(ev.target) && !anchorEl.contains(ev.target)) close();
   };
 
@@ -332,7 +410,7 @@ export function openAppearanceQuickPanel(anchorEl) {
   };
 
   function positionPanel() {
-    const margin = 8;
+    const margin = AQP_MARGIN;
     const rect = anchorEl.getBoundingClientRect();
     const width = panel.offsetWidth;
     const height = panel.offsetHeight;
@@ -349,6 +427,82 @@ export function openAppearanceQuickPanel(anchorEl) {
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
   }
+
+  function startAqpResize(ev, direction) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const rect = panel.getBoundingClientRect();
+    resizeState = {
+      direction,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      startLeft: rect.left,
+      startTop: rect.top
+    };
+    panel.classList.add('is-resizing');
+    document.body.style.cursor = aqpResizeCursor(direction);
+    document.body.style.userSelect = 'none';
+
+    onResizeMove = (moveEv) => {
+      if (!resizeState) return;
+      const {
+        direction: dir,
+        startX,
+        startY,
+        startWidth,
+        startHeight,
+        startLeft,
+        startTop
+      } = resizeState;
+      const deltaX = moveEv.clientX - startX;
+      const deltaY = moveEv.clientY - startY;
+      const maxWidth = Math.max(AQP_MIN_SIZE.width, window.innerWidth - AQP_MARGIN * 2);
+      const maxHeight = Math.max(AQP_MIN_SIZE.height, window.innerHeight - AQP_MARGIN * 2);
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newLeft = startLeft;
+      let newTop = startTop;
+
+      if (dir.includes('right')) {
+        newWidth = Math.max(AQP_MIN_SIZE.width, Math.min(maxWidth, startWidth + deltaX));
+      } else if (dir.includes('left')) {
+        newWidth = Math.max(AQP_MIN_SIZE.width, Math.min(maxWidth, startWidth - deltaX));
+        newLeft = startLeft - (newWidth - startWidth);
+      }
+
+      if (dir.includes('bottom')) {
+        newHeight = Math.max(AQP_MIN_SIZE.height, Math.min(maxHeight, startHeight + deltaY));
+      } else if (dir.includes('top')) {
+        newHeight = Math.max(AQP_MIN_SIZE.height, Math.min(maxHeight, startHeight - deltaY));
+        newTop = startTop - (newHeight - startHeight);
+      }
+
+      panel.style.width = `${Math.round(newWidth)}px`;
+      panel.style.height = `${Math.round(newHeight)}px`;
+      if (dir.includes('left')) panel.style.left = `${Math.round(newLeft)}px`;
+      if (dir.includes('top')) panel.style.top = `${Math.round(newTop)}px`;
+    };
+
+    onResizeEnd = () => {
+      if (resizeState) {
+        saveAqpSize(panel.offsetWidth, panel.offsetHeight);
+        resizedAt = Date.now();
+      }
+      stopResizeListeners();
+    };
+
+    document.addEventListener('mousemove', onResizeMove);
+    document.addEventListener('mouseup', onResizeEnd);
+  }
+
+  AQP_RESIZE_DIRECTIONS.forEach((direction) => {
+    const handle = el('div', `aqp-resize-handle aqp-resize-handle-${direction}`);
+    handle.addEventListener('mousedown', (ev) => startAqpResize(ev, direction));
+    panel.append(handle);
+  });
 
   function remembered(key, storageKey, fallback) {
     if (picked[key] != null) return picked[key];

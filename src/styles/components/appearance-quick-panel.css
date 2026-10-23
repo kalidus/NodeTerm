@@ -7,7 +7,10 @@
   flex-direction: column;
   width: min(920px, calc(100vw - 20px));
   height: min(720px, 88vh);
-  max-height: min(720px, 88vh);
+  min-width: 560px;
+  min-height: 400px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
   overflow: hidden;
   color: var(--ui-dialog-text, rgba(255, 255, 255, 0.92));
   background: var(--ui-dialog-bg, #1c1f26);
@@ -19,6 +22,85 @@
   font-family: var(--ui-font-family, inherit);
   font-size: 13px;
   line-height: 1.35;
+}
+
+/* Resize handles — zonas transparentes en bordes y esquinas */
+.aqp-resize-handle {
+  position: absolute;
+  z-index: 10;
+  background: transparent;
+}
+
+.aqp-resize-handle-right {
+  top: 8px;
+  right: -5px;
+  bottom: 8px;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+.aqp-resize-handle-left {
+  top: 8px;
+  left: -5px;
+  bottom: 8px;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+.aqp-resize-handle-bottom {
+  left: 8px;
+  right: 8px;
+  bottom: -5px;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.aqp-resize-handle-top {
+  left: 8px;
+  right: 8px;
+  top: -5px;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.aqp-resize-handle-bottom-right {
+  right: -5px;
+  bottom: -5px;
+  width: 15px;
+  height: 15px;
+  cursor: se-resize;
+  z-index: 11;
+}
+
+.aqp-resize-handle-bottom-left {
+  left: -5px;
+  bottom: -5px;
+  width: 15px;
+  height: 15px;
+  cursor: sw-resize;
+  z-index: 11;
+}
+
+.aqp-resize-handle-top-right {
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  cursor: ne-resize;
+  z-index: 11;
+}
+
+.aqp-resize-handle-top-left {
+  top: -5px;
+  left: -5px;
+  width: 15px;
+  height: 15px;
+  cursor: nw-resize;
+  z-index: 11;
+}
+
+.aqp.is-resizing {
+  user-select: none;
 }
 
 .aqp-header {
