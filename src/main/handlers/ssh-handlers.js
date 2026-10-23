@@ -311,6 +311,33 @@ function registerSSHHandlers(dependencies = {}) {
     return sshConfig;
   };
 
+  /**
+   * ✅ SEGURIDAD: Entrega one-shot del password manual al renderer para auto-guardar
+   * en el árbol cifrado. No se emite en ssh-connection-ready.
+   */
+  ipcMain.handle('ssh:claim-manual-password', async (_event, { tabId, originalKey } = {}) => {
+    try {
+      let conn = null;
+      if (tabId && sshConnections && sshConnections[tabId]) {
+        conn = sshConnections[tabId];
+      } else if (originalKey && sshConnections) {
+        conn = Object.values(sshConnections).find(
+          (c) => c && (c.originalKey === originalKey || c.tabId === originalKey)
+        ) || null;
+      } else if (tabId && findSSHConnection) {
+        conn = await findSSHConnection(tabId, { originalKey });
+      }
+
+      const password = conn?.manualPassword;
+      if (!password || typeof password !== 'string') {
+        return { ok: false, error: 'No manual password available' };
+      }
+      return { ok: true, password };
+    } catch (e) {
+      return { ok: false, error: e?.message || 'claim failed' };
+    }
+  });
+
   const markTransferDone = (transferId) => {
     if (!transferId) return;
     activeTransfers.delete(transferId);

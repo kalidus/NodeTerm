@@ -324,7 +324,7 @@ const OpenClawTab = () => {
           partition="persist:openclaw"
           allowpopups="true"
           style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px', background: 'transparent' }}
-          webpreferences="contextIsolation=yes, nodeIntegration=no, webSecurity=no"
+          webpreferences="contextIsolation=yes, nodeIntegration=no, webSecurity=yes"
         />
       </div>
     );

@@ -383,17 +383,19 @@ class SSHAuthService {
           sendToRenderer(sender, `ssh:data:${tabId}`, data.toString('utf-8'));
         });
 
-        // Guardar password en el objeto de conexión para uso interno (ej: SFTP)
+        // Guardar password en el objeto de conexión para uso interno (ej: SFTP / claim one-shot)
         if (manualPassword) {
           conn.manualPassword = manualPassword;
         }
+        const hasManualPassword = Boolean(manualPassword || conn.manualPassword);
 
         sendToRenderer(sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
         sendToRenderer(sender, `ssh:ready:${tabId}`);
+        // ✅ SEGURIDAD: no enviar la contraseña al renderer; el guardado usa ssh:claim-manual-password
         sendToRenderer(sender, 'ssh-connection-ready', {
           originalKey: conn.originalKey || tabId,
           tabId: tabId,
-          password: manualPassword || conn.manualPassword // Incluir password para que el renderer lo guarde
+          manualPasswordAvailable: hasManualPassword
         });
 
         // Callback de éxito

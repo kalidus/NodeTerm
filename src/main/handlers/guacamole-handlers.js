@@ -416,16 +416,21 @@ function registerGuacamoleHandlers({
 
       const CIPHER = 'AES-256-CBC';
       // ⚡ crypto is now required at module level (cached by Node.js)
-      // ✅ CRÍTICO: Usar la misma clave que el servidor Guacamole
-      // Si no se proporciona la función, usar fallback (solo para compatibilidad)
-      let SECRET_KEY;
-      if (getOrCreateGuacamoleSecretKey && typeof getOrCreateGuacamoleSecretKey === 'function') {
-        SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
-      } else {
-        // Fallback: usar clave hardcodeada (solo para compatibilidad con versiones antiguas)
-        console.warn('⚠️ [MAIN] Usando clave hardcodeada como fallback. Esto puede causar errores de validación.');
-        const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-        SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+      // ✅ CRÍTICO: Usar la misma clave que el servidor Guacamole (sin fallback hardcodeado)
+      if (!getOrCreateGuacamoleSecretKey || typeof getOrCreateGuacamoleSecretKey !== 'function') {
+        return {
+          success: false,
+          isServiceDisabled: false,
+          error: 'Clave de cifrado Guacamole no disponible. Reinicia la aplicación.'
+        };
+      }
+      const SECRET_KEY = await getOrCreateGuacamoleSecretKey(); // 32 bytes exactos para AES-256-CBC
+      if (!SECRET_KEY || !Buffer.isBuffer(SECRET_KEY) || SECRET_KEY.length !== 32) {
+        return {
+          success: false,
+          isServiceDisabled: false,
+          error: 'Clave de cifrado Guacamole inválida. Reinicia la aplicación.'
+        };
       }
 
       // Preparar campos de drive si el usuario lo activó (solo para RDP)

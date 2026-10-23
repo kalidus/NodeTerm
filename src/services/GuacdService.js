@@ -1031,7 +1031,8 @@ class GuacdService {
           '--name', 'nodeterm-guacd',
           '--rm',
           '-d',
-          '-p', `${this.port}:4822`,
+          // ✅ SEGURIDAD: publicar guacd solo en loopback (no expuesto a la LAN)
+          '-p', `127.0.0.1:${this.port}:4822`,
           '-v', `${this.driveHostDir}:/guacdrive`,
           'guacamole/guacd:latest'
         ];

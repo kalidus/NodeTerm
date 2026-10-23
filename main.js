@@ -936,7 +936,8 @@ async function initializeGuacamoleServices() {
           // instruction. Per-message deflate has significant CPU overhead for many small
           // messages. Over localhost/LAN, bandwidth is not the bottleneck; CPU is.
           // Verified: wsOptions passes directly to WebSocketServer constructor in guacamole-lite.
-          const websocketOptions = { port: websocketPort, perMessageDeflate: false };
+          // ✅ SEGURIDAD: bind solo a loopback (no exponer tokens Guacamole en la LAN)
+          const websocketOptions = { host: '127.0.0.1', port: websocketPort, perMessageDeflate: false };
 
           if (DEBUG_GUACAMOLE) console.log(`🔄 Intentando iniciar WebSocket en puerto ${websocketPort} (intento ${i + 1}/${MAX_RETRIES})`);
 
@@ -987,7 +988,7 @@ async function initializeGuacamoleServices() {
       }
 
       // Reconstituyendo websocketOptions para el resto del código
-      const websocketOptions = { port: websocketPort };
+      const websocketOptions = { host: '127.0.0.1', port: websocketPort };
 
       if (DEBUG_GUACAMOLE) {
         console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
@@ -1551,6 +1552,8 @@ function createWindow() {
     webPreferences.nodeIntegrationInSubFrames = false;
     webPreferences.contextIsolation = true;
     webPreferences.sandbox = true;
+    // Forzar same-origin policy aunque el <webview> pida webSecurity=no
+    webPreferences.webSecurity = true;
   });
 
   // Cierre de la ventana principal
@@ -3293,16 +3296,19 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
         // Actualizar conexión
         conn.ssh = newBastionConn;
         conn.config = newConfig;
+        // Mantener password en main para SFTP / claim one-shot (no enviarlo al renderer)
+        conn.manualPassword = password;
 
         // ✅ FIX: Desactivar modo de password manual después de conectar exitosamente
         sshAuthService.disableManualPasswordMode(conn);
 
         sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
         sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+        // ✅ SEGURIDAD: no enviar la contraseña al renderer; el guardado usa ssh:claim-manual-password
         sendToRenderer(event.sender, 'ssh-connection-ready', {
           originalKey: conn.originalKey || tabId,
           tabId: tabId,
-          password: password // Incluir password para que el renderer lo guarde
+          manualPasswordAvailable: true
         });
       } else {
         // ✅ REFACTORIZADO: Reconexión SSH directa usando SSHAuthService

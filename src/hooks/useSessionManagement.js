@@ -137,11 +137,11 @@ export const useSessionManagement = (toast, {
     };
 
     // Listeners estables con referencias fijas
-    const handleSSHReady = (data) => {
+    const handleSSHReady = async (data) => {
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, CONNECTION_STATUS.CONNECTED);
 
-        // Si hay un password proporcionado (de login manual), disparar evento para guardarlo
+        // Password ya no viaja en el evento; claim one-shot desde main si hubo login manual
         if (data.password) {
           window.dispatchEvent(new CustomEvent('ssh:password-correct', {
             detail: {
@@ -149,6 +149,26 @@ export const useSessionManagement = (toast, {
               password: data.password
             }
           }));
+          return;
+        }
+
+        if (data.manualPasswordAvailable && window.electron?.ipcRenderer?.invoke) {
+          try {
+            const claimed = await window.electron.ipcRenderer.invoke('ssh:claim-manual-password', {
+              tabId: data.tabId,
+              originalKey: data.originalKey
+            });
+            if (claimed?.ok && claimed.password) {
+              window.dispatchEvent(new CustomEvent('ssh:password-correct', {
+                detail: {
+                  originalKey: data.originalKey,
+                  password: claimed.password
+                }
+              }));
+            }
+          } catch (e) {
+            console.warn('No se pudo reclamar password manual para auto-guardar:', e?.message || e);
+          }
         }
       }
     };

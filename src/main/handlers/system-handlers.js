@@ -562,6 +562,13 @@ function registerSystemMonitoringHandlers() {
   // En Electron con contextIsolation, necesitamos usar webUtils desde el main process
   ipcMain.handle('file:get-path-for-file', async (event, fileIndex) => {
     try {
+      // ✅ SEGURIDAD: validar índice (nunca interpolar valores no validados en executeJavaScript)
+      // Solo number entero; Number('0);...') parsearía maliciosamente → rechazar strings
+      const index = typeof fileIndex === 'number' ? fileIndex : NaN;
+      if (!Number.isInteger(index) || index < 0 || index > 10000) {
+        return { ok: false, error: 'Invalid file index' };
+      }
+
       const { webContents } = require('electron');
       const sender = webContents.fromId(event.sender.id);
 
@@ -571,15 +578,17 @@ function registerSystemMonitoringHandlers() {
 
       // Ejecutar código en el renderer para obtener el objeto File y usar webUtils
       // webUtils.getPathForFile solo está disponible en el main process
+      // Índice serializado vía JSON.stringify para evitar inyección de código
       const pathResult = await sender.executeJavaScript(`
         (async () => {
           try {
+            const fileIndex = ${JSON.stringify(index)};
             const files = window.__lastDroppedFiles || [];
-            if (files.length <= ${fileIndex} || !files[${fileIndex}]) {
+            if (files.length <= fileIndex || !files[fileIndex]) {
               return { ok: false, error: 'File not found' };
             }
             
-            const file = files[${fileIndex}];
+            const file = files[fileIndex];
             
             // Intentar múltiples formas de obtener el path
             // En Electron, los archivos del sistema deberían tener path

@@ -652,7 +652,6 @@ export const useFormHandlers = ({
    * Crear nueva entrada de Password
    */
   const createNewPasswordEntry = useCallback((targetFolderKey = null, entry) => {
-    console.log('📝 createNewPasswordEntry called with:', { targetFolderKey, entry });
     const title = (entry?.title || '').trim();
     if (!title) {
       notify({ severity: 'error', summary: 'Error', detail: 'El título es obligatorio', life: 2500 });
@@ -676,7 +675,6 @@ export const useFormHandlers = ({
       createdAt: new Date().toISOString(),
       isUserCreated: true
     };
-    console.log('📝 Created password node:', newNode);
     const nodesCopy = deepCopy(nodes);
     if (targetFolderKey) {
       const parentNode = findNodeByKey(nodesCopy, targetFolderKey);
@@ -690,7 +688,6 @@ export const useFormHandlers = ({
       nodesCopy.push(newNode);
     }
     setNodes(nodesCopy);
-    console.log('📝 Nodes updated, new password node added');
     notify({ severity: 'success', summary: 'Creado', detail: `Entrada "${title}" añadida a la sidebar`, life: 2500 });
     return newNode;
   }, [nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, toast]);
