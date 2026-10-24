@@ -119,6 +119,52 @@ export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, cu
  * Opciones de xterm para un TUI a pantalla completa (AI CLI).
  * convertEol queda apagado: un \\n solo baja de fila y no arrastra el cursor a la columna 0.
  */
+function readWindowsBuildNumber() {
+  try {
+    if (typeof process !== 'undefined' && typeof process.getSystemVersion === 'function') {
+      const build = parseInt(String(process.getSystemVersion()).split('.')[2], 10);
+      if (!Number.isNaN(build) && build > 0) return build;
+    }
+  } catch (_) {}
+  try {
+    const exposed = typeof window !== 'undefined' ? window.electron?.windowsBuildNumber : undefined;
+    const build = parseInt(exposed, 10);
+    if (!Number.isNaN(build) && build > 0) return build;
+  } catch (_) {}
+  return undefined;
+}
+
+function readHostPlatform() {
+  try {
+    const exposed = typeof window !== 'undefined' ? window.electron?.platform : undefined;
+    if (exposed) return exposed;
+  } catch (_) {}
+  try {
+    // process/browser del bundle reporta "browser"; no vale como SO real.
+    if (typeof process !== 'undefined' && process.platform && process.platform !== 'browser') {
+      return process.platform;
+    }
+  } catch (_) {}
+  return undefined;
+}
+
+/**
+ * Build de Windows para xterm `windowsPty`. ConPTY a partir de 21376 no
+ * reinyecta el scrollback al crecer las filas; sin este dato el resize se come líneas.
+ * El renderer no tiene Node: el build llega por el preload (`electron.windowsBuildNumber`).
+ */
+export function getWindowsConptyOptions() {
+  try {
+    if (readHostPlatform() !== 'win32') return undefined;
+    const options = { backend: 'conpty' };
+    const buildNumber = readWindowsBuildNumber();
+    if (buildNumber) options.buildNumber = buildNumber;
+    return options;
+  } catch (_) {
+    return undefined;
+  }
+}
+
 export function createAiCliTerminalOptions({
   fontFamily,
   fontSize,
@@ -127,9 +173,10 @@ export function createAiCliTerminalOptions({
   scrollback,
   allowTransparency = false,
   cursor,
-  selection
+  selection,
+  windowsPty
 }) {
-  return {
+  const options = {
     cursorBlink: true,
     fontFamily,
     fontSize,
@@ -154,6 +201,8 @@ export function createAiCliTerminalOptions({
     cols: 120,
     rows: 30
   };
+  if (windowsPty) options.windowsPty = windowsPty;
+  return options;
 }
 
 /** Unicode 11 + iconos Nerd Font a 2 celdas (eza/ll sin solapar el nombre). */

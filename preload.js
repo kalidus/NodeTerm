@@ -1,4 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const os = require('os');
+
+function readWindowsBuildNumber() {
+  if (process.platform !== 'win32') return undefined;
+  try {
+    const raw = typeof process.getSystemVersion === 'function'
+      ? process.getSystemVersion()
+      : os.release();
+    const build = parseInt(String(raw).split('.')[2], 10);
+    return Number.isNaN(build) || build <= 0 ? undefined : build;
+  } catch (_) {
+    return undefined;
+  }
+}
 
 // 🔒 Registro y mapeo de suscripciones para permitir desuscripción limpia por referencia
 const listenerSubscriptions = new Map();
@@ -48,6 +62,7 @@ function isAllowedListenerChannel(channel) {
 
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
+  windowsBuildNumber: readWindowsBuildNumber(),
   isSecondaryInstance: process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true',
   openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   clipboard: {

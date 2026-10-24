@@ -101,11 +101,18 @@ function resolveTerm(termOrRef) {
 
 export function createXtermWriteBuffer(termRef, options = {}) {
   const maxChunkPerFrame = options.maxChunkPerFrame || DEFAULT_MAX_CHUNK_PER_FRAME;
+  const onPainted = typeof options.onPainted === 'function' ? options.onPainted : null;
   let isActive = options.active !== false;
+  let hold = false;
   let maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
   let chunks = [];
   let pendingBytes = 0;
   let rafId = null;
+
+  const notifyPainted = () => {
+    if (!onPainted) return;
+    try { onPainted(); } catch (_) {}
+  };
 
   const trimBacklog = () => {
     if (pendingBytes <= maxBacklogBytes || chunks.length === 0) return;
@@ -116,7 +123,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
 
   const flush = () => {
     rafId = null;
-    if (!isActive) {
+    if (!isActive || hold) {
       return;
     }
 
@@ -184,13 +191,13 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       pendingBytes = 0;
     }
 
-    if (chunks.length > 0 && isActive && resolveTerm(termRef)) {
+    if (chunks.length > 0 && isActive && !hold && resolveTerm(termRef)) {
       rafId = requestAnimationFrame(flush);
     }
   };
 
   const scheduleFlush = () => {
-    if (!isActive || rafId) return;
+    if (!isActive || hold || rafId) return;
     rafId = requestAnimationFrame(flush);
   };
 
@@ -229,15 +236,49 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    if (!isActive || hold) return;
+    const term = resolveTerm(termRef);
+    if (!term || chunks.length === 0) return;
+    const payload = chunks.join('');
+    chunks = [];
+    pendingBytes = 0;
+    try {
+      term.write(payload);
+    } catch (_) {}
+  };
+
+  /** Un solo write al soltar la retención, con el frame DEC 2026 entero. */
+  const releaseHold = () => {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
     if (!isActive) return;
     const term = resolveTerm(termRef);
-    if (chunks.length > 0 && term) {
-      try {
-        term.write(chunks.join(''));
-      } catch (_) {}
-      chunks = [];
-      pendingBytes = 0;
+    if (!term || chunks.length === 0) {
+      notifyPainted();
+      return;
     }
+    const payload = chunks.join('');
+    chunks = [];
+    pendingBytes = 0;
+    try {
+      term.write(payload, notifyPainted);
+    } catch (_) {}
+  };
+
+  const setHold = (nextHold) => {
+    const next = !!nextHold;
+    if (next === hold) return;
+    hold = next;
+    if (hold) {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      return;
+    }
+    releaseHold();
   };
 
   const setActive = (nextActive) => {
@@ -254,7 +295,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       return;
     }
 
-    if (!wasActive && chunks.length > 0) {
+    if (!wasActive && chunks.length > 0 && !hold) {
       scheduleFlush();
     }
   };
@@ -263,6 +304,8 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     write,
     clear,
     flushSync,
-    setActive
+    setActive,
+    setHold,
+    isHeld: () => hold
   };
 }

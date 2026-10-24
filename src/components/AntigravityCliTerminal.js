@@ -8,6 +8,7 @@ const AntigravityCliTerminal = createAiCliTerminalComponent({
   cursor: '#4285f4',
   selection: 'rgba(66, 133, 244, 0.3)',
   shellClass: 'antigravitycli-terminal-shell',
+  windowsConpty: true,
   validateConfig: () => window.electron?.antigravitycli?.validateConfig?.()
 });
 

@@ -14,7 +14,7 @@ function loadWriteBuffer() {
   return module.exports;
 }
 
-const { takePaintSlice } = loadWriteBuffer();
+const { takePaintSlice, createXtermWriteBuffer } = loadWriteBuffer();
 
 describe('takePaintSlice', () => {
   it('no parte un CSI que cae en el límite de 64 KB', () => {
@@ -45,6 +45,30 @@ describe('takePaintSlice', () => {
     const tailOpen = tail.includes(end) && !tail.includes(begin);
     assert.strictEqual(headOpen && tailOpen, false);
     assert.ok(head.includes(frame) || tail.startsWith(frame) || tail.includes(frame));
+  });
+
+  it('retiene el pintado lejos del final y lo suelta en un solo write', () => {
+    const writes = [];
+    const term = {
+      write(data, cb) {
+        writes.push(data);
+        if (typeof cb === 'function') cb();
+      }
+    };
+    let painted = 0;
+    const buf = createXtermWriteBuffer({ current: term }, {
+      active: true,
+      onPainted: () => { painted += 1; }
+    });
+    buf.setHold(true);
+    buf.write('hola');
+    buf.write('mundo');
+    assert.deepStrictEqual(writes, []);
+    assert.strictEqual(buf.isHeld(), true);
+    buf.setHold(false);
+    assert.deepStrictEqual(writes, ['holamundo']);
+    assert.strictEqual(painted, 1);
+    assert.strictEqual(buf.isHeld(), false);
   });
 
   it('no parte un par subrogado', () => {

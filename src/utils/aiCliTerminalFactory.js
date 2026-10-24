@@ -10,6 +10,7 @@ import {
   createStableTerminalFit,
   createTimerBag,
   getTerminalScrollback,
+  getWindowsConptyOptions,
   registerScrollbackSync,
   useTerminalMemoryGuards
 } from './xtermRenderer';
@@ -31,6 +32,7 @@ import {
  *   cursor: string,
  *   selection: string,
  *   shellClass: string,
+ *   windowsConpty?: boolean,
  *   validateConfig?: () => Promise<{ valid?: boolean, error?: string } | null | undefined>
  * }} config
  */
@@ -43,6 +45,7 @@ export function createAiCliTerminalComponent(config) {
     cursor,
     selection,
     shellClass,
+    windowsConpty = false,
     validateConfig
   } = config;
 
@@ -116,7 +119,8 @@ export function createAiCliTerminalComponent(config) {
         scrollback: getTerminalScrollback(),
         allowTransparency: isIntegrated,
         cursor,
-        selection
+        selection,
+        windowsPty: windowsConpty ? getWindowsConptyOptions() : undefined
       }));
 
       fitAddon.current = new FitAddon();
@@ -127,7 +131,26 @@ export function createAiCliTerminalComponent(config) {
       attachUnicode11(term.current, Unicode11Addon);
       term.current.open(terminalRef.current);
       fitAndSyncSize();
-      writeBufferRef.current = createXtermWriteBuffer(term, { active: !!activeRef.current });
+      let healRaf = null;
+      const healViewport = () => {
+        if (!term.current) return;
+        try { rendererRef.current?.addon?.clearTextureAtlas?.(); } catch (_) {}
+        const rows = term.current.rows || 0;
+        if (rows > 0) {
+          try { term.current.refresh(0, rows - 1); } catch (_) {}
+        }
+      };
+      const scheduleHeal = () => {
+        if (healRaf != null) return;
+        healRaf = requestAnimationFrame(() => {
+          healRaf = null;
+          healViewport();
+        });
+      };
+      writeBufferRef.current = createXtermWriteBuffer(term, {
+        active: !!activeRef.current,
+        onPainted: scheduleHeal
+      });
       rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
       const timers = createTimerBag();
       const debouncedFit = createDebouncedFn(() => {
@@ -182,6 +205,15 @@ export function createAiCliTerminalComponent(config) {
         writeBufferRef.current?.write(data);
       });
 
+      const scrollDisposable = term.current.onScroll(() => {
+        const buffer = term.current?.buffer?.active;
+        if (!buffer) return;
+        const atBottom = buffer.viewportY >= buffer.baseY;
+        const wasHeld = writeBufferRef.current?.isHeld?.() === true;
+        writeBufferRef.current?.setHold(!atBottom);
+        if (!atBottom || wasHeld) scheduleHeal();
+      });
+
       const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`${ipcPrefix}:ready:${tabId}`, () => {
         fitAndSyncSize();
       });
@@ -210,6 +242,8 @@ export function createAiCliTerminalComponent(config) {
 
       return () => {
         if (cleanupClipboard) cleanupClipboard();
+        if (healRaf != null) cancelAnimationFrame(healRaf);
+        scrollDisposable.dispose();
         writeBufferRef.current?.clear();
         resizeObserver.disconnect();
         debouncedFit.cancel();

@@ -84,8 +84,9 @@ async function startAntigravityCliSession(tabId, { cols, rows } = {}) {
 
     if (os.platform() === 'win32') {
       spawnOptions.windowsHide = false;
-      spawnOptions.useConpty = false;
-      spawnOptions.backend = 'winpty';
+      // ConPTY respeta pantalla alternativa y regiones de scroll. WinPTY
+      // volcaba cada redibujado del TUI al scrollback y al subir se veía roto.
+      spawnOptions.useConpty = true;
     }
 
     const candidates = resolveAntigravityCliCandidates(config);
