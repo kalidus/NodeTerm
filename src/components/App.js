@@ -382,55 +382,73 @@ const App = () => {
     });
   }, []);
 
-  // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
+  // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado).
+  // IMPORTANTE: no esperar a sync de app-data.json (~17MB) — la master key vive en security.json.
   useEffect(() => {
-    const waitForSyncReady = () => new Promise((resolve) => {
+    const waitForSyncReady = (timeoutMs = 12000) => new Promise((resolve) => {
       if (localStorageSyncService.isSyncReady()) {
-        resolve();
+        resolve(true);
         return;
       }
-      const onReady = () => {
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
         window.removeEventListener('localstorage-sync-ready', onReady);
-        resolve();
+        clearTimeout(timer);
+        resolve(ok);
       };
+      const onReady = () => finish(true);
       window.addEventListener('localstorage-sync-ready', onReady);
+      const timer = setTimeout(() => {
+        console.warn(`[App] localstorage-sync-ready timeout (${timeoutMs}ms); continúo sin sync completo`);
+        finish(false);
+      }, timeoutMs);
     });
 
     const initializeApp = async () => {
-      await waitForSyncReady();
-
-      if (localStorage.getItem('nodeterm_remember_password') === 'true') {
-        await secureStorage.setRememberPassword(true);
-      }
-
-      await secureStorage.migrateVaultSecurityIfNeeded();
-
-      const hasKey = await secureStorage.checkHasSavedMasterKey();
-
-      if (hasKey) {
-        const rememberPassword = await secureStorage.isRememberPasswordEnabled();
-
-        if (rememberPassword) {
-          // Intentar auto-unlock
-          try {
-            // loadMasterKey ya maneja la carga desde archivo si es necesario
-            const savedMasterKey = await secureStorage.loadMasterKey();
-            if (savedMasterKey) {
-              // Auto-unlock exitoso
-              setMasterKey(savedMasterKey);
-              setNeedsUnlock(false);
-              setIsAppReady(true);
-              return;
-            }
-          } catch (err) {
-            console.error('Error en auto-unlock:', err);
-          }
+      try {
+        // SIEMPRE intentar cargar clave cifrada de security.json (no depender del flag
+        // remember ni del sync de app-data: ese flag en localStorage llega tarde o falta).
+        let savedMasterKey = null;
+        try {
+          savedMasterKey = await secureStorage.loadMasterKey();
+        } catch (err) {
+          console.error('[App] Error en auto-unlock:', err);
         }
 
-        // Si no está recordado o falló, mostrar unlock dialog
+        if (savedMasterKey) {
+          setMasterKey(savedMasterKey);
+          setNeedsUnlock(false);
+          setIsAppReady(true);
+          waitForSyncReady().then(async () => {
+            try {
+              await secureStorage.migrateVaultSecurityIfNeeded();
+            } catch (e) {
+              console.warn('[App] migrateVaultSecurityIfNeeded:', e);
+            }
+          });
+          return;
+        }
+
+        const hasKey = await secureStorage.checkHasSavedMasterKey();
+        if (hasKey) {
+          setNeedsUnlock(true);
+        }
+      } catch (err) {
+        console.error('[App] Error inicializando unlock:', err);
         setNeedsUnlock(true);
       }
+
       setIsAppReady(true);
+
+      waitForSyncReady().then(async () => {
+        try {
+          await secureStorage.migrateVaultSecurityIfNeeded();
+        } catch (e) {
+          console.warn('[App] migrateVaultSecurityIfNeeded:', e);
+        }
+      });
     };
 
     initializeApp();

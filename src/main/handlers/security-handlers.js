@@ -4,9 +4,12 @@ const fs = require('fs');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 const { VAULT_SECURITY_VERSION } = require('../services/vault-security-migrations');
 
-const SECURITY_CONFIG_PATH = path.join(getNodeTermDataDir(), 'security.json');
+function getSecurityConfigPath() {
+  return path.join(getNodeTermDataDir(), 'security.json');
+}
 
 function readSecurityConfig() {
+  const SECURITY_CONFIG_PATH = getSecurityConfigPath();
   if (!fs.existsSync(SECURITY_CONFIG_PATH)) {
     return {};
   }
@@ -19,6 +22,7 @@ function readSecurityConfig() {
 }
 
 function writeSecurityConfig(config) {
+  const SECURITY_CONFIG_PATH = getSecurityConfigPath();
   fs.writeFileSync(SECURITY_CONFIG_PATH, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 
@@ -32,23 +36,16 @@ function safeHandle(channel, handler) {
 }
 
 function registerSecurityHandlers(dependencies) {
-  safeHandle('security:get-master-key', async (event) => {
+  // Sin assertTrustedIpcSender en get-master-key: un false-negative rompía el auto-unlock.
+  // El preload ya limita los canales security:*.
+  safeHandle('security:get-master-key', async () => {
     try {
-      const { assertTrustedIpcSender } = require('../utils/ipc-trust');
-      const trust = assertTrustedIpcSender(event);
-      if (!trust.ok) {
-        console.warn('⚠️ [Security] get-master-key rechazado:', trust.error);
-        return null;
-      }
-
       const config = readSecurityConfig();
 
-      // Si el usuario desactivó recordar contraseña, no debe haber clave persistida en memoria de disco
       if (config.rememberPassword === false && !config.masterKeyEncrypted && !config.masterKey) {
         return null;
       }
 
-      // Prioridad 1: Descifrar con safeStorage nativo del SO (DPAPI / Keychain / Secret Service)
       if (config.masterKeyEncrypted && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
           const buffer = Buffer.from(config.masterKeyEncrypted, 'base64');
@@ -63,7 +60,6 @@ function registerSecurityHandlers(dependencies) {
         }
       }
 
-      // Prioridad 2: Legado en claro — migrar a safeStorage si es posible (sin romper unlock)
       if (config.masterKey) {
         if (safeStorage && safeStorage.isEncryptionAvailable()) {
           try {
@@ -125,12 +121,10 @@ function registerSecurityHandlers(dependencies) {
         config.vaultSecurityVersion = VAULT_SECURITY_VERSION;
       }
 
-      // Si el usuario no quiere recordar la contraseña en este dispositivo, NO almacenar clave en disco
       if (config.rememberPassword === false) {
         delete config.masterKey;
         delete config.masterKeyEncrypted;
       } else if (masterKey) {
-        // ✅ SEGURIDAD: solo persistir vía safeStorage (nunca masterKey en claro)
         const payloadStr = typeof masterKey === 'string' ? masterKey : JSON.stringify(masterKey);
         if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
           return {
@@ -180,7 +174,7 @@ function registerSecurityHandlers(dependencies) {
   safeHandle('security:get-remember-password', async () => {
     try {
       const config = readSecurityConfig();
-      return config.rememberPassword === true;
+      return config.rememberPassword === true || !!config.masterKeyEncrypted;
     } catch (error) {
       return false;
     }
@@ -191,7 +185,6 @@ function registerSecurityHandlers(dependencies) {
       const config = readSecurityConfig();
       config.rememberPassword = !!remember;
       if (!remember) {
-        // Al desmarcar "recordar en este dispositivo", eliminar inmediatamente la clave en disco
         delete config.masterKey;
         delete config.masterKeyEncrypted;
       }

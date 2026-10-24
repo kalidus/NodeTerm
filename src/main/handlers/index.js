@@ -230,7 +230,12 @@ function registerSystemStatsIpcHandler() {
   });
 }
 
+let bootstrapIpcRegistered = false;
+
 function registerBootstrapIpcHandlers() {
+  if (bootstrapIpcRegistered) return;
+  bootstrapIpcRegistered = true;
+
   // Clipboard en modulo aislado (sin tar/Joplin): en asar prod system-handlers
   // fallaba al require JoplinImportService porque faltaba el paquete tar.
   runHandlerStep('clipboard IPC', () => {
@@ -240,6 +245,7 @@ function registerBootstrapIpcHandlers() {
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers({}));
   runHandlerStep('home wallpaper IPC', () => getHomeWallpaperHandlers().registerHomeWallpaperHandlers());
+  // Security solo aquí (evita ×3 al combinar whenReady + critical + registerSecurity)
   runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers({}));
 }
 
@@ -266,7 +272,6 @@ function registerCriticalHandlers(dependencies) {
 
   runHandlerStep('app IPC', () => getAppHandlers().registerAppHandlers(dependencies));
   runHandlerStep('system IPC', () => getSystemHandlers().registerSystemHandlers());
-  runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers(dependencies));
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers(dependencies));
   runHandlerStep('home wallpaper IPC', () => getHomeWallpaperHandlers().registerHomeWallpaperHandlers());
   runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers(dependencies));

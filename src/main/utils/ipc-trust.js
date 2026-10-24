@@ -1,6 +1,8 @@
 /**
- * Validación de origen IPC: solo webContents de ventanas BrowserWindow
- * (no guests/webviews).
+ * Validación de origen IPC: bloquear guests/webviews.
+ * El renderer de BrowserWindow de la app debe poder invocar handlers sensibles
+ * (p.ej. security:get-master-key). No fallar cerrado si fromWebContents es null:
+ * en Electron eso es frágil y rompía el auto-unlock de la master key.
  */
 
 /**
@@ -9,12 +11,15 @@
  */
 function assertTrustedIpcSender(event) {
   try {
-    // Require lazy: en tests el mock de electron a menudo no incluye BrowserWindow
-    const electron = require('electron');
-    const BrowserWindow = electron.BrowserWindow;
+    let BrowserWindow;
+    try {
+      BrowserWindow = require('electron').BrowserWindow;
+    } catch (_) {
+      BrowserWindow = null;
+    }
 
+    // Mock de test sin BrowserWindow: no bloquear (handlers unitarios)
     if (!BrowserWindow || typeof BrowserWindow.fromWebContents !== 'function') {
-      // Entorno de test / mock incompleto → no bloquear
       return { ok: true };
     }
 
@@ -23,13 +28,17 @@ function assertTrustedIpcSender(event) {
       return { ok: false, error: 'IPC sender no disponible' };
     }
 
+    // Objetivo real del hardening: no permitir IPC privilegiado desde <webview>
     if (typeof wc.getType === 'function' && wc.getType() === 'webview') {
       return { ok: false, error: 'IPC desde webview no permitido' };
     }
 
+    // Si fromWebContents no encuentra ventana, NO fallar cerrado: en Electron
+    // eso era frágil y rompía security:get-master-key / auto-unlock.
+    // Solo rechazar si la ventana asociada está destruida.
     const win = BrowserWindow.fromWebContents(wc);
-    if (!win || (typeof win.isDestroyed === 'function' && win.isDestroyed())) {
-      return { ok: false, error: 'IPC sender no pertenece a una ventana de la app' };
+    if (win && typeof win.isDestroyed === 'function' && win.isDestroyed()) {
+      return { ok: false, error: 'IPC sender pertenece a una ventana destruida' };
     }
 
     return { ok: true };

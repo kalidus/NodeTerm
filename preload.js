@@ -1,12 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const os = require('os');
 
+// No require('os'): en preload sandboxed tumba el bridge (window.electron undefined).
 function readWindowsBuildNumber() {
   if (process.platform !== 'win32') return undefined;
   try {
-    const raw = typeof process.getSystemVersion === 'function'
-      ? process.getSystemVersion()
-      : os.release();
+    if (typeof process.getSystemVersion !== 'function') return undefined;
+    const raw = process.getSystemVersion();
     const build = parseInt(String(raw).split('.')[2], 10);
     return Number.isNaN(build) || build <= 0 ? undefined : build;
   } catch (_) {
@@ -181,11 +180,25 @@ contextBridge.exposeInMainWorld('electron', {
   security: {
     getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
     saveMasterKey: (payload, rememberPassword) => {
-      const data =
-        payload && typeof payload === 'object' && !payload.salt
-          ? { ...payload, rememberPassword: payload.rememberPassword ?? rememberPassword }
-          : { encryptedMasterKey: payload, rememberPassword };
-      return ipcRenderer.invoke('security:save-master-key', data);
+      // IMPORTANTE: no usar !payload.salt — el objeto { masterKey, verifier } incluye
+      // verifier.salt y si se confundiera el shape, la clave no se persistiría.
+      if (payload && typeof payload === 'object' && (payload.masterKey || payload.encryptedMasterKey || payload.verifier)) {
+        return ipcRenderer.invoke('security:save-master-key', {
+          masterKey: payload.masterKey ?? payload.encryptedMasterKey ?? null,
+          verifier: payload.verifier ?? payload.vaultVerifier ?? null,
+          rememberPassword: payload.rememberPassword ?? rememberPassword
+        });
+      }
+      if (typeof payload === 'string') {
+        return ipcRenderer.invoke('security:save-master-key', {
+          masterKey: payload,
+          rememberPassword
+        });
+      }
+      return ipcRenderer.invoke('security:save-master-key', {
+        encryptedMasterKey: payload,
+        rememberPassword
+      });
     },
     hasMasterKey: () => ipcRenderer.invoke('security:has-master-key'),
     getVaultVerifier: () => ipcRenderer.invoke('security:get-vault-verifier'),

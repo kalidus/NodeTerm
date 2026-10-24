@@ -219,16 +219,25 @@ class SecureStorage {
     const verifier = await this.createVaultVerifier(masterKey);
 
     // 2. Persistir en el proceso principal usando safeStorage nativo
-    if (window.electron && window.electron.security) {
-      try {
-        await window.electron.security.saveMasterKey({
-          masterKey,
-          verifier,
-          rememberPassword: remember
-        });
-      } catch (e) {
-        console.error('❌ [SecureStorage] Error guardando clave maestra en proceso seguro:', e);
-      }
+    const saveViaSecurity = window.electron?.security?.saveMasterKey;
+    const saveViaInvoke = window.electron?.ipcRenderer?.invoke;
+    if (!saveViaSecurity && !saveViaInvoke) {
+      throw new Error('API de seguridad no disponible (window.electron.security)');
+    }
+    let result;
+    try {
+      const payload = { masterKey, verifier, rememberPassword: remember };
+      result = saveViaSecurity
+        ? await saveViaSecurity(payload)
+        : await saveViaInvoke('security:save-master-key', payload);
+    } catch (e) {
+      console.error('❌ [SecureStorage] Error guardando clave maestra en proceso seguro:', e);
+      throw e instanceof Error ? e : new Error(String(e?.message || e));
+    }
+    if (result && result.success === false) {
+      const msg = result.error || 'No se pudo guardar la clave maestra en este dispositivo';
+      console.error('❌ [SecureStorage] saveMasterKey rechazado:', msg);
+      throw new Error(msg);
     }
 
     // 3. 🛡️ SEGURIDAD CRÍTICA: Purgar clave maestra de localStorage (nunca más se guarda ahí)
@@ -249,7 +258,8 @@ class SecureStorage {
     if (window.electron?.security?.getRememberPassword) {
       try {
         const val = await window.electron.security.getRememberPassword();
-        if (typeof val === 'boolean') return val;
+        // Solo short-circuit en true: un false no debe tapar localStorage tras sync
+        if (val === true) return true;
       } catch (e) { /* fallback localStorage */ }
     }
     return localStorage.getItem('nodeterm_remember_password') === 'true';
@@ -285,11 +295,18 @@ class SecureStorage {
       }
 
       let masterKey = null;
+      let fromLegacySafeStorageBlob = false;
+      let fromLegacyLocalStorage = false;
 
       // Prioridad 1: Obtener desde safeStorage nativo del SO vía IPC
-      if (window.electron && window.electron.security) {
+      const getKey =
+        window.electron?.security?.getMasterKey ||
+        (window.electron?.ipcRenderer?.invoke
+          ? () => window.electron.ipcRenderer.invoke('security:get-master-key')
+          : null);
+      if (getKey) {
         try {
-          const fromSecurity = await window.electron.security.getMasterKey();
+          const fromSecurity = await getKey();
           if (fromSecurity) {
             if (typeof fromSecurity === 'string') {
               masterKey = fromSecurity;
@@ -298,6 +315,7 @@ class SecureStorage {
                 masterKey = fromSecurity.masterKey;
               } else if (fromSecurity.salt && fromSecurity.iv && fromSecurity.data) {
                 // Formato legacy almacenado previamente en safeStorage
+                fromLegacySafeStorageBlob = true;
                 try {
                   const legacyDec = await this.decryptData(fromSecurity, sessionPassword || this.generateDeviceFingerprint());
                   masterKey = legacyDec.masterKey || legacyDec;
@@ -327,11 +345,13 @@ class SecureStorage {
               try {
                 const dec = await this.decryptData(encrypted, protectionKey);
                 masterKey = dec.masterKey || dec;
+                fromLegacyLocalStorage = !!masterKey;
               } catch (_) {
                 const legacyKey = this.generateLegacyDeviceFingerprint();
                 if (legacyKey) {
                   const dec = await this.decryptData(encrypted, legacyKey);
                   masterKey = dec.masterKey || dec;
+                  fromLegacyLocalStorage = !!masterKey;
                 }
               }
             }
@@ -341,19 +361,28 @@ class SecureStorage {
         }
       }
 
-      // Si se recuperó una clave legacy, migrar inmediatamente al nuevo estándar safeStorage
-      if (masterKey) {
-        const remember = await this.isRememberPasswordEnabled();
-        await this.saveMasterKey(masterKey, remember);
-        localStorage.removeItem('nodeterm_master_key');
-        console.log('✅ [SecureStorage] Bóveda migrada exitosamente a safeStorage nativo del SO');
-
-        this.masterKeyCache = masterKey;
-        this.resetTimeout();
-        return masterKey;
+      if (!masterKey) {
+        return null;
       }
 
-      return null;
+      // Solo re-guardar al migrar formatos legacy; no en cada auto-unlock
+      // (un fallo de re-save no debe tumbar una clave ya leída).
+      const needsMigration = fromLegacyLocalStorage || fromLegacySafeStorageBlob;
+      if (needsMigration) {
+        try {
+          const remember = await this.isRememberPasswordEnabled();
+          await this.saveMasterKey(masterKey, remember);
+          localStorage.removeItem('nodeterm_master_key');
+          console.log('✅ [SecureStorage] Bóveda migrada exitosamente a safeStorage nativo del SO');
+        } catch (migErr) {
+          console.warn('⚠️ [SecureStorage] Migración a safeStorage falló; se usa la clave en sesión:', migErr);
+          localStorage.removeItem('nodeterm_master_key');
+        }
+      }
+
+      this.masterKeyCache = masterKey;
+      this.resetTimeout();
+      return masterKey;
     } catch (error) {
       console.error('❌ [SecureStorage] Error cargando clave maestra:', error);
       return null;

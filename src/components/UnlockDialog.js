@@ -10,7 +10,8 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [rememberPassword, setRememberPassword] = useState(false);
+  // Por defecto TRUE: desbloquear = recordar en este dispositivo
+  const [rememberPassword, setRememberPassword] = useState(true);
 
   const handleUnlock = async () => {
     setLoading(true);
@@ -25,10 +26,26 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
         return;
       }
 
-      await secureStorage.setRememberPassword(rememberPassword);
-      if (rememberPassword) {
-        await secureStorage.saveMasterKey(password, true);
+      try {
+        if (rememberPassword) {
+          await secureStorage.saveMasterKey(password, true);
+          await secureStorage.setRememberPassword(true);
+        } else {
+          await secureStorage.setRememberPassword(false);
+        }
+      } catch (persistErr) {
+        console.error('[UnlockDialog] Error persistiendo clave:', persistErr);
+        setError(
+          persistErr?.message ||
+          t(
+            'dialogs.unlock.errors.persistFailed',
+            'No se pudo guardar la clave en el dispositivo'
+          )
+        );
+        setLoading(false);
+        return;
       }
+
       onSuccess(password);
     } catch (err) {
       console.error('[UnlockDialog] Error:', err);
