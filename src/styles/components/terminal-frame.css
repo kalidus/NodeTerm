@@ -899,7 +899,25 @@
 .top-terminal-frame.synthwave-crimson,
 .terminal-frame-synthwave-arctic,
 .recents-terminal-frame.synthwave-arctic,
-.top-terminal-frame.synthwave-arctic {
+.top-terminal-frame.synthwave-arctic,
+.terminal-frame-synthwave-violet,
+.recents-terminal-frame.synthwave-violet,
+.top-terminal-frame.synthwave-violet,
+.terminal-frame-synthwave-toxic,
+.recents-terminal-frame.synthwave-toxic,
+.top-terminal-frame.synthwave-toxic,
+.terminal-frame-synthwave-copper,
+.recents-terminal-frame.synthwave-copper,
+.top-terminal-frame.synthwave-copper,
+.terminal-frame-synthwave-sakura,
+.recents-terminal-frame.synthwave-sakura,
+.top-terminal-frame.synthwave-sakura,
+.terminal-frame-synthwave-lemon,
+.recents-terminal-frame.synthwave-lemon,
+.top-terminal-frame.synthwave-lemon,
+.terminal-frame-synthwave-lagoon,
+.recents-terminal-frame.synthwave-lagoon,
+.top-terminal-frame.synthwave-lagoon {
     --synth-border: #d946ef;
     --synth-glow: rgba(217, 70, 239, 0.3);
     --synth-glow-2: rgba(236, 72, 153, 0.15);
@@ -997,6 +1015,102 @@
     --synth-dot-close: #a78bfa;
 }
 
+.terminal-frame-synthwave-violet,
+.recents-terminal-frame.synthwave-violet,
+.top-terminal-frame.synthwave-violet {
+    --synth-border: #c084fc;
+    --synth-glow: rgba(192, 132, 252, 0.34);
+    --synth-glow-2: rgba(168, 85, 247, 0.16);
+    --synth-bg: rgba(18, 8, 32, 0.88);
+    --synth-header-a: rgba(232, 121, 249, 0.2);
+    --synth-header-b: rgba(168, 85, 247, 0.2);
+    --synth-header-c: rgba(99, 102, 241, 0.16);
+    --synth-header-line: rgba(192, 132, 252, 0.45);
+    --synth-dot-min: #e879f9;
+    --synth-dot-max: #a855f7;
+    --synth-dot-close: #6366f1;
+}
+
+.terminal-frame-synthwave-toxic,
+.recents-terminal-frame.synthwave-toxic,
+.top-terminal-frame.synthwave-toxic {
+    --synth-border: #bef264;
+    --synth-glow: rgba(190, 242, 100, 0.32);
+    --synth-glow-2: rgba(232, 121, 249, 0.16);
+    --synth-bg: rgba(16, 20, 8, 0.88);
+    --synth-header-a: rgba(250, 204, 21, 0.22);
+    --synth-header-b: rgba(132, 204, 22, 0.2);
+    --synth-header-c: rgba(232, 121, 249, 0.16);
+    --synth-header-line: rgba(190, 242, 100, 0.45);
+    --synth-dot-min: #facc15;
+    --synth-dot-max: #84cc16;
+    --synth-dot-close: #e879f9;
+}
+
+.terminal-frame-synthwave-copper,
+.recents-terminal-frame.synthwave-copper,
+.top-terminal-frame.synthwave-copper {
+    --synth-border: #d97706;
+    --synth-glow: rgba(217, 119, 6, 0.34);
+    --synth-glow-2: rgba(154, 52, 18, 0.18);
+    --synth-bg: rgba(24, 12, 8, 0.88);
+    --synth-header-a: rgba(253, 186, 116, 0.22);
+    --synth-header-b: rgba(234, 88, 12, 0.2);
+    --synth-header-c: rgba(154, 52, 18, 0.18);
+    --synth-header-line: rgba(217, 119, 6, 0.5);
+    --synth-dot-min: #fdba74;
+    --synth-dot-max: #ea580c;
+    --synth-dot-close: #9a3412;
+}
+
+.terminal-frame-synthwave-sakura,
+.recents-terminal-frame.synthwave-sakura,
+.top-terminal-frame.synthwave-sakura {
+    --synth-border: #f9a8d4;
+    --synth-glow: rgba(249, 168, 212, 0.34);
+    --synth-glow-2: rgba(192, 132, 252, 0.16);
+    --synth-bg: rgba(28, 10, 22, 0.88);
+    --synth-header-a: rgba(251, 207, 232, 0.2);
+    --synth-header-b: rgba(244, 114, 182, 0.2);
+    --synth-header-c: rgba(192, 132, 252, 0.16);
+    --synth-header-line: rgba(249, 168, 212, 0.45);
+    --synth-dot-min: #fbcfe8;
+    --synth-dot-max: #f472b6;
+    --synth-dot-close: #c084fc;
+}
+
+.terminal-frame-synthwave-lemon,
+.recents-terminal-frame.synthwave-lemon,
+.top-terminal-frame.synthwave-lemon {
+    --synth-border: #facc15;
+    --synth-glow: rgba(250, 204, 21, 0.32);
+    --synth-glow-2: rgba(163, 230, 53, 0.16);
+    --synth-bg: rgba(22, 18, 6, 0.88);
+    --synth-header-a: rgba(254, 240, 138, 0.22);
+    --synth-header-b: rgba(234, 179, 8, 0.2);
+    --synth-header-c: rgba(163, 230, 53, 0.16);
+    --synth-header-line: rgba(250, 204, 21, 0.45);
+    --synth-dot-min: #fef08a;
+    --synth-dot-max: #eab308;
+    --synth-dot-close: #a3e635;
+}
+
+.terminal-frame-synthwave-lagoon,
+.recents-terminal-frame.synthwave-lagoon,
+.top-terminal-frame.synthwave-lagoon {
+    --synth-border: #2dd4bf;
+    --synth-glow: rgba(45, 212, 191, 0.32);
+    --synth-glow-2: rgba(2, 132, 199, 0.16);
+    --synth-bg: rgba(6, 18, 20, 0.88);
+    --synth-header-a: rgba(153, 246, 228, 0.2);
+    --synth-header-b: rgba(20, 184, 166, 0.2);
+    --synth-header-c: rgba(2, 132, 199, 0.16);
+    --synth-header-line: rgba(45, 212, 191, 0.45);
+    --synth-dot-min: #99f6e4;
+    --synth-dot-max: #14b8a6;
+    --synth-dot-close: #0284c7;
+}
+
 .terminal-frame-synthwave .terminal-frame-header,
 .recents-terminal-frame.synthwave .recents-terminal-header,
 .top-terminal-frame.synthwave .top-terminal-header,
@@ -1014,7 +1128,25 @@
 .top-terminal-frame.synthwave-crimson .top-terminal-header,
 .terminal-frame-synthwave-arctic .terminal-frame-header,
 .recents-terminal-frame.synthwave-arctic .recents-terminal-header,
-.top-terminal-frame.synthwave-arctic .top-terminal-header {
+.top-terminal-frame.synthwave-arctic .top-terminal-header,
+.terminal-frame-synthwave-violet .terminal-frame-header,
+.recents-terminal-frame.synthwave-violet .recents-terminal-header,
+.top-terminal-frame.synthwave-violet .top-terminal-header,
+.terminal-frame-synthwave-toxic .terminal-frame-header,
+.recents-terminal-frame.synthwave-toxic .recents-terminal-header,
+.top-terminal-frame.synthwave-toxic .top-terminal-header,
+.terminal-frame-synthwave-copper .terminal-frame-header,
+.recents-terminal-frame.synthwave-copper .recents-terminal-header,
+.top-terminal-frame.synthwave-copper .top-terminal-header,
+.terminal-frame-synthwave-sakura .terminal-frame-header,
+.recents-terminal-frame.synthwave-sakura .recents-terminal-header,
+.top-terminal-frame.synthwave-sakura .top-terminal-header,
+.terminal-frame-synthwave-lemon .terminal-frame-header,
+.recents-terminal-frame.synthwave-lemon .recents-terminal-header,
+.top-terminal-frame.synthwave-lemon .top-terminal-header,
+.terminal-frame-synthwave-lagoon .terminal-frame-header,
+.recents-terminal-frame.synthwave-lagoon .recents-terminal-header,
+.top-terminal-frame.synthwave-lagoon .top-terminal-header {
     background: linear-gradient(90deg, var(--synth-header-a) 0%, var(--synth-header-b) 50%, var(--synth-header-c) 100%) !important;
     border-bottom: 1px solid var(--synth-header-line) !important;
 }

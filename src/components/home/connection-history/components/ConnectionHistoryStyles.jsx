@@ -672,6 +672,12 @@ const ConnectionHistoryStyles = ({
 				.recents-terminal-frame.synthwave-emerald, .top-terminal-frame.synthwave-emerald,
 				.recents-terminal-frame.synthwave-crimson, .top-terminal-frame.synthwave-crimson,
 				.recents-terminal-frame.synthwave-arctic, .top-terminal-frame.synthwave-arctic,
+				.recents-terminal-frame.synthwave-violet, .top-terminal-frame.synthwave-violet,
+				.recents-terminal-frame.synthwave-toxic, .top-terminal-frame.synthwave-toxic,
+				.recents-terminal-frame.synthwave-copper, .top-terminal-frame.synthwave-copper,
+				.recents-terminal-frame.synthwave-sakura, .top-terminal-frame.synthwave-sakura,
+				.recents-terminal-frame.synthwave-lemon, .top-terminal-frame.synthwave-lemon,
+				.recents-terminal-frame.synthwave-lagoon, .top-terminal-frame.synthwave-lagoon,
 				.recents-terminal-frame.matrix, .top-terminal-frame.matrix,
 				.recents-terminal-frame.aurora-glass, .top-terminal-frame.aurora-glass,
 				.recents-terminal-frame.stealth, .top-terminal-frame.stealth {
