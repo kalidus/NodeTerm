@@ -1,0 +1,28 @@
+/* ---
+  Feature styles — deferred after first paint (settings, vault sidebars, AI tabs, dialogs).
+  Loaded via dynamic import() from index.js on idle.
+--- */
+
+@import './components/color-selector.css';
+@import './components/folder-dialog.css';
+/* password-manager-sidebar.css: lo carga PasswordManagerSidebar (lazy) — no reinyectar en idle */
+@import './components/password-tab-content.css';
+@import './components/anything-llm.css';
+@import './components/ai-clients-tab.css';
+@import './components/apps-tab.css';
+@import './components/security-settings.css';
+@import './components/general-settings.css';
+@import './components/terminal-settings.css';
+@import './components/export-import-dialogs.css';
+@import './components/sync-settings-dialog.css';
+@import './components/status-bar-settings.css';
+@import './components/settings-sidebar.css';
+@import './components/appearance-quick-panel.css';
+@import './components/theme-selector.css';
+@import './components/iron-rdp-toolbar.css';
+@import './components/users-settings.css';
+/* network-tool-header.css: lo carga NetworkToolHeader (lazy tab) — no reinyectar en idle */
+
+/* --- Pages --- */
+@import './pages/dashboard.css';
+@import './pages/file-explorer.css';

@@ -313,9 +313,21 @@ const Sidebar = React.memo(({
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
+  // Keep-alive: once visited (or idle-warmed), keep mounted with display:none — instant like connections
+  const [mountedSidebarViews, setMountedSidebarViews] = useState(() => new Set());
 
   useEffect(() => {
     setSidebarView(viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode === 'connections') return;
+    setMountedSidebarViews((prev) => {
+      if (prev.has(viewMode)) return prev;
+      const next = new Set(prev);
+      next.add(viewMode);
+      return next;
+    });
   }, [viewMode]);
 
   // Límites de visualización de hijos por carpeta para optimizar renderizado de directorios muy grandes
@@ -460,23 +472,39 @@ const Sidebar = React.memo(({
     return () => clearTimeout(timer);
   }, [sidebarCollapsed]);
 
-  // Con panel colapsado a layout real (visibility:hidden), el warmup off-screen ya no hace falta.
-  // Solo precargar chunks lazy y marcar refs cuando hay nodos.
+  // Tras cargar conexiones: montar notas/pass/tools en idle (display:none) para cambio instantáneo.
   useEffect(() => {
     if (!sidebarCollapsed) {
-      hasWarmedUpRef.current = true;
       hasEverExpandedRef.current = true;
       firstExpandSettledRef.current = true;
-      return;
     }
-    if (isLoading || !nodes || nodes.length === 0 || hasWarmedUpRef.current) {
+    if (isLoading || hasWarmedUpRef.current) {
       return;
     }
     hasWarmedUpRef.current = true;
-    import('./ToolsSidebar').catch(() => {});
-    import('./LocalFileExplorerSidebar').catch(() => {});
-    import('./SettingsSidebar').catch(() => {});
-  }, [sidebarCollapsed, isLoading, nodes]);
+
+    const warmSecondarySidebars = () => {
+      import('./PasswordManagerSidebar').catch(() => {});
+      import('./DocumentsSidebar').catch(() => {});
+      import('./ToolsSidebar').catch(() => {});
+      import('./LocalFileExplorerSidebar').catch(() => {});
+      import('./SettingsSidebar').catch(() => {});
+      setMountedSidebarViews((prev) => {
+        const next = new Set(prev);
+        next.add('passwords');
+        next.add('documents');
+        next.add('tools');
+        return next;
+      });
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(warmSecondarySidebars, { timeout: 800 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(warmSecondarySidebars, 0);
+    return () => clearTimeout(t);
+  }, [sidebarCollapsed, isLoading]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
@@ -3420,8 +3448,8 @@ const Sidebar = React.memo(({
         />
       </div>
 
-      {viewMode === 'passwords' && (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {(viewMode === 'passwords' || mountedSidebarViews.has('passwords')) && (
+      <div style={{ display: viewMode === 'passwords' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyPasswordManagerSidebar
             nodes={nodes}
@@ -3453,8 +3481,8 @@ const Sidebar = React.memo(({
       </div>
       )}
 
-      {viewMode === 'documents' && (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {(viewMode === 'documents' || mountedSidebarViews.has('documents')) && (
+      <div style={{ display: viewMode === 'documents' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyDocumentsSidebar
             showToast={showToast}
@@ -3485,8 +3513,9 @@ const Sidebar = React.memo(({
       </div>
       )}
 
-      {/* Otras vistas dinámicas que no requieren persistencia de estado de carga */}
-      {viewMode === 'localExplorer' && (
+      {/* Keep-alive: same pattern as connections (display:none) after first visit / idle warm */}
+      {(viewMode === 'localExplorer' || mountedSidebarViews.has('localExplorer')) && (
+        <div style={{ display: viewMode === 'localExplorer' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyLocalFileExplorerSidebar
             initialPath={localExplorerPath}
@@ -3507,9 +3536,11 @@ const Sidebar = React.memo(({
             folderIconSize={folderIconSize}
           />
         </Suspense>
+        </div>
       )}
 
-      {viewMode === 'tools' && (
+      {(viewMode === 'tools' || mountedSidebarViews.has('tools')) && (
+        <div style={{ display: viewMode === 'tools' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyToolsSidebar
             onOpenTool={(toolId, toolLabel, mode) => {
@@ -3527,9 +3558,11 @@ const Sidebar = React.memo(({
             explorerFontColor={explorerFontColor}
           />
         </Suspense>
+        </div>
       )}
 
-      {viewMode === 'settings' && (
+      {(viewMode === 'settings' || mountedSidebarViews.has('settings')) && (
+        <div style={{ display: viewMode === 'settings' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazySettingsSidebar
             iconTheme={iconTheme}
@@ -3542,6 +3575,7 @@ const Sidebar = React.memo(({
             explorerFontColor={explorerFontColor}
           />
         </Suspense>
+        </div>
       )}
       
     </>

@@ -456,8 +456,8 @@ const DocumentsSidebar = ({
   }, []);
 
   useEffect(() => {
+    // Soft reload on sync/events: never flip isLoading (avoids tree flash after first paint)
     const reloadFromStorage = async () => {
-      setIsLoading(true);
       try {
         const savedExp = localStorage.getItem('documents_expanded_keys');
         if (savedExp) setExpandedKeys(JSON.parse(savedExp));

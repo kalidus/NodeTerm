@@ -1,5 +1,6 @@
 import React from 'react';
 import NetworkToolHistoryMenu from './NetworkToolHistoryMenu';
+import '../../../styles/components/network-tool-header.css';
 
 /**
  * NetworkToolHeader - Encabezado unificado para las herramientas de red

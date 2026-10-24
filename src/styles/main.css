@@ -1,54 +1,8 @@
 /* ---
-  Main Stylesheet
-  Este archivo actúa como el punto de entrada principal para todos los estilos de la aplicación.
+  Compat entry — prefer shell.css (sync) + features.css (idle) from index.js.
+  This file keeps a full stack for any leftover sync importers.
+  base/base.css stays owned by index.js to avoid double-load in the boot path.
 --- */
 
-/* --- Base --- */
-@import './base/base.css';
-
-/* --- Layout --- */
-@import './layout/splitter.css';
-@import './layout/statusbar.css';
-@import './layout/sidebar.css';
-
-/* --- Components --- */
-@import './components/tabs.css';
-@import './components/forms.css';
-@import './components/menubar.css';
-@import './components/app-ui.css';
-@import './components/connection-terminal-form.css';
-@import './components/menus.css';
-@import './components/terminal.css';
-@import './components/color-selector.css';
-@import './components/folder-dialog.css';
-@import './components/titlebar-actions.css';
-@import './components/password-manager-sidebar.css';
-@import './components/password-tab-content.css';
-@import './components/anything-llm.css';
-@import './components/ai-clients-tab.css';
-@import './components/apps-tab.css';
-@import './components/security-settings.css';
-@import './components/general-settings.css';
-@import './components/terminal-settings.css';
-@import './components/export-import-dialogs.css';
-@import './components/sync-settings-dialog.css';
-@import './components/status-bar-settings.css';
-@import './components/settings-sidebar.css';
-@import './components/appearance-quick-panel.css';
-@import './components/theme-selector.css';
-@import './components/update-notification.css';
-@import './components/iron-rdp-toolbar.css';
-@import './components/users-settings.css';
-@import './components/home-panels-snap.css';
-@import './components/home-dock.css';
-@import './components/home-launcher.css';
-@import './components/home-release-notes.css';
-@import './components/network-tool-header.css';
-/* Sobrescribir colores de PrimeReact después de todos los demás estilos */
-@import './components/prime-react-overrides.css';
-
-
-/* --- Pages --- */
-@import './pages/dashboard.css';
-@import './pages/file-explorer.css';
-
+@import './shell.css';
+@import './features.css';

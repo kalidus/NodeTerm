@@ -14,19 +14,16 @@ import { applyLiteEffectsFromStorage } from './utils/uiLiteEffects';
 
 markStartup('index.js evaluado');
 
-const loadPrimeReactCss = () => Promise.all([
-  import('primereact/resources/themes/lara-light-indigo/theme.css'),
-  import('primereact/resources/primereact.min.css'),
-  import('primeicons/primeicons.css')
-]).catch(() => {});
+import { loadDeferredFeatureCss, warmDeferredFeatureCss } from './utils/deferredAppStyles';
+
 const loadPrimeFlex = () => import('primeflex/primeflex.css').catch(() => {});
 const loadLocalFonts = () => import('./styles/fonts.css').catch(() => {});
-const loadDeferredAppCss = () => Promise.all([
-  import('./styles/components/animated-themes.css'),
-  import('./styles/components/dialogs.css'),
-  import('./styles/layout/atelier.css'),
-  import('./styles/layout/mux.css')
-]).catch(() => {});
+const loadDeferredAppCss = () => loadDeferredFeatureCss();
+// Prime sync: trees (conexiones/notas/pass/tools) need it on first paint — no FOUC gate
+import 'primereact/resources/themes/lara-light-indigo/theme.css';
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
+warmDeferredFeatureCss();
 import './styles/base/base.css'; // Importamos la nueva base de estilos
 import PrimeReact from 'primereact/api';
 
@@ -61,8 +58,8 @@ if (typeof window !== 'undefined') {
   };
 }
 
-// Custom styles
-import './styles/main.css';
+// Custom styles — shell sync; features.css entra en idle vía loadDeferredAppCss
+import './styles/shell.css';
 import './styles/layout/layouts.css';
 // Arranque: Inter, JetBrains Mono y Fira Code. El resto de familias locales entra en idle.
 import './styles/fonts-core.css';
@@ -263,8 +260,7 @@ const paintApp = () => {
       }
       setTimeout(fn, 0);
     };
-    idleCss(loadPrimeReactCss, 500);
-    idleCss(loadDeferredAppCss, 500);
+    idleCss(loadDeferredAppCss, 0);
     idleCss(loadPrimeFlex, 3000);
     idleCss(loadLocalFonts, 3500);
   });
