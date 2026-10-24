@@ -32,21 +32,9 @@ import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { setVaultEncryptedItem } from '../shared/vault-write';
+import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
-
-function waitForLocalStorageSyncReady() {
-  if (localStorageSyncService.isSyncReady()) {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    const onReady = () => {
-      window.removeEventListener('localstorage-sync-ready', onReady);
-      resolve();
-    };
-    window.addEventListener('localstorage-sync-ready', onReady);
-  });
-}
 
 // Skeleton loader para simular árbol de passwords de forma premium
 const PasswordSkeleton = () => {
@@ -249,7 +237,7 @@ const PasswordManagerSidebar = ({
     let cancelled = false;
     const loadPasswords = async () => {
       try {
-        await waitForLocalStorageSyncReady();
+        await waitForVaultSyncIfNeeded('passwords_encrypted', 5000);
         if (cancelled) return;
         if (masterKey && secureStorage) {
           // CON master key: Cargar encriptado

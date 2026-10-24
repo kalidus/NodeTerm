@@ -167,20 +167,38 @@ class LocalStorageSyncService {
         const saved = this._readSavedVaultStamps();
         const confirmed = [];
 
+        const toFetch = [];
         for (const key of VAULT_LOCAL_STORAGE_KEYS) {
             const stamp = stamps[key] || 0;
             if (!stamp) continue;
             const localVal = localStorage.getItem(key);
             // Stamp match: skip solo si el local no parece un wipe (encrypt([]) ~tiny).
-            // Si es tiny, forzar getVault — el sidecar en disco puede seguir siendo el bueno.
             const stampMatches = !!(localVal && saved[key] === stamp);
             const localTiny = isTinyVaultPayload(localVal);
             if (stampMatches && !localTiny) {
                 confirmed.push(key);
                 continue;
             }
-            try {
-                const blob = await window.electron.appdata.getVault(key);
+            toFetch.push({ key, localVal, localTiny, stampMatches });
+        }
+
+        if (toFetch.length > 0) {
+            const results = await Promise.all(
+                toFetch.map(async ({ key, localVal, localTiny, stampMatches }) => {
+                    try {
+                        const blob = await window.electron.appdata.getVault(key);
+                        return { key, localVal, localTiny, stampMatches, blob, error: null };
+                    } catch (error) {
+                        console.warn(
+                            `[LocalStorageSync] No se pudo leer vault ${key}:`,
+                            error
+                        );
+                        return { key, localVal, localTiny, stampMatches, blob: null, error };
+                    }
+                })
+            );
+
+            for (const { key, localVal, localTiny, stampMatches, blob } of results) {
                 if (blob) {
                     if (localVal && isCatastrophicVaultPayloadShrink(localVal, blob)) {
                         console.error(
@@ -194,10 +212,9 @@ class LocalStorageSyncService {
                 } else if (stampMatches && !localTiny) {
                     confirmed.push(key);
                 }
-            } catch (error) {
-                console.warn(`[LocalStorageSync] No se pudo leer vault ${key}:`, error);
             }
         }
+
         sharedData._vaultConfirmed = confirmed;
         return sharedData;
     }

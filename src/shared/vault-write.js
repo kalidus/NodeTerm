@@ -15,6 +15,14 @@ function isTinyVaultPayload(str) {
   return typeof str === 'string' && str.length > 0 && str.length < VAULT_TINY_PAYLOAD_CHARS;
 }
 
+/** true si falta el blob o parece un wipe (encrypt([])). */
+function vaultLocalNeedsSyncWait(key) {
+  if (typeof localStorage === 'undefined') return true;
+  const val = localStorage.getItem(key);
+  if (val == null || val === '') return true;
+  return isTinyVaultPayload(val);
+}
+
 function invalidateVaultStamp(key) {
   if (typeof localStorage === 'undefined') return;
   try {
@@ -63,6 +71,7 @@ module.exports = {
   VAULT_TINY_PAYLOAD_CHARS,
   VAULT_STAMPS_LS,
   isTinyVaultPayload,
+  vaultLocalNeedsSyncWait,
   invalidateVaultStamp,
   setVaultEncryptedItem
 };

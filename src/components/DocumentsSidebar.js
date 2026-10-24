@@ -35,20 +35,8 @@ import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
 import { getHomeTabActive, subscribeHomeTabActive } from '../utils/homeTabActiveBus';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import '../styles/components/documents.css';
-
-function waitForLocalStorageSyncReady() {
-  if (localStorageSyncService.isSyncReady()) {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    const onReady = () => {
-      window.removeEventListener('localstorage-sync-ready', onReady);
-      resolve();
-    };
-    window.addEventListener('localstorage-sync-ready', onReady);
-  });
-}
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
 function stripTreeNodeIcons(nodes) {
@@ -506,7 +494,7 @@ const DocumentsSidebar = ({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      await waitForLocalStorageSyncReady();
+      await waitForVaultSyncIfNeeded('documents_encrypted', 5000);
       if (cancelled) return;
       const tree = await loadDocumentTree(secureStorage, masterKey);
       if (cancelled) return;

@@ -5,7 +5,8 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { setVaultEncryptedItem } from '../shared/vault-write';
+import { setVaultEncryptedItem, isTinyVaultPayload } from '../shared/vault-write';
+import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
@@ -2175,16 +2176,8 @@ const App = () => {
   // Función para cargar nodos (centralizada para permitir recargas externas)
   const loadNodes = useCallback(async () => {
     try {
-      // Evitar migrar TREE_DATA→encrypted o defaults antes de hidratar sidecars
-      if (window.electron?.appdata && !localStorageSyncService.isSyncReady()) {
-        await new Promise((resolve) => {
-          const onReady = () => {
-            window.removeEventListener('localstorage-sync-ready', onReady);
-            resolve();
-          };
-          window.addEventListener('localstorage-sync-ready', onReady);
-        });
-      }
+      // Solo esperar sync si falta vault o es tiny (warm path: decrypt ya desde LS)
+      await waitForVaultSyncIfNeeded('connections_encrypted', 5000);
 
       const encryptedData = localStorage.getItem('connections_encrypted');
       const isCacheHit = encryptedData && 
@@ -2198,8 +2191,10 @@ const App = () => {
       }
 
       if (masterKey) {
-        // MODO ENCRIPTADO: Cargar desde connections_encrypted
-        if (encryptedData) {
+        // MODO ENCRIPTADO: Cargar desde connections_encrypted (warm: blob sustancial)
+        const hasUsableVault =
+          encryptedData && !isTinyVaultPayload(encryptedData);
+        if (hasUsableVault) {
           let decrypted;
           let migrated;
           if (isCacheHit && lastMigratedResult) {
@@ -2230,11 +2225,11 @@ const App = () => {
             console.error('[loadNodes] Decryption failed');
           }
         } else {
-          // Tras sync: preferir sidecar en disco antes de migrar TREE_DATA o defaults
+          // Sin blob / tiny: intentar sidecar antes de migrar TREE_DATA o defaults
           if (window.electron?.appdata?.getVault) {
             try {
               const fromDisk = await window.electron.appdata.getVault('connections_encrypted');
-              if (fromDisk) {
+              if (fromDisk && !isTinyVaultPayload(fromDisk)) {
                 const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
                 if (wroteDisk.ok) {
                   const decryptedDisk = await secureStorage.decryptData(
