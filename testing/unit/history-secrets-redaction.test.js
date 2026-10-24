@@ -98,10 +98,11 @@ describe('Historial/favoritos sin secretos en claro', () => {
     }]));
     invalidateConnectionStoreCache();
     const recents = getRecents();
-    assert.strictEqual(recents[0].password, '');
-    assert.strictEqual(recents[0].privateKey, '');
+    assert.strictEqual('password' in recents[0], false);
+    assert.strictEqual('privateKey' in recents[0], false);
     const persisted = JSON.parse(localStorage.getItem('nodeterm_connection_history'));
-    assert.strictEqual(persisted[0].password, '');
+    assert.strictEqual('password' in persisted[0], false);
+    assert.strictEqual('privateKey' in persisted[0], false);
   });
 
   it('toggleFavorite no guarda password en favoritos', () => {
@@ -135,14 +136,14 @@ describe('Historial/favoritos sin secretos en claro', () => {
     const fav = getFavorites().find((f) => f.id === 'pwd_fav_1');
     assert.ok(fav);
     assert.strictEqual(fav.name, 'Bank updated');
-    assert.strictEqual(fav.password, '');
-    assert.strictEqual(fav.notes, '');
-    assert.strictEqual(fav.content, '');
-    assert.strictEqual(fav.jumpPassword, '');
+    assert.strictEqual('password' in fav, false);
+    assert.strictEqual('notes' in fav, false);
+    assert.strictEqual('content' in fav, false);
+    assert.strictEqual('jumpPassword' in fav, false);
     const persisted = JSON.parse(localStorage.getItem('nodeterm_favorite_connections'));
     const stored = persisted.find((f) => f.id === 'pwd_fav_1');
-    assert.strictEqual(stored.password, '');
-    assert.strictEqual(stored.notes, '');
+    assert.strictEqual('password' in stored, false);
+    assert.strictEqual('notes' in stored, false);
   });
 
   it('reorderFavorites redacta secretos al guardar', () => {
@@ -156,7 +157,7 @@ describe('Historial/favoritos sin secretos en claro', () => {
       jumpPrivateKey: 'JUMPKEY'
     }]);
     const fav = getFavorites()[0];
-    assert.strictEqual(fav.password, '');
-    assert.strictEqual(fav.jumpPrivateKey, '');
+    assert.strictEqual('password' in fav, false);
+    assert.strictEqual('jumpPrivateKey' in fav, false);
   });
 });
