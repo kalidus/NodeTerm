@@ -62,9 +62,56 @@ function decodeEncryptedFields(encryptedObj) {
   };
 }
 
+function bytesEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Mismo ciphertext AES aunque el JSON sea legacy number[] o v2 con otro timestamp.
+ */
+function vaultPayloadsEquivalent(a, b) {
+  try {
+    const left = typeof a === 'string' ? JSON.parse(a) : a;
+    const right = typeof b === 'string' ? JSON.parse(b) : b;
+    const A = decodeEncryptedFields(left);
+    const B = decodeEncryptedFields(right);
+    return bytesEqual(A.salt, B.salt) && bytesEqual(A.iv, B.iv) && bytesEqual(A.data, B.data);
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Caché de sesión para CryptoKey derivadas (PBKDF2). La clave incluye el password en memoria.
+ */
+function createDerivedKeyCache() {
+  const map = new Map();
+  return {
+    async getOrDerive(password, saltBytes, iterations, deriveFn) {
+      const cacheKey = `${iterations}:${bytesToBase64(saltBytes)}:${password}`;
+      if (map.has(cacheKey)) {
+        return map.get(cacheKey);
+      }
+      const value = await deriveFn();
+      map.set(cacheKey, value);
+      return value;
+    },
+    size() {
+      return map.size;
+    }
+  };
+}
+
 module.exports = {
   bytesToBase64,
   fieldToBytes,
   toEncryptedV2,
-  decodeEncryptedFields
+  decodeEncryptedFields,
+  bytesEqual,
+  vaultPayloadsEquivalent,
+  createDerivedKeyCache
 };

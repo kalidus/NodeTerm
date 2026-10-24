@@ -208,6 +208,7 @@ contextBridge.exposeInMainWorld('electron', {
   },
   appdata: {
     getAll: () => ipcRenderer.invoke('appdata:get-all'),
+    getVault: (key) => ipcRenderer.invoke('appdata:get-vault', key),
     saveAll: (data) => ipcRenderer.invoke('appdata:save-all', data),
     getSyncKeys: () => ipcRenderer.invoke('appdata:get-sync-keys'),
     getLastModified: () => ipcRenderer.invoke('appdata:get-last-modified'),

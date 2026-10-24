@@ -1,5 +1,5 @@
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
-import { toEncryptedV2, decodeEncryptedFields } from '../shared/vault-blob-encoding';
+import { toEncryptedV2, decodeEncryptedFields, createDerivedKeyCache } from '../shared/vault-blob-encoding';
 
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
@@ -18,6 +18,7 @@ class SecureStorage {
     this.masterKeyCache = null;
     this.sessionTimeout = 30 * 60 * 1000; // 30 minutos
     this.timeoutId = null;
+    this._derivedKeyCache = createDerivedKeyCache();
   }
 
   /**
@@ -75,27 +76,29 @@ class SecureStorage {
    * Deriva una clave criptográfica usando PBKDF2
    */
   async deriveKey(password, salt, iterations = this.iterations) {
-    const enc = new TextEncoder();
-    const keyMaterial = await window.crypto.subtle.importKey(
-      'raw',
-      enc.encode(password),
-      { name: 'PBKDF2' },
-      false,
-      ['deriveKey']
-    );
+    return this._derivedKeyCache.getOrDerive(password, salt, iterations, async () => {
+      const enc = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
 
-    return await window.crypto.subtle.deriveKey(
-      {
-        name: 'PBKDF2',
-        salt: salt,
-        iterations: iterations,
-        hash: 'SHA-256'
-      },
-      keyMaterial,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['encrypt', 'decrypt']
-    );
+      return await window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: iterations,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    });
   }
 
   /**

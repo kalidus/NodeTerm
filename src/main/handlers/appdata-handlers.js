@@ -16,11 +16,13 @@ const {
 } = require('../utils/file-utils');
 const { SYNC_KEYS } = require('../utils/sync-keys');
 const {
-  mergeVaultSidecarsIntoData,
+  VAULT_SIDECAR_KEYS,
   extractAndPersistVaultSidecars,
   migrateEmbeddedVaultToSidecars,
   stripVaultKeysFromObject,
   getVaultSidecarsMtimeMax,
+  getVaultSidecarStamps,
+  readVaultSidecar,
   listVaultSidecarBasenames,
   ensureVaultDir,
   getVaultDir
@@ -84,6 +86,7 @@ function readAppDataFromDisk() {
       try {
         const toWrite = stripVaultKeysFromObject(parsed);
         fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(toWrite), { encoding: 'utf8', mode: 0o600 });
+        parsed = toWrite;
         console.log('[AppData] Normalizado app-data.json (compacto, vault en sidecars)');
       } catch (migrateErr) {
         console.warn('[AppData] No se pudo guardar app-data.json saneado:', migrateErr.message);
@@ -91,8 +94,18 @@ function readAppDataFromDisk() {
     }
   }
 
-  // Sidecar gana si existe; si no, se conservan keys embebidas del JSON.
-  return mergeVaultSidecarsIntoData(parsed);
+  // No rehidratar .bin aquí: get-all solo lleva settings. Blobs vía appdata:get-vault.
+  // Si aún no hay sidecar, se conserva la key embebida (migración pendiente / secundaria).
+  if (parsed) {
+    const stamps = getVaultSidecarStamps();
+    for (const key of VAULT_SIDECAR_KEYS) {
+      if (stamps[key] > 0) {
+        delete parsed[key];
+      }
+    }
+  }
+
+  return parsed;
 }
 
 function getAppDataCached() {
@@ -217,7 +230,8 @@ function registerAppDataHandlers(dependencies) {
         if (!hasAppData && !hasVault) {
           return null;
         }
-        return getAppDataCached();
+        const settings = getAppDataCached() || {};
+        return { ...settings, _vaultStamps: getVaultSidecarStamps() };
       } catch (e) {
         invalidateAppDataCache();
         console.warn(
@@ -231,6 +245,18 @@ function registerAppDataHandlers(dependencies) {
       }
     }
     return null;
+  });
+
+  safeHandle('appdata:get-vault', async (_event, key) => {
+    if (!VAULT_SIDECAR_KEYS.includes(key)) {
+      return null;
+    }
+    try {
+      return readVaultSidecar(key);
+    } catch (error) {
+      console.warn(`[AppData] Error leyendo vault ${key}:`, error.message || error);
+      return null;
+    }
   });
 
   safeHandle('appdata:save-all', async (event, data) => {
@@ -265,7 +291,7 @@ function registerAppDataHandlers(dependencies) {
         }
       }
 
-      cachedData = mergeVaultSidecarsIntoData(settingsData);
+      cachedData = settingsData;
       cachedStamp = getContentStamp();
       notifyAppDataChanged();
       return { success: true };

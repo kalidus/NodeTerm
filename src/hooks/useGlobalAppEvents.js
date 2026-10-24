@@ -76,22 +76,23 @@ export const useGlobalAppEvents = ({
     };
 
     const handleSettingsUpdated = (e) => {
-      if (e.detail?.source === 'sync') {
-        loadNodes();
+      if (e.detail?.source !== 'sync') return;
+      const keys = e.detail?.keys;
+      if (Array.isArray(keys) && !keys.includes('connections_encrypted')) {
+        return;
       }
+      loadNodes();
     };
 
     window.addEventListener('encryption-data-synced', handleSync);
     window.addEventListener('connections-synced-from-cloud', handleSync);
     window.addEventListener('settings-updated', handleSettingsUpdated);
-    window.addEventListener('localstorage-sync-ready', handleSync);
     window.addEventListener('nodeterm-backup-imported', handleSync);
 
     return () => {
       window.removeEventListener('encryption-data-synced', handleSync);
       window.removeEventListener('connections-synced-from-cloud', handleSync);
       window.removeEventListener('settings-updated', handleSettingsUpdated);
-      window.removeEventListener('localstorage-sync-ready', handleSync);
       window.removeEventListener('nodeterm-backup-imported', handleSync);
     };
   }, [loadNodes]);

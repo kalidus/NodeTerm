@@ -116,6 +116,18 @@ describe('vault-sidecar', () => {
     assert.strictEqual(again, false);
   });
 
+  it('writeVaultSidecar does not bump mtime when bytes are unchanged', () => {
+    const json = makeV2Json();
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('connections_encrypted', json), true);
+    const filePath = vaultSidecar.sidecarPathForKey('connections_encrypted');
+    const before = fs.statSync(filePath).mtimeMs;
+    const again = vaultSidecar.writeVaultSidecar('connections_encrypted', json);
+    assert.strictEqual(again, false);
+    assert.strictEqual(fs.statSync(filePath).mtimeMs, before);
+    const stamps = vaultSidecar.getVaultSidecarStamps();
+    assert.strictEqual(stamps.connections_encrypted, before);
+  });
+
   it('rejects bad magic', () => {
     assert.throws(
       () => vaultSidecar.binaryToEncryptedJsonString(Buffer.from('XXXX' + 'a'.repeat(40))),

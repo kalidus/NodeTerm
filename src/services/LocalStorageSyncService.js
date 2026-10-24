@@ -5,6 +5,10 @@
  */
 
 import { SYNC_KEYS } from '../shared/sync-keys';
+import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
+
+const VAULT_STAMPS_LS = 'nodeterm_vault_stamps';
 
 const EXTRA_FETCH_ROUNDS = 2;
 const EXTRA_FETCH_DELAY_MS = 300;
@@ -108,13 +112,81 @@ class LocalStorageSyncService {
         if (!sharedData || typeof sharedData !== 'object') {
             return true;
         }
+        const stamps = sharedData._vaultStamps || {};
         for (const key of SYNC_KEYS) {
             const localVal = localStorage.getItem(key);
+            if (VAULT_LOCAL_STORAGE_KEYS.includes(key)) {
+                // Sidecar presente: el blob no viaja en getAll. Solo falta si hay local y no hay fichero.
+                if (!isEmptyValue(localVal) && !(stamps[key] > 0) && (sharedData[key] == null)) {
+                    return true;
+                }
+                continue;
+            }
             if (!isEmptyValue(localVal) && (sharedData[key] === undefined || sharedData[key] === null)) {
                 return true;
             }
         }
         return false;
+    }
+
+    _readSavedVaultStamps() {
+        try {
+            const raw = localStorage.getItem(VAULT_STAMPS_LS);
+            const parsed = raw ? JSON.parse(raw) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    _persistVaultStamps(stamps, confirmedKeys) {
+        if (!Array.isArray(confirmedKeys)) return;
+        const next = { ...this._readSavedVaultStamps() };
+        const allowed = new Set(confirmedKeys);
+        for (const key of VAULT_LOCAL_STORAGE_KEYS) {
+            if (!allowed.has(key)) continue;
+            if (stamps[key] > 0 && localStorage.getItem(key)) {
+                next[key] = stamps[key];
+            }
+        }
+        try {
+            localStorage.setItem(VAULT_STAMPS_LS, JSON.stringify(next));
+        } catch (_) {
+            /* noop */
+        }
+    }
+
+    /**
+     * Trae blobs de vault solo si no hay copia local o el mtime del sidecar cambió.
+     */
+    async _hydrateVaultBlobs(sharedData) {
+        if (!sharedData || !window.electron?.appdata?.getVault) {
+            return sharedData;
+        }
+        const stamps = sharedData._vaultStamps || {};
+        const saved = this._readSavedVaultStamps();
+        const confirmed = [];
+
+        for (const key of VAULT_LOCAL_STORAGE_KEYS) {
+            const stamp = stamps[key] || 0;
+            if (!stamp) continue;
+            const localVal = localStorage.getItem(key);
+            if (localVal && saved[key] === stamp) {
+                confirmed.push(key);
+                continue;
+            }
+            try {
+                const blob = await window.electron.appdata.getVault(key);
+                if (blob) {
+                    sharedData[key] = blob;
+                    confirmed.push(key);
+                }
+            } catch (error) {
+                console.warn(`[LocalStorageSync] No se pudo leer vault ${key}:`, error);
+            }
+        }
+        sharedData._vaultConfirmed = confirmed;
+        return sharedData;
     }
 
     async initialize() {
@@ -135,10 +207,11 @@ class LocalStorageSyncService {
                 return;
             }
 
-            const sharedData = await this._fetchSharedData();
+            const sharedData = await this._hydrateVaultBlobs(await this._fetchSharedData());
 
             if (sharedData) {
                 this._importToLocalStorage(sharedData);
+                this._persistVaultStamps(sharedData._vaultStamps || {}, sharedData._vaultConfirmed);
                 this._snapshotSyncState();
                 if (!window.electron?.isSecondaryInstance && this._hasLocalKeysMissingFromShared(sharedData)) {
                     await this.syncToFile();
@@ -173,11 +246,12 @@ class LocalStorageSyncService {
         if (!window.electron?.appdata) {
             return false;
         }
-        const sharedData = await this._fetchSharedData();
+        const sharedData = await this._hydrateVaultBlobs(await this._fetchSharedData());
         if (!sharedData) {
             return false;
         }
         this._importToLocalStorage(sharedData);
+        this._persistVaultStamps(sharedData._vaultStamps || {}, sharedData._vaultConfirmed);
         this._snapshotSyncState();
         return true;
     }
@@ -217,6 +291,7 @@ class LocalStorageSyncService {
         const normalized = this._normalizeFavoriteSyncPayload({ ...data });
         let importedCount = 0;
         let needsWriteBack = false;
+        const writtenKeys = [];
 
         for (const key of SYNC_KEYS) {
             if (normalized[key] !== undefined && normalized[key] !== null) {
@@ -226,11 +301,18 @@ class LocalStorageSyncService {
                     needsWriteBack = true;
                     continue;
                 }
-                // Skip idéntico: evita re-setItem del vault gordo y un segundo loadNodes innecesario
                 if (localVal === normalized[key]) {
                     continue;
                 }
+                if (
+                    VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                    localVal &&
+                    vaultPayloadsEquivalent(localVal, normalized[key])
+                ) {
+                    continue;
+                }
                 localStorage.setItem(key, normalized[key]);
+                writtenKeys.push(key);
                 importedCount++;
             }
         }
@@ -247,7 +329,7 @@ class LocalStorageSyncService {
         // Notificar a la aplicación que hubo cambios
         if (importedCount > 0) {
             window.dispatchEvent(new CustomEvent('settings-updated', {
-                detail: { source: 'sync', count: importedCount }
+                detail: { source: 'sync', count: importedCount, keys: writtenKeys }
             }));
         }
 

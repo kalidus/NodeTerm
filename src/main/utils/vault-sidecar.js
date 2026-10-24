@@ -81,6 +81,16 @@ function writeVaultSidecar(storageKey, jsonStr) {
   }
   ensureVaultDir();
   const binary = encryptedJsonStringToBinary(jsonStr);
+  if (fs.existsSync(filePath)) {
+    try {
+      const existing = fs.readFileSync(filePath);
+      if (existing.equals(binary)) {
+        return false;
+      }
+    } catch (_) {
+      /* reescribir */
+    }
+  }
   const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tmp, binary, { mode: 0o600 });
   fs.renameSync(tmp, filePath);
@@ -190,6 +200,23 @@ function stripVaultKeysFromObject(obj) {
   return out;
 }
 
+function getVaultSidecarStamps() {
+  const stamps = {};
+  for (const key of VAULT_SIDECAR_KEYS) {
+    const filePath = sidecarPathForKey(key);
+    let mtime = 0;
+    try {
+      if (filePath && fs.existsSync(filePath)) {
+        mtime = fs.statSync(filePath).mtimeMs;
+      }
+    } catch (_) {
+      mtime = 0;
+    }
+    stamps[key] = mtime;
+  }
+  return stamps;
+}
+
 function getVaultSidecarsMtimeMax() {
   let max = 0;
   for (const key of VAULT_SIDECAR_KEYS) {
@@ -227,6 +254,7 @@ module.exports = {
   extractAndPersistVaultSidecars,
   migrateEmbeddedVaultToSidecars,
   stripVaultKeysFromObject,
+  getVaultSidecarStamps,
   getVaultSidecarsMtimeMax,
   listVaultSidecarBasenames,
   fieldToBytes

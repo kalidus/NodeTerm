@@ -5,7 +5,9 @@ const {
   bytesToBase64,
   fieldToBytes,
   toEncryptedV2,
-  decodeEncryptedFields
+  decodeEncryptedFields,
+  vaultPayloadsEquivalent,
+  createDerivedKeyCache
 } = require('../../src/shared/vault-blob-encoding');
 
 describe('vault-blob-encoding', () => {
@@ -45,6 +47,40 @@ describe('vault-blob-encoding', () => {
     assert.deepStrictEqual(Array.from(decoded.salt), salt);
     assert.deepStrictEqual(Array.from(decoded.iv), iv);
     assert.deepStrictEqual(Array.from(decoded.data), data);
+  });
+
+  it('vaultPayloadsEquivalent ignores timestamp and legacy vs v2 encoding', () => {
+    const salt = crypto.randomBytes(16);
+    const iv = crypto.randomBytes(12);
+    const data = crypto.randomBytes(24);
+    const legacy = JSON.stringify({
+      salt: Array.from(salt),
+      iv: Array.from(iv),
+      data: Array.from(data),
+      timestamp: 111
+    });
+    const v2 = JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 0 }));
+    const v2other = JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 999 }));
+    assert.strictEqual(vaultPayloadsEquivalent(legacy, v2), true);
+    assert.strictEqual(vaultPayloadsEquivalent(v2, v2other), true);
+    const other = JSON.stringify(toEncryptedV2({ salt, iv, data: crypto.randomBytes(24), timestamp: 0 }));
+    assert.strictEqual(vaultPayloadsEquivalent(v2, other), false);
+  });
+
+  it('createDerivedKeyCache calls derive once per salt+password', async () => {
+    const cache = createDerivedKeyCache();
+    let calls = 0;
+    const derive = async () => {
+      calls += 1;
+      return { id: calls };
+    };
+    const salt = crypto.randomBytes(16);
+    const a = await cache.getOrDerive('pw', salt, 1000, derive);
+    const b = await cache.getOrDerive('pw', salt, 1000, derive);
+    assert.strictEqual(a, b);
+    assert.strictEqual(calls, 1);
+    await cache.getOrDerive('other', salt, 1000, derive);
+    assert.strictEqual(calls, 2);
   });
 
   it('rejects invalid field', () => {
