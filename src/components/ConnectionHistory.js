@@ -270,8 +270,8 @@ const ConnectionHistory = ({
 					return;
 				}
 				if (masterKey && secureStorage && encryptedData) {
-					const decrypted = await secureStorage.decryptData(
-						JSON.parse(encryptedData),
+					const decrypted = await secureStorage.decryptStorageKeyCached(
+						'passwords_encrypted',
 						masterKey
 					);
 					if (!cancelled) {

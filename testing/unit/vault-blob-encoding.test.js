@@ -7,7 +7,8 @@ const {
   toEncryptedV2,
   decodeEncryptedFields,
   vaultPayloadsEquivalent,
-  createDerivedKeyCache
+  createDerivedKeyCache,
+  createStorageDecryptCache
 } = require('../../src/shared/vault-blob-encoding');
 
 describe('vault-blob-encoding', () => {
@@ -80,6 +81,43 @@ describe('vault-blob-encoding', () => {
     assert.strictEqual(a, b);
     assert.strictEqual(calls, 1);
     await cache.getOrDerive('other', salt, 1000, derive);
+    assert.strictEqual(calls, 2);
+  });
+
+  it('createStorageDecryptCache decrypts once for concurrent calls and recomputes on blob change', async () => {
+    const cache = createStorageDecryptCache();
+    let calls = 0;
+    const decrypt = async () => {
+      calls += 1;
+      return { tree: calls };
+    };
+    const [a, b, c] = await Promise.all([
+      cache.get('passwords_encrypted', 'blob1', 'pw', decrypt),
+      cache.get('passwords_encrypted', 'blob1', 'pw', decrypt),
+      cache.get('passwords_encrypted', 'blob1', 'pw', decrypt)
+    ]);
+    assert.strictEqual(calls, 1);
+    assert.strictEqual(a, b);
+    assert.strictEqual(b, c);
+
+    const d = await cache.get('passwords_encrypted', 'blob2', 'pw', decrypt);
+    assert.strictEqual(calls, 2);
+    assert.notStrictEqual(d, a);
+
+    // Otra password sobre el mismo blob recalcula
+    await cache.get('passwords_encrypted', 'blob2', 'other', decrypt);
+    assert.strictEqual(calls, 3);
+  });
+
+  it('createStorageDecryptCache does not cache failures', async () => {
+    const cache = createStorageDecryptCache();
+    let calls = 0;
+    const failing = async () => {
+      calls += 1;
+      throw new Error('bad key');
+    };
+    await assert.rejects(cache.get('k', 'raw', 'pw', failing), /bad key/);
+    await assert.rejects(cache.get('k', 'raw', 'pw', failing), /bad key/);
     assert.strictEqual(calls, 2);
   });
 

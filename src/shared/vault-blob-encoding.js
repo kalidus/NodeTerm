@@ -106,7 +106,36 @@ function createDerivedKeyCache() {
   };
 }
 
+/**
+ * Caché de resultados descifrados por clave de storage: mismo blob + misma password
+ * devuelven la misma promesa (incluye llamadas concurrentes). Se invalida al cambiar el blob.
+ */
+function createStorageDecryptCache() {
+  const map = new Map();
+  return {
+    get(storageKey, raw, password, decryptFn) {
+      const hit = map.get(storageKey);
+      if (hit && hit.raw === raw && hit.password === password) {
+        return hit.promise;
+      }
+      const promise = Promise.resolve().then(() => decryptFn());
+      const entry = { raw, password, promise };
+      map.set(storageKey, entry);
+      promise.catch(() => {
+        if (map.get(storageKey) === entry) {
+          map.delete(storageKey);
+        }
+      });
+      return promise;
+    },
+    clear() {
+      map.clear();
+    }
+  };
+}
+
 module.exports = {
+  createStorageDecryptCache,
   bytesToBase64,
   fieldToBytes,
   toEncryptedV2,

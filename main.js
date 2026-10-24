@@ -1894,8 +1894,8 @@ function createWindow() {
     }
   }
 
-  // Open the DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
+  // DevTools solo bajo demanda en desarrollo (NODETERM_DEVTOOLS=1); F12 sigue disponible.
+  if (process.env.NODE_ENV === 'development' && process.env.NODETERM_DEVTOOLS === '1') {
     mainWindow.webContents.openDevTools();
   }
 

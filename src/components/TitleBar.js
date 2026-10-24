@@ -137,8 +137,8 @@ const TitleBar = ({
           const encryptedData = localStorage.getItem('passwords_encrypted');
 
           if (encryptedData) {
-            const decrypted = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
+            const decrypted = await secureStorage.decryptStorageKeyCached(
+              'passwords_encrypted',
               masterKey
             );
             setPasswordNodes(decrypted);

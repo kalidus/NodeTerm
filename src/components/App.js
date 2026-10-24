@@ -94,6 +94,8 @@ import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefa
 let lastDecryptedDataStr = null;
 let lastDecryptedKey = null;
 let lastDecryptedResult = null;
+// Árbol ya migrado (Wallix) del último descifrado: misma referencia en cache hit evita recorrer/clonar 5000 nodos y re-render
+let lastMigratedResult = null;
 
 const App = () => {
   const toast = useRef(null);
@@ -529,8 +531,7 @@ const App = () => {
         const enc = localStorage.getItem('passwords_encrypted');
         if (enc && masterKey) {
           try {
-            const obj = JSON.parse(enc);
-            const decrypted = await secureStorage.decryptData(obj, masterKey);
+            const decrypted = await secureStorage.decryptStorageKeyCached('passwords_encrypted', masterKey);
             // Los passwords se guardan como árbol; contar de forma recursiva
             count = walk(decrypted);
           } catch { }
@@ -2170,19 +2171,30 @@ const App = () => {
         // MODO ENCRIPTADO: Cargar desde connections_encrypted
         if (encryptedData) {
           let decrypted;
-          if (isCacheHit) {
+          let migrated;
+          if (isCacheHit && lastMigratedResult) {
             decrypted = lastDecryptedResult;
+            migrated = lastMigratedResult;
           } else {
-            decrypted = await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+            decrypted = isCacheHit
+              ? lastDecryptedResult
+              : await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
             if (decrypted) {
+              migrated = migrateWallixBastionInTree(decrypted);
               lastDecryptedDataStr = encryptedData;
               lastDecryptedKey = masterKey;
               lastDecryptedResult = decrypted;
+              lastMigratedResult = migrated;
             }
           }
           if (decrypted) {
-            isExternalReloadRef.current = true;
-            setNodes(migrateWallixBastionInTree(decrypted));
+            // Solo marcar recarga externa si el estado realmente cambia; con la misma
+            // referencia React no re-renderiza y la marca quedaría pegada, saltando un guardado real.
+            setNodes((prev) => {
+              if (prev === migrated) return prev;
+              isExternalReloadRef.current = true;
+              return migrated;
+            });
             hasLoadedNodesRef.current = true;
           } else {
             console.error('[loadNodes] Decryption failed');
@@ -2292,6 +2304,7 @@ const App = () => {
           lastDecryptedDataStr = encryptedStr;
           lastDecryptedKey = masterKey;
           lastDecryptedResult = nodes;
+          lastMigratedResult = nodes;
 
           // Sincronizar cambios cifrados
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);

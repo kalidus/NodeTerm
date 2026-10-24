@@ -27,8 +27,7 @@ import HomeEmbeddedSessions from './home/HomeEmbeddedSessions';
 import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
-import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
-import FileExplorer from './FileExplorer';
+import { LazyFileExplorer, LazySSHSystemMonitorPanel, TabChunkFallback } from './tabLoaders';
 import { TAB_TYPES } from '../utils/constants';
 import {
   buildDefaultTerminalOptions,
@@ -3195,27 +3194,31 @@ const MainContentArea = ({
                           />
                           {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
                           {(tab.type === 'terminal' || tab.type === 'local-terminal') && sshSystemMonitorTabId === tab.key && (
-                            <SSHSystemMonitorPanel
-                              tabId={tab.key}
-                              tab={tab}
-                              onClose={() => setSshSystemMonitorTabId(null)}
-                            />
+                            <React.Suspense fallback={<TabChunkFallback />}>
+                              <LazySSHSystemMonitorPanel
+                                tabId={tab.key}
+                                tab={tab}
+                                onClose={() => setSshSystemMonitorTabId(null)}
+                              />
+                            </React.Suspense>
                           )}
 
                           {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
                           {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
-                            <FileExplorer
-                              tabId={tab.key}
-                              tab={tab}
-                              sshConfig={tab.sshConfig}
-                              onClose={() => setSshFileExplorerTabId(null)}
-                              isStandaloneTab={false}
-                              iconTheme={memoizedContentRendererProps?.iconTheme}
-                              explorerFont={memoizedContentRendererProps?.explorerFont}
-                              explorerColorTheme={memoizedContentRendererProps?.explorerColorTheme}
-                              setExplorerColorTheme={memoizedContentRendererProps?.setExplorerColorTheme}
-                              explorerFontSize={memoizedContentRendererProps?.explorerFontSize}
-                            />
+                            <React.Suspense fallback={<TabChunkFallback />}>
+                              <LazyFileExplorer
+                                tabId={tab.key}
+                                tab={tab}
+                                sshConfig={tab.sshConfig}
+                                onClose={() => setSshFileExplorerTabId(null)}
+                                isStandaloneTab={false}
+                                iconTheme={memoizedContentRendererProps?.iconTheme}
+                                explorerFont={memoizedContentRendererProps?.explorerFont}
+                                explorerColorTheme={memoizedContentRendererProps?.explorerColorTheme}
+                                setExplorerColorTheme={memoizedContentRendererProps?.setExplorerColorTheme}
+                                explorerFontSize={memoizedContentRendererProps?.explorerFontSize}
+                              />
+                            </React.Suspense>
                           )}
                         </div>
                       );

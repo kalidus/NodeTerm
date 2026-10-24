@@ -1,5 +1,10 @@
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
-import { toEncryptedV2, decodeEncryptedFields, createDerivedKeyCache } from '../shared/vault-blob-encoding';
+import {
+  toEncryptedV2,
+  decodeEncryptedFields,
+  createDerivedKeyCache,
+  createStorageDecryptCache
+} from '../shared/vault-blob-encoding';
 
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
@@ -19,6 +24,7 @@ class SecureStorage {
     this.sessionTimeout = 30 * 60 * 1000; // 30 minutos
     this.timeoutId = null;
     this._derivedKeyCache = createDerivedKeyCache();
+    this._storageDecryptCache = createStorageDecryptCache();
   }
 
   /**
@@ -143,6 +149,19 @@ class SecureStorage {
 
     const jsonData = dec.decode(decrypted);
     return JSON.parse(jsonData);
+  }
+
+  /**
+   * Descifra el blob de una clave de localStorage reutilizando resultado/promesa si el
+   * string del blob y la password no cambiaron (evita N descifrados del mismo vault al arrancar).
+   * Devuelve null si no hay blob. Los llamadores no deben mutar el resultado.
+   */
+  async decryptStorageKeyCached(storageKey, password) {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    return this._storageDecryptCache.get(storageKey, raw, password, () =>
+      this.decryptData(JSON.parse(raw), password)
+    );
   }
 
   /**

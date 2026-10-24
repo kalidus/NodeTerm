@@ -18,6 +18,7 @@ function getChunk(key, loader) {
 
 export const LazyHomeTab = lazy(() => getChunk('HomeTab', () => import('./HomeTab')));
 export const LazyFileExplorer = lazy(() => getChunk('FileExplorer', () => import('./FileExplorer')));
+export const LazySSHSystemMonitorPanel = lazy(() => getChunk('SSHSystemMonitorPanel', () => import('./SSHSystemMonitorPanel')));
 export const LazySplitLayout = lazy(() => getChunk('SplitLayout', () => import('./SplitLayout')));
 export const LazyRdpSessionTab = lazy(() => getChunk('RdpSessionTab', () => import('./RdpSessionTab')));
 export const LazyGuacamoleTerminal = lazy(() => getChunk('GuacamoleTerminal', () => import('./GuacamoleTerminal')));

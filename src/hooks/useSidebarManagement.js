@@ -4,6 +4,7 @@ import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
 
 function normalizeTreeNodes(inputNodes) {
   const seenKeys = new Set();
@@ -79,6 +80,9 @@ function normalizeTreeNodes(inputNodes) {
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
   const [nodes, setNodes] = useState(() => {
+    // Con vault cifrado el árbol real lo carga App.loadNodes; no parsear la copia legacy en claro.
+    if (localStorage.getItem('connections_encrypted')) return [];
+
     const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
 
     try {
@@ -152,14 +156,21 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         const allData = await window.electron.appdata.getAll();
         if (!allData) return;
 
-        const remoteEncrypted = allData['connections_encrypted'];
+        // getAll ya no incluye los blobs del vault (viven en sidecars): pedirlo bajo demanda.
+        let remoteEncrypted = allData['connections_encrypted'];
+        if (!remoteEncrypted && allData._vaultStamps?.connections_encrypted > 0 && window.electron.appdata.getVault) {
+          remoteEncrypted = await window.electron.appdata.getVault('connections_encrypted');
+        }
         const remoteJson = allData[STORAGE_KEYS.TREE_DATA];
 
         if (!remoteEncrypted && !remoteJson) return;
 
         if (remoteEncrypted) {
           const currentEncrypted = localStorage.getItem('connections_encrypted');
-          if (remoteEncrypted !== currentEncrypted) {
+          if (
+            remoteEncrypted !== currentEncrypted &&
+            !(currentEncrypted && vaultPayloadsEquivalent(currentEncrypted, remoteEncrypted))
+          ) {
             localStorage.setItem('connections_encrypted', remoteEncrypted);
             localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
             window.dispatchEvent(new CustomEvent('encryption-data-synced'));
