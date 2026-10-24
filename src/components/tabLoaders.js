@@ -50,10 +50,12 @@ export const LazyNetworkToolTab = lazy(() => getChunk('NetworkToolTab', () => im
 export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEditor', () => import('./TiptapDocumentEditor')));
 export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
 export const LazyBrowserTab = lazy(() => getChunk('BrowserTab', () => import('./BrowserTab')));
+export const LazyDialogsManager = lazy(() => getChunk('DialogsManager', () => import('./DialogsManager')));
 
 const CHUNK_LOADERS = {
   HomeTab: () => import('./HomeTab'),
   FileExplorer: () => import('./FileExplorer'),
+  DialogsManager: () => import('./DialogsManager'),
   SplitLayout: () => import('./SplitLayout'),
   RdpSessionTab: () => import('./RdpSessionTab'),
   GuacamoleTerminal: () => import('./GuacamoleTerminal'),

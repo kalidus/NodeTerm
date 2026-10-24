@@ -12,8 +12,8 @@ const SYNC_KEYS = [
   'nodeterm_connection_history',
   'nodeterm_favorite_connections',
 
-  // Árbol de datos (conexiones organizadas)
-  'basicapp2_tree_data',
+  // Árbol en claro (basicapp2_tree_data): NO sincronizar — con vault vive en sidecars;
+  // sin vault queda solo en localStorage de la instancia.
 
   // Configuración de sincronización
   'nodeterm_sync_config',
@@ -143,8 +143,8 @@ const SYNC_KEYS = [
 
   // Herramientas de red (Wake on LAN y escaneos de red guardados)
   'nodeterm_wol_devices',
-  'nodeterm_saved_network_scans',
-  'nodeterm_network_tools_history'
+  'nodeterm_saved_network_scans'
+  // nodeterm_network_tools_history: local-only (resultados grandes; no multi-instancia)
 ];
 
 module.exports = { SYNC_KEYS };

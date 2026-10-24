@@ -28,7 +28,7 @@ const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
 
 // Default max recents if caller does not specify
 // Aumentado a 200 para permitir mostrar muchas más conexiones recientes
-const DEFAULT_RECENTS_LIMIT = 200;
+const DEFAULT_RECENTS_LIMIT = 80;
 
 // Single event name for updates (favorites or recents)
 const UPDATED_EVENT = 'connections-updated';
@@ -81,25 +81,23 @@ function redactSensitiveFields(item) {
   const scrubbed = { ...item };
   for (const field of SENSITIVE_HISTORY_FIELDS) {
     if (field in scrubbed) {
-      scrubbed[field] = '';
+      delete scrubbed[field];
     }
   }
   return scrubbed;
 }
 
-function itemHasSensitiveData(item) {
+/** True si aún hay claves sensibles (aunque estén vacías) — fuerza migración a omitirlas. */
+function itemHasSensitiveKeys(item) {
   if (!item || typeof item !== 'object') return false;
-  return SENSITIVE_HISTORY_FIELDS.some((field) => {
-    const value = item[field];
-    return typeof value === 'string' ? value.length > 0 : !!value;
-  });
+  return SENSITIVE_HISTORY_FIELDS.some((field) => field in item);
 }
 
 function scrubListInPlace(key, list) {
   if (!Array.isArray(list) || list.length === 0) return list;
   let changed = false;
   const scrubbed = list.map((item) => {
-    if (!itemHasSensitiveData(item)) return item;
+    if (!itemHasSensitiveKeys(item)) return item;
     changed = true;
     return redactSensitiveFields(item);
   });

@@ -20,6 +20,11 @@ describe('Master Key Security & Cryptographic Verifier Tests (Hallazgo 3.4)', ()
         'nodeterm_master_key debe haber sido removido de SYNC_KEYS para evitar sincronización en texto plano'
       );
     });
+
+    it('árbol en claro e historial de network tools no van en SYNC_KEYS', () => {
+      assert.strictEqual(SYNC_KEYS.includes('basicapp2_tree_data'), false);
+      assert.strictEqual(SYNC_KEYS.includes('nodeterm_network_tools_history'), false);
+    });
   });
 
   describe('Criptografía de Verifier (PBKDF2 + AES-GCM)', () => {

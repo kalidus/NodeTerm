@@ -45,9 +45,10 @@ import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks'
 
 import { countConnections } from '../utils/connectionCounter';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
-import EditConnectionTabContent from './EditConnectionTabContent';
-import PasswordTabContent from './PasswordTabContent';
+import { TabChunkFallback } from './tabLoaders';
 
+const LazyEditConnectionTabContent = React.lazy(() => import('./EditConnectionTabContent'));
+const LazyPasswordTabContent = React.lazy(() => import('./PasswordTabContent'));
 
 const TabContentRendererInner = React.memo(({
   tab,
@@ -217,12 +218,14 @@ const TabContentRendererInner = React.memo(({
   // Secret info tab (password, crypto_wallet, api_key, secure_note)
   if (tab.type === TAB_TYPES.PASSWORD && tab.passwordData) {
     return (
-      <PasswordTabContent
-        tab={tab}
-        masterKey={masterKey}
-        secureStorage={secureStorage}
-        setSshTabs={setSshTabs}
-      />
+      <Suspense fallback={<TabChunkFallback />}>
+        <LazyPasswordTabContent
+          tab={tab}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          setSshTabs={setSshTabs}
+        />
+      </Suspense>
     );
   }
 
@@ -1788,22 +1791,24 @@ const TabContentRendererInner = React.memo(({
   // Editar conexión (edit-connection)
   if (tab.type === 'edit-connection') {
     return (
-      <EditConnectionTabContent
-        tab={tab}
-        nodes={nodes}
-        handleSaveSshToSidebar={handleSaveSshToSidebar}
-        handleSaveRdpToSidebar={handleSaveRdpToSidebar}
-        handleSaveVncToSidebar={handleSaveVncToSidebar}
-        handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
-        handleSaveSSHTunnelToSidebar={handleSaveSSHTunnelToSidebar}
-        onOpenSSHConnection={onCreateSSHConnection}
-        onOpenRdpConnection={onOpenRdpConnection}
-        onOpenVncConnection={onOpenVncConnection}
-        onOpenFileConnection={onOpenFileConnection}
-        onOpenSSHTunnel={onOpenSSHTunnel}
-        handleTabClose={handleTabClose}
-        iconTheme={iconTheme}
-      />
+      <Suspense fallback={<TabChunkFallback />}>
+        <LazyEditConnectionTabContent
+          tab={tab}
+          nodes={nodes}
+          handleSaveSshToSidebar={handleSaveSshToSidebar}
+          handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+          handleSaveVncToSidebar={handleSaveVncToSidebar}
+          handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
+          handleSaveSSHTunnelToSidebar={handleSaveSSHTunnelToSidebar}
+          onOpenSSHConnection={onCreateSSHConnection}
+          onOpenRdpConnection={onOpenRdpConnection}
+          onOpenVncConnection={onOpenVncConnection}
+          onOpenFileConnection={onOpenFileConnection}
+          onOpenSSHTunnel={onOpenSSHTunnel}
+          handleTabClose={handleTabClose}
+          iconTheme={iconTheme}
+        />
+      </Suspense>
     );
   }
 

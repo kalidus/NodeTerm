@@ -36,7 +36,6 @@ import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
 import TreeContextMenu from './contextmenus/TreeContextMenu';
-import Sidebar from './Sidebar';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
 
@@ -48,8 +47,6 @@ import TabBarRestoreButton from './TabBarRestoreButton';
 import { useMcpAgentBridge } from '../hooks/useMcpAgentBridge';
 import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 
-// Componentes críticos (se cargan inmediatamente)
-import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
 import {
@@ -70,7 +67,6 @@ import {
   handleUnblockForms,
   handleGuacamoleCreateTab
 } from '../utils/tabEventHandlers';
-import DialogsManager from './DialogsManager';
 import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
@@ -86,7 +82,7 @@ import {
   TAB_TYPES,
   CONNECTION_STATUS
 } from '../utils/constants';
-import { preloadHeavyTabChunks } from './tabLoaders';
+import { LazyDialogsManager, TabChunkFallback, preloadHeavyTabChunks } from './tabLoaders';
 import { loadXtermModules } from '../utils/xtermLoader';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 
@@ -456,7 +452,7 @@ const App = () => {
     initializeApp();
   }, [secureStorage]);
 
-  // Precarga en idle: terminal SSH + IronRDP (chunk/WASM) + xterm
+  // Precarga en idle: DialogsManager (chunk grande) + terminal SSH + IronRDP + xterm
   useEffect(() => {
     if (!isAppReady) return;
     const useIdle = typeof requestIdleCallback === 'function';
@@ -465,11 +461,17 @@ const App = () => {
     });
     const idleId = useIdle
       ? requestIdleCallback(() => {
+          import('./DialogsManager').catch((err) => {
+            console.warn('[App] Precalentado DialogsManager:', err);
+          });
           loadXtermModules().catch((err) => {
             console.warn('[App] Precalentado xterm:', err);
           });
-        }, { timeout: 8000 })
+        }, { timeout: 3000 })
       : setTimeout(() => {
+          import('./DialogsManager').catch((err) => {
+            console.warn('[App] Precalentado DialogsManager:', err);
+          });
           loadXtermModules().catch((err) => {
             console.warn('[App] Precalentado xterm:', err);
           });
@@ -481,6 +483,22 @@ const App = () => {
         clearTimeout(idleId);
       }
     };
+  }, [isAppReady]);
+
+  // One-shot: con vault, purgar árbol en claro y forzar rewrite de app-data sin claves legacy de sync
+  useEffect(() => {
+    if (!isAppReady) return;
+    const PURGE_FLAG = 'nodeterm_purged_legacy_sync_v1';
+    try {
+      if (localStorage.getItem(PURGE_FLAG)) return;
+      if (localStorage.getItem('connections_encrypted')) {
+        localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+      }
+      localStorage.setItem(PURGE_FLAG, '1');
+      localStorageSyncService.forceSync();
+    } catch (_) {
+      /* noop */
+    }
   }, [isAppReady]);
 
 
@@ -2909,7 +2927,8 @@ const App = () => {
           tabBarCollapsed={tabBarCollapsed}
         />
 
-        <DialogsManager
+        <React.Suspense fallback={<TabChunkFallback />}>
+        <LazyDialogsManager
           // Referencias
           toast={toast}
 
@@ -3327,6 +3346,7 @@ const App = () => {
           tabBarCollapsed={tabBarCollapsed}
           isMinimalMode={isMinimalMode}
         />
+        </React.Suspense>
 
         {/* Menú contextual del árbol de la sidebar */}
         <TreeContextMenu

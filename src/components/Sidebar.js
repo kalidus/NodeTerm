@@ -7,7 +7,6 @@ import { Divider } from 'primereact/divider';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
-import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
@@ -18,6 +17,9 @@ import SidebarIconRail from './SidebarIconRail';
 import { TabChunkFallback } from './tabLoaders';
 
 const LazyImportDialog = React.lazy(() => import('./ImportDialog'));
+const LazyFolderDialog = React.lazy(() =>
+  import('./Dialogs').then((m) => ({ default: m.FolderDialog }))
+);
 const LazyPasswordManagerSidebar = React.lazy(() => import('./PasswordManagerSidebar'));
 const LazyDocumentsSidebar = React.lazy(() => import('./DocumentsSidebar'));
 const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplorerSidebar'));
@@ -3694,26 +3696,30 @@ const Sidebar = React.memo(({
       </div>
 
 
-      <FolderDialog
-        visible={showFolderDialog}
-        onHide={() => {
-          setShowFolderDialog(false);
-          setFolderName('');
-          setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
-          setFolderIcon(null);
-          setEditingNode(null); // Limpiar estado de edición al cerrar
-        }}
-        mode={editingNode ? "edit" : "new"}
-        folderName={folderName}
-        setFolderName={setFolderName}
-        folderColor={folderColor}
-        setFolderColor={setFolderColor}
-        folderIcon={folderIcon}
-        setFolderIcon={setFolderIcon}
-        onConfirm={createNewFolder}
-        themeDefaultColor={getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord')}
-        themeName={iconThemes[iconTheme?.toLowerCase()]?.name || 'Material'}
-      />
+      {showFolderDialog && (
+        <Suspense fallback={<TabChunkFallback />}>
+          <LazyFolderDialog
+            visible={showFolderDialog}
+            onHide={() => {
+              setShowFolderDialog(false);
+              setFolderName('');
+              setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+              setFolderIcon(null);
+              setEditingNode(null);
+            }}
+            mode={editingNode ? 'edit' : 'new'}
+            folderName={folderName}
+            setFolderName={setFolderName}
+            folderColor={folderColor}
+            setFolderColor={setFolderColor}
+            folderIcon={folderIcon}
+            setFolderIcon={setFolderIcon}
+            onConfirm={createNewFolder}
+            themeDefaultColor={getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord')}
+            themeName={iconThemes[iconTheme?.toLowerCase()]?.name || 'Material'}
+          />
+        </Suspense>
+      )}
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
 
 

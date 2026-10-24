@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from 'react';
 import UnlockDialog from '../UnlockDialog';
 import CloudRestoreMasterKeyDialog from '../CloudRestoreMasterKeyDialog';
 import ConnectionSearchPalette from '../ConnectionSearchPalette';
-import DialogsManager from '../DialogsManager';
 import WallixRefreshDialog from '../WallixRefreshDialog';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
@@ -14,6 +13,7 @@ const ImportWizardDialog = lazy(() => import('../ImportWizardDialog'));
 
 /**
  * Componente que agrupa y encapsula todos los diálogos y overlays globales de App.js.
+ * DialogsManager vive en App (lazy) para no meter Dialogs.js en el bundle inicial.
  */
 export const AppModals = ({
   children,
@@ -41,9 +41,6 @@ export const AppModals = ({
   expandedKeys,
   masterKey,
   iconTheme,
-
-  // DialogsManager props
-  dialogsManagerProps,
 
   // Import / Export dialogs props
   showImportDialog,
@@ -105,9 +102,7 @@ export const AppModals = ({
         onOpenSettings={() => setShowSettingsDialog?.(true)}
       />
 
-      {/* Gestor unificado de diálogos de conexión y configuración */}
       {children}
-      {dialogsManagerProps && <DialogsManager {...dialogsManagerProps} />}
 
       {/* Lazy loading con Suspense para asistentes de importación/exportación */}
       <Suspense fallback={null}>
