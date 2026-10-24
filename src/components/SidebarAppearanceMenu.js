@@ -1,10 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Dropdown } from 'primereact/dropdown';
 import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
 import UiFontSizeControl from './common/UiFontSizeControl';
-import { iconThemes } from '../themes/icon-themes';
+import {
+  iconThemes,
+  iconThemeMeta,
+  ensureIconTheme,
+  preloadIconThemes,
+  onIconThemeLoaded
+} from '../themes/icon-themes';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { explorerFonts } from '../themes';
 import '../styles/components/tree-themes.css';
@@ -36,7 +42,15 @@ const SidebarAppearanceMenu = ({
 }) => {
   const panelRef = useRef(null);
   const [settingsView, setSettingsView] = useState('choice');
+  const [iconPackTick, setIconPackTick] = useState(0);
   const themeIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
+
+  useEffect(() => {
+    if (settingsView !== 'treeIcons') return undefined;
+    preloadIconThemes();
+    return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
+  }, [settingsView]);
+  void iconPackTick;
 
   return (
     <>
@@ -215,17 +229,26 @@ const SidebarAppearanceMenu = ({
                 <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Iconos del Árbol</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {Object.entries(iconThemes).map(([id, theme]) => {
+                {iconThemeMeta.map(({ id, name }) => {
+                  const theme = iconThemes[id];
                   const isActive = (iconTheme || 'nord').toLowerCase() === id.toLowerCase();
-                  const previewIcon = theme.icons?.folder;
+                  const previewIcon = theme?.icons?.folder;
                   return (
                     <div
                       key={id}
-                      onClick={() => setIconTheme?.(id)}
+                      onClick={() => {
+                        ensureIconTheme(id);
+                        setIconTheme?.(id);
+                      }}
                       className="theme-item"
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setIconTheme?.(id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          ensureIconTheme(id);
+                          setIconTheme?.(id);
+                        }
+                      }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
                         cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
@@ -239,10 +262,7 @@ const SidebarAppearanceMenu = ({
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{theme.name}</div>
-                        {theme.description && (
-                          <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{theme.description}</div>
-                        )}
+                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{name}</div>
                       </div>
                       {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
                     </div>

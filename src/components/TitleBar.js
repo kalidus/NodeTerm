@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
-import { iconThemes } from '../themes/icon-themes';
+import { iconThemes, ensureIconTheme } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
@@ -114,6 +114,10 @@ const TitleBar = ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    ensureIconTheme(iconTheme);
+  }, [iconTheme]);
 
   const handleFilterChange = (val) => {
     setLocalFilter(val);

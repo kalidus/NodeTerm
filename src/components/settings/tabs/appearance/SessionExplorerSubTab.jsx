@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
-import { iconThemes } from '../../../../themes/icon-themes';
+import {
+  iconThemes,
+  iconThemeOptions,
+  ensureIconTheme,
+  preloadIconThemes,
+  onIconThemeLoaded
+} from '../../../../themes/icon-themes';
 import { treeThemeOptions } from '../../../../themes/tree-themes';
 import { sessionActionIconThemes } from '../../../../themes/session-action-icons';
 import { explorerFonts } from '../../../../themes';
@@ -27,6 +33,14 @@ export const SessionExplorerSubTab = ({
   setSidebarFontSize
 }) => {
   const { t } = useTranslation('settings');
+  const [iconPackTick, setIconPackTick] = useState(0);
+
+  useEffect(() => {
+    ensureIconTheme(iconThemeSidebar);
+    preloadIconThemes();
+    return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
+  }, [iconThemeSidebar]);
+  void iconPackTick;
 
   return (
     <div className="general-settings-container" style={{ width: '100%', maxWidth: '100%' }}>
@@ -259,14 +273,17 @@ export const SessionExplorerSubTab = ({
               <Dropdown
                 id="icon-theme-sidebar"
                 value={iconThemeSidebar}
-                options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                onChange={e => setIconThemeSidebar && setIconThemeSidebar(e.value)}
+                options={iconThemeOptions}
+                onChange={e => {
+                  ensureIconTheme(e.value);
+                  setIconThemeSidebar && setIconThemeSidebar(e.value);
+                }}
                 placeholder={t('appearance.sessionExplorer.selectTheme')}
                 style={{ width: '100%' }}
                 itemTemplate={option => (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {iconThemes[option.value]?.icons.folder}
-                    {iconThemes[option.value]?.name}
+                    {iconThemes[option.value]?.icons?.folder}
+                    {option.label}
                   </span>
                 )}
               />

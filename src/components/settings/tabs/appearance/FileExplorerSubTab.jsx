@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaFolder, FaFilePdf, FaFileWord, FaFileExcel } from 'react-icons/fa';
 import { Dropdown } from 'primereact/dropdown';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
 import UiFontSizeControl from '../../../common/UiFontSizeControl';
 import { uiThemes } from '../../../../themes/ui-themes';
-import { iconThemes } from '../../../../themes/icon-themes';
+import {
+  iconThemes,
+  iconThemeOptions,
+  ensureIconTheme,
+  preloadIconThemes,
+  onIconThemeLoaded
+} from '../../../../themes/icon-themes';
 import { explorerFonts } from '../../../../themes';
 import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 
@@ -20,6 +26,14 @@ export const FileExplorerSubTab = ({
   handleUnifiedFontChange
 }) => {
   const { t } = useTranslation('settings');
+  const [iconPackTick, setIconPackTick] = useState(0);
+
+  useEffect(() => {
+    ensureIconTheme(iconTheme);
+    preloadIconThemes();
+    return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
+  }, [iconTheme]);
+  void iconPackTick;
 
   const themeColors = uiThemes[explorerColorTheme]?.colors || uiThemes['Light']?.colors || {};
   const previewBg = themeColors.contentBackground || '#ffffff';
@@ -293,14 +307,17 @@ export const FileExplorerSubTab = ({
               <Dropdown
                 id="icon-theme"
                 value={iconTheme}
-                options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                onChange={e => setIconTheme && setIconTheme(e.value)}
+                options={iconThemeOptions}
+                onChange={e => {
+                  ensureIconTheme(e.value);
+                  setIconTheme && setIconTheme(e.value);
+                }}
                 placeholder={t('appearance.sessionExplorer.selectTheme')}
                 style={{ width: '100%' }}
                 itemTemplate={option => (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {iconThemes[option.value]?.icons.folder}
-                    {iconThemes[option.value]?.name}
+                    {iconThemes[option.value]?.icons?.folder}
+                    {option.label}
                   </span>
                 )}
               />

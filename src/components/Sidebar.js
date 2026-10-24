@@ -7,7 +7,7 @@ import { Divider } from 'primereact/divider';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
-import { iconThemes } from '../themes/icon-themes';
+import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme, newDocumentToolbarIcon } from '../themes/session-action-icons';
@@ -214,7 +214,23 @@ const Sidebar = React.memo(({
     iconCache.clear();
     defaultColorCache.clear();
   }, [iconTheme, folderIconSize, connectionIconSize]);
-  
+
+  // Lazy icon packs: ensure active theme chunk, then re-render tree when it arrives
+  const [iconThemePackVersion, setIconThemePackVersion] = useState(0);
+  useEffect(() => {
+    ensureIconTheme(iconTheme);
+  }, [iconTheme]);
+  useEffect(() => {
+    return onIconThemeLoaded((id) => {
+      const cur = (iconTheme || 'nord').toLowerCase();
+      if (id.toLowerCase() !== cur) return;
+      iconCache.clear();
+      defaultColorCache.clear();
+      setIconThemePackVersion((v) => v + 1);
+    });
+  }, [iconTheme]);
+  void iconThemePackVersion;
+
 
 
   // Estado para diálogos

@@ -5,7 +5,7 @@ import { SiDebian, SiDocker } from 'react-icons/si';
 import DistroIcon from './DistroIcon';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { getHomeTabIcon } from '../themes/home-tab-icons';
-import { iconThemes } from '../themes/icon-themes';
+import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -84,16 +84,24 @@ const TabHeader = React.memo(({
     return () => window.removeEventListener('theme-changed', handleThemeChange);
   }, []);
 
-  // Escuchar cambios del tema de iconos de la sidebar
+  // Escuchar cambios del tema de iconos de la sidebar (+ carga lazy del pack SVG)
   useEffect(() => {
     const handleSidebarIconThemeUpdate = () => {
+      try {
+        ensureIconTheme(localStorage.getItem('iconThemeSidebar') || 'nord');
+      } catch (_) {
+        ensureIconTheme('nord');
+      }
       setSidebarIconThemeVersion(v => v + 1);
     };
 
+    handleSidebarIconThemeUpdate();
+    const unsub = onIconThemeLoaded(() => setSidebarIconThemeVersion((v) => v + 1));
     window.addEventListener('settings-updated', handleSidebarIconThemeUpdate);
     window.addEventListener('storage', handleSidebarIconThemeUpdate);
 
     return () => {
+      unsub();
       window.removeEventListener('settings-updated', handleSidebarIconThemeUpdate);
       window.removeEventListener('storage', handleSidebarIconThemeUpdate);
     };

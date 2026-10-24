@@ -4,7 +4,7 @@ import { Tree } from 'primereact/tree';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Divider } from 'primereact/divider';
 import { uiThemes } from '../themes/ui-themes';
-import { iconThemes } from '../themes/icon-themes';
+import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { 
   FaFolder, FaFolderOpen, FaFile, FaFilePdf, FaFileWord, FaFileExcel, 
@@ -103,6 +103,18 @@ const LocalFileExplorerSidebar = ({
       window.removeEventListener('icon-theme-changed', handleStorageChange);
     };
   }, [iconTheme, iconSize, folderIconSize]);
+
+  const [iconPackVersion, setIconPackVersion] = useState(0);
+  useEffect(() => {
+    ensureIconTheme(iconTheme);
+  }, [iconTheme]);
+  useEffect(() => {
+    return onIconThemeLoaded((id) => {
+      if ((iconTheme || 'material').toLowerCase() !== id.toLowerCase()) return;
+      setIconPackVersion((v) => v + 1);
+    });
+  }, [iconTheme]);
+  void iconPackVersion;
   
   const [nodes, setNodes] = useState([]);
   const [expandedKeys, setExpandedKeys] = useState({});
