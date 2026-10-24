@@ -1304,12 +1304,17 @@ const Sidebar = React.memo(({
     setFavoritesRevision((prev) => prev + 1);
   }, []);
 
-  const favoritesTree = useMemo(() => buildFavoritesSidebarTree({
-    nodes,
-    favorites: getFavorites(),
-    groups: favoriteGroupsStore.getGroups(),
-    getFavoriteGroups: favoriteGroupsStore.getFavoriteGroups
-  }), [nodes, favoritesRevision]);
+  const favoritesTree = useMemo(() => {
+    if (!(showFavoritesView && viewMode === 'connections')) {
+      return [];
+    }
+    return buildFavoritesSidebarTree({
+      nodes,
+      favorites: getFavorites(),
+      groups: favoriteGroupsStore.getGroups(),
+      getFavoriteGroups: favoriteGroupsStore.getFavoriteGroups
+    });
+  }, [nodes, favoritesRevision, showFavoritesView, viewMode]);
 
   const filteredFavoritesTree = useMemo(
     () => filterFavoritesTree(favoritesTree, sidebarFilter),

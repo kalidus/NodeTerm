@@ -454,7 +454,9 @@ const App = () => {
     initializeApp();
   }, [secureStorage]);
 
-  // Precarga en idle: DialogsManager (chunk grande) + terminal SSH + IronRDP + xterm
+  const [dialogsManagerArmed, setDialogsManagerArmed] = useState(false);
+
+  // Precarga en idle largo: no competir con Home (terminal SSH ya espera 8s)
   useEffect(() => {
     if (!isAppReady) return;
     const useIdle = typeof requestIdleCallback === 'function';
@@ -463,21 +465,23 @@ const App = () => {
     });
     const idleId = useIdle
       ? requestIdleCallback(() => {
+          setDialogsManagerArmed(true);
           import('./DialogsManager').catch((err) => {
             console.warn('[App] Precalentado DialogsManager:', err);
           });
           loadXtermModules().catch((err) => {
             console.warn('[App] Precalentado xterm:', err);
           });
-        }, { timeout: 3000 })
+        }, { timeout: 8000 })
       : setTimeout(() => {
+          setDialogsManagerArmed(true);
           import('./DialogsManager').catch((err) => {
             console.warn('[App] Precalentado DialogsManager:', err);
           });
           loadXtermModules().catch((err) => {
             console.warn('[App] Precalentado xterm:', err);
           });
-        }, 1500);
+        }, 8000);
     return () => {
       if (useIdle) {
         try { cancelIdleCallback(idleId); } catch (_) {}
@@ -1987,7 +1991,27 @@ const App = () => {
     editingSSHTunnelNode, setEditingSSHTunnelNode
   } = useDialogManagement();
 
+  const anyDialogsManagerOpen = !!(
+    showSSHDialog ||
+    showRdpDialog ||
+    showFolderDialog ||
+    showEditSSHDialog ||
+    showEditFolderDialog ||
+    showSettingsDialog ||
+    showSyncDialog ||
+    showCreateGroupDialog ||
+    showUnifiedConnectionDialog ||
+    showFileConnectionDialog ||
+    showProtocolSelectionDialog ||
+    showNetworkToolsDialog ||
+    showSSHTunnelDialog
+  );
 
+  useEffect(() => {
+    if (anyDialogsManagerOpen) {
+      setDialogsManagerArmed(true);
+    }
+  }, [anyDialogsManagerOpen]);
 
   // Window management hook
   const {
@@ -2971,6 +2995,7 @@ const App = () => {
           tabBarCollapsed={tabBarCollapsed}
         />
 
+        {dialogsManagerArmed && (
         <React.Suspense fallback={<TabChunkFallback />}>
         <LazyDialogsManager
           // Referencias
@@ -3391,6 +3416,7 @@ const App = () => {
           isMinimalMode={isMinimalMode}
         />
         </React.Suspense>
+        )}
 
         {/* Menú contextual del árbol de la sidebar */}
         <TreeContextMenu

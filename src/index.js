@@ -14,22 +14,13 @@ import { applyLiteEffectsFromStorage } from './utils/uiLiteEffects';
 
 markStartup('index.js evaluado');
 
-// PrimeReact - Los CSS se cargan normalmente (webpack los optimiza)
-// 🚀 OPTIMIZACIÓN: Estos imports son necesarios pero webpack los procesa eficientemente
-import "primereact/resources/themes/lara-light-indigo/theme.css";
-import "primereact/resources/primereact.min.css";
-import "primeicons/primeicons.css";
-// primeflex diferido (no bloquea primer paint)
+const loadPrimeReactCss = () => Promise.all([
+  import('primereact/resources/themes/lara-light-indigo/theme.css'),
+  import('primereact/resources/primereact.min.css'),
+  import('primeicons/primeicons.css')
+]).catch(() => {});
 const loadPrimeFlex = () => import('primeflex/primeflex.css').catch(() => {});
-// Fuentes locales integradas (JetBrains Mono, Fira Code, etc.) diferidas y 100% offline
 const loadLocalFonts = () => import('./styles/fonts.css').catch(() => {});
-if (typeof requestIdleCallback === 'function') {
-  requestIdleCallback(loadPrimeFlex, { timeout: 3000 });
-  requestIdleCallback(loadLocalFonts, { timeout: 3500 });
-} else {
-  setTimeout(loadPrimeFlex, 0);
-  setTimeout(loadLocalFonts, 50);
-}
 import './styles/base/base.css'; // Importamos la nueva base de estilos
 import PrimeReact from 'primereact/api';
 
@@ -261,6 +252,16 @@ const paintApp = () => {
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('app:renderer-ready');
     }
+    const idleCss = (fn, timeout) => {
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(fn, { timeout });
+        return;
+      }
+      setTimeout(fn, 0);
+    };
+    idleCss(loadPrimeReactCss, 500);
+    idleCss(loadPrimeFlex, 3000);
+    idleCss(loadLocalFonts, 3500);
   });
 };
 

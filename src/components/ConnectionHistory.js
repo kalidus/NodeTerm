@@ -313,34 +313,44 @@ const ConnectionHistory = ({
 
 	useEffect(() => subscribeSidebarView(setSidebarView), []);
 
-	// Cargar notas / documentos desde localStorage
+	// Cargar notas / documentos: idle para no competir con unlock; eventos recargan ya
 	useEffect(() => {
+		let cancelled = false;
 		const loadDocuments = async () => {
 			try {
 				if (masterKey && secureStorage) {
 					const encryptedData = localStorage.getItem('documents_encrypted');
 					if (encryptedData) {
-						const decrypted = await secureStorage.decryptData(
-							JSON.parse(encryptedData),
+						const decrypted = await secureStorage.decryptStorageKeyCached(
+							'documents_encrypted',
 							masterKey
 						);
-						setDocumentNodes(Array.isArray(decrypted) ? decrypted : []);
+						if (!cancelled) {
+							setDocumentNodes(Array.isArray(decrypted) ? decrypted : []);
+						}
 						return;
 					}
 				}
 				const plainData = localStorage.getItem('documentManagerNodes');
-				if (plainData) {
-					setDocumentNodes(JSON.parse(plainData) || []);
-				} else {
-					setDocumentNodes([]);
+				if (!cancelled) {
+					setDocumentNodes(plainData ? JSON.parse(plainData) || [] : []);
 				}
 			} catch (error) {
 				console.error('Error loading documents for home notes:', error);
-				setDocumentNodes([]);
+				if (!cancelled) setDocumentNodes([]);
 			}
 		};
 
-		loadDocuments();
+		const scheduleIdle = (fn, timeout) => {
+			if (typeof requestIdleCallback === 'function') {
+				return requestIdleCallback(fn, { timeout });
+			}
+			return setTimeout(fn, timeout);
+		};
+		const idleId = scheduleIdle(() => {
+			loadDocuments();
+		}, 1500);
+
 		const handleStorageChange = (e) => {
 			if (e.key === 'documentManagerNodes' || e.key === 'documents_encrypted') {
 				loadDocuments();
@@ -351,6 +361,12 @@ const ConnectionHistory = ({
 		window.addEventListener('document-content-updated', handleContentUpdated);
 		window.addEventListener('document-title-updated', handleContentUpdated);
 		return () => {
+			cancelled = true;
+			if (typeof cancelIdleCallback === 'function') {
+				try { cancelIdleCallback(idleId); } catch (_) { /* noop */ }
+			} else {
+				clearTimeout(idleId);
+			}
 			window.removeEventListener('storage', handleStorageChange);
 			window.removeEventListener('document-content-updated', handleContentUpdated);
 			window.removeEventListener('document-title-updated', handleContentUpdated);
