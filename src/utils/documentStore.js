@@ -1,4 +1,5 @@
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 
 const STORAGE_KEY_TREE = 'documents_encrypted';
 const STORAGE_KEY_TREE_PLAIN = 'documentManagerNodes';
@@ -21,8 +22,12 @@ export async function loadDocumentTree(secureStorage, masterKey) {
       if (plainData) {
         const parsed = JSON.parse(plainData);
         const encrypted = await secureStorage.encryptData(parsed, masterKey);
-        localStorage.setItem(STORAGE_KEY_TREE, JSON.stringify(encrypted));
-        localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
+        const encStr = JSON.stringify(encrypted);
+        const wrote = setVaultEncryptedItem(STORAGE_KEY_TREE, encStr);
+        if (wrote.ok) {
+          localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
+          localStorageSyncService.debouncedSync({ [STORAGE_KEY_TREE]: encStr });
+        }
         return parsed;
       }
       return [];
@@ -40,16 +45,25 @@ export async function saveDocumentTree(tree, secureStorage, masterKey) {
     if (masterKey && secureStorage) {
       const encrypted = await secureStorage.encryptData(tree, masterKey);
       const encStr = JSON.stringify(encrypted);
-      localStorage.setItem(STORAGE_KEY_TREE, encStr);
+      const wrote = setVaultEncryptedItem(STORAGE_KEY_TREE, encStr);
+      if (!wrote.ok) {
+        console.error(
+          '[DocumentsVault] Guardado rechazado:',
+          wrote.reason || 'unknown'
+        );
+        return false;
+      }
       localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
       localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
-    } else {
-      const plainStr = JSON.stringify(tree);
-      localStorage.setItem(STORAGE_KEY_TREE_PLAIN, plainStr);
-      localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
+      return true;
     }
+    const plainStr = JSON.stringify(tree);
+    localStorage.setItem(STORAGE_KEY_TREE_PLAIN, plainStr);
+    localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
+    return true;
   } catch (error) {
     console.error('Error saving documents:', error);
+    return false;
   }
 }
 

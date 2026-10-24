@@ -7,8 +7,8 @@
 import { SYNC_KEYS } from '../shared/sync-keys';
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
-
-const VAULT_STAMPS_LS = 'nodeterm_vault_stamps';
+import { isCatastrophicVaultPayloadShrink } from '../shared/vault-shrink-guard';
+import { isTinyVaultPayload, VAULT_STAMPS_LS } from '../shared/vault-write';
 
 const EXTRA_FETCH_ROUNDS = 2;
 const EXTRA_FETCH_DELAY_MS = 300;
@@ -171,14 +171,27 @@ class LocalStorageSyncService {
             const stamp = stamps[key] || 0;
             if (!stamp) continue;
             const localVal = localStorage.getItem(key);
-            if (localVal && saved[key] === stamp) {
+            // Stamp match: skip solo si el local no parece un wipe (encrypt([]) ~tiny).
+            // Si es tiny, forzar getVault — el sidecar en disco puede seguir siendo el bueno.
+            const stampMatches = !!(localVal && saved[key] === stamp);
+            const localTiny = isTinyVaultPayload(localVal);
+            if (stampMatches && !localTiny) {
                 confirmed.push(key);
                 continue;
             }
             try {
                 const blob = await window.electron.appdata.getVault(key);
                 if (blob) {
-                    sharedData[key] = blob;
+                    if (localVal && isCatastrophicVaultPayloadShrink(localVal, blob)) {
+                        console.error(
+                            `[LocalStorageSync] getVault ${key} ignorado: shrink vs local`
+                        );
+                        if (!localTiny) confirmed.push(key);
+                    } else {
+                        sharedData[key] = blob;
+                        confirmed.push(key);
+                    }
+                } else if (stampMatches && !localTiny) {
                     confirmed.push(key);
                 }
             } catch (error) {
@@ -311,6 +324,17 @@ class LocalStorageSyncService {
                 ) {
                     continue;
                 }
+                // No importar un vault casi vacío sobre uno local sustancial
+                if (
+                    VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                    isCatastrophicVaultPayloadShrink(localVal, normalized[key])
+                ) {
+                    console.error(
+                        `[LocalStorageSync] Import rechazado para ${key}: shrink catastrófico`
+                    );
+                    needsWriteBack = true;
+                    continue;
+                }
                 localStorage.setItem(key, normalized[key]);
                 writtenKeys.push(key);
                 importedCount++;
@@ -388,23 +412,47 @@ class LocalStorageSyncService {
             for (const key of SYNC_KEYS) {
                 // PRIMERO: Intentar usar el override explícito si existe
                 if (overrides[key] !== undefined) {
-                    data[key] = overrides[key];
-                    this._memoryCache[key] = overrides[key]; // Actualizar caché
+                    const nextVal = overrides[key];
+                    if (
+                        VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                        isCatastrophicVaultPayloadShrink(
+                            localStorage.getItem(key) || this._memoryCache?.[key],
+                            nextVal
+                        )
+                    ) {
+                        console.error(
+                            `[LocalStorageSync] Sync omitido para ${key}: shrink catastrófico`
+                        );
+                        continue;
+                    }
+                    data[key] = nextVal;
+                    this._memoryCache[key] = nextVal;
                     count++;
                 }
                 // SEGUNDO: Fallback a localStorage
                 else {
                     const value = localStorage.getItem(key);
                     if (value !== null) {
+                        // LS envenenado (encrypt([])) vs caché buena: no empujar el vacío a disco
+                        if (
+                            VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                            isCatastrophicVaultPayloadShrink(this._memoryCache?.[key], value)
+                        ) {
+                            console.error(
+                                `[LocalStorageSync] Sync LS omitido para ${key}: shrink vs caché; se conserva caché`
+                            );
+                            data[key] = this._memoryCache[key];
+                            count++;
+                            continue;
+                        }
                         data[key] = value;
-                        this._memoryCache[key] = value; // Actualizar caché
+                        this._memoryCache[key] = value;
                         count++;
                     }
                     // TERCERO: Fallback a caché en memoria (para evitar borrados accidentales si localStorage falla antes de inicializar)
                     else if (!this._initialized && this._memoryCache[key] !== undefined) {
                         data[key] = this._memoryCache[key];
                         count++;
-                        // console.log(`[LocalStorageSync] ⚠️ Usando caché en memoria para clave perdida: ${key}`);
                     } else if (this._initialized) {
                         // Si está inicializado y no está en localStorage, lo eliminamos de la caché en memoria para permitir su borrado en app-data.json
                         delete this._memoryCache[key];

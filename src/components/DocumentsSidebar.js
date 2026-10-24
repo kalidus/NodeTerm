@@ -37,6 +37,19 @@ import { getHomeTabActive, subscribeHomeTabActive } from '../utils/homeTabActive
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import '../styles/components/documents.css';
 
+function waitForLocalStorageSyncReady() {
+  if (localStorageSyncService.isSyncReady()) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const onReady = () => {
+      window.removeEventListener('localstorage-sync-ready', onReady);
+      resolve();
+    };
+    window.addEventListener('localstorage-sync-ready', onReady);
+  });
+}
+
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
 function stripTreeNodeIcons(nodes) {
   if (!nodes?.length) return nodes || [];
@@ -491,8 +504,12 @@ const DocumentsSidebar = ({
   }, [expandedKeys]);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      await waitForLocalStorageSyncReady();
+      if (cancelled) return;
       const tree = await loadDocumentTree(secureStorage, masterKey);
+      if (cancelled) return;
       const hasQuickNote = tree.some(node => node.key === 'quick_note');
       if (!hasQuickNote) {
         tree.unshift({
@@ -525,6 +542,9 @@ const DocumentsSidebar = ({
       setIsLoading(false);
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [masterKey, secureStorage]);
 
   useEffect(() => {

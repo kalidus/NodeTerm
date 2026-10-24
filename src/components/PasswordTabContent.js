@@ -5,6 +5,8 @@ import { Dropdown } from 'primereact/dropdown';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { isFavorite, toggleFavorite } from '../utils/connectionStore';
 import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks';
+import { setVaultEncryptedItem } from '../shared/vault-write';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 
 /**
  * Extrae el dominio limpio de una URL para obtener el favicon o mostrar el host.
@@ -353,8 +355,14 @@ const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
       try {
         if (masterKey && secureStorage) {
           const encrypted = await secureStorage.encryptData(updatedNodes, masterKey);
-          localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+          const encStr = JSON.stringify(encrypted);
+          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
+          if (!wrote.ok) {
+            console.error('[PasswordTab] Guardado rechazado:', wrote.reason);
+            return;
+          }
           localStorage.removeItem('passwordManagerNodes');
+          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
         } else {
           localStorage.setItem('passwordManagerNodes', JSON.stringify(updatedNodes));
         }

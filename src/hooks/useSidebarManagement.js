@@ -5,6 +5,7 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 
 function normalizeTreeNodes(inputNodes) {
   const seenKeys = new Set();
@@ -171,9 +172,13 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             remoteEncrypted !== currentEncrypted &&
             !(currentEncrypted && vaultPayloadsEquivalent(currentEncrypted, remoteEncrypted))
           ) {
-            localStorage.setItem('connections_encrypted', remoteEncrypted);
-            localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
-            window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+            const wrote = setVaultEncryptedItem('connections_encrypted', remoteEncrypted);
+            if (!wrote.ok) {
+              console.error('[useSidebarManagement] Sync vault rechazado:', wrote.reason);
+            } else {
+              localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
+              window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+            }
           }
         }
 

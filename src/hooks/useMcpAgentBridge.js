@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { terminalAgentBridge } from '../services/TerminalAgentBridge';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 
 /**
  * Hook para desacoplar el puente MCP Agent Bridge (window.nodeterm_integration)
@@ -61,7 +62,11 @@ export const useMcpAgentBridge = ({
         if (masterKey) {
           const encrypted = await secureStorage.encryptData(newPasswords, masterKey);
           const encStr = JSON.stringify(encrypted);
-          localStorage.setItem('passwords_encrypted', encStr);
+          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
+          if (!wrote.ok) {
+            console.error('[MCP] savePasswords rechazado:', wrote.reason);
+            return false;
+          }
           localStorage.removeItem('passwordManagerNodes');
           localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
         } else {
@@ -77,7 +82,11 @@ export const useMcpAgentBridge = ({
         if (masterKey) {
           const encrypted = await secureStorage.encryptData(newDocuments, masterKey);
           const encStr = JSON.stringify(encrypted);
-          localStorage.setItem('documents_encrypted', encStr);
+          const wrote = setVaultEncryptedItem('documents_encrypted', encStr);
+          if (!wrote.ok) {
+            console.error('[MCP] saveDocuments rechazado:', wrote.reason);
+            return false;
+          }
           localStorage.removeItem('documentManagerNodes');
           localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
         } else {

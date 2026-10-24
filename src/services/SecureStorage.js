@@ -5,6 +5,7 @@ import {
   createDerivedKeyCache,
   createStorageDecryptCache
 } from '../shared/vault-blob-encoding';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
@@ -597,7 +598,11 @@ class SecureStorage {
     };
 
     const encrypted = await this.encryptData(sessionData, key);
-    localStorage.setItem('nodeterm_secure_sessions', JSON.stringify(encrypted));
+    const encStr = JSON.stringify(encrypted);
+    const wrote = setVaultEncryptedItem('nodeterm_secure_sessions', encStr);
+    if (!wrote.ok) {
+      throw new Error(`No se pudieron guardar las sesiones: ${wrote.reason}`);
+    }
     localStorage.setItem('nodeterm_sessions_timestamp', Date.now().toString());
   }
 
@@ -687,6 +692,20 @@ class SecureStorage {
       }
     }
 
+    // Intentar con documentos
+    if (!validKey) {
+      const documentsData = localStorage.getItem('documents_encrypted');
+      if (documentsData) {
+        try {
+          await this.decryptData(JSON.parse(documentsData), oldKey);
+          validKey = true;
+          validationSuccess.push('documents');
+        } catch (error) {
+          console.log('No se pudo validar con documentos:', error.name);
+        }
+      }
+    }
+
     // Si aún no funciona, intentar con sesiones
     if (!validKey) {
       try {
@@ -702,6 +721,7 @@ class SecureStorage {
     if (!validKey && this.hasSavedMasterKey() &&
       !connectionsData &&
       !localStorage.getItem('passwords_encrypted') &&
+      !localStorage.getItem('documents_encrypted') &&
       !localStorage.getItem('nodeterm_secure_sessions')) {
       console.log('No hay datos encriptados, pero hay master key guardada');
       validKey = true;
@@ -719,7 +739,10 @@ class SecureStorage {
       try {
         const decrypted = await this.decryptData(JSON.parse(connectionsData), oldKey);
         const encrypted = await this.encryptData(decrypted, newKey);
-        localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
+        const wrote = setVaultEncryptedItem('connections_encrypted', JSON.stringify(encrypted));
+        if (!wrote.ok) {
+          throw new Error(`Re-encriptar conexiones rechazado: ${wrote.reason}`);
+        }
         reencryptedConnections = true;
         console.log('✅ Conexiones re-encriptadas correctamente');
       } catch (error) {
@@ -738,7 +761,10 @@ class SecureStorage {
       try {
         const decrypted = await this.decryptData(JSON.parse(passwordsData), oldKey);
         const encrypted = await this.encryptData(decrypted, newKey);
-        localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+        const wrote = setVaultEncryptedItem('passwords_encrypted', JSON.stringify(encrypted));
+        if (!wrote.ok) {
+          throw new Error(`Re-encriptar passwords rechazado: ${wrote.reason}`);
+        }
         reencryptedPasswords = true;
         console.log('✅ Passwords re-encriptados correctamente');
       } catch (error) {
@@ -746,6 +772,27 @@ class SecureStorage {
         // No fallar si los passwords no se pueden re-encriptar, pero avisar
         if (validationSuccess.includes('passwords')) {
           throw new Error(`Error al re-encriptar los passwords: ${error.message}`);
+        }
+      }
+    }
+
+    // Re-encriptar documentos con clave nueva (si existen)
+    let reencryptedDocuments = false;
+    const documentsData = localStorage.getItem('documents_encrypted');
+    if (documentsData) {
+      try {
+        const decrypted = await this.decryptData(JSON.parse(documentsData), oldKey);
+        const encrypted = await this.encryptData(decrypted, newKey);
+        const wrote = setVaultEncryptedItem('documents_encrypted', JSON.stringify(encrypted));
+        if (!wrote.ok) {
+          throw new Error(`Re-encriptar documentos rechazado: ${wrote.reason}`);
+        }
+        reencryptedDocuments = true;
+        console.log('✅ Documentos re-encriptados correctamente');
+      } catch (error) {
+        console.error('❌ Error re-encriptando documentos:', error);
+        if (validationSuccess.includes('documents')) {
+          throw new Error(`Error al re-encriptar los documentos: ${error.message}`);
         }
       }
     }
@@ -767,7 +814,7 @@ class SecureStorage {
     }
 
     // Verificar que al menos algo se re-encriptó o no había nada que re-encriptar
-    if (!reencryptedConnections && !reencryptedPasswords && !reencryptedSessions) {
+    if (!reencryptedConnections && !reencryptedPasswords && !reencryptedDocuments && !reencryptedSessions) {
       console.log('ℹ️ No había datos para re-encriptar');
     }
 

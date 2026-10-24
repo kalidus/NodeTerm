@@ -30,8 +30,23 @@ import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
+import localStorageSyncService from '../services/LocalStorageSyncService';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
+
+function waitForLocalStorageSyncReady() {
+  if (localStorageSyncService.isSyncReady()) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const onReady = () => {
+      window.removeEventListener('localstorage-sync-ready', onReady);
+      resolve();
+    };
+    window.addEventListener('localstorage-sync-ready', onReady);
+  });
+}
 
 // Skeleton loader para simular árbol de passwords de forma premium
 const PasswordSkeleton = () => {
@@ -229,10 +244,13 @@ const PasswordManagerSidebar = ({
   const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
-  // CARGAR passwords (con o sin encriptación)
+  // CARGAR passwords (con o sin encriptación) — tras sync, para no cifrar [] sobre el sidecar
   useEffect(() => {
+    let cancelled = false;
     const loadPasswords = async () => {
       try {
+        await waitForLocalStorageSyncReady();
+        if (cancelled) return;
         if (masterKey && secureStorage) {
           // CON master key: Cargar encriptado
           const encryptedData = localStorage.getItem('passwords_encrypted');
@@ -242,7 +260,7 @@ const PasswordManagerSidebar = ({
               JSON.parse(encryptedData),
               masterKey
             );
-            setPasswordNodes(decrypted);
+            if (!cancelled) setPasswordNodes(Array.isArray(decrypted) ? decrypted : []);
           } else {
             // Migración: Si hay datos sin encriptar, encriptarlos
             const plainData = localStorage.getItem('passwordManagerNodes');
@@ -251,13 +269,15 @@ const PasswordManagerSidebar = ({
               
               // Encriptar y guardar
               const encrypted = await secureStorage.encryptData(parsed, masterKey);
-              localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+              const encStr = JSON.stringify(encrypted);
+              const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
+              if (wrote.ok) {
+                localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
+                localStorage.removeItem('passwordManagerNodes');
+              }
               
-              // Eliminar datos sin encriptar
-              localStorage.removeItem('passwordManagerNodes');
-              
-              setPasswordNodes(parsed);
-            } else {
+              if (!cancelled) setPasswordNodes(parsed);
+            } else if (!cancelled) {
               setPasswordNodes([]);
             }
           }
@@ -265,22 +285,25 @@ const PasswordManagerSidebar = ({
           // SIN master key: Funciona como antes
           const saved = localStorage.getItem('passwordManagerNodes');
           if (saved) {
-            setPasswordNodes(JSON.parse(saved));
-          } else {
+            if (!cancelled) setPasswordNodes(JSON.parse(saved));
+          } else if (!cancelled) {
             setPasswordNodes([]);
           }
         }
       } catch (error) {
         console.error('Error loading passwords:', error);
-        setPasswordNodes([]);
+        if (!cancelled) setPasswordNodes([]);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadPasswords();
     window.addEventListener('passwords-storage-updated', loadPasswords);
-    return () => window.removeEventListener('passwords-storage-updated', loadPasswords);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('passwords-storage-updated', loadPasswords);
+    };
   }, [masterKey, secureStorage]);
 
   // GUARDAR passwords (con o sin encriptación)
@@ -302,7 +325,16 @@ const PasswordManagerSidebar = ({
         if (masterKey && secureStorage) {
           // CON master key: Guardar encriptado
           const encrypted = await secureStorage.encryptData(passwordNodes, masterKey);
-          localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+          const encStr = JSON.stringify(encrypted);
+          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
+          if (!wrote.ok) {
+            console.error(
+              '[PasswordVault] Guardado rechazado:',
+              wrote.reason || 'unknown'
+            );
+            return;
+          }
+          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
           
           // Limpiar datos sin encriptar
           localStorage.removeItem('passwordManagerNodes');

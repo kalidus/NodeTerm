@@ -109,11 +109,68 @@ describe('vault-sidecar', () => {
     const without = vaultSidecar.stripVaultKeysFromObject(parsed);
     const merged = vaultSidecar.mergeVaultSidecarsIntoData(without);
     assert.ok(merged.connections_encrypted);
-    const again = vaultSidecar.migrateEmbeddedVaultToSidecars({
-      connections_encrypted: makeV2Json()
+    // Mismos bytes → no escribe de nuevo
+    assert.strictEqual(vaultSidecar.migrateEmbeddedVaultToSidecars(parsed), false);
+  });
+
+  it('migrateEmbeddedVaultToSidecars grows over tiny wiped sidecar', () => {
+    const tinyJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(16),
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('passwords_encrypted', tinyJson), true);
+    const filePath = vaultSidecar.sidecarPathForKey('passwords_encrypted');
+    const tinyLen = fs.statSync(filePath).size;
+
+    const bigJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(4096),
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(
+      vaultSidecar.migrateEmbeddedVaultToSidecars({ passwords_encrypted: bigJson }),
+      true
+    );
+    assert.ok(fs.statSync(filePath).size > tinyLen);
+  });
+
+  it('extractAndPersist does not set wroteVault when shrink is refused', () => {
+    const bigJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(4096),
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('passwords_encrypted', bigJson), true);
+    const beforeLen = fs.statSync(vaultSidecar.sidecarPathForKey('passwords_encrypted')).size;
+
+    const tinyJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(16),
+        timestamp: 0
+      })
+    );
+    const { wroteVault, settingsData } = vaultSidecar.extractAndPersistVaultSidecars({
+      ui_theme: 'dark',
+      passwords_encrypted: tinyJson
     });
-    // Sidecar already exists → no re-migrate
-    assert.strictEqual(again, false);
+    assert.strictEqual(wroteVault, false);
+    assert.strictEqual(settingsData.passwords_encrypted, undefined);
+    assert.strictEqual(
+      fs.statSync(vaultSidecar.sidecarPathForKey('passwords_encrypted')).size,
+      beforeLen
+    );
   });
 
   it('writeVaultSidecar does not bump mtime when bytes are unchanged', () => {
@@ -134,4 +191,37 @@ describe('vault-sidecar', () => {
       /Invalid vault sidecar magic/
     );
   });
+
+  it('writeVaultSidecar refuses catastrophic shrink unless allowShrink', () => {
+    const bigData = crypto.randomBytes(4096);
+    const bigJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: bigData,
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('passwords_encrypted', bigJson), true);
+    const filePath = vaultSidecar.sidecarPathForKey('passwords_encrypted');
+    const beforeLen = fs.statSync(filePath).size;
+
+    const tinyJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(16),
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('passwords_encrypted', tinyJson), false);
+    assert.strictEqual(fs.statSync(filePath).size, beforeLen);
+
+    assert.strictEqual(
+      vaultSidecar.writeVaultSidecar('passwords_encrypted', tinyJson, { allowShrink: true }),
+      true
+    );
+    assert.ok(fs.statSync(filePath).size < beforeLen);
+  });
 });
+

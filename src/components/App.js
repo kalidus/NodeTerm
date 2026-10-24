@@ -5,6 +5,7 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
@@ -2174,6 +2175,17 @@ const App = () => {
   // Función para cargar nodos (centralizada para permitir recargas externas)
   const loadNodes = useCallback(async () => {
     try {
+      // Evitar migrar TREE_DATA→encrypted o defaults antes de hidratar sidecars
+      if (window.electron?.appdata && !localStorageSyncService.isSyncReady()) {
+        await new Promise((resolve) => {
+          const onReady = () => {
+            window.removeEventListener('localstorage-sync-ready', onReady);
+            resolve();
+          };
+          window.addEventListener('localstorage-sync-ready', onReady);
+        });
+      }
+
       const encryptedData = localStorage.getItem('connections_encrypted');
       const isCacheHit = encryptedData && 
                          encryptedData === lastDecryptedDataStr && 
@@ -2218,6 +2230,35 @@ const App = () => {
             console.error('[loadNodes] Decryption failed');
           }
         } else {
+          // Tras sync: preferir sidecar en disco antes de migrar TREE_DATA o defaults
+          if (window.electron?.appdata?.getVault) {
+            try {
+              const fromDisk = await window.electron.appdata.getVault('connections_encrypted');
+              if (fromDisk) {
+                const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
+                if (wroteDisk.ok) {
+                  const decryptedDisk = await secureStorage.decryptData(
+                    JSON.parse(fromDisk),
+                    masterKey
+                  );
+                  if (decryptedDisk) {
+                    const migratedDisk = migrateWallixBastionInTree(decryptedDisk);
+                    isExternalReloadRef.current = true;
+                    setNodes(migratedDisk);
+                    hasLoadedNodesRef.current = true;
+                    lastDecryptedDataStr = fromDisk;
+                    lastDecryptedKey = masterKey;
+                    lastDecryptedResult = decryptedDisk;
+                    lastMigratedResult = migratedDisk;
+                    return;
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('[loadNodes] getVault connections falló:', e?.message || e);
+            }
+          }
+
           // Migración: Si no hay encriptado pero hay datos planos, encriptarlos
           const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
           if (savedNodes) {
@@ -2225,8 +2266,12 @@ const App = () => {
             const migratedNodes = Array.isArray(parsed) ? parsed : [parsed];
             
             const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
-            localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
-            localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+            const encStr = JSON.stringify(encrypted);
+            const wrote = setVaultEncryptedItem('connections_encrypted', encStr);
+            if (wrote.ok) {
+              localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+              localStorageSyncService.debouncedSync({ connections_encrypted: encStr });
+            }
             isExternalReloadRef.current = true;
             setNodes(migrateWallixBastionInTree(migratedNodes));
             hasLoadedNodesRef.current = true;
@@ -2315,7 +2360,11 @@ const App = () => {
            // CON master key: Guardar encriptado
           const encrypted = await secureStorage.encryptData(nodes, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
-          localStorage.setItem('connections_encrypted', encryptedStr);
+          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr);
+          if (!wrote.ok) {
+            console.error('[App] Guardado conexiones rechazado:', wrote.reason);
+            return;
+          }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
 
           // Actualizar caché para evitar re-desencriptar en la siguiente comprobación

@@ -74,7 +74,23 @@ function binaryToEncryptedJsonString(buf) {
   return JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 0 }));
 }
 
-function writeVaultSidecar(storageKey, jsonStr) {
+/**
+ * Evita que un blob vacío/casi vacío (p. ej. encrypt([])) pise un vault real.
+ * Umbral: existente >= 2KB y nuevo < 25% del tamaño actual.
+ */
+function isCatastrophicVaultShrink(existingLen, incomingLen) {
+  if (!existingLen || existingLen < 2048) return false;
+  if (!incomingLen || incomingLen >= existingLen) return false;
+  return incomingLen < existingLen * 0.25;
+}
+
+/**
+ * @param {string} storageKey
+ * @param {string} jsonStr
+ * @param {{ allowShrink?: boolean }} [options]
+ * @returns {boolean} true si escribió
+ */
+function writeVaultSidecar(storageKey, jsonStr, options = {}) {
   const filePath = sidecarPathForKey(storageKey);
   if (!filePath || jsonStr == null || jsonStr === '') {
     return false;
@@ -85,6 +101,16 @@ function writeVaultSidecar(storageKey, jsonStr) {
     try {
       const existing = fs.readFileSync(filePath);
       if (existing.equals(binary)) {
+        return false;
+      }
+      if (
+        !options.allowShrink &&
+        isCatastrophicVaultShrink(existing.length, binary.length)
+      ) {
+        console.error(
+          `[VaultSidecar] RECHAZADO shrink catastrófico de ${storageKey}: ` +
+            `${existing.length} → ${binary.length} bytes. Se conserva el sidecar actual.`
+        );
         return false;
       }
     } catch (_) {
@@ -153,8 +179,11 @@ function extractAndPersistVaultSidecars(data) {
       continue;
     }
     try {
-      writeVaultSidecar(key, value);
-      wroteVault = true;
+      const wrote = writeVaultSidecar(key, value);
+      if (wrote) {
+        wroteVault = true;
+      }
+      // Shrink rechazado: sidecar intacto; no re-embeber el valor (posiblemente vacío) en JSON
     } catch (err) {
       console.error(`[VaultSidecar] Error escribiendo ${key}:`, err.message || err);
       // Conservar en JSON si falla el sidecar para no perder datos
@@ -166,8 +195,8 @@ function extractAndPersistVaultSidecars(data) {
 }
 
 /**
- * Si app-data aún tiene vault embebido y no hay sidecar (o queremos re-migrar),
- * escribe sidecars desde el objeto parseado. No borra del objeto en memoria aquí.
+ * Si app-data aún tiene vault embebido, escribe/actualiza sidecars.
+ * writeVaultSidecar: no-op si bytes iguales; rechaza shrink; permite crecer sobre sidecar tiny.
  */
 function migrateEmbeddedVaultToSidecars(parsed) {
   if (!parsed || typeof parsed !== 'object') {
@@ -177,13 +206,10 @@ function migrateEmbeddedVaultToSidecars(parsed) {
   for (const key of VAULT_SIDECAR_KEYS) {
     const embedded = parsed[key];
     if (embedded == null || embedded === '') continue;
-    const filePath = sidecarPathForKey(key);
-    if (filePath && fs.existsSync(filePath)) {
-      continue;
-    }
     try {
-      writeVaultSidecar(key, embedded);
-      migrated = true;
+      if (writeVaultSidecar(key, embedded)) {
+        migrated = true;
+      }
     } catch (err) {
       console.warn(`[VaultSidecar] Migración ${key} fallida:`, err.message || err);
     }
@@ -248,6 +274,7 @@ module.exports = {
   encryptedJsonStringToBinary,
   binaryToEncryptedJsonString,
   writeVaultSidecar,
+  isCatastrophicVaultShrink,
   readVaultSidecar,
   deleteVaultSidecar,
   mergeVaultSidecarsIntoData,

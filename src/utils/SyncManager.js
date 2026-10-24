@@ -5,6 +5,8 @@ import SessionManager from '../services/SessionManager';
 // Importar theme managers para recargar temas tras sincronización
 import { themeManager } from './themeManager';
 import { statusBarThemeManager } from './statusBarThemeManager';
+import { setVaultEncryptedItem } from '../shared/vault-write';
+import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
 
 /** Claves empaquetadas en JSON en Nextcloud (mismos nombres en localStorage) */
 const NC_BUNDLE_DOCUMENTS = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
@@ -144,8 +146,16 @@ function ncApplyPayload(data, keys, skipKey = {}) {
   keys.forEach((k) => {
     if (!Object.prototype.hasOwnProperty.call(data, k) || data[k] == null) return;
     if (skipKey[k]?.()) return;
-    const val = data[k];
-    localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+    const val = typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]);
+    if (VAULT_LOCAL_STORAGE_KEYS.includes(k)) {
+      const wrote = setVaultEncryptedItem(k, val);
+      if (!wrote.ok) {
+        console.error(`[SYNC] Apply vault ${k} rechazado:`, wrote.reason);
+        return;
+      }
+    } else {
+      localStorage.setItem(k, val);
+    }
     applied = true;
   });
   return applied;
@@ -780,18 +790,23 @@ class SyncManager {
       try {
         const connectionsData = await this.nextcloudService.downloadFile(NC_FILE_CONNECTIONS_VAULT);
         if (connectionsData) {
-          connectionsVaultApplied = true;
-          localStorage.setItem('connections_encrypted', connectionsData);
-          localStorage.removeItem('basicapp2_tree_data');
+          const wrote = setVaultEncryptedItem('connections_encrypted', connectionsData);
+          if (!wrote.ok) {
+            console.error('[SYNC] Vault conexiones nube rechazado:', wrote.reason);
+            connectionsResult = { success: false, error: wrote.reason };
+          } else {
+            connectionsVaultApplied = true;
+            localStorage.removeItem('basicapp2_tree_data');
 
-          const masterKey = await this.secureStorage.getMasterKey();
-          connectionsResult = {
-            success: true,
-            message: masterKey
-              ? 'Conexiones descargadas desde vault cifrado'
-              : 'Vault de conexiones descargado; configura la misma clave maestra para ver credenciales'
-          };
-          dispatchConnectionsSyncedFromCloud({ unlocked: !!masterKey });
+            const masterKey = await this.secureStorage.getMasterKey();
+            connectionsResult = {
+              success: true,
+              message: masterKey
+                ? 'Conexiones descargadas desde vault cifrado'
+                : 'Vault de conexiones descargado; configura la misma clave maestra para ver credenciales'
+            };
+            dispatchConnectionsSyncedFromCloud({ unlocked: !!masterKey });
+          }
         }
       } catch (error) {
         console.warn('Error descargando vault de conexiones:', error);
@@ -849,8 +864,12 @@ class SyncManager {
       try {
         const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
         if (passwordsData) {
+          const wrotePw = setVaultEncryptedItem('passwords_encrypted', passwordsData);
+          if (!wrotePw.ok) {
+            console.error('[SYNC] Vault passwords nube rechazado:', wrotePw.reason);
+            passwordsResult = { success: false, error: wrotePw.reason };
+          } else {
           passwordsVaultFileApplied = true;
-          localStorage.setItem('passwords_encrypted', passwordsData);
           localStorage.removeItem('passwordManagerNodes');
 
           let importCount = null;
@@ -900,6 +919,7 @@ class SyncManager {
             count: importCount,
             silent: false
           });
+          }
         } else {
           passwordsResult = {
             success: true,
