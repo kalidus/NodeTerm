@@ -447,8 +447,10 @@ const CygwinHandlers = {
 
   // Limpiar todos los procesos (al cerrar la app / antes de desinstalar)
   cleanup: () => {
-    console.log(`[Cygwin] Limpiando ${Object.keys(cygwinProcesses).length} procesos`);
-    Object.keys(cygwinProcesses).forEach((tabId) => {
+    const tabIds = Object.keys(cygwinProcesses);
+    if (tabIds.length === 0) return;
+    console.log(`[Cygwin] Limpiando ${tabIds.length} procesos`);
+    tabIds.forEach((tabId) => {
       CygwinHandlers.stop(tabId);
     });
   },
