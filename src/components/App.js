@@ -2236,19 +2236,20 @@ const App = () => {
       setNodes(getDefaultNodes());
       hasLoadedNodesRef.current = true;
     } finally {
-      // Si el servicio de sync aún no se ha inicializado y estamos en electron,
-      // no quitar el loading todavía (esperar a que esté listo)
-      if (window.electron?.appdata && !localStorageSyncService._initialized) {
-        // Seguir en loading
+      const hasEncrypted = localStorage.getItem('connections_encrypted');
+      // Vault local + masterKey: mostrar árbol sin esperar sync de app-data/sidecars.
+      // Solo esperar sync si aún no hay vault en localStorage ni nodos cargados.
+      if (hasEncrypted && !masterKey) {
+        // Seguir en skeleton hasta desbloquear
+      } else if (
+        window.electron?.appdata &&
+        !localStorageSyncService._initialized &&
+        !hasEncrypted &&
+        !hasLoadedNodesRef.current
+      ) {
+        // Seguir en loading hasta primer sync
       } else {
-        // Si hay vault cifrado pero no tenemos masterKey, no podemos mostrar las conexiones aún.
-        // Mantenemos el estado de carga (skeleton) para evitar un flash del árbol vacío/default
-        const hasEncrypted = localStorage.getItem('connections_encrypted');
-        if (hasEncrypted && !masterKey) {
-          // Seguir en loading hasta desbloquear
-        } else {
-          setIsLoadingConnections(false);
-        }
+        setIsLoadingConnections(false);
       }
     }
   }, [masterKey, secureStorage, getDefaultNodes]);

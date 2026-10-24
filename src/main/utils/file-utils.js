@@ -156,7 +156,7 @@ function decryptStringSecurely(str) {
  * Los valores sensibles ya van cifrados dentro del payload (connections_encrypted, etc.).
  */
 function serializeAppDataFile(data) {
-  return JSON.stringify(data, null, 2);
+  return JSON.stringify(data);
 }
 
 /**

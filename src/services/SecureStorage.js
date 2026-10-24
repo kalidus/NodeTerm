@@ -1,4 +1,5 @@
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+import { toEncryptedV2, decodeEncryptedFields } from '../shared/vault-blob-encoding';
 
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
@@ -7,6 +8,7 @@ import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
  * - PBKDF2 para derivación de claves
  * - Protección de clave maestra en localStorage
  * - Soporte para portabilidad entre dispositivos
+ * - Blobs v2 en base64 (lectura dual de legacy number[])
  */
 
 class SecureStorage {
@@ -113,22 +115,20 @@ class SecureStorage {
       enc.encode(jsonData)
     );
 
-    return {
-      salt: Array.from(salt),
-      iv: Array.from(iv),
-      data: Array.from(new Uint8Array(encrypted)),
+    return toEncryptedV2({
+      salt,
+      iv,
+      data: new Uint8Array(encrypted),
       timestamp: Date.now()
-    };
+    });
   }
 
   /**
-   * Descifra datos usando AES-GCM
+   * Descifra datos usando AES-GCM (v2 base64 o legacy number[])
    */
   async decryptData(encryptedObj, password) {
     const dec = new TextDecoder();
-    const salt = new Uint8Array(encryptedObj.salt);
-    const iv = new Uint8Array(encryptedObj.iv);
-    const data = new Uint8Array(encryptedObj.data);
+    const { salt, iv, data } = decodeEncryptedFields(encryptedObj);
 
     const key = await this.deriveKey(password, salt);
 
@@ -159,12 +159,12 @@ class SecureStorage {
       enc.encode(payload)
     );
 
-    return {
-      salt: Array.from(salt),
-      iv: Array.from(iv),
-      data: Array.from(new Uint8Array(encrypted)),
+    return toEncryptedV2({
+      salt,
+      iv,
+      data: new Uint8Array(encrypted),
       timestamp: Date.now()
-    };
+    });
   }
 
   /**
@@ -176,9 +176,7 @@ class SecureStorage {
     }
     try {
       const dec = new TextDecoder();
-      const salt = new Uint8Array(verifier.salt);
-      const iv = new Uint8Array(verifier.iv);
-      const data = new Uint8Array(verifier.data);
+      const { salt, iv, data } = decodeEncryptedFields(verifier);
 
       const key = await this.deriveKey(password, salt);
       const decrypted = await window.crypto.subtle.decrypt(

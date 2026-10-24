@@ -1,7 +1,8 @@
 /**
  * Handlers para sincronizacion de localStorage entre instancias
  *
- * Las instancias secundarias usan UserData temporal y leen app-data.json compartido.
+ * Settings viven en app-data.json; vault cifrado en vault/*.bin (sidecars).
+ * Las instancias secundarias usan UserData temporal y leen estos ficheros compartidos.
  */
 
 const { ipcMain, BrowserWindow } = require('electron');
@@ -14,6 +15,16 @@ const {
   isAppDataPlainJson
 } = require('../utils/file-utils');
 const { SYNC_KEYS } = require('../utils/sync-keys');
+const {
+  mergeVaultSidecarsIntoData,
+  extractAndPersistVaultSidecars,
+  migrateEmbeddedVaultToSidecars,
+  stripVaultKeysFromObject,
+  getVaultSidecarsMtimeMax,
+  listVaultSidecarBasenames,
+  ensureVaultDir,
+  getVaultDir
+} = require('../utils/vault-sidecar');
 
 const APP_DATA_PATH = path.join(getNodeTermDataDir(), 'app-data.json');
 const APP_DATA_DIR = path.dirname(APP_DATA_PATH);
@@ -22,13 +33,14 @@ const READ_MAX_RETRIES = 8;
 const WATCH_FALLBACK_MS = 15000;
 
 let cachedData = null;
-let cachedMtime = 0;
+let cachedStamp = 0;
 let watcher = null;
+let vaultWatcher = null;
 let watchFallbackTimer = null;
 let watchNotifyTimer = null;
 let watchStarted = false;
 
-function getFileMtime() {
+function getAppDataMtime() {
   try {
     if (!fs.existsSync(APP_DATA_PATH)) return 0;
     return fs.statSync(APP_DATA_PATH).mtimeMs;
@@ -37,45 +49,60 @@ function getFileMtime() {
   }
 }
 
+function getContentStamp() {
+  return Math.max(getAppDataMtime(), getVaultSidecarsMtimeMax());
+}
+
 function invalidateAppDataCache() {
   cachedData = null;
-  cachedMtime = 0;
+  cachedStamp = 0;
 }
 
 function readAppDataFromDisk() {
-  if (!fs.existsSync(APP_DATA_PATH)) {
-    return null;
-  }
-  const raw = fs.readFileSync(APP_DATA_PATH, 'utf8');
-  const parsed = parseAppDataFileContent(raw);
+  let parsed = null;
+  const isSecondary = process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true';
 
-  // 🛡️ SEGURIDAD: Purgar nodeterm_master_key si existía en versiones anteriores
-  let needsRewrite = false;
-  if (parsed && parsed.nodeterm_master_key) {
-    delete parsed.nodeterm_master_key;
-    needsRewrite = true;
-  }
+  if (fs.existsSync(APP_DATA_PATH)) {
+    const raw = fs.readFileSync(APP_DATA_PATH, 'utf8');
+    parsed = parseAppDataFileContent(raw);
 
-  if ((!isAppDataPlainJson(raw) || needsRewrite) && process.env.NODETERM_IS_SECONDARY_INSTANCE !== 'true') {
-    try {
-      fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(parsed), { encoding: 'utf8', mode: 0o600 });
-      console.log('[AppData] Normalizado app-data.json (modo 0o600, sin clave maestra)');
-    } catch (migrateErr) {
-      console.warn('[AppData] No se pudo guardar app-data.json saneado:', migrateErr.message);
+    let needsRewrite = false;
+    if (parsed && parsed.nodeterm_master_key) {
+      delete parsed.nodeterm_master_key;
+      needsRewrite = true;
+    }
+
+    // Solo primaria escribe sidecars desde keys embebidas; merge sigue pudiendo usar embebido.
+    if (!isSecondary) {
+      const migratedVault = migrateEmbeddedVaultToSidecars(parsed);
+      if (migratedVault) {
+        needsRewrite = true;
+      }
+    }
+
+    if ((!isAppDataPlainJson(raw) || needsRewrite) && !isSecondary) {
+      try {
+        const toWrite = stripVaultKeysFromObject(parsed);
+        fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(toWrite), { encoding: 'utf8', mode: 0o600 });
+        console.log('[AppData] Normalizado app-data.json (compacto, vault en sidecars)');
+      } catch (migrateErr) {
+        console.warn('[AppData] No se pudo guardar app-data.json saneado:', migrateErr.message);
+      }
     }
   }
 
-  return parsed;
+  // Sidecar gana si existe; si no, se conservan keys embebidas del JSON.
+  return mergeVaultSidecarsIntoData(parsed);
 }
 
 function getAppDataCached() {
-  const mtime = getFileMtime();
-  if (cachedData && mtime && mtime === cachedMtime) {
+  const stamp = getContentStamp();
+  if (cachedData && stamp && stamp === cachedStamp) {
     return cachedData;
   }
   const parsed = readAppDataFromDisk();
   cachedData = parsed;
-  cachedMtime = mtime;
+  cachedStamp = stamp || getContentStamp();
   return parsed;
 }
 
@@ -94,8 +121,8 @@ function scheduleWatchNotify() {
   if (watchNotifyTimer) clearTimeout(watchNotifyTimer);
   watchNotifyTimer = setTimeout(() => {
     watchNotifyTimer = null;
-    const mtime = getFileMtime();
-    if (mtime && cachedMtime && mtime === cachedMtime) {
+    const stamp = getContentStamp();
+    if (stamp && cachedStamp && stamp === cachedStamp) {
       return;
     }
     invalidateAppDataCache();
@@ -106,11 +133,23 @@ function scheduleWatchNotify() {
 function startWatchFallback() {
   if (watchFallbackTimer) return;
   watchFallbackTimer = setInterval(() => {
-    const mtime = getFileMtime();
-    if (mtime && cachedMtime && mtime === cachedMtime) return;
+    const stamp = getContentStamp();
+    if (stamp && cachedStamp && stamp === cachedStamp) return;
     invalidateAppDataCache();
     notifyAppDataChanged();
   }, WATCH_FALLBACK_MS);
+}
+
+function isWatchedAppDataName(name) {
+  if (!name) return true;
+  return name === 'app-data.json' || name.startsWith('app-data.');
+}
+
+function isWatchedVaultName(name) {
+  if (!name) return true;
+  const basenames = listVaultSidecarBasenames();
+  if (basenames.includes(name)) return true;
+  return name.endsWith('.bin') || name.endsWith('.tmp');
 }
 
 function startAppDataWatch() {
@@ -123,12 +162,28 @@ function startAppDataWatch() {
     }
     watcher = fs.watch(APP_DATA_DIR, { persistent: false }, (_event, filename) => {
       const name = filename ? String(filename) : '';
-      if (name && name !== 'app-data.json' && !name.startsWith('app-data.')) {
+      if (name && !isWatchedAppDataName(name) && name !== 'vault') {
         return;
       }
       scheduleWatchNotify();
     });
     watcher.on('error', () => {
+      startWatchFallback();
+    });
+  } catch (_) {
+    startWatchFallback();
+  }
+
+  try {
+    ensureVaultDir();
+    vaultWatcher = fs.watch(getVaultDir(), { persistent: false }, (_event, filename) => {
+      const name = filename ? String(filename) : '';
+      if (name && !isWatchedVaultName(name)) {
+        return;
+      }
+      scheduleWatchNotify();
+    });
+    vaultWatcher.on('error', () => {
       startWatchFallback();
     });
   } catch (_) {
@@ -157,14 +212,16 @@ function registerAppDataHandlers(dependencies) {
     let retries = READ_MAX_RETRIES;
     while (retries > 0) {
       try {
-        if (!fs.existsSync(APP_DATA_PATH)) {
+        const hasAppData = fs.existsSync(APP_DATA_PATH);
+        const hasVault = getVaultSidecarsMtimeMax() > 0;
+        if (!hasAppData && !hasVault) {
           return null;
         }
         return getAppDataCached();
       } catch (e) {
         invalidateAppDataCache();
         console.warn(
-          `[AppData] Error parseando app-data.json (intento ${READ_MAX_RETRIES - retries + 1}/${READ_MAX_RETRIES}):`,
+          `[AppData] Error leyendo datos compartidos (intento ${READ_MAX_RETRIES - retries + 1}/${READ_MAX_RETRIES}):`,
           e.message || e
         );
         retries--;
@@ -182,13 +239,14 @@ function registerAppDataHandlers(dependencies) {
         ...data,
         _syncedAt: new Date().toISOString()
       };
-      // 🛡️ SEGURIDAD: Nunca persistir la clave maestra en el fichero compartido
       delete dataWithMeta.nodeterm_master_key;
+
+      const { settingsData } = extractAndPersistVaultSidecars(dataWithMeta);
 
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tempPath = path.join(APP_DATA_DIR, `app-data.${uniqueId}.tmp`);
 
-      const serialized = serializeAppDataFile(dataWithMeta);
+      const serialized = serializeAppDataFile(settingsData);
       fs.writeFileSync(tempPath, serialized, { encoding: 'utf8', mode: 0o600 });
 
       let renameRetries = 5;
@@ -207,8 +265,8 @@ function registerAppDataHandlers(dependencies) {
         }
       }
 
-      cachedData = dataWithMeta;
-      cachedMtime = getFileMtime();
+      cachedData = mergeVaultSidecarsIntoData(settingsData);
+      cachedStamp = getContentStamp();
       notifyAppDataChanged();
       return { success: true };
     } catch (error) {
@@ -220,7 +278,7 @@ function registerAppDataHandlers(dependencies) {
 
   safeHandle('appdata:get-last-modified', async () => {
     try {
-      return getFileMtime();
+      return getContentStamp();
     } catch (error) {
       console.error('Error obteniendo mtime:', error);
       return 0;

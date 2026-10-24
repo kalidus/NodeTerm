@@ -226,7 +226,10 @@ class LocalStorageSyncService {
                     needsWriteBack = true;
                     continue;
                 }
-                // Sobrescribir siempre al inicializar para asegurar sync
+                // Skip idéntico: evita re-setItem del vault gordo y un segundo loadNodes innecesario
+                if (localVal === normalized[key]) {
+                    continue;
+                }
                 localStorage.setItem(key, normalized[key]);
                 importedCount++;
             }
