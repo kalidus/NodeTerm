@@ -10,7 +10,13 @@ import {
   onIconThemeLoaded
 } from '../../../../themes/icon-themes';
 import { treeThemeOptions } from '../../../../themes/tree-themes';
-import { sessionActionIconThemes } from '../../../../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  sessionActionIconThemeOptions,
+  ensureSessionActionIconTheme,
+  preloadSessionActionIconThemes,
+  onSessionActionIconThemeLoaded
+} from '../../../../themes/session-action-icons';
 import { explorerFonts } from '../../../../themes';
 import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 import localStorageSyncService from '../../../../services/LocalStorageSyncService';
@@ -34,6 +40,7 @@ export const SessionExplorerSubTab = ({
 }) => {
   const { t } = useTranslation('settings');
   const [iconPackTick, setIconPackTick] = useState(0);
+  const [actionPackTick, setActionPackTick] = useState(0);
 
   useEffect(() => {
     ensureIconTheme(iconThemeSidebar);
@@ -41,6 +48,13 @@ export const SessionExplorerSubTab = ({
     return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
   }, [iconThemeSidebar]);
   void iconPackTick;
+
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+    preloadSessionActionIconThemes();
+    return onSessionActionIconThemeLoaded(() => setActionPackTick((v) => v + 1));
+  }, [sessionActionIconTheme]);
+  void actionPackTick;
 
   return (
     <div className="general-settings-container" style={{ width: '100%', maxWidth: '100%' }}>
@@ -342,12 +356,9 @@ export const SessionExplorerSubTab = ({
               <Dropdown
                 id="session-action-icon-theme"
                 value={sessionActionIconTheme || 'modern'}
-                options={Object.entries(sessionActionIconThemes).map(([key, theme]) => ({
-                  label: theme.name,
-                  value: key,
-                  description: theme.description
-                }))}
+                options={sessionActionIconThemeOptions}
                 onChange={(e) => {
+                  ensureSessionActionIconTheme(e.value);
                   if (setSessionActionIconTheme) {
                     setSessionActionIconTheme(e.value);
                   }

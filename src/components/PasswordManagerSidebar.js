@@ -16,7 +16,11 @@ import { appConfirm } from './ui/AppConfirm';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  ensureSessionActionIconTheme,
+  onSessionActionIconThemeLoaded
+} from '../themes/session-action-icons';
 import { CRYPTO_NETWORK_OPTIONS, getNetworkById } from '../utils/cryptoNetworks';
 import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
 import {
@@ -95,6 +99,18 @@ const PasswordManagerSidebar = ({
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actionPackVersion, setActionPackVersion] = useState(0);
+
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+  }, [sessionActionIconTheme]);
+  useEffect(() => {
+    return onSessionActionIconThemeLoaded((id) => {
+      if ((sessionActionIconTheme || 'modern') !== id) return;
+      setActionPackVersion((v) => v + 1);
+    });
+  }, [sessionActionIconTheme]);
+  void actionPackVersion;
 
   useEffect(() => {
     setFavoriteSourceTrees({ passwordNodes });

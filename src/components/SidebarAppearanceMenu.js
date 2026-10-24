@@ -11,7 +11,13 @@ import {
   preloadIconThemes,
   onIconThemeLoaded
 } from '../themes/icon-themes';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  sessionActionIconThemeMeta,
+  ensureSessionActionIconTheme,
+  preloadSessionActionIconThemes,
+  onSessionActionIconThemeLoaded
+} from '../themes/session-action-icons';
 import { explorerFonts } from '../themes';
 import '../styles/components/tree-themes.css';
 
@@ -43,7 +49,12 @@ const SidebarAppearanceMenu = ({
   const panelRef = useRef(null);
   const [settingsView, setSettingsView] = useState('choice');
   const [iconPackTick, setIconPackTick] = useState(0);
+  const [actionPackTick, setActionPackTick] = useState(0);
   const themeIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
+
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+  }, [sessionActionIconTheme]);
 
   useEffect(() => {
     if (settingsView !== 'treeIcons') return undefined;
@@ -51,6 +62,13 @@ const SidebarAppearanceMenu = ({
     return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
   }, [settingsView]);
   void iconPackTick;
+
+  useEffect(() => {
+    if (settingsView !== 'actionIcons') return undefined;
+    preloadSessionActionIconThemes();
+    return onSessionActionIconThemeLoaded(() => setActionPackTick((v) => v + 1));
+  }, [settingsView]);
+  void actionPackTick;
 
   return (
     <>
@@ -279,16 +297,25 @@ const SidebarAppearanceMenu = ({
                 <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Iconos de Acción</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {Object.entries(sessionActionIconThemes).map(([id, theme]) => {
+                {sessionActionIconThemeMeta.map(({ id, name, description }) => {
+                  const theme = sessionActionIconThemes[id];
                   const isActive = sessionActionIconTheme === id;
                   return (
                     <div
                       key={id}
-                      onClick={() => setSessionActionIconTheme?.(id)}
+                      onClick={() => {
+                        ensureSessionActionIconTheme(id);
+                        setSessionActionIconTheme?.(id);
+                      }}
                       className="theme-item"
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setSessionActionIconTheme?.(id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          ensureSessionActionIconTheme(id);
+                          setSessionActionIconTheme?.(id);
+                        }
+                      }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
                         cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
@@ -298,12 +325,12 @@ const SidebarAppearanceMenu = ({
                     >
                       <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', flexShrink: 0 }}>
                         <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {theme.icons.newConnection}
+                          {theme?.icons?.newConnection || <i className="pi pi-plus-circle" style={{ color: 'var(--primary-color)' }} />}
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{theme.name}</div>
-                        <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{theme.description || ''}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{name}</div>
+                        <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{description || ''}</div>
                       </div>
                       {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
                     </div>

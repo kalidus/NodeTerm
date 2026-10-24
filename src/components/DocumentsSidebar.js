@@ -6,7 +6,11 @@ import { Tree } from 'primereact/tree';
 import AppDialog from './ui/AppDialog';
 import { appConfirm } from './ui/AppConfirm';
 import { ContextMenu } from 'primereact/contextmenu';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  ensureSessionActionIconTheme,
+  onSessionActionIconThemeLoaded
+} from '../themes/session-action-icons';
 import { iconThemes } from '../themes/icon-themes';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -343,6 +347,18 @@ const DocumentsSidebar = ({
   const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actionPackVersion, setActionPackVersion] = useState(0);
+
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+  }, [sessionActionIconTheme]);
+  useEffect(() => {
+    return onSessionActionIconThemeLoaded((id) => {
+      if ((sessionActionIconTheme || 'modern') !== id) return;
+      setActionPackVersion((v) => v + 1);
+    });
+  }, [sessionActionIconTheme]);
+  void actionPackVersion;
 
   useEffect(() => {
     setFavoriteSourceTrees({ documentNodes });

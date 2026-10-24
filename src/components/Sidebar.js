@@ -10,7 +10,13 @@ import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
-import { sessionActionIconThemes, getDefaultSessionActionIconTheme, newDocumentToolbarIcon } from '../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  getDefaultSessionActionIconTheme,
+  newDocumentToolbarIcon,
+  ensureSessionActionIconTheme,
+  onSessionActionIconThemeLoaded
+} from '../themes/session-action-icons';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import SidebarIconRail from './SidebarIconRail';
@@ -230,6 +236,18 @@ const Sidebar = React.memo(({
     });
   }, [iconTheme]);
   void iconThemePackVersion;
+
+  const [sessionActionPackVersion, setSessionActionPackVersion] = useState(0);
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+  }, [sessionActionIconTheme]);
+  useEffect(() => {
+    return onSessionActionIconThemeLoaded((id) => {
+      if ((sessionActionIconTheme || 'modern') !== id) return;
+      setSessionActionPackVersion((v) => v + 1);
+    });
+  }, [sessionActionIconTheme]);
+  void sessionActionPackVersion;
 
 
 

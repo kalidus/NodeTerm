@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AIClientBrandIcon from './AIClientBrandIcon';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
+import {
+  sessionActionIconThemes,
+  ensureSessionActionIconTheme,
+  onSessionActionIconThemeLoaded
+} from '../themes/session-action-icons';
 import { railIcons } from '../themes/rail-icons';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
@@ -33,6 +37,18 @@ const SidebarIconRail = React.memo(({
   onShowImportWizard,
 }) => {
   const { t } = useTranslation('common');
+  const [actionPackVersion, setActionPackVersion] = useState(0);
+
+  useEffect(() => {
+    ensureSessionActionIconTheme(sessionActionIconTheme);
+  }, [sessionActionIconTheme]);
+  useEffect(() => {
+    return onSessionActionIconThemeLoaded((id) => {
+      if ((sessionActionIconTheme || 'modern') !== id) return;
+      setActionPackVersion((v) => v + 1);
+    });
+  }, [sessionActionIconTheme]);
+  void actionPackVersion;
 
   // Fuente de verdad: evento + localStorage (la prop sola no bastaba para ocultar el icono)
   const [browserAppEnabled, setBrowserAppEnabled] = useState(() => isIntegratedBrowserEnabled());
