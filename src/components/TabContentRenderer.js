@@ -43,7 +43,6 @@ import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword, isFavorite, toggleFavorite } from '../utils/connectionStore';
 import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks';
 
-import { countConnections } from '../utils/connectionCounter';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { TabChunkFallback } from './tabLoaders';
 
@@ -129,12 +128,6 @@ const TabContentRendererInner = React.memo(({
   handleSaveSSHTunnelToSidebar,
   handleTabClose
 }) => {
-  // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
-  const counts = React.useMemo(() => {
-    if (tab.type !== 'home') return null;
-    return countConnections(nodes, rdpTabs);
-  }, [tab.type, nodes, rdpTabs]);
-
   if (tab.type === 'home') {
     return (
       <LazyHomeTab
@@ -156,9 +149,6 @@ const TabContentRendererInner = React.memo(({
           if (onShowFileExplorer) onShowFileExplorer(null);
         }}
         onEditConnection={onEditConnection}
-        sshConnectionsCount={counts?.ssh || 0}
-        foldersCount={counts?.folders || 0}
-        rdpConnectionsCount={counts?.rdp || 0}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
         localLinuxTerminalTheme={localLinuxTerminalTheme}

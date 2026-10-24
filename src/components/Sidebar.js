@@ -439,8 +439,6 @@ const Sidebar = React.memo(({
       return;
     }
     hasWarmedUpRef.current = true;
-    import('./PasswordManagerSidebar').catch(() => {});
-    import('./DocumentsSidebar').catch(() => {});
     import('./ToolsSidebar').catch(() => {});
     import('./LocalFileExplorerSidebar').catch(() => {});
     import('./SettingsSidebar').catch(() => {});
@@ -3388,8 +3386,8 @@ const Sidebar = React.memo(({
         />
       </div>
 
-      {/* Vista de Passwords (Mantenida montada para evitar flashes de descifrado scrypt) */}
-      <div style={{ display: viewMode === 'passwords' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {viewMode === 'passwords' && (
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyPasswordManagerSidebar
             nodes={nodes}
@@ -3419,9 +3417,10 @@ const Sidebar = React.memo(({
           />
         </Suspense>
       </div>
+      )}
 
-      {/* Vista de Documents (Mantenida montada para consistencia y cero lag) */}
-      <div style={{ display: viewMode === 'documents' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {viewMode === 'documents' && (
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazyDocumentsSidebar
             showToast={showToast}
@@ -3450,6 +3449,7 @@ const Sidebar = React.memo(({
           />
         </Suspense>
       </div>
+      )}
 
       {/* Otras vistas dinámicas que no requieren persistencia de estado de carga */}
       {viewMode === 'localExplorer' && (

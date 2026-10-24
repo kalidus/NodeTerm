@@ -39,7 +39,6 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { ContextMenu } from 'primereact/contextmenu';
 import TreeContextMenu from './contextmenus/TreeContextMenu';
 import { themes } from '../themes';
-import { iconThemes } from '../themes/icon-themes';
 
 
 // Componentes modulares de la aplicación

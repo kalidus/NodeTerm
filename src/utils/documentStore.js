@@ -12,11 +12,11 @@ export async function loadDocumentTree(secureStorage, masterKey) {
     if (masterKey && secureStorage) {
       const encryptedData = localStorage.getItem(STORAGE_KEY_TREE);
       if (encryptedData) {
-        const decrypted = await secureStorage.decryptData(
-          JSON.parse(encryptedData),
+        const decrypted = await secureStorage.decryptStorageKeyCached(
+          STORAGE_KEY_TREE,
           masterKey
         );
-        return decrypted;
+        return Array.isArray(decrypted) ? decrypted : [];
       }
       const plainData = localStorage.getItem(STORAGE_KEY_TREE_PLAIN);
       if (plainData) {

@@ -244,8 +244,8 @@ const PasswordManagerSidebar = ({
           const encryptedData = localStorage.getItem('passwords_encrypted');
           
           if (encryptedData) {
-            const decrypted = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
+            const decrypted = await secureStorage.decryptStorageKeyCached(
+              'passwords_encrypted',
               masterKey
             );
             if (!cancelled) setPasswordNodes(Array.isArray(decrypted) ? decrypted : []);
@@ -407,8 +407,8 @@ const PasswordManagerSidebar = ({
         if (masterKey && secureStorage) {
           const encryptedData = localStorage.getItem('passwords_encrypted');
           if (encryptedData) {
-            const decrypted = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
+            const decrypted = await secureStorage.decryptStorageKeyCached(
+              'passwords_encrypted',
               masterKey
             );
             skipSaveFromCloudRef.current = true;

@@ -21,6 +21,12 @@ const loadPrimeReactCss = () => Promise.all([
 ]).catch(() => {});
 const loadPrimeFlex = () => import('primeflex/primeflex.css').catch(() => {});
 const loadLocalFonts = () => import('./styles/fonts.css').catch(() => {});
+const loadDeferredAppCss = () => Promise.all([
+  import('./styles/components/animated-themes.css'),
+  import('./styles/components/dialogs.css'),
+  import('./styles/layout/atelier.css'),
+  import('./styles/layout/mux.css')
+]).catch(() => {});
 import './styles/base/base.css'; // Importamos la nueva base de estilos
 import PrimeReact from 'primereact/api';
 
@@ -58,8 +64,6 @@ if (typeof window !== 'undefined') {
 // Custom styles
 import './styles/main.css';
 import './styles/layout/layouts.css';
-import './styles/layout/atelier.css';
-import './styles/layout/mux.css';
 // Arranque: Inter, JetBrains Mono y Fira Code. El resto de familias locales entra en idle.
 import './styles/fonts-core.css';
 
@@ -260,6 +264,7 @@ const paintApp = () => {
       setTimeout(fn, 0);
     };
     idleCss(loadPrimeReactCss, 500);
+    idleCss(loadDeferredAppCss, 500);
     idleCss(loadPrimeFlex, 3000);
     idleCss(loadLocalFonts, 3500);
   });
