@@ -8,6 +8,27 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.7.9] - 2026-10-25
+
+### Seguridad
+- **Hardening Phases 1–3**: IPC, Guacamole, secretos SSH, webviews, SSRF, Joplin/notas, grabaciones, vault, Docker loopback, MCP y TLS.
+- **Master key**: Restaurar auto-unlock tras la rotura por preload sandboxed.
+
+### Arranque y vault
+- **Cold/warm start**: CSS diferido, chunks lazy de iconos/temas, Dialogs y sidebars on-demand; sync del vault solo si el blob local falta o es mínimo.
+- **Vault**: Evitar doble decrypt; no borrar sidecars/localStorage con saves vacíos; historial sync más ligero; menos trabajo IPC en arranques calientes.
+
+### UI
+- **Marcos**: Seis variantes synthwave más para bordes de terminal.
+- **Actualizaciones**: Icono de update estilo Discord en la TitleBar.
+
+### Fixes y CI
+- **MCP**: Auto-start del API server al boot si está habilitado.
+- **Antigravity**: Evitar frames TUI rotos al hacer scroll a mitad de respuesta.
+- **Cygwin**: Omitir cleanup ruidoso al salir sin sesiones.
+- **Historial**: Alinear tests con omisión/redacción de secretos.
+- **CI**: Tests unit/RDP/VNC en `main` antes de releases.
+
 ## [1.7.8] - 2026-10-23
 
 ### Home y paneles flotantes
