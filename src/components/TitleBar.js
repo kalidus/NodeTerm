@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
@@ -10,6 +10,11 @@ import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import TitleBarUpdateButton from './TitleBarUpdateButton';
+import {
+  UI_LAYOUT_OPTIONS,
+  getCurrentUILayoutId,
+  setUILayout,
+} from '../utils/appearanceLayout';
 
 const TitleBarIconButton = ({
   title,
@@ -60,6 +65,14 @@ const IconPanelTop = () => (
   </svg>
 );
 
+const IconLayout = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="1.5" y="1.5" width="5" height="13" rx="1.2" {...LAYOUT_STROKE} />
+    <rect x="8.5" y="1.5" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
+    <rect x="8.5" y="9" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
+  </svg>
+);
+
 const TitleBar = ({
   sidebarFilter,
   setSidebarFilter,
@@ -102,10 +115,43 @@ const TitleBar = ({
   // Debounced search state
   const [localFilter, setLocalFilter] = useState(sidebarFilter || '');
   const debounceTimeoutRef = useRef(null);
+  const layoutBtnRef = useRef(null);
+  const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
+  const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
 
   useEffect(() => {
     setLocalFilter(sidebarFilter || '');
   }, [sidebarFilter]);
+
+  useEffect(() => {
+    const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
+    window.addEventListener('layout-changed', syncLayout);
+    return () => window.removeEventListener('layout-changed', syncLayout);
+  }, []);
+
+  useEffect(() => {
+    if (!layoutPopoverOpen) return;
+    const onDown = (e) => {
+      if (layoutBtnRef.current?.contains(e.target)) return;
+      if (e.target?.closest?.('.title-bar-layout-popover')) return;
+      setLayoutPopoverOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLayoutPopoverOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [layoutPopoverOpen]);
+
+  const handleSelectUiLayout = useCallback((layoutId) => {
+    setUILayout(layoutId);
+    setCurrentUiLayout(layoutId);
+    setLayoutPopoverOpen(false);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1258,6 +1304,52 @@ const TitleBar = ({
           >
             <IconMinimal />
           </TitleBarIconButton>
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
+        <div className="title-bar-action-group" ref={layoutBtnRef}>
+          <TitleBarIconButton
+            title="Cambiar layout de la UI"
+            active={layoutPopoverOpen}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setLayoutPopoverOpen((open) => !open);
+            }}
+          >
+            <IconLayout />
+          </TitleBarIconButton>
+          {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
+            (() => {
+              const rect = layoutBtnRef.current.getBoundingClientRect();
+              return (
+                <div
+                  className="title-bar-layout-popover"
+                  style={{
+                    top: rect.bottom + 4,
+                    right: Math.max(8, window.innerWidth - rect.right),
+                  }}
+                  role="menu"
+                >
+                  {UI_LAYOUT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={currentUiLayout === opt.id}
+                      className={`title-bar-layout-popover-item${currentUiLayout === opt.id ? ' is-selected' : ''}`}
+                      onClick={() => handleSelectUiLayout(opt.id)}
+                    >
+                      <i className={`pi ${opt.icon}`} />
+                      <span>{opt.name}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })(),
+            document.body
+          )}
         </div>
 
         <div className="title-bar-action-sep" aria-hidden="true" />
