@@ -4,10 +4,13 @@ import { persistSyncedSetting } from './persistSyncedSetting';
 /** Clave localStorage del estilo de apariencia (layout global de la UI). */
 export const UI_LAYOUT_STORAGE_KEY = 'ui_layout';
 
-const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux'];
+const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux', 'layout-islas', 'layout-dock', 'layout-tablero'];
 
 /** Opciones de layout para selectores rápidos (titlebar, etc.). */
 export const UI_LAYOUT_OPTIONS = [
+  { id: 'islas', name: 'Islas', icon: 'pi-th-large' },
+  { id: 'dock', name: 'Dock', icon: 'pi-arrow-down' },
+  { id: 'tablero', name: 'Tablero', icon: 'pi-id-card' },
   { id: 'atelier', name: 'Atelier', icon: 'pi-star' },
   { id: 'mux', name: 'Mux', icon: 'pi-th-large' },
   { id: 'default', name: 'Default', icon: 'pi-box' },
@@ -21,12 +24,17 @@ function syncIconThemeForLayout(layoutId) {
   if (layoutId === 'cyberpunk') {
     localStorage.setItem('iconTheme', 'cyber_blue');
     localStorage.setItem('iconThemeSidebar', 'cyber_blue');
+  } else if (layoutId === 'tablero') {
+    localStorage.setItem('iconTheme', 'fluent');
+    localStorage.setItem('iconThemeSidebar', 'fluent');
   } else if (
     layoutId === 'unified' ||
     layoutId === 'unified-rounded' ||
     layoutId === 'unified-app-rounded' ||
     layoutId === 'atelier' ||
-    layoutId === 'mux'
+    layoutId === 'mux' ||
+    layoutId === 'islas' ||
+    layoutId === 'dock'
   ) {
     localStorage.setItem('iconTheme', 'cupertino');
     localStorage.setItem('iconThemeSidebar', 'cupertino');
@@ -53,6 +61,10 @@ export function applyUILayoutFromStorage() {
   let layoutId = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
   if (layoutId === 'modern-custom') {
     layoutId = 'unified-rounded';
+    localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
+  }
+  if (layoutId === 'brutal' || layoutId === 'gaceta') {
+    layoutId = 'atelier';
     localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
   }
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);

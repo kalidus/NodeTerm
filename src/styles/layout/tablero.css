@@ -1,0 +1,158 @@
+/* Estilo Tablero: banda superior sólida, rail con tick y tarjetas sobre lienzo plano.
+   Solo aplica con body.layout-tablero. El acento sale de --ui-button-primary. */
+
+body.layout-tablero {
+  --layout-border-radius-main: 12px;
+  --layout-border-radius-sm: 8px;
+  --layout-border-radius-lg: 14px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: none;
+  --layout-font-family: var(--ui-font-family);
+  --tablero-card: color-mix(in srgb, var(--ui-button-primary, #3b6cff) 16%, var(--ui-sidebar-bg, #1a2230));
+  --tablero-card-border: color-mix(in srgb, var(--ui-button-primary, #3b6cff) 32%, transparent);
+}
+
+body.layout-tablero .app-container {
+  background: var(--ui-content-bg, #1a1c1e);
+}
+
+html[data-custom-titlebar="true"] body.layout-tablero .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-tablero .title-bar span,
+html[data-custom-titlebar="true"] body.layout-tablero .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-tablero .title-bar {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--ui-titlebar-accent, #1e3a8a) !important;
+  color: var(--ui-titlebar-text, #fff) !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+}
+
+body.layout-tablero .title-bar .app-search-input {
+  height: 24px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--ui-titlebar-text, #fff) 12%, transparent) !important;
+}
+
+body.layout-tablero .status-bar {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--ui-content-bg, #1a1c1e) !important;
+}
+
+body.layout-tablero .sidebar-container.sidebar-root {
+  background: color-mix(in srgb, var(--ui-content-bg, #1a1c1e) 78%, black) !important;
+  border: none !important;
+  border-right: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 8%, transparent) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.layout-tablero .sidebar-tree .p-treenode-content {
+  border-radius: 8px !important;
+}
+
+body.layout-tablero .sidebar-tree .p-treenode-content.p-highlight::after {
+  background: color-mix(in srgb, var(--ui-button-primary, #eab308) 18%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--ui-button-primary, #eab308) !important;
+  border-radius: 8px;
+}
+
+body.layout-tablero .terminal-frame,
+body.layout-tablero .main-splitter .terminal-frame {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--ui-content-bg, #1a1c1e) !important;
+}
+
+body.layout-tablero .home-panel-frame,
+body.layout-tablero .home-clock-card,
+body.layout-tablero .home-fav-tile,
+body.layout-tablero .home-jump-tile,
+body.layout-tablero .home-group-card,
+body.layout-tablero .home-dock-tile,
+body.layout-tablero .cyber-result-card,
+body.layout-tablero .file-explorer-card,
+body.layout-tablero .general-settings-section {
+  background: var(--tablero-card) !important;
+  border: 1px solid var(--tablero-card-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+body.layout-tablero .home-dock-tile-well {
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+body.layout-tablero .home-dock-group-title,
+body.layout-tablero .cyber-sessions-title {
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+  color: var(--ui-fg-muted, inherit) !important;
+}
+
+body.layout-tablero .hero-search-container {
+  filter: none !important;
+  border-radius: 12px !important;
+}
+
+body.layout-tablero .hero-search-container::before {
+  text-shadow: none !important;
+}
+
+body.layout-tablero .hero-search-container::after,
+body.layout-tablero .cyber-sessions-dot {
+  display: none !important;
+  box-shadow: none !important;
+}
+
+body.layout-tablero .p-dialog.app-dialog,
+body.layout-tablero .app-dialog-portal,
+body.layout-tablero .p-confirm-dialog.app-confirm-dialog,
+body.layout-tablero .create-group-dialog,
+body.layout-tablero .app-surface,
+body.layout-tablero .search-dropdown {
+  border-radius: 12px !important;
+  border: 1px solid var(--tablero-card-border) !important;
+  box-shadow: none !important;
+  background: var(--tablero-card) !important;
+}
+
+body.layout-tablero .p-dialog.app-dialog .p-dialog-header,
+body.layout-tablero .app-dialog-portal-header,
+body.layout-tablero .create-group-dialog .dialog-header,
+body.layout-tablero .file-explorer-header,
+body.layout-tablero .network-tool-header-container,
+body.layout-tablero .password-tab-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--tablero-card-border) !important;
+  border-radius: 12px 12px 0 0;
+}
+
+body.layout-tablero .settings-nav-item {
+  border-radius: 8px !important;
+}
+
+body.layout-tablero .settings-nav-item.active {
+  background: color-mix(in srgb, var(--ui-button-primary, #eab308) 18%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--ui-button-primary, #eab308) !important;
+}

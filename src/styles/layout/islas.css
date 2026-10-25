@@ -1,0 +1,131 @@
+/* Estilo Islas: tarjetas sueltas sobre un lienzo. Solo aplica con body.layout-islas.
+   Los colores siguen saliendo del tema de interfaz activo. */
+
+body.layout-islas {
+  --layout-border-radius-main: 18px;
+  --layout-border-radius-sm: 12px;
+  --layout-border-radius-lg: 22px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --layout-font-family: var(--ui-font-family);
+  --islas-gap: 14px;
+}
+
+body.layout-islas .app-container {
+  background: color-mix(in srgb, var(--ui-content-bg, #0c0e12) 86%, black);
+}
+
+html[data-custom-titlebar="true"] body.layout-islas .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-islas .title-bar span,
+html[data-custom-titlebar="true"] body.layout-islas .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-islas .title-bar {
+  margin: var(--islas-gap) var(--islas-gap) 0 var(--islas-gap) !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 10%, transparent) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+}
+
+body.layout-islas .title-bar .app-search-input {
+  height: 24px !important;
+  border-radius: 999px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--ui-fg, #fff) 8%, transparent) !important;
+}
+
+body.layout-islas .status-bar {
+  margin: 0 var(--islas-gap) var(--islas-gap) var(--islas-gap) !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 10%, transparent) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+}
+
+body.layout-islas .main-splitter > .p-splitter-panel {
+  padding: var(--islas-gap) !important;
+}
+
+body.layout-islas .main-splitter > .p-splitter-panel:first-child {
+  padding-right: calc(var(--islas-gap) / 2) !important;
+}
+
+body.layout-islas .main-splitter > .p-splitter-panel:last-child {
+  padding-left: calc(var(--islas-gap) / 2) !important;
+}
+
+body.layout-islas .sidebar-container.sidebar-root {
+  background: var(--ui-sidebar-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 10%, transparent) !important;
+  border-radius: var(--layout-border-radius-main) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+  overflow: hidden;
+}
+
+body.layout-islas .sidebar-tree .p-treenode-content.p-highlight::after {
+  background: var(--ui-accent-soft, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: none !important;
+  border-radius: 10px;
+}
+
+body.layout-islas .terminal-frame,
+body.layout-islas .main-splitter .terminal-frame {
+  border-radius: var(--layout-border-radius-main) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 10%, transparent) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+  background: var(--ui-sidebar-bg, #16181d) !important;
+}
+
+body.layout-islas .home-panel-frame,
+body.layout-islas .home-clock-card,
+body.layout-islas .home-fav-tile,
+body.layout-islas .home-jump-tile,
+body.layout-islas .home-group-card,
+body.layout-islas .home-dock-tile,
+body.layout-islas .cyber-result-card {
+  border-radius: 16px !important;
+  border: 1px solid color-mix(in srgb, var(--ui-fg, #fff) 8%, transparent) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+}
+
+body.layout-islas .home-dock-tile-well {
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+body.layout-islas .hero-search-container {
+  filter: none !important;
+}
+
+body.layout-islas .hero-search-container::after,
+body.layout-islas .cyber-sessions-dot {
+  display: none !important;
+  box-shadow: none !important;
+}
+
+body.layout-islas .p-dialog.app-dialog,
+body.layout-islas .app-dialog-portal,
+body.layout-islas .p-confirm-dialog.app-confirm-dialog,
+body.layout-islas .create-group-dialog,
+body.layout-islas .file-explorer-card,
+body.layout-islas .app-surface,
+body.layout-islas .search-dropdown,
+body.layout-islas .general-settings-section {
+  border-radius: var(--layout-border-radius-main) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+}
+
+body.layout-islas .file-explorer-header,
+body.layout-islas .network-tool-header-container,
+body.layout-islas .password-tab-header {
+  border-radius: 12px 12px 0 0;
+}

@@ -1,0 +1,126 @@
+/* Estilo Dock: titlebar fina y barra inferior gruesa. Solo aplica con body.layout-dock.
+   Los controles de ventana siguen en la titlebar. Los colores salen del tema activo. */
+
+body.layout-dock {
+  --layout-border-radius-main: 14px;
+  --layout-border-radius-sm: 999px;
+  --layout-border-radius-lg: 18px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: none;
+  --layout-font-family: var(--ui-font-family);
+}
+
+body.layout-dock .app-container {
+  background: var(--ui-content-bg);
+}
+
+html[data-custom-titlebar="true"] body.layout-dock .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-dock .title-bar span,
+html[data-custom-titlebar="true"] body.layout-dock .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-dock .title-bar {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  opacity: 0.92;
+}
+
+body.layout-dock .title-bar .app-search-input,
+body.layout-dock .hero-search-container {
+  border-radius: 999px !important;
+}
+
+body.layout-dock .title-bar .app-search-input {
+  height: 18px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--ui-fg, #fff) 8%, transparent) !important;
+}
+
+body.layout-dock .status-bar {
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 8px 8px 8px !important;
+  padding-inline: 10px !important;
+  border-radius: 18px !important;
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary, #3b82f6) 35%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-button-primary, #3b82f6) 14%, var(--ui-sidebar-bg, #16181d)) !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .status-bar-section,
+body.layout-dock .status-group {
+  border-radius: 999px;
+}
+
+body.layout-dock .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border-radius: 999px !important;
+  margin: 3px 2px !important;
+}
+
+body.layout-dock .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: color-mix(in srgb, var(--ui-button-primary, #3b82f6) 22%, transparent) !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .sidebar-tree .p-treenode-content.p-highlight::after {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ui-button-primary, #3b82f6) 18%, transparent) !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .terminal-frame {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .home-panel-frame,
+body.layout-dock .home-clock-card,
+body.layout-dock .home-fav-tile,
+body.layout-dock .home-jump-tile,
+body.layout-dock .home-group-card,
+body.layout-dock .home-dock-tile,
+body.layout-dock .cyber-result-card {
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .home-dock-tile-well {
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+body.layout-dock .hero-search-container {
+  filter: none !important;
+}
+
+body.layout-dock .hero-search-container::after {
+  display: none !important;
+}
+
+body.layout-dock .p-dialog.app-dialog,
+body.layout-dock .app-dialog-portal,
+body.layout-dock .p-confirm-dialog.app-confirm-dialog,
+body.layout-dock .create-group-dialog,
+body.layout-dock .file-explorer-card,
+body.layout-dock .app-surface,
+body.layout-dock .search-dropdown {
+  border-radius: 16px !important;
+}
+
+body.layout-dock .file-explorer-header,
+body.layout-dock .network-tool-header-container,
+body.layout-dock .password-tab-header {
+  border-radius: 16px 16px 0 0;
+}

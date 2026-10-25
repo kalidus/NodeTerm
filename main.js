@@ -3767,6 +3767,8 @@ function applyWindowCornersForLayout(win, layoutId) {
   
   if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'cyberpunk') {
     preference = 1; // Square corners
+  } else if (layoutId === 'tablero') {
+    preference = 3; // Slightly rounded corners
   }
   
   try {

@@ -12,7 +12,10 @@ export function loadDeferredFeatureCss() {
       import('../styles/components/animated-themes.css'),
       import('../styles/components/dialogs.css'),
       import('../styles/layout/atelier.css'),
-      import('../styles/layout/mux.css')
+      import('../styles/layout/mux.css'),
+      import('../styles/layout/islas.css'),
+      import('../styles/layout/dock.css'),
+      import('../styles/layout/tablero.css')
     ]).catch(() => {});
   }
   return featuresPromise;

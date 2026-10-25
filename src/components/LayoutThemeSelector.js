@@ -29,6 +29,66 @@ const LayoutThemeSelector = () => {
 
   const layouts = [
     {
+      id: 'islas',
+      name: 'Islas',
+      description: 'Lienzo de fondo y cada región como una tarjeta suelta, con hueco amplio y sombra suave.',
+      icon: 'pi-th-large',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px', backgroundColor: '#07080a', boxSizing: 'border-box' }}>
+          <div style={{ height: '8px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+          <div style={{ display: 'flex', flex: 1, gap: '4px', minHeight: 0 }}>
+            <div style={{ width: '28%', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+            <div style={{ flex: 1, borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+          </div>
+          <div style={{ height: '7px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+        </div>
+      )
+    },
+    {
+      id: 'dock',
+      name: 'Dock',
+      description: 'Titlebar casi invisible y una barra inferior gruesa, con pestañas y búsqueda en píldora.',
+      icon: 'pi-arrow-down',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#12141a', boxSizing: 'border-box' }}>
+          <div style={{ height: '6px', backgroundColor: '#181b22' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '26%', backgroundColor: '#181b22' }} />
+            <div style={{ flex: 1, padding: '6px', display: 'flex', alignItems: 'flex-start', gap: '3px' }}>
+              <div style={{ width: '18px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.55)' }} />
+              <div style={{ width: '14px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+            </div>
+          </div>
+          <div style={{ height: '12px', margin: '0 4px 4px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.28)', border: '1px solid rgba(59,130,246,0.45)' }} />
+        </div>
+      )
+    },
+    {
+      id: 'tablero',
+      name: 'Tablero',
+      description: 'Banda superior sólida, marca vertical en el ítem activo y tarjetas redondeadas sobre un lienzo plano.',
+      icon: 'pi-id-card',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1c1e', boxSizing: 'border-box' }}>
+          <div style={{ height: '10px', backgroundColor: '#1e3a8a' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '22%', backgroundColor: '#141618', padding: '5px 4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '8px', borderRadius: '2px', backgroundColor: 'rgba(234,179,8,0.2)', boxShadow: 'inset 2px 0 0 #eab308' }} />
+              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+            </div>
+            <div style={{ flex: 1, padding: '5px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+            </div>
+          </div>
+          <div style={{ height: '6px', backgroundColor: '#1a1c1e' }} />
+        </div>
+      )
+    },
+    {
       id: 'atelier',
       name: 'Atelier',
       description: 'Consola refinada. Radios suaves, un solo acento del tema y las mismas superficies en inicio, diálogos y herramientas.',
