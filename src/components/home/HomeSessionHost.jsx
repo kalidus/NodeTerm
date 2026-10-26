@@ -27,7 +27,7 @@ export default function HomeSessionHost({
     <div
       ref={ref}
       className="home-session-host"
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 80000 }}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     />
   );
 }

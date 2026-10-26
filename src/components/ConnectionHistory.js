@@ -15,6 +15,7 @@ import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react
 import AIClientBrandIcon from './AIClientBrandIcon';
 import HomePanelWrapper from './HomePanelWrapper';
 import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../utils/homeTabSync';
+import { allocHomePanelZ } from '../utils/homePanelStack';
 import { getSidebarView, subscribeSidebarView } from '../utils/sidebarViewBus';
 import VaultCyberPanels from './home/VaultCyberPanels';
 import ConnectionCyberPanels from './home/ConnectionCyberPanels';
@@ -774,7 +775,7 @@ const ConnectionHistory = ({
 
 		const layoutUpdates = {
 			visible: true,
-			zIndex: 999999
+			zIndex: allocHomePanelZ()
 		};
 		if (Number.isFinite(targetX) && Number.isFinite(targetY)) {
 			layoutUpdates.x = Math.round(targetX);
@@ -1194,10 +1195,7 @@ const ConnectionHistory = ({
 							title="~/filters"
 							path={`filters · ${favoriteGroupsMgr.filterContext === 'favorites' ? 'favoritos' : 'recientes'}`}
 							titleIcon={<i className="pi pi-filter" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} />}
-							panelState={{
-								...panelsLayout.filters,
-								zIndex: Math.max(panelsLayout.filters?.zIndex || 0, 999999)
-							}}
+							panelState={panelsLayout.filters}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={closeFilterPanel}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import HomePanelWrapper from '../HomePanelWrapper';
 import TabContentRenderer from '../TabContentRenderer';
@@ -7,8 +7,7 @@ import {
   getHomeSessionHostOptions,
   subscribeHomeSessionHost
 } from '../../utils/homeSessionHostBus';
-
-const BASE_Z = 80000;
+import { allocHomePanelZ } from '../../utils/homePanelStack';
 
 function panelIdFor(tabKey) {
   return `home-session-${tabKey}`;
@@ -66,7 +65,6 @@ export default function HomeEmbeddedSessions({
     [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs]
   );
   const signature = embeddedTabs.map((tab) => tab.key).join('\n');
-  const zRef = useRef(BASE_Z);
   const [boxes, setBoxes] = useState({});
   const [hostState, setHostState] = useState(() => ({
     element: getHomeSessionHost(),
@@ -111,7 +109,6 @@ export default function HomeEmbeddedSessions({
           return;
         }
         changed = true;
-        zRef.current += 1;
         const slot = Object.keys(prev).length + added;
         added += 1;
         next[id] = {
@@ -119,7 +116,7 @@ export default function HomeEmbeddedSessions({
           y: 48 + (slot % 8) * 28,
           width: 780,
           height: 520,
-          zIndex: zRef.current,
+          zIndex: allocHomePanelZ(),
           isMaximized: false,
           isMinimized: false,
           visible: true
@@ -134,8 +131,7 @@ export default function HomeEmbeddedSessions({
     const onFocus = (event) => {
       const key = event?.detail?.key;
       if (!key) return;
-      zRef.current += 1;
-      const zIndex = zRef.current;
+      const zIndex = allocHomePanelZ();
       setBoxes((prev) => {
         const id = boxKeyFrom(key, prev);
         if (!prev[id]) return prev;
@@ -150,8 +146,7 @@ export default function HomeEmbeddedSessions({
   }, []);
 
   const raise = useCallback((id) => {
-    zRef.current += 1;
-    const zIndex = zRef.current;
+    const zIndex = allocHomePanelZ();
     setBoxes((prev) => {
       const key = boxKeyFrom(id, prev);
       if (!prev[key]) return prev;

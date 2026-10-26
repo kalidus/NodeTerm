@@ -2,16 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import HomePanelWrapper from '../HomePanelWrapper';
 import { findNodeInTree } from '../../utils/treeDragDrop';
 import connectionStore from '../../utils/connectionStore';
+import { allocHomePanelZ } from '../../utils/homePanelStack';
 import ConnectionCyberPanel from './ConnectionCyberPanel';
-
-const BASE_Z = 10020;
 
 const PANEL_BOX = {
   x: 48,
   y: 40,
   width: 420,
   height: 460,
-  zIndex: BASE_Z,
+  zIndex: 20,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -55,13 +54,12 @@ export default function ConnectionCyberPanels({
 }) {
   const [node, setNode] = useState(null);
   const [box, setBox] = useState(PANEL_BOX);
-  const zRef = useRef(BASE_Z);
   const nodesRef = useRef(sidebarNodes);
   nodesRef.current = sidebarNodes;
 
   const raise = useCallback(() => {
-    zRef.current += 1;
-    setBox((prev) => ({ ...prev, zIndex: zRef.current, isMinimized: false }));
+    const zIndex = allocHomePanelZ();
+    setBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
   }, []);
 
   const openByKey = useCallback((key) => {

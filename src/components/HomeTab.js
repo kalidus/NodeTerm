@@ -47,6 +47,7 @@ import {
   ensureRequiredHomeTerminal
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
+import { allocHomePanelZ } from '../utils/homePanelStack';
 import HomeOptionsOverlay from './home/HomeOptionsOverlay';
 import { useHomeWallpaper } from '../utils/homeWallpaper';
 
@@ -836,20 +837,7 @@ const HomeTab = ({
     setPanelsLayout((prev) => {
       const current = prev[panelId];
       if (!current) return prev;
-      if (panelId === 'filters') {
-        const nextZ = 999999;
-        if (current.zIndex === nextZ) return prev;
-        return { ...prev, filters: { ...current, zIndex: nextZ } };
-      }
-      let maxOtherZ = 10;
-      Object.entries(prev).forEach(([id, p]) => {
-        if (id === panelId) return;
-        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) {
-          maxOtherZ = Math.max(maxOtherZ, p.zIndex);
-        }
-      });
-      if ((current.zIndex || 0) > maxOtherZ) return prev;
-      const nextZ = maxOtherZ + 1;
+      const nextZ = allocHomePanelZ();
       const next = { ...prev, [panelId]: { ...current, zIndex: nextZ } };
       const authored = authoredLayoutRef.current;
       if (authored && authored[panelId]) {
@@ -896,17 +884,11 @@ const HomeTab = ({
       const current = prev[panelId] || defaults[panelId];
       if (!current) return prev;
       const isVis = forceState !== undefined ? forceState : !current.visible;
-      let maxZ = 10;
-      Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
-      });
 
       let updatedPanel = {
         ...current,
         visible: isVis,
-        zIndex: panelId === 'filters'
-          ? (isVis ? 999999 : current.zIndex)
-          : (isVis ? maxZ + 1 : current.zIndex),
+        zIndex: isVis ? allocHomePanelZ() : current.zIndex,
         ...(extraUpdates || {})
       };
 
@@ -982,10 +964,6 @@ const HomeTab = ({
       if (!current) return prev;
 
       const { width: w, height: h } = getCanvasSize();
-      let maxZ = 10;
-      Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
-      });
 
       let nextPanel;
       if (current.isMaximized) {
@@ -1025,7 +1003,7 @@ const HomeTab = ({
           isMaximized: true,
           isMinimized: false,
           preMinimizedHeight: undefined,
-          zIndex: panelId === 'filters' ? 999999 : maxZ + 1
+          zIndex: allocHomePanelZ()
         };
       }
 

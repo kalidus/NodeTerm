@@ -1,16 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import HomePanelWrapper from '../HomePanelWrapper';
 import { collectVaultEntries } from '../../utils/homeWidgets';
+import { allocHomePanelZ } from '../../utils/homePanelStack';
 import VaultCyberTerminal, { VaultCyberDetail } from './VaultCyberTerminal';
-
-const BASE_Z = 10000;
 
 const LIST_BOX = {
   x: 24,
   y: 24,
   width: 680,
   height: 440,
-  zIndex: BASE_Z,
+  zIndex: 20,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -21,7 +20,7 @@ const DETAIL_BOX = {
   y: 56,
   width: 360,
   height: 400,
-  zIndex: BASE_Z + 1,
+  zIndex: 21,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -44,13 +43,11 @@ export default function VaultCyberPanels({
   const [listBox, setListBox] = useState(LIST_BOX);
   const [detailEntry, setDetailEntry] = useState(null);
   const [detailBox, setDetailBox] = useState(DETAIL_BOX);
-  const zRef = useRef(BASE_Z + 1);
   const passwordNodesRef = useRef(passwordNodes);
   passwordNodesRef.current = passwordNodes;
 
   const raise = useCallback((target) => {
-    zRef.current += 1;
-    const zIndex = zRef.current;
+    const zIndex = allocHomePanelZ();
     if (target === 'list') {
       setListBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
     } else {

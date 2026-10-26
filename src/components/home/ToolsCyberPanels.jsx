@@ -1,10 +1,10 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import HomePanelWrapper from '../HomePanelWrapper';
 import { findToolMetadata, TOOL_COMPONENTS } from '../network-tools/toolRegistry';
+import { allocHomePanelZ } from '../../utils/homePanelStack';
 
 const NetworkToolsDialog = React.lazy(() => import('../NetworkToolsDialog'));
 
-const BASE_Z = 10060;
 const COMPACT_WIDTH = 640;
 
 const PANEL_BOX = {
@@ -12,7 +12,7 @@ const PANEL_BOX = {
   y: 28,
   width: 800,
   height: 560,
-  zIndex: BASE_Z,
+  zIndex: 20,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -27,12 +27,11 @@ export default function ToolsCyberPanels({
   const [tool, setTool] = useState(null);
   const [box, setBox] = useState(PANEL_BOX);
   const [compact, setCompact] = useState(false);
-  const zRef = useRef(BASE_Z);
   const bodyRef = useRef(null);
 
   const raise = useCallback(() => {
-    zRef.current += 1;
-    setBox((prev) => ({ ...prev, zIndex: zRef.current, isMinimized: false }));
+    const zIndex = allocHomePanelZ();
+    setBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
   }, []);
 
   const openTool = useCallback((detail) => {

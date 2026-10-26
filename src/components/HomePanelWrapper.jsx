@@ -1,10 +1,11 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
+import { allocHomePanelZ, noteHomePanelZ } from '../utils/homePanelStack';
 
-let liveZSeq = 5000;
-function nextLiveZ(minZ = 0) {
-  liveZSeq = Math.max(liveZSeq, Number(minZ) || 0) + 1;
-  return liveZSeq;
+function stackZ(value, fallback = 10) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n >= 900000) return fallback;
+  return n;
 }
 
 function panelStateEqual(a, b) {
@@ -112,9 +113,10 @@ const HomePanelWrapper = ({
   const minimizedHeight = 30;
   const maximizeTitle = isMaximized ? 'Restaurar' : 'Maximizar';
   const isFilterPanel = id === 'filters';
-  const displayZ = isFilterPanel
-    ? 999999
-    : (Number(localZ) || Number(zIndex) || 10);
+  const persistedZ = stackZ(zIndex, 10);
+  noteHomePanelZ(persistedZ);
+  if (localZ != null) noteHomePanelZ(localZ);
+  const displayZ = localZ != null ? stackZ(localZ, persistedZ) : persistedZ;
   const activeShadow = isMaximized
     ? 'none'
     : (isFilterPanel
@@ -139,8 +141,8 @@ const HomePanelWrapper = ({
       width,
       height: isMinimized ? minimizedHeight : height
     });
-    setLocalZ(isFilterPanel ? 999999 : nextLiveZ(zIndex));
-  }, [captureLiveBox, x, y, width, height, isMinimized, isFilterPanel, zIndex]);
+    setLocalZ(allocHomePanelZ());
+  }, [captureLiveBox, x, y, width, height, isMinimized]);
 
   const persistZIndex = useCallback(() => {
     onBringToFront?.(id);
@@ -151,13 +153,13 @@ const HomePanelWrapper = ({
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (now - lastRaiseTsRef.current < 16) return;
     lastRaiseTsRef.current = now;
-    setLocalZ(isFilterPanel ? 999999 : nextLiveZ(zIndex));
+    setLocalZ(allocHomePanelZ());
     onBringToFront?.(id);
-  }, [id, onBringToFront, isFilterPanel, zIndex]);
+  }, [id, onBringToFront]);
 
   useEffect(() => {
     if (localZ == null) return undefined;
-    const persisted = Number(zIndex) || 10;
+    const persisted = stackZ(zIndex, 10);
     if (persisted >= localZ) {
       setLocalZ(null);
     }

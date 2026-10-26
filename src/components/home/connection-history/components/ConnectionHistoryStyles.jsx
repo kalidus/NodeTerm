@@ -1509,9 +1509,6 @@ const ConnectionHistoryStyles = ({
 					border-color: ${terminalTheme.green ? terminalTheme.green + '66' : 'rgba(63,185,80,0.4)'};
 					background: rgba(255,255,255,0.06);
 				}
-				.home-panel-rnd-filters {
-					z-index: 999999 !important;
-				}
 				.filters-terminal-frame {
 					box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 					backdrop-filter: ${backdropFilterGlass};

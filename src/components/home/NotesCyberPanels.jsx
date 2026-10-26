@@ -1,16 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import HomePanelWrapper from '../HomePanelWrapper';
 import { findNodeInTree } from '../../utils/treeDragDrop';
+import { allocHomePanelZ } from '../../utils/homePanelStack';
 import NotesCyberPanel from './NotesCyberPanel';
-
-const BASE_Z = 10040;
 
 const PANEL_BOX = {
   x: 72,
   y: 48,
   width: 460,
   height: 500,
-  zIndex: BASE_Z,
+  zIndex: 20,
   isMaximized: false,
   isMinimized: false,
   visible: true
@@ -32,13 +31,12 @@ export default function NotesCyberPanels({
 }) {
   const [node, setNode] = useState(null);
   const [box, setBox] = useState(PANEL_BOX);
-  const zRef = useRef(BASE_Z);
   const nodesRef = useRef(documentNodes);
   nodesRef.current = documentNodes;
 
   const raise = useCallback(() => {
-    zRef.current += 1;
-    setBox((prev) => ({ ...prev, zIndex: zRef.current, isMinimized: false }));
+    const zIndex = allocHomePanelZ();
+    setBox((prev) => ({ ...prev, zIndex, isMinimized: false }));
   }, []);
 
   const openNode = useCallback((nextNode) => {
