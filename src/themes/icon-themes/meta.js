@@ -1,5 +1,7 @@
 /** Lightweight icon-theme catalog (no SVG). */
-export const iconThemeMeta = [
+import { futuristIconMeta } from './futurist-catalog';
+
+const baseIconThemeMeta = [
   {
     "id": "cyberpunk",
     "name": "Cyberpunk"
@@ -185,6 +187,8 @@ export const iconThemeMeta = [
     "name": "Crimson Tech"
   }
 ];
+
+export const iconThemeMeta = [...baseIconThemeMeta, ...futuristIconMeta];
 
 export const iconThemeIds = iconThemeMeta.map((t) => t.id);
 

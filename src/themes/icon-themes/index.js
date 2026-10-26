@@ -4,6 +4,7 @@
 import nord from './nord';
 import material from './material';
 import { iconThemeMeta, iconThemeIds, iconThemeOptions } from './meta';
+import { futuristCatalog } from './futurist-catalog';
 
 export { iconThemeMeta, iconThemeIds, iconThemeOptions };
 
@@ -164,6 +165,33 @@ export function onIconThemeLoaded(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
+
+let futuristPackPromise = null;
+
+function loadFuturistPack() {
+  if (!futuristPackPromise) {
+    futuristPackPromise = import(/* webpackChunkName: "icon-theme-futurist" */ './futurist-pack')
+      .then((mod) => {
+        const themes = mod.futuristIconThemes;
+        Object.keys(themes).forEach((id) => putTheme(id, themes[id]));
+        return themes;
+      })
+      .catch((err) => {
+        futuristPackPromise = null;
+        console.warn('[icon-themes] failed to load futurist pack', err);
+        throw err;
+      });
+  }
+  return futuristPackPromise;
+}
+
+futuristCatalog.forEach(({ id }) => {
+  loaders[id] = () => loadFuturistPack().then((themes) => {
+    const theme = themes[id];
+    if (!theme) throw new Error(`missing icon theme ${id}`);
+    return { default: theme };
+  });
+});
 
 /** Kick off load for themes saved in localStorage (non-blocking). */
 export function warmIconThemesFromStorage() {
