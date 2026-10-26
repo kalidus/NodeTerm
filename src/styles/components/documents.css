@@ -1707,49 +1707,6 @@
    NOTES JOPliN-LIKE UX
    ================================ */
 
-.documents-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px 8px;
-  flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.documents-search-input {
-  width: 100%;
-  font-size: 0.8rem !important;
-  padding: 0.35rem 0.5rem 0.35rem 1.75rem !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: var(--ui-content-text, #e2e8f0) !important;
-  border-radius: 6px !important;
-}
-
-.documents-tag-filter {
-  max-width: 110px;
-  font-size: 0.72rem;
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--ui-content-text, #cbd5e1);
-}
-
-.documents-search-clear {
-  border: none;
-  background: transparent;
-  color: var(--ui-content-text, #94a3b8);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-}
-
-.documents-search-clear:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
 .document-editor-body-row {
   display: flex;
   flex: 1;

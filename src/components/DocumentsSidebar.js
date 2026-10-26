@@ -22,9 +22,7 @@ import {
   addNodeToTree,
   removeNodeFromTree,
   updateNodeInTree,
-  findNodeInTree,
-  filterDocumentTree,
-  collectAllTags
+  findNodeInTree
 } from '../utils/documentStore';
 import TreeContextMenu from './contextmenus/TreeContextMenu';
 import {
@@ -442,8 +440,6 @@ const DocumentsSidebar = ({
   const sidebarRootRef = useRef(null);
   const documentClickTimerRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
-  const [docsSearchQuery, setDocsSearchQuery] = useState('');
-  const [docsTagFilter, setDocsTagFilter] = useState('');
   const [quickNotesCtxMenu, setQuickNotesCtxMenu] = useState(null);
   const [quickNotesCtxItems, setQuickNotesCtxItems] = useState([]);
 
@@ -977,13 +973,9 @@ const DocumentsSidebar = ({
     });
   };
 
-  const allDocumentTags = useMemo(() => collectAllTags(documentNodes), [documentNodes]);
-
   const filteredDocumentNodes = useMemo(() => {
-    const withoutQuick = documentNodes.filter(node => node.key !== 'quick_note');
-    if (!docsSearchQuery.trim() && !docsTagFilter) return withoutQuick;
-    return filterDocumentTree(withoutQuick, docsSearchQuery, docsTagFilter);
-  }, [documentNodes, docsSearchQuery, docsTagFilter]);
+    return documentNodes.filter(node => node.key !== 'quick_note');
+  }, [documentNodes]);
 
   const treeValue = useMemo(
     () => stripTreeNodeIcons(filteredDocumentNodes),
@@ -1585,43 +1577,6 @@ const DocumentsSidebar = ({
           fontSize: `${explorerFontSize}px`
         }}
       >
-        <div className="documents-search-bar">
-          <span className="p-input-icon-left" style={{ width: '100%' }}>
-            <i className="pi pi-search" />
-            <InputText
-              value={docsSearchQuery}
-              onChange={(e) => setDocsSearchQuery(e.target.value)}
-              placeholder="Buscar notas..."
-              className="documents-search-input"
-            />
-          </span>
-          {allDocumentTags.length > 0 && (
-            <select
-              className="documents-tag-filter"
-              value={docsTagFilter}
-              onChange={(e) => setDocsTagFilter(e.target.value)}
-              title="Filtrar por etiqueta"
-            >
-              <option value="">Todas las etiquetas</option>
-              {allDocumentTags.map((tag) => (
-                <option key={tag} value={tag}>#{tag}</option>
-              ))}
-            </select>
-          )}
-          {(docsSearchQuery || docsTagFilter) && (
-            <button
-              type="button"
-              className="documents-search-clear"
-              title="Limpiar filtros"
-              onClick={() => {
-                setDocsSearchQuery('');
-                setDocsTagFilter('');
-              }}
-            >
-              <i className="pi pi-times" />
-            </button>
-          )}
-        </div>
         {isLoading ? (
           <div className="documents-empty-state">
             <i className="pi pi-spin pi-spinner" />
