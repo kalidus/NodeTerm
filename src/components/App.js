@@ -618,6 +618,15 @@ const App = () => {
     // Ahora los datos se empezarán a guardar encriptados
   }, []);
 
+  useEffect(() => {
+    const onMasterKeyUpdated = (event) => {
+      const key = event.detail?.key;
+      if (typeof key === 'string' && key) setMasterKey(key);
+    };
+    window.addEventListener('master-key-updated', onMasterKeyUpdated);
+    return () => window.removeEventListener('master-key-updated', onMasterKeyUpdated);
+  }, []);
+
   // Handler cuando se cambia master password desde Settings
   const handleMasterPasswordChanged = useCallback((key) => {
     setMasterKey(key);

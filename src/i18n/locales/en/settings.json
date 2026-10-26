@@ -104,6 +104,7 @@
       "cursorUnderline": "Underline"
     },
     "groups": {
+      "preferences": "Settings",
       "appearance": "Appearance",
       "system": "System"
     },

@@ -202,6 +202,37 @@
   padding: 2px 12px 12px;
 }
 
+.aqp-body--embed {
+  overflow: hidden;
+  padding: 0;
+}
+
+.aqp-embed {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.aqp-embed .general-settings-content,
+.aqp-embed .security-layout-grid {
+  grid-template-columns: 1fr;
+}
+
+.aqp-embed .security-layout-grid > * {
+  grid-column: 1 !important;
+  grid-row: auto !important;
+}
+
+body:has(.aqp) .p-dropdown-panel,
+body:has(.aqp) .p-password-panel,
+body:has(.aqp) .p-password-overlay,
+body:has(.aqp) .p-overlaypanel,
+body:has(.aqp) .p-dialog-mask,
+body:has(.aqp) .p-toast {
+  z-index: 10050 !important;
+}
+
 .aqp-body::-webkit-scrollbar {
   width: 8px;
 }

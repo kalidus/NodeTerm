@@ -1,3 +1,6 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import QuickPanelSettingsHost from '../components/settings/QuickPanelSettingsHost';
 import { themeManager } from './themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from './presetManager';
@@ -139,6 +142,27 @@ const APP_CATALOG = [
 ];
 
 const RAIL_GROUPS = [
+  {
+    id: 'preferences',
+    labelKey: 'settings.quickPanel.groups.preferences',
+    sections: [
+      {
+        id: 'general',
+        icon: 'pi-cog',
+        labelKey: 'settings.sidebar.general'
+      },
+      {
+        id: 'security',
+        icon: 'pi-shield',
+        labelKey: 'settings.sidebar.security',
+        descKey: 'settings.sidebarDescriptions.masterKey',
+        chips: [
+          { id: 'clave-maestra', labelKey: 'settings.sidebar.masterKey' },
+          { id: 'auditoria', labelKey: 'settings.sidebar.audit' }
+        ]
+      }
+    ]
+  },
   {
     id: 'appearance',
     labelKey: 'settings.quickPanel.groups.appearance',
@@ -393,20 +417,38 @@ export function openAppearanceQuickPanel(anchorEl) {
     panel._aqpCleanup?.();
     panel.remove();
   };
+  const extraCleanup = [];
   panel._aqpCleanup = () => {
     document.removeEventListener('click', onOutside);
     document.removeEventListener('keydown', onKey);
     stopResizeListeners();
+    extraCleanup.forEach((fn) => {
+      try { fn(); } catch (_) { /* ignore */ }
+    });
   };
 
   const onOutside = (ev) => {
     if (Date.now() - openedAt < 150) return;
     if (resizeState || Date.now() - resizedAt < 200) return;
-    if (!panel.contains(ev.target) && !anchorEl.contains(ev.target)) close();
+    const target = ev.target;
+    if (target instanceof Element && target.closest(
+      '.p-dropdown-panel, .p-password-panel, .p-password-overlay, .p-connected-overlay, .p-overlaypanel, .p-dialog, .p-dialog-mask, .app-confirm-dialog, .p-toast, .p-tooltip, .home-icon-overlay'
+    )) {
+      return;
+    }
+    if (!panel.contains(target) && !anchorEl.contains(target)) close();
   };
 
   const onKey = (ev) => {
-    if (ev.key === 'Escape') close();
+    if (ev.key !== 'Escape') return;
+    const overlayOpen = Array.from(document.querySelectorAll(
+      '.p-dropdown-panel, .p-password-panel, .p-password-overlay, .p-overlaypanel, .p-dialog-mask, .p-confirm-dialog, .app-confirm-dialog'
+    )).some((node) => {
+      const style = window.getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+    });
+    if (overlayOpen) return;
+    close();
   };
 
   function positionPanel() {
@@ -528,9 +570,14 @@ export function openAppearanceQuickPanel(anchorEl) {
       const count = APP_CATALOG.filter(app => enabled[app.id]).length;
       return t('settings.quickPanel.appsActive', { count });
     }
-    if (sectionId === 'import') {
+    if (sectionId === 'import' || sectionId === 'security') {
       const section = SECTIONS.find(item => item.id === sectionId);
       return section?.descKey ? t(section.descKey) : '';
+    }
+    if (sectionId === 'general') {
+      const code = i18n.getLocale?.() || 'es';
+      const match = (i18n.getAvailableLocales?.() || []).find(item => item.code === code);
+      return match?.name || code;
     }
     return '';
   }
@@ -642,9 +689,58 @@ export function openAppearanceQuickPanel(anchorEl) {
     });
   }
 
+  let embedRoot = null;
+  let embedHost = null;
+  let embedKey = null;
+  let embedResizeObserver = null;
+
+  function unmountEmbed() {
+    if (embedResizeObserver) {
+      embedResizeObserver.disconnect();
+      embedResizeObserver = null;
+    }
+    const root = embedRoot;
+    embedRoot = null;
+    embedHost = null;
+    embedKey = null;
+    if (root) queueMicrotask(() => root.unmount());
+  }
+  extraCleanup.push(unmountEmbed);
+
+  function mountEmbed(section, key) {
+    const host = el('div', 'aqp-embed');
+    const body = el('div', 'aqp-body aqp-body--embed');
+    body.append(host);
+    stage.append(body);
+    const root = createRoot(host);
+    embedHost = host;
+    embedRoot = root;
+    embedKey = key;
+    let lastHeight = 0;
+
+    const renderHost = () => {
+      if (embedRoot !== root || !host.isConnected) return;
+      const height = host.clientHeight || Math.max(320, panel.clientHeight - 160);
+      if (height === lastHeight) return;
+      lastHeight = height;
+      root.render(React.createElement(QuickPanelSettingsHost, {
+        mode: section.id === 'security' ? 'security' : 'general',
+        securitySubTab: state.chip || 'clave-maestra',
+        contentHeight: height,
+        onClose: close
+      }));
+    };
+
+    renderHost();
+    requestAnimationFrame(renderHost);
+    embedResizeObserver = new ResizeObserver(() => renderHost());
+    embedResizeObserver.observe(host);
+  }
+
   function renderStage() {
-    stage.replaceChildren();
     const section = activeSection();
+    unmountEmbed();
+    stage.replaceChildren();
     const head = el('div', 'aqp-stage-head');
     head.append(el('div', 'aqp-title', t(section.labelKey)));
     if (section.chips) {
@@ -688,6 +784,18 @@ export function openAppearanceQuickPanel(anchorEl) {
       head.append(typeChips);
     }
     stage.append(head);
+
+    const embedKeyNext = section.id === 'general'
+      ? 'general'
+      : section.id === 'security'
+        ? `security:${state.chip || 'clave-maestra'}`
+        : null;
+    stage.classList.toggle('aqp-stage--embed', !!embedKeyNext);
+    if (embedKeyNext) {
+      gridEl = null;
+      mountEmbed(section, embedKeyNext);
+      return;
+    }
 
     const hideSearch = section.id === 'terminal' && state.chip === 'global';
     let input = null;
@@ -1147,6 +1255,20 @@ export function openAppearanceQuickPanel(anchorEl) {
     renderRail();
     renderStage();
     positionPanel();
+  }
+
+  if (typeof i18n.subscribe === 'function') {
+    extraCleanup.push(i18n.subscribe(() => {
+      renderHeader();
+      renderRail();
+      const title = stage.querySelector(':scope > .aqp-stage-head .aqp-title');
+      const section = activeSection();
+      if (title) title.textContent = t(section.labelKey);
+      const chipButtons = stage.querySelectorAll(':scope > .aqp-stage-head .aqp-chip');
+      (section.chips || []).forEach((chip, index) => {
+        if (chipButtons[index]) chipButtons[index].textContent = t(chip.labelKey);
+      });
+    }));
   }
 
   document.body.appendChild(panel);
