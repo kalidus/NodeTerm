@@ -60,6 +60,8 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   border-radius: 12px;
@@ -120,8 +122,9 @@
 }
 
 .home-clock-card-hero {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -148,6 +151,22 @@
   flex-direction: column;
   gap: 2px;
   align-items: flex-start;
+  overflow: hidden;
+}
+
+.home-clock-card-primary > * {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.home-clock-card-extra,
+.home-clock-card-extra-more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .home-clock-card--clock-only .home-clock-card-primary {
@@ -179,12 +198,20 @@
   font-weight: 550;
   opacity: 0.95;
   margin-top: 2px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-clock-weather-condition--in-card {
   font-size: clamp(0.62rem, 3.2cqw, 0.76rem);
   opacity: 0.82;
   color: inherit;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-clock-card-clockline {
@@ -199,6 +226,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+.home-clock-card-date {
+  font-size: clamp(0.62rem, 3.2cqw, 0.78rem);
+  opacity: 0.78;
+  margin-top: 2px;
+  line-height: 1.3;
+  max-width: 100%;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .home-clock-date--in-card {
   font-size: clamp(0.72rem, 3.6cqw, 0.88rem);
   opacity: 0.85;
@@ -211,14 +251,23 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  max-width: 42%;
+  max-width: 28%;
+  min-width: 0;
+}
+
+.home-clock-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 6px;
+  max-width: 100%;
   min-width: 0;
 }
 
 .home-clock-card-stat {
   font-size: clamp(0.58rem, 2.9cqw, 0.72rem);
   opacity: 0.88;
-  text-align: right;
+  text-align: left;
   line-height: 1.25;
   font-family: 'Fira Code', Consolas, monospace;
   font-variant-numeric: tabular-nums;
@@ -226,6 +275,7 @@
 
 .home-clock-card-forecast-band {
   flex-shrink: 0;
+  min-width: 0;
   padding: 8px 6px 10px;
   background: rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(8px);
@@ -233,7 +283,31 @@
 }
 
 .home-clock-forecast--in-card {
+  display: grid;
+  grid-template-columns: repeat(var(--day-count, 5), minmax(0, 1fr));
   gap: 4px;
+  overflow: hidden;
+}
+
+.home-clock-forecast--in-card .home-clock-slot {
+  min-width: 0;
+  width: 100%;
+  flex-shrink: 1;
+  padding: 6px 2px;
+  box-sizing: border-box;
+}
+
+.home-clock-forecast--in-card .home-weather-icon--forecast {
+  width: clamp(16px, 10cqmin, 28px);
+  height: clamp(16px, 10cqmin, 28px);
+}
+
+.home-clock-slot--in-card .home-clock-slot-label,
+.home-clock-slot--in-card .home-clock-slot-temp {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-clock-slot--in-card {
@@ -276,6 +350,9 @@
   max-width: 100%;
   max-height: 100%;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-radius: 10px;
   padding: 10px 10px 12px;
   background: rgba(8, 12, 20, 0.88);
@@ -300,6 +377,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .home-clock-detail-sheet__title-main {
@@ -318,6 +396,121 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.home-clock-detail-sheet__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-clock-detail-sheet__icon .home-weather-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.home-clock-detail-sheet__range {
+  font-family: 'Fira Code', Consolas, monospace;
+  font-size: clamp(0.72rem, 3.4cqw, 0.9rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.home-clock-detail-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.home-clock-detail-sheet__meta .home-clock-detail-sheet__cell {
+  flex: 1 1 72px;
+}
+
+.home-clock-hour-strip {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 6px;
+  min-width: 0;
+}
+
+.home-clock-hour {
+  flex: 0 0 auto;
+  width: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border-radius: 8px;
+}
+
+.home-clock-hour.is-past {
+  opacity: 0.4;
+}
+
+.home-clock-hour.is-now {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.home-clock-hour-label,
+.home-clock-hour-temp,
+.home-clock-hour-precip {
+  font-family: 'Fira Code', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.home-clock-hour-label {
+  font-size: 0.58rem;
+  opacity: 0.75;
+}
+
+.home-clock-hour.is-now .home-clock-hour-label {
+  color: var(--ch-primary, #4fc3f7);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.home-clock-hour-bar {
+  position: relative;
+  width: 3px;
+  height: 28px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.home-clock-hour-bar > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ch-primary, #4fc3f7) 80%, #fff);
+}
+
+.home-clock-hour .home-weather-icon--forecast {
+  width: 22px;
+  height: 22px;
+}
+
+.home-clock-hour-temp {
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.home-clock-hour-precip {
+  min-height: 0.7rem;
+  font-size: 0.55rem;
+  color: #7ec8ff;
 }
 
 .home-clock-detail-sheet__close {
@@ -684,8 +877,8 @@
 }
 
 .home-weather-icon--hero {
-  width: clamp(40px, 24cqw, 96px);
-  height: clamp(40px, 24cqw, 96px);
+  width: clamp(36px, 18cqmin, 72px);
+  height: clamp(36px, 18cqmin, 72px);
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
 }
 
@@ -706,7 +899,7 @@
 }
 
 .home-weather-icon-fallback.home-weather-icon--hero {
-  font-size: clamp(2rem, 14cqw, 3rem);
+  font-size: clamp(1.6rem, 12cqmin, 2.4rem);
 }
 
 .home-weather-icon-fallback.home-weather-icon--forecast {
@@ -719,6 +912,10 @@
   gap: 6px;
   max-width: 100%;
   min-width: 0;
+}
+
+.home-clock-chips--in-card {
+  margin-top: 8px;
 }
 
 .home-clock-chip {
@@ -817,14 +1014,14 @@
     padding: 10px 34px 8px 10px;
   }
 
-  .home-clock-slot,
+  .home-clock-forecast--in-card .home-clock-slot {
+    min-width: 0;
+    padding: 6px 2px;
+  }
+
   .home-clock-zone {
     min-width: 52px;
     padding: 6px 6px;
-  }
-
-  .home-clock-slot {
-    min-width: 50px;
   }
 }
 
@@ -834,28 +1031,8 @@
   }
 
   .home-clock-card-hero {
-    flex-direction: column;
-    align-items: stretch;
     gap: 6px;
     padding: 10px 32px 8px 8px;
-  }
-
-  .home-clock-card-aside {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    max-width: 100%;
-    gap: 8px;
-  }
-
-  .home-clock-card-stat {
-    text-align: left;
-  }
-
-  .home-clock-card-clockline {
-    white-space: normal;
-    line-height: 1.3;
   }
 }
 
@@ -865,19 +1042,13 @@
     gap: 5px;
   }
 
-  .home-clock-forecast,
   .home-clock-zones {
     gap: 4px;
   }
 
-  .home-clock-slot,
   .home-clock-zone {
     min-width: 46px;
     padding: 5px 4px;
-  }
-
-  .home-clock-slot {
-    min-width: 44px;
   }
 
   .home-clock-chip {
@@ -893,38 +1064,69 @@
   }
 }
 
-@container homeClock (max-height: 220px) {
-  .home-clock {
-    gap: 5px;
-    padding-top: 6px;
-    padding-bottom: 8px;
+@container homeClock (max-width: 220px) {
+  .home-clock-forecast--in-card {
+    display: flex;
+    overflow-x: auto;
+    grid-template-columns: none;
   }
 
-  .home-clock-card-hero {
-    padding-top: 8px;
-    padding-bottom: 6px;
-  }
-
-  .home-clock-card-temp {
-    font-size: clamp(1.25rem, 11cqw, 2rem);
+  .home-clock-forecast--in-card .home-clock-slot {
+    min-width: 52px;
+    width: auto;
+    flex: 0 0 auto;
   }
 }
 
-@container homeClock (max-height: 160px) {
-  .home-clock {
-    gap: 4px;
-    padding: 5px 8px 6px;
+@container homeClock (max-height: 380px) {
+  .home-clock-greeting--in-card,
+  .home-clock-card-extra-more {
+    display: none;
   }
+}
 
-  .home-clock-card-hero {
-    padding: 6px 28px 4px 6px;
-  }
-
-  .home-clock-card-clockline {
+@container homeClock (max-height: 300px) {
+  .home-clock-card-extra {
     display: none;
   }
 
+  .home-clock {
+    gap: 6px;
+    padding: 8px 10px 8px;
+  }
+
+  .home-clock-card-hero {
+    align-items: center;
+    padding: 6px 40px 6px 12px;
+  }
+
+  .home-clock-card-temp {
+    font-size: clamp(1.45rem, 9cqw, 2rem);
+  }
+
+  .home-weather-icon--hero {
+    width: 32px;
+    height: 32px;
+  }
+
   .home-clock-card-forecast-band {
-    padding: 4px 4px 6px;
+    padding: 5px 4px 6px;
+  }
+
+  .home-clock-forecast--in-card .home-clock-slot {
+    padding: 4px 2px;
+    gap: 1px;
+  }
+
+  .home-clock-forecast--in-card .home-weather-icon--forecast {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@container homeClock (max-height: 300px) and (min-width: 280px) {
+  .home-clock-card-hero {
+    flex-direction: row;
+    align-items: center;
   }
 }

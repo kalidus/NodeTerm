@@ -14,6 +14,7 @@ const {
   moonPhase,
   formatUtcOffset,
   upcomingHourly,
+  hourlyForDate,
   parseTimezoneList,
   wantsWeather
 } = require('../../src/utils/homeClock');
@@ -202,6 +203,19 @@ describe('prevision horaria', () => {
     assert.deepStrictEqual(got.map((row) => row.time), [
       '2026-10-01T11:00',
       '2026-10-01T12:00'
+    ]);
+  });
+
+  it('deja las horas de un dia y marca la hora actual', () => {
+    const rows = [
+      { time: '2026-10-01T10:00', temperature: 18 },
+      { time: '2026-10-01T11:00', temperature: 19 },
+      { time: '2026-10-02T00:00', temperature: 14 }
+    ];
+    const got = hourlyForDate(rows, '2026-10-01', new Date('2026-10-01T11:30:00Z'), 'UTC');
+    assert.deepStrictEqual(got.map((row) => [row.time, row.past, row.now]), [
+      ['2026-10-01T10:00', true, false],
+      ['2026-10-01T11:00', false, true]
     ]);
   });
 

@@ -22,6 +22,7 @@ import {
   timezoneLabel,
   weatherCodeInfo,
   upcomingHourly,
+  hourlyForDate,
   weekdayShortFromDate,
   wantsWeather,
   windDirectionLabel,
@@ -39,10 +40,6 @@ function dateFromDailyKey(dateStr) {
   }
   const parsed = new Date(dateStr);
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
-
-function formatLongDateFromKey(dateStr) {
-  return formatLongDate(dateFromDailyKey(dateStr));
 }
 
 function buildNowDetailLines(ctx) {
@@ -94,6 +91,16 @@ function buildNowDetailLines(ctx) {
     lines.push({ k: 'Actualizado', v: formatUpdatedAgo(weather.fetchedAt, now) });
   }
   return lines;
+}
+
+function hourBarPercent(value, min, max) {
+  const v = Number(value);
+  const lo = Number(min);
+  const hi = Number(max);
+  if (!Number.isFinite(v)) return 0;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return 70;
+  const pct = ((v - lo) / (hi - lo)) * 100;
+  return Math.round(Math.max(12, Math.min(100, pct)));
 }
 
 function buildDayDetailLines(row, unit) {
@@ -171,6 +178,7 @@ const TOGGLE_GROUPS = [
 
 export const HomeClockPanel = () => {
   const rootRef = useRef(null);
+  const hourStripRef = useRef(null);
   const [now, setNow] = useState(() => new Date());
   const [config, setConfig] = useState(() => loadClockConfig());
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -294,24 +302,24 @@ export const HomeClockPanel = () => {
   ));
   const weatherKind = current ? weatherVisualKind(current.code) : 'cloud';
 
-  const showAsideWind = !!(current && config.showWind && roundMetric(current.windSpeed) != null);
-  const showAsidePrecip = !!(current && config.showPrecip && roundMetric(current.precip) != null);
-  const showAsideFeels = !!(current && config.showFeelsLike && roundMetric(current.feelsLike) != null);
-  const asideWindDir = current ? windDirectionLabel(current.windDirection) : '';
+  const heroStats = [];
+  if (current && config.showFeelsLike && roundMetric(current.feelsLike) != null) {
+    heroStats.push(`Sensacion ${roundMetric(current.feelsLike)} ${unit}`);
+  }
+  if (current && config.showWind && roundMetric(current.windSpeed) != null) {
+    const dir = windDirectionLabel(current.windDirection);
+    heroStats.push(`Viento ${roundMetric(current.windSpeed)} ${windUnit}${dir ? ` ${dir}` : ''}`);
+  }
+  if (current && config.showPrecip && roundMetric(current.precip) != null) {
+    heroStats.push(`Lluvia ${roundMetric(current.precip)}%`);
+  }
 
   const chips = [];
-  if (current && config.showFeelsLike && !showAsideFeels && roundMetric(current.feelsLike) != null) {
-    chips.push(`Sensacion ${roundMetric(current.feelsLike)} ${unit}`);
-  }
   if (config.showMinMax && today && roundMetric(today.min) != null && roundMetric(today.max) != null) {
     chips.push(`${roundMetric(today.min)} / ${roundMetric(today.max)} ${unit}`);
   }
   if (current && config.showHumidity && roundMetric(current.humidity) != null) {
     chips.push(`Humedad ${roundMetric(current.humidity)}%`);
-  }
-  if (current && config.showWind && !showAsideWind && roundMetric(current.windSpeed) != null) {
-    const dir = windDirectionLabel(current.windDirection);
-    chips.push(`Viento ${roundMetric(current.windSpeed)} ${windUnit}${dir ? ` ${dir}` : ''}`);
   }
   if (current && config.showPressure && roundMetric(current.pressure) != null) {
     chips.push(`${roundMetric(current.pressure)} hPa`);
@@ -321,9 +329,6 @@ export const HomeClockPanel = () => {
   }
   if (current && config.showVisibility && formatVisibility(current.visibility)) {
     chips.push(formatVisibility(current.visibility));
-  }
-  if (current && config.showPrecip && !showAsidePrecip && roundMetric(current.precip) != null) {
-    chips.push(`Lluvia ${roundMetric(current.precip)}%`);
   }
   if (config.showSun && today && (today.sunrise || today.sunset)) {
     const rise = clockFromIso(today.sunrise);
@@ -349,6 +354,23 @@ export const HomeClockPanel = () => {
     return days.find((row) => row.date === overlayDetailKey) || null;
   }, [overlayDetailKey, days]);
 
+  const overlayDayHours = useMemo(() => {
+    if (!overlayDayRow || !weather) return [];
+    return hourlyForDate(
+      weather.hourly,
+      overlayDayRow.date,
+      now,
+      weather.location && weather.location.timezone
+    );
+  }, [overlayDayRow, weather, now]);
+
+  const overlayDayMeta = useMemo(() => {
+    if (!overlayDayRow) return [];
+    return buildDayDetailLines(overlayDayRow, unit).filter((line) => (
+      line.k === 'Prob. lluvia' || line.k === 'UV max' || line.k === 'Sol'
+    ));
+  }, [overlayDayRow, unit]);
+
   const overlayDetailLines = useMemo(() => {
     if (overlayDetailKey === 'now') return nowDetailLines;
     if (overlayDayRow) return buildDayDetailLines(overlayDayRow, unit);
@@ -365,9 +387,16 @@ export const HomeClockPanel = () => {
     if (overlayDayRow) {
       const idx = days.findIndex((row) => row.date === overlayDayRow.date);
       const info = weatherCodeInfo(overlayDayRow.code, true);
+      const weekday = formatWeekday(dateFromDailyKey(overlayDayRow.date));
+      const weekdayLabel = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
+      const monthText = new Intl.DateTimeFormat('es-ES', {
+        day: 'numeric',
+        month: 'long'
+      }).format(dateFromDailyKey(overlayDayRow.date));
       return {
-        primary: idx === 0 ? 'Hoy' : weekdayShortFromDate(overlayDayRow.date),
-        secondary: `${formatLongDateFromKey(overlayDayRow.date)}${info.label ? ` · ${info.label}` : ''}`
+        primary: idx === 0 ? 'Hoy' : weekdayLabel,
+        secondary: monthText,
+        condition: info.label
       };
     }
     return null;
@@ -397,6 +426,19 @@ export const HomeClockPanel = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [overlayDetailKey, closeDetailSheet]);
 
+  useEffect(() => {
+    if (!overlayDayRow) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const strip = hourStripRef.current;
+      if (!strip) return;
+      const node = strip.querySelector('[data-hour-now="1"]');
+      if (!node) return;
+      const left = node.offsetLeft - ((strip.clientWidth - node.offsetWidth) / 2);
+      strip.scrollLeft = Math.max(0, left);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [overlayDetailKey, overlayDayRow, overlayDayHours.length]);
+
   const handleHeroKey = useCallback((event) => {
     if (!canExpandHero) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -404,21 +446,19 @@ export const HomeClockPanel = () => {
     openNowDetail(event);
   }, [canExpandHero, openNowDetail]);
 
-  const clockLine = useMemo(() => {
-    const parts = [];
-    if (config.showTime) {
-      parts.push(formatClockTime(now, { hour12: config.hour12, showSeconds: config.showSeconds }));
-    }
-    if (config.showLongDate) {
-      parts.push(formatLongDate(now));
-    } else if (config.showWeekday) {
-      parts.push(formatWeekday(now));
-    }
-    return parts.join(' · ');
-  }, [config.showTime, config.showSeconds, config.hour12, config.showLongDate, config.showWeekday, now]);
-
   const cardWeatherKind = current ? weatherKind : 'cloud';
   const cardClockOnly = showClockBlock && !(showWeatherBlock && current);
+  const showDetailSheet = !!(
+    overlayDetailKey
+    && overlayDetailHeader
+    && (overlayDetailKey === 'now' ? overlayDetailLines.length > 0 : true)
+  );
+  const clockTimeLabel = config.showTime
+    ? formatClockTime(now, { hour12: config.hour12, showSeconds: config.showSeconds })
+    : '';
+  const clockDateLabel = config.showLongDate
+    ? formatLongDate(now)
+    : (config.showWeekday ? formatWeekday(now) : '');
 
   return (
     <div className="home-clock" ref={rootRef}>
@@ -473,19 +513,38 @@ export const HomeClockPanel = () => {
                   {weather.location.label || weather.location.name}
                 </div>
               )}
-              {showWeatherBlock && config.showCondition && condition && (
-                <div className="home-clock-weather-condition home-clock-weather-condition--in-card" title={condition.label}>
-                  {condition.label}
+              <div className="home-clock-card-extra">
+                {showWeatherBlock && config.showCondition && condition && (
+                  <div className="home-clock-weather-condition home-clock-weather-condition--in-card" title={condition.label}>
+                    {condition.label}
+                  </div>
+                )}
+                {!cardClockOnly && clockTimeLabel && (
+                  <div className="home-clock-card-clockline" title={clockTimeLabel}>{clockTimeLabel}</div>
+                )}
+                <div className="home-clock-card-extra-more">
+                  {!cardClockOnly && clockDateLabel && (
+                    <div className="home-clock-card-date" title={clockDateLabel}>{clockDateLabel}</div>
+                  )}
+                  {cardClockOnly && clockDateLabel && (
+                    <div className="home-clock-date home-clock-date--in-card" title={clockDateLabel}>
+                      {clockDateLabel}
+                    </div>
+                  )}
+                  {heroStats.length > 0 && (
+                    <div className="home-clock-card-stats">
+                      {heroStats.map((stat) => (
+                        <span key={stat} className="home-clock-card-stat">{stat}</span>
+                      ))}
+                    </div>
+                  )}
+                  {chips.length > 0 && (
+                    <div className="home-clock-chips home-clock-chips--in-card">
+                      {chips.map((chip) => <span key={chip} className="home-clock-chip">{chip}</span>)}
+                    </div>
+                  )}
                 </div>
-              )}
-              {!cardClockOnly && clockLine && (
-                <div className="home-clock-card-clockline" title={clockLine}>{clockLine}</div>
-              )}
-              {cardClockOnly && (config.showLongDate || config.showWeekday) && (
-                <div className="home-clock-date home-clock-date--in-card" title={formatLongDate(now)}>
-                  {config.showLongDate ? formatLongDate(now) : formatWeekday(now)}
-                </div>
-              )}
+              </div>
             </div>
 
             {showWeatherBlock && current && (
@@ -496,29 +555,16 @@ export const HomeClockPanel = () => {
                   size="hero"
                   title={condition ? condition.label : undefined}
                 />
-                {showAsideWind && (
-                  <div className="home-clock-card-stat">
-                    Viento: {roundMetric(current.windSpeed)} {windUnit}
-                    {asideWindDir ? ` ${asideWindDir}` : ''}
-                  </div>
-                )}
-                {showAsidePrecip && (
-                  <div className="home-clock-card-stat">
-                    Lluvia: {roundMetric(current.precip)}%
-                  </div>
-                )}
-                {showAsideFeels && (
-                  <div className="home-clock-card-stat">
-                    Sensacion: {roundMetric(current.feelsLike)} {unit}
-                  </div>
-                )}
               </div>
             )}
           </div>
 
           {config.showDaily && days.length > 0 && (
             <div className="home-clock-card-forecast-band" aria-label="Proximos dias">
-              <div className="home-clock-forecast home-clock-forecast--in-card">
+              <div
+                className="home-clock-forecast home-clock-forecast--in-card"
+                style={{ '--day-count': days.length }}
+              >
                 {days.map((row) => {
                   const info = weatherCodeInfo(row.code, true);
                   const daySelected = overlayDetailKey === row.date;
@@ -527,7 +573,7 @@ export const HomeClockPanel = () => {
                       key={row.date}
                       type="button"
                       className={`home-clock-slot home-clock-slot--btn home-clock-slot--in-card no-drag${daySelected ? ' is-selected' : ''}`}
-                      title={`${info.label}. Pulsa para detalle`}
+                      title={`${info.label}. Pulsa para ver las horas`}
                       onClick={(event) => openDayDetail(event, row.date)}
                     >
                       <span className="home-clock-slot-label">{weekdayShortFromDate(row.date)}</span>
@@ -544,7 +590,7 @@ export const HomeClockPanel = () => {
             </div>
           )}
 
-          {overlayDetailKey && overlayDetailHeader && overlayDetailLines.length > 0 && (
+          {showDetailSheet && (
             <div
               className="home-clock-detail-sheet no-drag"
               role="dialog"
@@ -559,10 +605,28 @@ export const HomeClockPanel = () => {
               />
               <div className="home-clock-detail-sheet__panel">
                 <div className="home-clock-detail-sheet__head">
+                  {overlayDayRow && (
+                    <div className="home-clock-detail-sheet__icon">
+                      <HomeWeatherIcon
+                        code={overlayDayRow.code}
+                        isDay
+                        size="forecast"
+                        title={overlayDetailHeader.condition || undefined}
+                      />
+                    </div>
+                  )}
                   <div id="home-clock-detail-title" className="home-clock-detail-sheet__title">
                     <span className="home-clock-detail-sheet__title-main">{overlayDetailHeader.primary}</span>
                     {overlayDetailHeader.secondary && (
                       <span className="home-clock-detail-sheet__title-sub">{overlayDetailHeader.secondary}</span>
+                    )}
+                    {overlayDetailHeader.condition && (
+                      <span className="home-clock-detail-sheet__title-sub">{overlayDetailHeader.condition}</span>
+                    )}
+                    {overlayDayRow && roundMetric(overlayDayRow.max) != null && roundMetric(overlayDayRow.min) != null && (
+                      <span className="home-clock-detail-sheet__range">
+                        {roundMetric(overlayDayRow.max)} / {roundMetric(overlayDayRow.min)} {unit}
+                      </span>
                     )}
                   </div>
                   <button
@@ -574,23 +638,60 @@ export const HomeClockPanel = () => {
                     <i className="pi pi-times" />
                   </button>
                 </div>
-                <div className="home-clock-detail-sheet__grid">
-                  {overlayDetailLines.map((line) => (
-                    <div key={line.k} className="home-clock-detail-sheet__cell">
-                      <span className="home-clock-detail-sheet__cell-k">{line.k}</span>
-                      <span className="home-clock-detail-sheet__cell-v">{line.v}</span>
-                    </div>
-                  ))}
-                </div>
+                {overlayDayRow && overlayDayHours.length > 0 && (
+                  <div
+                    className="home-clock-hour-strip"
+                    ref={hourStripRef}
+                    aria-label="Horas del dia"
+                  >
+                    {overlayDayHours.map((row) => {
+                      const isDay = row.isDay !== 0;
+                      const info = weatherCodeInfo(row.code, isDay);
+                      const precip = roundMetric(row.precip);
+                      return (
+                        <div
+                          key={row.time}
+                          className={`home-clock-hour${row.past ? ' is-past' : ''}${row.now ? ' is-now' : ''}`}
+                          data-hour-now={row.now ? '1' : undefined}
+                          title={info.label}
+                        >
+                          <span className="home-clock-hour-label">{hourLabel(row.time)}</span>
+                          <span className="home-clock-hour-bar" aria-hidden="true">
+                            <span style={{ height: `${hourBarPercent(row.temperature, overlayDayRow.min, overlayDayRow.max)}%` }} />
+                          </span>
+                          <HomeWeatherIcon code={row.code} isDay={isDay} size="forecast" title={info.label} />
+                          <span className="home-clock-hour-temp">
+                            {roundMetric(row.temperature) != null ? `${roundMetric(row.temperature)}°` : '--'}
+                          </span>
+                          <span className="home-clock-hour-precip">{precip > 0 ? `${precip}%` : ''}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {overlayDayRow && overlayDayMeta.length > 0 && (
+                  <div className="home-clock-detail-sheet__meta">
+                    {overlayDayMeta.map((line) => (
+                      <div key={line.k} className="home-clock-detail-sheet__cell">
+                        <span className="home-clock-detail-sheet__cell-k">{line.k}</span>
+                        <span className="home-clock-detail-sheet__cell-v">{line.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {overlayDetailKey === 'now' && (
+                  <div className="home-clock-detail-sheet__grid">
+                    {overlayDetailLines.map((line) => (
+                      <div key={line.k} className="home-clock-detail-sheet__cell">
+                        <span className="home-clock-detail-sheet__cell-k">{line.k}</span>
+                        <span className="home-clock-detail-sheet__cell-v">{line.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {chips.length > 0 && (
-        <div className="home-clock-chips">
-          {chips.map((chip) => <span key={chip} className="home-clock-chip">{chip}</span>)}
         </div>
       )}
 

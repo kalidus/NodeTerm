@@ -367,11 +367,8 @@ function weekdayShortFromDate(isoDate) {
   return new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(new Date(parts[0], parts[1] - 1, parts[2]));
 }
 
-function upcomingHourly(hourly, timeZone, count, now) {
-  const rows = Array.isArray(hourly) ? hourly : [];
+function zoneHourStamp(now, timeZone) {
   const current = now instanceof Date ? now : new Date();
-  const limit = count || 12;
-  let stamp = '';
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: timeZone || undefined,
@@ -385,15 +382,37 @@ function upcomingHourly(hourly, timeZone, count, now) {
     parts.forEach((part) => {
       if (part.type !== 'literal') map[part.type] = part.value;
     });
-    stamp = `${map.year}-${map.month}-${map.day}T${map.hour}`;
+    if (!map.year || !map.month || !map.day || map.hour == null || map.hour === '') return '';
+    return `${map.year}-${map.month}-${map.day}T${map.hour}`;
   } catch (err) {
-    stamp = '';
+    return '';
   }
+}
+
+function upcomingHourly(hourly, timeZone, count, now) {
+  const rows = Array.isArray(hourly) ? hourly : [];
+  const limit = count || 12;
+  const stamp = zoneHourStamp(now, timeZone);
   const index = stamp
     ? rows.findIndex((row) => String(row.time || '').slice(0, 13) >= stamp)
     : 0;
   const start = index < 0 ? 0 : index;
   return rows.slice(start, start + limit);
+}
+
+function hourlyForDate(hourly, dateKey, now, timeZone) {
+  const key = String(dateKey || '').slice(0, 10);
+  if (!key) return [];
+  const rows = Array.isArray(hourly) ? hourly : [];
+  const stamp = zoneHourStamp(now, timeZone);
+  return rows.filter((row) => String(row.time || '').slice(0, 10) === key).map((row) => {
+    const hour = String(row.time || '').slice(0, 13);
+    return {
+      ...row,
+      past: !!(stamp && hour < stamp),
+      now: !!(stamp && hour === stamp)
+    };
+  });
 }
 
 function wantsWeather(config) {
@@ -444,6 +463,7 @@ module.exports = {
   hourLabel,
   weekdayShortFromDate,
   upcomingHourly,
+  hourlyForDate,
   wantsWeather,
   formatVisibility
 };
