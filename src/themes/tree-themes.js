@@ -228,6 +228,42 @@ export const treeThemes = {
     cssClass: 'tree-theme-cyber'
   },
 
+  circuit: {
+    name: 'Circuito',
+    description: 'Conectores en L con nodos, estilo topología de red',
+    lineStyle: 'solid',
+    lineColor: 'var(--ui-button-primary)',
+    lineOpacity: 0.35,
+    lineWidth: 1,
+    nodeSpacing: 'compact',
+    indentSize: 12,
+    borderRadius: 0,
+    hoverStyle: 'glow',
+    connectorChars: null,
+    cssClass: 'tree-theme-circuit'
+  },
+
+  terminal: {
+    name: 'Terminal',
+    description: 'Líneas tipo ├─ └─ con tipografía monoespaciada',
+    lineStyle: 'solid',
+    lineColor: 'var(--ui-button-primary)',
+    lineOpacity: 0.4,
+    lineWidth: 1,
+    nodeSpacing: 'compact',
+    indentSize: 14,
+    borderRadius: 0,
+    hoverStyle: 'highlight',
+    connectorChars: {
+      vertical: '│',
+      horizontal: '─',
+      branch: '├',
+      lastBranch: '└',
+      space: ' '
+    },
+    cssClass: 'tree-theme-terminal'
+  },
+
   matrix: {
     name: 'Matrix',
     description: 'Verde digital estilo Matrix',

@@ -1050,6 +1050,218 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: CIRCUIT (Topología de red)
+   Conectores en L con nodo (punto) en cada bifurcación; brillo al hover
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-circuit {
+  --tree-indent: 12px;
+  --tree-line-color: color-mix(in srgb, var(--ui-button-primary, #38bdf8) 38%, transparent);
+  --tree-line-opacity: 1;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 0;
+  --circuit-row-half: calc(var(--sidebar-row-min-h, 22px) / 2);
+  --circuit-glow: color-mix(in srgb, var(--ui-button-primary, #38bdf8) 55%, transparent);
+}
+
+.sidebar-tree.tree-theme-circuit .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-content {
+  min-height: var(--sidebar-row-min-h, 22px) !important;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-children {
+  position: relative;
+  padding-left: 12px !important;
+  margin-left: 10px !important;
+  border-left: none !important;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode {
+  position: relative !important;
+}
+
+/* Troncal vertical */
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: -12px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 0 !important;
+  height: auto !important;
+  border: none !important;
+  border-left: 1px solid var(--tree-line-color) !important;
+  background: none !important;
+  pointer-events: none;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode:last-child::before {
+  bottom: auto !important;
+  height: var(--circuit-row-half) !important;
+}
+
+/* Rama horizontal */
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: -12px !important;
+  top: var(--circuit-row-half) !important;
+  width: 8px !important;
+  height: 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--tree-line-color) !important;
+  background: none !important;
+  pointer-events: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Nodo (punto) en la unión */
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: calc(var(--circuit-row-half) - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--tree-line-color);
+  pointer-events: none;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode > .p-treenode-content:hover::before {
+  border-top-color: var(--ui-button-primary, #38bdf8) !important;
+  box-shadow: 0 0 6px var(--circuit-glow);
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode:has(> .p-treenode-content:hover)::after,
+.sidebar-tree.tree-theme-circuit .p-treenode-children > .p-treenode:has(> .p-treenode-content.p-highlight)::after {
+  background: var(--ui-button-primary, #38bdf8);
+  box-shadow: 0 0 6px var(--circuit-glow);
+}
+
+.sidebar-tree.tree-theme-circuit .p-tree-toggler-icon {
+  color: var(--ui-button-primary, #38bdf8) !important;
+  opacity: 0.85;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-content:hover::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ui-button-primary, #38bdf8) 12%, transparent), transparent 85%) !important;
+}
+
+.sidebar-tree.tree-theme-circuit .p-treenode-content.p-highlight::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ui-button-primary, #38bdf8) 22%, transparent), color-mix(in srgb, var(--ui-button-primary, #38bdf8) 4%, transparent)) !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary, #38bdf8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: TERMINAL (├─ └─)
+   Líneas en L tipo árbol de consola; tipografía monoespaciada
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-terminal {
+  --tree-indent: 14px;
+  --tree-line-color: color-mix(in srgb, var(--ui-button-primary, #39ff9c) 40%, transparent);
+  --tree-line-opacity: 1;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 0;
+  --terminal-row-half: 11px;
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+.sidebar-tree.tree-theme-terminal .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content {
+  min-height: 22px !important;
+  line-height: 22px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content .node-label {
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.95em;
+  letter-spacing: 0.01em;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-children {
+  position: relative;
+  padding-left: 14px !important;
+  margin-left: 10px !important;
+  border-left: none !important;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-children > .p-treenode {
+  position: relative !important;
+}
+
+/* Línea vertical (troncal) */
+.sidebar-tree.tree-theme-terminal .p-treenode-children > .p-treenode::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: -14px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 0 !important;
+  height: auto !important;
+  border: none !important;
+  border-left: 1px solid var(--tree-line-color) !important;
+  background: none !important;
+  pointer-events: none;
+}
+
+/* Último hijo: vertical corta → efecto └ */
+.sidebar-tree.tree-theme-terminal .p-treenode-children > .p-treenode:last-child::before {
+  bottom: auto !important;
+  height: var(--terminal-row-half) !important;
+}
+
+/* Tramo horizontal (├─ / └─) */
+.sidebar-tree.tree-theme-terminal .p-treenode-children > .p-treenode > .p-treenode-content::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: -14px !important;
+  top: var(--terminal-row-half) !important;
+  width: 11px !important;
+  height: 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--tree-line-color) !important;
+  background: none !important;
+  pointer-events: none;
+}
+
+.sidebar-tree.tree-theme-terminal .p-tree-toggler-icon {
+  color: var(--ui-button-primary, #39ff9c) !important;
+  opacity: 0.95;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content:hover::after {
+  background: color-mix(in srgb, var(--ui-button-primary, #39ff9c) 9%, transparent) !important;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content.p-highlight {
+  color: var(--ui-button-primary, #39ff9c) !important;
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content.p-highlight .node-label {
+  color: var(--ui-button-primary, #39ff9c);
+}
+
+.sidebar-tree.tree-theme-terminal .p-treenode-content.p-highlight::after {
+  background: color-mix(in srgb, var(--ui-button-primary, #39ff9c) 14%, transparent) !important;
+  box-shadow: inset 2px 0 0 var(--ui-button-primary, #39ff9c);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: MATRIX (Verde Digital)
    Estilo Matrix con verde brillante
    ═══════════════════════════════════════════════════════════════════════════════ */
