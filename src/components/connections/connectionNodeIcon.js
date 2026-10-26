@@ -25,12 +25,14 @@ const SCALES = {
   atom: 1.05,
   vscode: 1.05,
   linea: 1.06,
-  fluent: 1.0
+  fluent: 1.0,
+  ghost_ui: 1.18
 };
 
 function normalizeIcon(rawIcon, size, themeKey) {
   if (!rawIcon || !React.isValidElement(rawIcon)) return null;
-  const finalSize = Math.round(size * (SCALES[themeKey] || 1));
+  const scale = SCALES[themeKey] || (typeof themeKey === 'string' && themeKey.startsWith('ghost') ? 1.18 : 1);
+  const finalSize = Math.round(size * scale);
   return React.cloneElement(rawIcon, {
     width: finalSize,
     height: finalSize,

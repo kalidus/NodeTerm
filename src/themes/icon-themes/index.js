@@ -5,6 +5,7 @@ import nord from './nord';
 import material from './material';
 import { iconThemeMeta, iconThemeIds, iconThemeOptions } from './meta';
 import { futuristCatalog } from './futurist-catalog';
+import { ghostCatalog } from './ghost-catalog';
 
 export { iconThemeMeta, iconThemeIds, iconThemeOptions };
 
@@ -187,6 +188,33 @@ function loadFuturistPack() {
 
 futuristCatalog.forEach(({ id }) => {
   loaders[id] = () => loadFuturistPack().then((themes) => {
+    const theme = themes[id];
+    if (!theme) throw new Error(`missing icon theme ${id}`);
+    return { default: theme };
+  });
+});
+
+let ghostPackPromise = null;
+
+function loadGhostPack() {
+  if (!ghostPackPromise) {
+    ghostPackPromise = import(/* webpackChunkName: "icon-theme-ghost" */ './ghost-pack')
+      .then((mod) => {
+        const themes = mod.ghostIconThemes;
+        Object.keys(themes).forEach((id) => putTheme(id, themes[id]));
+        return themes;
+      })
+      .catch((err) => {
+        ghostPackPromise = null;
+        console.warn('[icon-themes] failed to load ghost pack', err);
+        throw err;
+      });
+  }
+  return ghostPackPromise;
+}
+
+ghostCatalog.forEach(({ id }) => {
+  loaders[id] = () => loadGhostPack().then((themes) => {
     const theme = themes[id];
     if (!theme) throw new Error(`missing icon theme ${id}`);
     return { default: theme };

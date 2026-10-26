@@ -45,7 +45,12 @@ import {
   isNotesLayout,
   readSavedNotesLayout
 } from './notes/notesLayoutModes';
+import { ghostCatalog } from '../themes/icon-themes/ghost-catalog';
 import '../styles/components/documents.css';
+
+const GHOST_NOTEBOOK_COLORS = Object.fromEntries(
+  ghostCatalog.map(({ id, color }) => [id.toLowerCase(), color])
+);
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
 function stripTreeNodeIcons(nodes) {
@@ -172,12 +177,13 @@ export const NotebookIcon = ({ themeKey = 'nord', isOpen = false, size = 18 }) =
     );
   }
 
-  if (key === 'ghost_ui') {
+  if (key === 'ghost_ui' || key.startsWith('ghost')) {
+    const color = key === 'ghost_ui' ? 'white' : (GHOST_NOTEBOOK_COLORS[key] || 'white');
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="0.8" style={{ filter: 'url(#ghost_glow_v5)' }}>
+      <svg width={size} height={size} viewBox="1.5 1.5 21 21" fill="none" stroke={color} strokeWidth="1.05" style={{ filter: 'url(#ghost_glow_v5)' }}>
         <rect x="5" y="3" width="15" height="18" rx="2" />
-        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="white" strokeWidth="1" />
-        <path d="M9 7h7M9 12h7" stroke="white" opacity="0.4" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke={color} strokeWidth="1.25" />
+        <path d="M9 7h7M9 12h7" stroke={color} opacity="0.4" />
       </svg>
     );
   }

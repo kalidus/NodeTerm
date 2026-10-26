@@ -2664,10 +2664,11 @@ const Sidebar = React.memo(({
         atom: 1.05,
         vscode: 1.05,
         linea: 1.06,
-        fluent: 1.0 // Ya es bastante grande
+        fluent: 1.0, // Ya es bastante grande
+        ghost_ui: 1.18
       };
 
-      const scale = SCALES[key] || 1.0;
+      const scale = SCALES[key] || (typeof key === 'string' && key.startsWith('ghost') ? 1.18 : 1.0);
       const finalSize = Math.round(size * scale);
 
       return React.cloneElement(rawIcon, {
@@ -2791,10 +2792,9 @@ const Sidebar = React.memo(({
 
     // Detectar si tiene icono personalizado (para ajustar alineación del texto)
     const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
-    const isWallixFolder = isFolder && node.importedFrom === 'Wallix' && node.droppable;
     const isConnection = !isFolder && (isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel);
     const hasOpenSession = isConnection && openSessionNodeKeys?.has?.(actionNode.key);
-    const iconSlotUsesBadge = hasCustomFolderIcon || isWallixFolder;
+    const iconSlotUsesBadge = hasCustomFolderIcon;
     const showTunnelActiveDot = isSSHTunnel && node.data?.tunnelStatus === 'active';
     const iconSlotSize = isFolder ? (folderIconSize || 20) : (connectionIconSize || 20);
     const iconSlotClass = [

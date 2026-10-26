@@ -1,5 +1,6 @@
 /** Lightweight icon-theme catalog (no SVG). */
 import { futuristIconMeta } from './futurist-catalog';
+import { ghostIconMeta } from './ghost-catalog';
 
 const baseIconThemeMeta = [
   {
@@ -188,7 +189,20 @@ const baseIconThemeMeta = [
   }
 ];
 
-export const iconThemeMeta = [...baseIconThemeMeta, ...futuristIconMeta];
+const ghostAnchor = baseIconThemeMeta.findIndex((theme) => theme.id === 'ghost_ui');
+const iconThemesBeforeGhostVariants = ghostAnchor === -1
+  ? baseIconThemeMeta
+  : baseIconThemeMeta.slice(0, ghostAnchor + 1);
+const iconThemesAfterGhostVariants = ghostAnchor === -1
+  ? []
+  : baseIconThemeMeta.slice(ghostAnchor + 1);
+
+export const iconThemeMeta = [
+  ...iconThemesBeforeGhostVariants,
+  ...ghostIconMeta,
+  ...iconThemesAfterGhostVariants,
+  ...futuristIconMeta
+];
 
 export const iconThemeIds = iconThemeMeta.map((t) => t.id);
 
