@@ -11,7 +11,6 @@ import {
   ensureSessionActionIconTheme,
   onSessionActionIconThemeLoaded
 } from '../themes/session-action-icons';
-import { iconThemes } from '../themes/icon-themes';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
@@ -36,8 +35,16 @@ import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
 import { getHomeTabActive, subscribeHomeTabActive } from '../utils/homeTabActiveBus';
-import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { FolderIconSelectorModal } from './FolderIconSelector';
 import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
+import NotesBrowser from './notes/NotesBrowser';
+import { renderDocumentNodeIcon } from './notes/documentNodeIcon';
+import { findFolderPath, isNotebook, isNote, isQuickNotesGroup } from './notes/notesBrowse';
+import {
+  NOTES_LAYOUT_STORAGE_KEY,
+  isNotesLayout,
+  readSavedNotesLayout
+} from './notes/notesLayoutModes';
 import '../styles/components/documents.css';
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -371,9 +378,39 @@ const DocumentsSidebar = ({
   });
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [quickNotesPanelOpen, setQuickNotesPanelOpen] = useState(false);
+  const [notesLayout, setNotesLayout] = useState(readSavedNotesLayout);
+  const [browseStack, setBrowseStack] = useState([]);
 
-  const themeKey = (iconTheme || 'nord').toLowerCase();
-  const themeIcons = iconThemes[themeKey]?.icons || iconThemes['nord'].icons;
+  useEffect(() => {
+    try { localStorage.setItem(NOTES_LAYOUT_STORAGE_KEY, notesLayout); } catch {}
+    window.dispatchEvent(new CustomEvent('documents-sidebar:layout-state', {
+      detail: { layout: notesLayout }
+    }));
+  }, [notesLayout]);
+
+  useEffect(() => {
+    const onSetLayout = (event) => {
+      const next = event.detail?.layout;
+      if (isNotesLayout(next)) setNotesLayout(next);
+    };
+    window.addEventListener('documents-sidebar:set-layout', onSetLayout);
+    return () => window.removeEventListener('documents-sidebar:set-layout', onSetLayout);
+  }, []);
+
+  useEffect(() => {
+    setBrowseStack((prev) => {
+      const resolved = [];
+      let level = documentNodes;
+      for (const key of prev) {
+        const folder = (level || []).find((node) => node && node.key === key && isNotebook(node));
+        if (!folder) break;
+        resolved.push(key);
+        level = folder.children || [];
+      }
+      if (resolved.length === prev.length && resolved.every((key, index) => key === prev[index])) return prev;
+      return resolved;
+    });
+  }, [documentNodes]);
 
   const selectedNodeForDetails = useMemo(() => {
     if (!selectedNodeKey) return null;
@@ -576,6 +613,38 @@ const DocumentsSidebar = ({
     }));
   }, []);
 
+  const activateNotesItem = useCallback((node, mode = 'reuse') => {
+    if (!node) return;
+    if (isQuickNotesGroup(node)) {
+      setSelectedNodeKey('quick_note');
+      setQuickNotesPanelOpen(true);
+      return;
+    }
+    if (isNotebook(node)) {
+      if (mode !== 'new') {
+        const path = findFolderPath(documentNodes, node.key);
+        if (path) setBrowseStack(path);
+      }
+      return;
+    }
+    if (!isNote(node)) return;
+    setSelectedNodeKey(node.key);
+    setQuickNotesPanelOpen(false);
+    if (mode === 'reuse') {
+      if (documentClickTimerRef.current) clearTimeout(documentClickTimerRef.current);
+      documentClickTimerRef.current = setTimeout(() => {
+        documentClickTimerRef.current = null;
+        handleOpenDocument(node, 'reuse');
+      }, 250);
+      return;
+    }
+    if (documentClickTimerRef.current) {
+      clearTimeout(documentClickTimerRef.current);
+      documentClickTimerRef.current = null;
+    }
+    handleOpenDocument(node, 'new');
+  }, [documentNodes, handleOpenDocument]);
+
   const resolveSelectedKey = useCallback(() => {
     if (!selectedNodeKey) return null;
     if (typeof selectedNodeKey === 'string') return selectedNodeKey;
@@ -587,13 +656,16 @@ const DocumentsSidebar = ({
   }, [selectedNodeKey]);
 
   const getParentKeyForNewNote = useCallback(() => {
+    if (notesLayout !== 'tree' && browseStack.length) {
+      return browseStack[browseStack.length - 1];
+    }
     const key = resolveSelectedKey();
     if (!key || key === 'quick_note') return null;
     const node = findNodeInTree(documentNodes, key);
     if (!node) return null;
     const isFolder = node.droppable || node.data?.type === 'document-folder';
     return isFolder ? key : null;
-  }, [documentNodes, resolveSelectedKey]);
+  }, [documentNodes, resolveSelectedKey, notesLayout, browseStack]);
 
   const createNewDocumentInTree = useCallback((parentKey = null) => {
     let newDoc;
@@ -845,6 +917,20 @@ const DocumentsSidebar = ({
     const isFolder = node.droppable || node.data?.type === 'document-folder';
     const items = [];
 
+    if (node.key === 'quick_note') {
+      items.push({
+        label: 'Abrir notas rápidas',
+        icon: 'pi pi-bolt',
+        command: () => {
+          setSelectedNodeKey('quick_note');
+          setQuickNotesPanelOpen(true);
+        }
+      });
+      setContextMenuItems(items);
+      contextMenuRef.current?.show(event.originalEvent);
+      return;
+    }
+
     if (isFolder) {
       items.push(
         {
@@ -925,6 +1011,10 @@ const DocumentsSidebar = ({
 
     setContextMenuItems(items);
     contextMenuRef.current?.show(event.originalEvent);
+  };
+
+  const onBrowserContextMenu = (event, node) => {
+    onContextMenu({ node, originalEvent: event });
   };
 
   const handleEmptySpaceContextMenu = (e) => {
@@ -1057,37 +1147,12 @@ const DocumentsSidebar = ({
             flexShrink: 0
           }}
         >
-          {isFolder ? (
-            node.data?.customIcon ? (
-              (() => {
-                const preset = Object.values(FolderIconPresets).find(p => p.id === node.data.customIcon);
-                if (preset) {
-                  return <FolderIconRenderer preset={preset} pixelSize={18} />;
-                }
-                return <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />;
-              })()
-            ) : (
-              <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />
-            )
-          ) : (
-            node.data?.icon ? (
-              <span style={{ fontSize: '0.95rem', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{node.data.icon}</span>
-            ) : themeIcons.file ? (
-              React.cloneElement(themeIcons.file, {
-                width: 18,
-                height: 18,
-                style: { ...themeIcons.file.props.style, width: '18px', height: '18px' }
-              })
-            ) : (
-              <i
-                className="pi pi-file"
-                style={{
-                  fontSize: '0.9rem',
-                  color: '#64b5f6'
-                }}
-              />
-            )
-          )}
+          {renderDocumentNodeIcon(node, {
+            iconTheme,
+            size: 18,
+            expanded: Boolean(node.expanded),
+            NotebookIcon
+          })}
         </span>
         {isInlineRenaming ? (
           <InputText
@@ -1198,7 +1263,7 @@ const DocumentsSidebar = ({
   }, []);
 
   const openNewFolderDialog = () => {
-    setParentKeyForNew(null);
+    setParentKeyForNew(notesLayout !== 'tree' && browseStack.length ? browseStack[browseStack.length - 1] : null);
     setNewItemName('');
     setShowNewFolderDialog(true);
   };
@@ -1582,6 +1647,22 @@ const DocumentsSidebar = ({
             <i className="pi pi-spin pi-spinner" />
             <p>Cargando notas...</p>
           </div>
+        ) : notesLayout !== 'tree' ? (
+          <NotesBrowser
+            nodes={documentNodes}
+            layout={notesLayout}
+            browseStack={browseStack}
+            searching={Boolean(sidebarFilter && String(sidebarFilter).trim())}
+            searchTerm={sidebarFilter}
+            selectedKey={typeof selectedNodeKey === 'string' ? selectedNodeKey : (selectedNodeKey ? Object.keys(selectedNodeKey)[0] : null)}
+            iconTheme={iconTheme}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            NotebookIcon={NotebookIcon}
+            onCrumb={(index) => setBrowseStack((prev) => prev.slice(0, index))}
+            onActivate={activateNotesItem}
+            onContextMenu={onBrowserContextMenu}
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Pinned Quick Note Row */}
