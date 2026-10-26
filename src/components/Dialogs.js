@@ -2716,7 +2716,7 @@ export function EnhancedSSHForm({
       <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
         
         {layoutMode === 'split' ? (
-          <div className="grid" style={{ gap: '0' }}>
+          <div className="grid grid-nogutter">
             <div className="col-12 md:col-6" style={{ padding: '0 1rem 0 0' }}>
               {renderNameDesc()}
               {renderHostPort()}

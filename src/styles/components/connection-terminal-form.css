@@ -938,6 +938,20 @@ body.layout-cyberpunk .connection-terminal-form .terminal-folder-dropdown.p-drop
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  width: 100%;
+}
+
+.edit-connection-tab-container .terminal-form-scroll-area {
+  width: 100%;
+}
+
+.edit-connection-tab-container .terminal-form-scroll-area > .grid {
+  width: 100%;
+  margin: 0;
+}
+
+.edit-connection-tab-container .terminal-form-scroll-area > .grid > [class*="col-"] {
+  min-width: 0;
 }
 
 .edit-connection-tab-container .terminal-footer {

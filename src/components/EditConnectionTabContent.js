@@ -1961,7 +1961,7 @@ export default function EditConnectionTabContent({
       >
         <div
           style={{
-            maxWidth: layoutMode === 'standard' ? '720px' : (layoutMode === 'sidebar' ? '100%' : '1100px'),
+            maxWidth: layoutMode === 'standard' ? '720px' : '100%',
             width: '100%',
             margin: '0 auto',
             flex: 1,
