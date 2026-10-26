@@ -1358,18 +1358,6 @@ const TitleBar = ({
 
         <div className="title-bar-action-group">
           <TitleBarIconButton
-            title="Opciones de Home"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              window.dispatchEvent(new CustomEvent('open-home-options', {
-                detail: { anchor: event.currentTarget }
-              }));
-            }}
-          >
-            <i className="pi pi-sliders-h" />
-          </TitleBarIconButton>
-          <TitleBarIconButton
             title="Tema y diseño de pestañas"
             onClick={(event) => {
               event.preventDefault();
