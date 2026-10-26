@@ -192,13 +192,15 @@
     },
     "sessionExplorer": {
       "title": "Explorador de Sesiones",
-      "description": "Personaliza iconos, tamaños, tipografía y color del árbol",
+      "description": "Personaliza iconos, tamaños y el color del árbol",
       "selectTheme": "Selecciona un tema",
       "selectFont": "Selecciona una fuente",
+      "treeColor": "Color del árbol",
       "restoreColor": "Restaurar color por defecto"
     },
     "homePage": {
-      "description": "Personaliza la tipografía del menú de la página de inicio",
+      "description": "Personaliza iconos, terminal y barra de estado de la página de inicio",
+      "optionsTitle": "Opciones de inicio",
       "menuTypography": "Tipografía del Menú",
       "typography": "Tipografía",
       "font": "Fuente",

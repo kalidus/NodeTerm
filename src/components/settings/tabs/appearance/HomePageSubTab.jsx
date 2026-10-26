@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { Checkbox } from 'primereact/checkbox';
-import UiFontSizeControl from '../../../common/UiFontSizeControl';
-import { UI_FONT_SIZE_DEFAULT } from '../../../../utils/sidebarFontStack';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
 import { STORAGE_KEYS } from '../../../../utils/constants';
-import { explorerFonts } from '../../../../themes';
-import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 import { actionBarThemes } from '../../../../themes/action-bar-themes';
 import {
   actionBarIconThemes,
@@ -17,46 +13,8 @@ import {
 } from '../../../../themes/action-bar-icon-themes';
 import HomeWallpaperPicker from '../../../home/HomeWallpaperPicker';
 
-export const HomePageSubTab = ({
-  uiFont,
-  uiFontSize,
-  setUiFontSize,
-  handleUnifiedFontChange
-}) => {
+export const HomePageSubTab = () => {
   const { t } = useTranslation('settings');
-
-  // Configuración de tipografía de HomeTab
-  const [homeTabFont, setHomeTabFont] = useState(() => {
-    try {
-      return localStorage.getItem('uiFont') || localStorage.getItem('homeTabFont') || explorerFonts[0];
-    } catch {
-      return explorerFonts[0];
-    }
-  });
-
-  useEffect(() => {
-    const handleUiFontChange = (e) => {
-      const font = e.detail?.font || localStorage.getItem('uiFont');
-      if (font) setHomeTabFont(font);
-    };
-    window.addEventListener('ui-font-changed', handleUiFontChange);
-    return () => window.removeEventListener('ui-font-changed', handleUiFontChange);
-  }, []);
-
-  useEffect(() => {
-    if (uiFont && uiFont !== homeTabFont) {
-      setHomeTabFont(uiFont);
-    }
-  }, [uiFont]);
-
-  const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
-    try {
-      const saved = uiFontSize ?? localStorage.getItem('uiFontSize') ?? localStorage.getItem('homeTabFontSize');
-      return saved != null && saved !== '' ? parseFloat(saved) : UI_FONT_SIZE_DEFAULT;
-    } catch {
-      return UI_FONT_SIZE_DEFAULT;
-    }
-  });
 
   // Tema de iconos de la barra de acciones
   const [actionBarIconTheme, setActionBarIconTheme] = useState(() => {
@@ -99,12 +57,6 @@ export const HomePageSubTab = ({
       return true;
     }
   });
-
-  useEffect(() => {
-    if (uiFontSize != null) {
-      setHomeTabFontSize(uiFontSize);
-    }
-  }, [uiFontSize]);
 
   // Persistir tema de iconos de la barra de acciones
   useEffect(() => {
@@ -152,7 +104,7 @@ export const HomePageSubTab = ({
         </div>
       </div>
 
-      {/* Sección de Tipografía */}
+      {/* Opciones de inicio */}
       <div className="general-settings-section" style={{
         marginBottom: 0,
         maxWidth: '100%',
@@ -163,78 +115,12 @@ export const HomePageSubTab = ({
             background: 'linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%)',
             boxShadow: '0 2px 8px rgba(79, 195, 247, 0.3)'
           }}>
-            <i className="pi pi-pencil"></i>
+            <i className="pi pi-palette"></i>
           </div>
-          <h4 className="general-section-title">{t('appearance.homePage.menuTypography')}</h4>
+          <h4 className="general-section-title">{t('appearance.homePage.optionsTitle')}</h4>
         </div>
 
         <div className="general-settings-options" style={{ padding: '1rem 1.25rem' }}>
-          {/* Tipografía */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.08)',
-            borderRadius: '10px',
-            padding: '0.875rem 1rem',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            marginBottom: '1rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem'
-            }}>
-              <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-              <span style={{
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: 'var(--ui-dialog-text)'
-              }}>{t('appearance.homePage.typography')}</span>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem'
-            }}>
-              {/* Fuente */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
-                </div>
-                <Dropdown
-                  id="homeTab-font"
-                  value={uiFont || homeTabFont}
-                  options={explorerFonts.map(f => ({ label: f, value: f }))}
-                  onChange={e => handleUnifiedFontChange && handleUnifiedFontChange(e.value)}
-                  placeholder={t('appearance.sessionExplorer.selectFont')}
-                  style={{ flex: 1 }}
-                  itemTemplate={option => (
-                    <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
-                  )}
-                />
-              </div>
-
-              <div style={{ marginTop: '0.5rem' }}>
-                <UiFontSizeControl
-                  value={uiFontSize != null ? uiFontSize : homeTabFontSize}
-                  onChange={(next) => {
-                    if (setUiFontSize) setUiFontSize(next);
-                    else setHomeTabFontSize(next);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Tema de Iconos */}
           <div style={{
             background: 'rgba(0, 0, 0, 0.08)',
@@ -585,7 +471,6 @@ export const HomePageSubTab = ({
                     </div>
                     <span style={{
                       fontSize: '8px',
-                      fontFamily: homeTabFont,
                       color: 'var(--text-color-secondary)',
                       textAlign: 'center',
                       opacity: 0.8,

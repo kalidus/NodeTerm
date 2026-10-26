@@ -44,11 +44,15 @@ export const useThemeManagement = () => {
 
   // Font states
   const [fontFamily, setFontFamily] = useState(() =>
-    migrateStoredFont(localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value)
+    migrateStoredFont(
+      localStorage.getItem(FONT_FAMILY_STORAGE_KEY)
+      || localStorage.getItem('basicapp_terminal_font_family')
+      || availableFonts[0].value
+    )
   );
 
   const [fontSize, setFontSize] = useState(() => {
-    const savedSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+    const savedSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY) || localStorage.getItem('basicapp_terminal_font_size');
     return savedSize ? parseInt(savedSize, 10) : 14;
   });
 
@@ -305,13 +309,27 @@ export const useThemeManagement = () => {
   const setConnectionIconSize = setIconSize;
   const setSidebarIconSize = setIconSize;
 
-  const [sidebarFontColor, setSidebarFontColor] = useState(() => {
+  const [sidebarFontColor, setSidebarFontColorState] = useState(() => {
     try {
       return localStorage.getItem('sidebarFontColor') || '';
     } catch {
       return '';
     }
   });
+
+  const setSidebarFontColor = useCallback((newColor, options = {}) => {
+    const value = typeof newColor === 'string' ? newColor : '';
+    const source = options.source || 'user';
+    try {
+      if (value) localStorage.setItem('sidebarFontColor', value);
+      else localStorage.removeItem('sidebarFontColor');
+      if (source === 'user' || source === 'preset') {
+        if (value) localStorage.setItem('sidebarFontColorSource', source);
+        else localStorage.removeItem('sidebarFontColorSource');
+      }
+    } catch { }
+    setSidebarFontColorState(value);
+  }, []);
 
   // Tree theme state
   const [treeTheme, setTreeTheme] = useState(() => {
@@ -334,12 +352,21 @@ export const useThemeManagement = () => {
   // Auto-save effects
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
-    localStorageSyncService.debouncedSync({ [FONT_FAMILY_STORAGE_KEY]: fontFamily });
+    localStorage.setItem('basicapp_terminal_font_family', fontFamily);
+    localStorageSyncService.debouncedSync({
+      [FONT_FAMILY_STORAGE_KEY]: fontFamily,
+      basicapp_terminal_font_family: fontFamily
+    });
   }, [fontFamily]);
 
   useEffect(() => {
-    localStorage.setItem(FONT_SIZE_STORAGE_KEY, fontSize);
-    localStorageSyncService.debouncedSync({ [FONT_SIZE_STORAGE_KEY]: fontSize });
+    const size = String(fontSize);
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, size);
+    localStorage.setItem('basicapp_terminal_font_size', size);
+    localStorageSyncService.debouncedSync({
+      [FONT_SIZE_STORAGE_KEY]: size,
+      basicapp_terminal_font_size: size
+    });
   }, [fontSize]);
 
   useEffect(() => {
@@ -541,16 +568,16 @@ export const useThemeManagement = () => {
     const updatedLocalDockerTerminalTheme = localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
 
     // UI Fonts
-    const updatedFontFamily = migrateStoredFont(localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value);
-    const updatedFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+    const updatedFontFamily = migrateStoredFont(
+      localStorage.getItem(FONT_FAMILY_STORAGE_KEY)
+      || localStorage.getItem('basicapp_terminal_font_family')
+      || availableFonts[0].value
+    );
+    const updatedFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY) || localStorage.getItem('basicapp_terminal_font_size');
 
     const updatedUiFont = migrateStoredFont(localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0]);
     const updatedUiFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-    const updatedExplorerFont = migrateStoredFont(localStorage.getItem('explorerFont') || updatedUiFont);
-    const updatedExplorerFontSize = localStorage.getItem('explorerFontSize') || updatedUiFontSize;
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
-    const updatedSidebarFont = migrateStoredFont(localStorage.getItem('sidebarFont') || updatedUiFont);
-    const updatedSidebarFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || updatedUiFontSize;
     const updatedSidebarFontColor = localStorage.getItem('sidebarFontColor') || '';
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
@@ -579,10 +606,10 @@ export const useThemeManagement = () => {
       setSidebarFontSizeState(syncedSize);
       setExplorerFontSizeState(syncedSize);
     }
-    setExplorerFontState(updatedExplorerFont);
+    setExplorerFontState(updatedUiFont);
     setExplorerColorTheme(updatedExplorerColorTheme);
-    setSidebarFontState(updatedSidebarFont);
-    setSidebarFontColor(updatedSidebarFontColor);
+    setSidebarFontState(updatedUiFont);
+    setSidebarFontColor(updatedSidebarFontColor, { source: 'sync' });
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
     setTreeTheme(updatedTreeTheme);
@@ -606,10 +633,10 @@ export const useThemeManagement = () => {
       applyAppTypography({
         uiFont: updatedUiFont,
         uiFontSize: updatedUiFontSize ? parseFloat(updatedUiFontSize) : undefined,
-        sidebarFont: updatedSidebarFont,
-        sidebarFontSize: updatedSidebarFontSize ? parseFloat(updatedSidebarFontSize) : undefined,
-        explorerFont: updatedExplorerFont,
-        explorerFontSize: updatedExplorerFontSize ? parseFloat(updatedExplorerFontSize) : undefined
+        sidebarFont: updatedUiFont,
+        sidebarFontSize: updatedUiFontSize ? parseFloat(updatedUiFontSize) : undefined,
+        explorerFont: updatedUiFont,
+        explorerFontSize: updatedUiFontSize ? parseFloat(updatedUiFontSize) : undefined
       });
       if (updatedSidebarFontColor) {
         root.style.setProperty('--ui-sidebar-text', updatedSidebarFontColor);

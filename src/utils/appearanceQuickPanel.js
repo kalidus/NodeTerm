@@ -396,11 +396,18 @@ function publishCatalog(key, value) {
   }));
 }
 
-export function openAppearanceQuickPanel(anchorEl) {
+export function openAppearanceQuickPanel(anchorEl, options = {}) {
   if (!anchorEl) return;
+
+  const requestedSection = options.section || '';
+  const requestedChip = options.chip || '';
 
   const existingPanel = document.getElementById('tab-appearance-quick-panel');
   if (existingPanel) {
+    if ((requestedSection || requestedChip) && typeof existingPanel._aqpNavigate === 'function') {
+      existingPanel._aqpNavigate(requestedSection, requestedChip);
+      return;
+    }
     existingPanel._aqpCleanup?.();
     existingPanel.remove();
     return;
@@ -415,8 +422,8 @@ export function openAppearanceQuickPanel(anchorEl) {
   const picked = {};
   const availableFonts = getAvailableFonts();
   const state = {
-    section: 'ui',
-    chip: 'themes',
+    section: requestedSection || 'ui',
+    chip: requestedChip || 'themes',
     termType: 'ssh',
     query: ''
   };
@@ -592,6 +599,37 @@ export function openAppearanceQuickPanel(anchorEl) {
   function remembered(key, storageKey, fallback) {
     if (picked[key] != null) return picked[key];
     return readStorage(storageKey, fallback);
+  }
+
+  function readTerminalValue(type, kind, fallback) {
+    const keys = TERMINAL_FONT_KEYS[type];
+    const pickedKey = kind === 'family' ? `font-${type}` : `fontSize-${type}`;
+    const storageKey = kind === 'family' ? keys.family : keys.size;
+    if (picked[pickedKey] != null && picked[pickedKey] !== '') return picked[pickedKey];
+    const primary = readStorage(storageKey, '');
+    if (primary) return primary;
+    if (type === 'ssh') {
+      const aliasKey = kind === 'family' ? 'basicapp_font_family' : 'basicapp_font_size';
+      const alias = readStorage(aliasKey, '');
+      if (alias) return alias;
+    }
+    return fallback;
+  }
+
+  function writeTerminalValue(type, kind, value) {
+    const keys = TERMINAL_FONT_KEYS[type];
+    const storageKey = kind === 'family' ? keys.family : keys.size;
+    const text = String(value);
+    localStorage.setItem(storageKey, text);
+    if (type === 'ssh') {
+      const aliasKey = kind === 'family' ? 'basicapp_font_family' : 'basicapp_font_size';
+      localStorage.setItem(aliasKey, text);
+      window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+        detail: kind === 'family'
+          ? { fontFamily: text, terminalType: 'ssh' }
+          : { fontSize: Number(text), terminalType: 'ssh' }
+      }));
+    }
   }
 
   function sectionValue(sectionId) {
@@ -997,8 +1035,8 @@ export function openAppearanceQuickPanel(anchorEl) {
   function buildTerminalTypographyCatalog() {
     const type = state.termType || 'ssh';
     const keys = TERMINAL_FONT_KEYS[type];
-    const currentFont = remembered(`font-${type}`, keys.family, availableFonts[0]?.value || 'Consolas');
-    const currentSize = parseInt(remembered(`fontSize-${type}`, keys.size, '14'), 10) || 14;
+    const currentFont = readTerminalValue(type, 'family', availableFonts[0]?.value || 'Consolas');
+    const currentSize = parseInt(readTerminalValue(type, 'size', '14'), 10) || 14;
 
     const sizeWrap = el('div', 'aqp-form-card aqp-form-card--compact');
     sizeWrap.addEventListener('click', (ev) => ev.stopPropagation());
@@ -1016,7 +1054,7 @@ export function openAppearanceQuickPanel(anchorEl) {
     slider.addEventListener('change', () => {
       const value = parseInt(slider.value, 10);
       picked[`fontSize-${type}`] = String(value);
-      localStorage.setItem(keys.size, String(value));
+      writeTerminalValue(type, 'size', value);
       publishCatalog(keys.catalogSize, value);
       window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
         detail: { fontSize: value, terminalType: type }
@@ -1036,7 +1074,7 @@ export function openAppearanceQuickPanel(anchorEl) {
           preview,
           onPick: () => {
             picked[`font-${type}`] = font.value;
-            localStorage.setItem(keys.family, font.value);
+            writeTerminalValue(type, 'family', font.value);
             publishCatalog(keys.catalogFamily, font.value);
             window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
               detail: { fontFamily: font.value, terminalType: type }
@@ -1457,6 +1495,13 @@ export function openAppearanceQuickPanel(anchorEl) {
       });
     }));
   }
+
+  panel._aqpNavigate = (sectionId, chipId) => {
+    if (sectionId) state.section = sectionId;
+    if (chipId) state.chip = chipId;
+    state.query = '';
+    render();
+  };
 
   document.body.appendChild(panel);
   render();

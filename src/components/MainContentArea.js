@@ -213,7 +213,10 @@ const MainContentArea = ({
     const onOpenAppearanceQuickPanel = (ev) => {
       const anchor = ev?.detail?.anchor;
       if (!anchor) return;
-      openAppearanceQuickPanel(anchor);
+      openAppearanceQuickPanel(anchor, {
+        section: ev?.detail?.section,
+        chip: ev?.detail?.chip
+      });
     };
     window.addEventListener('open-appearance-quick-panel', onOpenAppearanceQuickPanel);
     return () => window.removeEventListener('open-appearance-quick-panel', onOpenAppearanceQuickPanel);

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { FaFolder, FaFilePdf, FaFileWord, FaFileExcel } from 'react-icons/fa';
 import { Dropdown } from 'primereact/dropdown';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
-import UiFontSizeControl from '../../../common/UiFontSizeControl';
 import { uiThemes } from '../../../../themes/ui-themes';
 import {
   iconThemes,
@@ -11,19 +10,12 @@ import {
   preloadIconThemes,
   onIconThemeLoaded
 } from '../../../../themes/icon-themes';
-import { explorerFonts } from '../../../../themes';
-import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 
 export const FileExplorerSubTab = ({
-  explorerFont,
-  explorerFontSize,
-  setExplorerFontSize,
   explorerColorTheme,
   setExplorerColorTheme,
   iconTheme,
-  setIconTheme,
-  uiFont,
-  handleUnifiedFontChange
+  setIconTheme
 }) => {
   const { t } = useTranslation('settings');
   const [iconPackTick, setIconPackTick] = useState(0);
@@ -107,8 +99,6 @@ export const FileExplorerSubTab = ({
             <div
               className="explorer-preview-container"
               style={{
-                fontFamily: buildSidebarFontStack(explorerFont),
-                fontSize: `${explorerFontSize}px`,
                 background: previewBg,
                 borderRadius: '8px',
                 padding: '0.5rem',
@@ -142,13 +132,13 @@ export const FileExplorerSubTab = ({
                   <div style={{
                     fontWeight: 600,
                     color: previewText,
-                    fontSize: `${explorerFontSize}px`,
+                    fontSize: 'var(--ui-font-size, 14px)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>Notas</div>
                   <div style={{
-                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                    fontSize: 'calc(var(--ui-font-size, 14px) - 2px)',
                     color: previewText,
                     opacity: 0.7,
                     marginTop: '2px'
@@ -180,13 +170,13 @@ export const FileExplorerSubTab = ({
                   <div style={{
                     fontWeight: 500,
                     color: previewText,
-                    fontSize: `${explorerFontSize}px`,
+                    fontSize: 'var(--ui-font-size, 14px)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>reporte.pdf</div>
                   <div style={{
-                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                    fontSize: 'calc(var(--ui-font-size, 14px) - 2px)',
                     color: previewText,
                     opacity: 0.7,
                     marginTop: '2px'
@@ -218,13 +208,13 @@ export const FileExplorerSubTab = ({
                   <div style={{
                     fontWeight: 500,
                     color: previewText,
-                    fontSize: `${explorerFontSize}px`,
+                    fontSize: 'var(--ui-font-size, 14px)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>presentacion.pptx</div>
                   <div style={{
-                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                    fontSize: 'calc(var(--ui-font-size, 14px) - 2px)',
                     color: previewText,
                     opacity: 0.7,
                     marginTop: '2px'
@@ -255,13 +245,13 @@ export const FileExplorerSubTab = ({
                   <div style={{
                     fontWeight: 500,
                     color: previewText,
-                    fontSize: `${explorerFontSize}px`,
+                    fontSize: 'var(--ui-font-size, 14px)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>datos.xlsx</div>
                   <div style={{
-                    fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
+                    fontSize: 'calc(var(--ui-font-size, 14px) - 2px)',
                     color: previewText,
                     opacity: 0.7,
                     marginTop: '2px'
@@ -364,71 +354,6 @@ export const FileExplorerSubTab = ({
                   </span>
                 )}
               />
-            </div>
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════════
-            FILA 2: TIPOGRAFÍA
-            ═══════════════════════════════════════════════════════════════ */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.08)',
-            borderRadius: '10px',
-            padding: '0.875rem 1rem',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            marginBottom: '1rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem'
-            }}>
-              <i className="pi pi-pencil" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-              <span style={{
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: 'var(--ui-dialog-text)'
-              }}>Tipografía</span>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem'
-            }}>
-              {/* Fuente */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
-                </div>
-                <Dropdown
-                  id="explorer-font"
-                  value={uiFont || explorerFont}
-                  options={explorerFonts.map(f => ({ label: f, value: f }))}
-                  onChange={e => handleUnifiedFontChange && handleUnifiedFontChange(e.value)}
-                  placeholder={t('appearance.sessionExplorer.selectFont')}
-                  style={{ flex: 1 }}
-                  itemTemplate={option => (
-                    <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
-                  )}
-                />
-              </div>
-
-              <div style={{ marginTop: '0.5rem' }}>
-                <UiFontSizeControl
-                  value={explorerFontSize}
-                  onChange={(next) => setExplorerFontSize && setExplorerFontSize(next)}
-                />
-              </div>
             </div>
           </div>
 

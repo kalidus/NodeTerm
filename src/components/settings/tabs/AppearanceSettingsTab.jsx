@@ -54,25 +54,13 @@ export const AppearanceSettingsTab = ({
   setIconThemeSidebar,
   sessionActionIconTheme,
   setSessionActionIconTheme,
-  sidebarFont,
-  setSidebarFont,
   uiFont,
-  setUiFont,
   uiFontSize,
-  setUiFontSize,
-  sidebarFontSize,
-  setSidebarFontSize,
   sidebarFontColor,
   setSidebarFontColor,
   folderIconSize,
-  setFolderIconSize,
   connectionIconSize,
-  setConnectionIconSize,
   // File Explorer Props
-  explorerFont,
-  setExplorerFont,
-  explorerFontSize,
-  setExplorerFontSize,
   explorerColorTheme,
   setExplorerColorTheme,
   iconTheme,
@@ -83,29 +71,17 @@ export const AppearanceSettingsTab = ({
   const handleSidebarFontColorChange = useCallback((newColor) => {
     if (colorTimeoutRef.current) {
       clearTimeout(colorTimeoutRef.current);
+      colorTimeoutRef.current = null;
+    }
+    if (!setSidebarFontColor) return;
+    if (!newColor) {
+      setSidebarFontColor('');
+      return;
     }
     colorTimeoutRef.current = setTimeout(() => {
-      if (setSidebarFontColor && typeof setSidebarFontColor === 'function') {
-        try {
-          if (newColor) {
-            localStorage.setItem('sidebarFontColorSource', 'user');
-          } else {
-            localStorage.removeItem('sidebarFontColorSource');
-          }
-        } catch { }
-        setSidebarFontColor(newColor);
-      }
+      setSidebarFontColor(newColor);
     }, 150);
   }, [setSidebarFontColor]);
-
-  const handleUnifiedFontChange = useCallback((newFont) => {
-    if (!newFont) return;
-    if (setUiFont) {
-      setUiFont(newFont);
-    } else if (setSidebarFont) {
-      setSidebarFont(newFont);
-    }
-  }, [setUiFont, setSidebarFont]);
 
   return (
     <div className="apariencia-tab-container" style={{ right: '8px', width: 'calc(100% - 8px)' }}>
@@ -113,9 +89,7 @@ export const AppearanceSettingsTab = ({
         <ThemeSelector
           showPreview={true}
           uiFont={uiFont}
-          setUiFont={setUiFont}
           uiFontSize={uiFontSize}
-          setUiFontSize={setUiFontSize}
         />
       )}
 
@@ -173,28 +147,19 @@ export const AppearanceSettingsTab = ({
           setIconThemeSidebar={setIconThemeSidebar}
           sessionActionIconTheme={sessionActionIconTheme}
           setSessionActionIconTheme={setSessionActionIconTheme}
-          sidebarFont={sidebarFont}
-          uiFont={uiFont}
-          sidebarFontSize={sidebarFontSize}
           sidebarFontColor={sidebarFontColor}
-          setSidebarFontColor={setSidebarFontColor}
-          handleUnifiedFontChange={handleUnifiedFontChange}
           handleSidebarFontColorChange={handleSidebarFontColorChange}
-          setSidebarFontSize={setSidebarFontSize || setUiFontSize}
+          folderIconSize={folderIconSize}
+          connectionIconSize={connectionIconSize}
         />
       )}
 
       {activeSubTab === 'explorador-archivos' && (
         <FileExplorerSubTab
-          explorerFont={explorerFont}
-          explorerFontSize={explorerFontSize}
-          setExplorerFontSize={setExplorerFontSize}
           explorerColorTheme={explorerColorTheme}
           setExplorerColorTheme={setExplorerColorTheme}
           iconTheme={iconTheme}
           setIconTheme={setIconTheme}
-          uiFont={uiFont}
-          handleUnifiedFontChange={handleUnifiedFontChange}
         />
       )}
 
@@ -213,12 +178,7 @@ export const AppearanceSettingsTab = ({
       )}
 
       {activeSubTab === 'pagina-inicio' && (
-        <HomePageSubTab
-          uiFont={uiFont}
-          uiFontSize={uiFontSize}
-          setUiFontSize={setUiFontSize}
-          handleUnifiedFontChange={handleUnifiedFontChange}
-        />
+        <HomePageSubTab />
       )}
     </div>
   );

@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
-import { Dropdown } from 'primereact/dropdown';
 import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
-import UiFontSizeControl from './common/UiFontSizeControl';
 import {
   iconThemes,
   iconThemeMeta,
@@ -18,7 +16,6 @@ import {
   preloadSessionActionIconThemes,
   onSessionActionIconThemeLoaded
 } from '../themes/session-action-icons';
-import { explorerFonts } from '../themes';
 import '../styles/components/tree-themes.css';
 
 const TB_ICON = {
@@ -36,14 +33,8 @@ const SidebarAppearanceMenu = ({
   setIconTheme,
   sessionActionIconTheme = 'modern',
   setSessionActionIconTheme,
-  explorerFont,
-  setExplorerFont,
-  explorerFontSize,
-  setExplorerFontSize,
   explorerFontColor,
   setExplorerFontColor,
-  iconSize,
-  setIconSize,
   tooltip = 'Apariencia del árbol',
 }) => {
   const panelRef = useRef(null);
@@ -180,8 +171,8 @@ const SidebarAppearanceMenu = ({
                   <i className="pi pi-sliders-h" style={{ color: '#e91e63' }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Tipografía y Color</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Fuente, color y tamaño del texto</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Color del árbol</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Color del texto de las sesiones</div>
                 </div>
                 <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
               </div>
@@ -363,57 +354,17 @@ const SidebarAppearanceMenu = ({
           {settingsView === 'typography' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <Button 
-                  icon="pi pi-arrow-left" 
-                  className="p-button-text p-button-sm" 
-                  style={{ padding: '4px', width: '24px', height: '24px' }} 
-                  onClick={() => setSettingsView('choice')} 
+                <Button
+                  icon="pi pi-arrow-left"
+                  className="p-button-text p-button-sm"
+                  style={{ padding: '4px', width: '24px', height: '24px' }}
+                  onClick={() => setSettingsView('choice')}
                 />
-                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Tipografía y Color</span>
+                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Color del árbol</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '380px', overflowY: 'auto', paddingRight: '4px', paddingBottom: '4px', scrollbarWidth: 'thin' }}>
-                
-                {/* Selector de Fuente */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingRight: '4px', paddingBottom: '4px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>Fuente</span>
-                  <Dropdown
-                    value={explorerFont || 'Segoe UI'}
-                    options={explorerFonts.map(f => ({ label: f, value: f }))}
-                    onChange={(e) => setExplorerFont?.(e.value)}
-                    placeholder="Seleccionar fuente"
-                    style={{
-                      width: '100%',
-                      background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)',
-                      border: '1px solid var(--ui-dialog-border)',
-                      borderRadius: 'var(--ui-radius-md)',
-                      height: '34px',
-                      fontSize: '0.8rem'
-                    }}
-                    panelStyle={{
-                      background: 'var(--ui-dialog-bg)',
-                      border: '1px solid var(--ui-dialog-border)',
-                      boxShadow: '0 8px 30px var(--ui-dialog-shadow)',
-                      borderRadius: 'var(--ui-radius-md)'
-                    }}
-                    itemTemplate={(option) => (
-                      <span style={{ fontFamily: option.value, fontSize: '0.8rem', color: 'var(--ui-sidebar-text)' }}>
-                        {option.label}
-                      </span>
-                    )}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <UiFontSizeControl
-                    compact
-                    value={explorerFontSize}
-                    onChange={(next) => setExplorerFontSize?.(next)}
-                  />
-                </div>
-
-                {/* Selector de Color */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>Color del Texto</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>Color del texto</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
                       width: '24px',
@@ -426,9 +377,9 @@ const SidebarAppearanceMenu = ({
                       overflow: 'hidden',
                       flexShrink: 0
                     }} title="Seleccionar color">
-                      <input 
-                        type="color" 
-                        value={explorerFontColor || '#a9b1d6'} 
+                      <input
+                        type="color"
+                        value={explorerFontColor || '#a9b1d6'}
                         onChange={(e) => setExplorerFontColor?.(e.target.value)}
                         style={{
                           position: 'absolute',
@@ -438,10 +389,10 @@ const SidebarAppearanceMenu = ({
                           height: '34px',
                           opacity: 0,
                           cursor: 'pointer'
-                        }} 
+                        }}
                       />
                     </div>
-                    <input 
+                    <input
                       type="text"
                       value={explorerFontColor || ''}
                       placeholder="Color por defecto"
@@ -458,27 +409,27 @@ const SidebarAppearanceMenu = ({
                       }}
                     />
                     {explorerFontColor && (
-                      <Button 
-                        icon="pi pi-times" 
-                        className="p-button-text p-button-sm" 
-                        style={{ padding: '4px', width: '24px', height: '24px', color: '#ff5555', flexShrink: 0 }} 
-                        onClick={() => setExplorerFontColor?.('')} 
+                      <Button
+                        icon="pi pi-times"
+                        className="p-button-text p-button-sm"
+                        style={{ padding: '4px', width: '24px', height: '24px', color: '#ff5555', flexShrink: 0 }}
+                        onClick={() => setExplorerFontColor?.('')}
                         title="Restablecer color por defecto"
                       />
                     )}
                   </div>
                 </div>
-
-                {/* Restablecer por defecto */}
+                <div style={{ fontSize: '0.72rem', lineHeight: 1.4, color: 'var(--ui-sidebar-text)', opacity: 0.65 }}>
+                  La fuente y el tamaño se aplican a toda la interfaz.
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setExplorerFont?.('Segoe UI');
-                    setIconSize?.(20);
-                    setExplorerFontColor?.('');
+                  onClick={(event) => {
+                    window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
+                      detail: { anchor: event.currentTarget, section: 'ui', chip: 'typography' }
+                    }));
                   }}
                   style={{
-                    marginTop: '8px',
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: 'var(--ui-radius-md)',
@@ -488,23 +439,14 @@ const SidebarAppearanceMenu = ({
                     fontSize: '0.8rem',
                     fontWeight: '600',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--ui-sidebar-hover)';
-                    e.currentTarget.style.borderColor = 'var(--ui-dialog-border)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--ui-context-hover)';
-                    e.currentTarget.style.borderColor = 'var(--ui-dialog-border)';
-                  }}
                 >
-                  <i className="pi pi-refresh" style={{ fontSize: '0.75rem' }} />
-                  Restablecer por defecto
+                  <i className="pi pi-pencil" style={{ fontSize: '0.75rem' }} />
+                  Editar tipografía
                 </button>
               </div>
             </>

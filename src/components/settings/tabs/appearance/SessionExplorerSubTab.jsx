@@ -17,10 +17,7 @@ import {
   preloadSessionActionIconThemes,
   onSessionActionIconThemeLoaded
 } from '../../../../themes/session-action-icons';
-import { explorerFonts } from '../../../../themes';
-import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 import localStorageSyncService from '../../../../services/LocalStorageSyncService';
-import UiFontSizeControl from '../../../common/UiFontSizeControl';
 
 export const SessionExplorerSubTab = ({
   treeTheme,
@@ -29,14 +26,10 @@ export const SessionExplorerSubTab = ({
   setIconThemeSidebar,
   sessionActionIconTheme,
   setSessionActionIconTheme,
-  sidebarFont,
-  uiFont,
-  sidebarFontSize,
   sidebarFontColor,
-  setSidebarFontColor,
-  handleUnifiedFontChange,
   handleSidebarFontColorChange,
-  setSidebarFontSize
+  folderIconSize,
+  connectionIconSize
 }) => {
   const { t } = useTranslation('settings');
   const [iconPackTick, setIconPackTick] = useState(0);
@@ -122,8 +115,6 @@ export const SessionExplorerSubTab = ({
             <div
               className={`tree-preview-container tree-theme-${treeTheme}`}
               style={{
-                fontFamily: buildSidebarFontStack(sidebarFont),
-                fontSize: `${sidebarFontSize}px`,
                 color: sidebarFontColor || 'var(--ui-dialog-text)'
               }}
             >
@@ -400,122 +391,59 @@ export const SessionExplorerSubTab = ({
                 fontSize: '0.875rem',
                 fontWeight: 600,
                 color: 'var(--ui-dialog-text)'
-              }}>Tipografía</span>
+              }}>{t('appearance.sessionExplorer.treeColor')}</span>
             </div>
 
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1.2fr 1fr',
-              gap: '1rem'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
             }}>
-              {/* Fuente */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.font')}</span>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="color"
+                    id="sidebar-font-color-input"
+                    value={sidebarFontColor || '#ffffff'}
+                    onChange={(e) => handleSidebarFontColorChange?.(e.target.value)}
+                    style={{
+                      flex: 1,
+                      height: '36px',
+                      minWidth: '80px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--ui-button-primary)',
+                    fontWeight: 600,
+                    minWidth: '70px',
+                    textAlign: 'right',
+                    fontFamily: 'monospace'
+                  }}>{sidebarFontColor || 'Por defecto'}</span>
                 </div>
-                <Dropdown
-                  id="sidebar-font"
-                  value={uiFont || sidebarFont}
-                  options={explorerFonts.map(f => ({ label: f, value: f }))}
-                  onChange={e => handleUnifiedFontChange && handleUnifiedFontChange(e.value)}
-                  placeholder={t('appearance.sessionExplorer.selectFont')}
-                  style={{ flex: 1 }}
-                  itemTemplate={option => (
-                    <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
-                  )}
-                />
+                {sidebarFontColor && (
+                  <Button
+                    icon="pi pi-times"
+                    className="p-button-text p-button-rounded"
+                    onClick={() => {
+                      handleSidebarFontColorChange?.('');
+                      try { localStorageSyncService.forceSync(); } catch { }
+                    }}
+                    tooltip={t('appearance.sessionExplorer.restoreColor')}
+                    tooltipOptions={{ position: 'top' }}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      padding: 0,
+                      color: 'var(--text-color-secondary)'
+                    }}
+                  />
+                )}
               </div>
-
-              {/* Color de Fuente */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Color</span>
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="color"
-                      id="sidebar-font-color-input"
-                      value={sidebarFontColor || '#ffffff'}
-                      onChange={(e) => {
-                        const newColor = e.target.value;
-                        if (handleSidebarFontColorChange) {
-                          handleSidebarFontColorChange(newColor);
-                        } else if (setSidebarFontColor) {
-                          setSidebarFontColor(newColor);
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        height: '36px',
-                        minWidth: '80px',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        cursor: 'pointer',
-                        backgroundColor: 'transparent'
-                      }}
-                    />
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--ui-button-primary)',
-                      fontWeight: 600,
-                      minWidth: '70px',
-                      textAlign: 'right',
-                      fontFamily: 'monospace'
-                    }}>{sidebarFontColor || 'Por defecto'}</span>
-                  </div>
-                  {sidebarFontColor && (
-                    <Button
-                      icon="pi pi-times"
-                      className="p-button-text p-button-rounded"
-                      onClick={() => {
-                        console.log('[SettingsDialog] Restaurando color por defecto');
-                        try {
-                          localStorage.removeItem('sidebarFontColorSource');
-                          localStorage.removeItem('sidebarFontColor');
-                          // Force immediate sync so the deletion is written to
-                          // app-data.json before a possible app restart
-                          localStorageSyncService.forceSync();
-                        } catch { }
-                        if (setSidebarFontColor) setSidebarFontColor('');
-                      }}
-                      tooltip={t('appearance.sessionExplorer.restoreColor')}
-                      tooltipOptions={{ position: 'top' }}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        padding: 0,
-                        color: 'var(--text-color-secondary)'
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-            </div>
-            <div style={{ marginTop: '1rem' }}>
-              <UiFontSizeControl
-                value={sidebarFontSize}
-                onChange={(next) => setSidebarFontSize && setSidebarFontSize(next)}
-              />
             </div>
           </div>
 

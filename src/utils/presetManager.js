@@ -8,8 +8,42 @@ import {
   builtinPresets
 } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { applyAppTypography } from './sidebarFontStack';
+import { applyAppTypography, deriveUiIconSize } from './sidebarFontStack';
 import { applyUILayoutFromStorage } from './appearanceLayout';
+
+function unifyPresetTypography(settings) {
+  if (!settings) return;
+  const uiFontName = settings.uiFont || settings.sidebarFont || settings.explorerFont || settings.homeTabFont;
+  if (uiFontName) {
+    settings.uiFont = uiFontName;
+    settings.sidebarFont = uiFontName;
+    settings.explorerFont = uiFontName;
+    settings.homeTabFont = uiFontName;
+  }
+  const uiSize = settings.uiFontSize || settings.sidebarFontSize || settings.explorerFontSize || settings.homeTabFontSize;
+  if (uiSize) {
+    const size = String(uiSize);
+    settings.uiFontSize = size;
+    settings.sidebarFontSize = size;
+    settings.explorerFontSize = size;
+    settings.homeTabFontSize = size;
+    const icon = String(deriveUiIconSize(size));
+    settings.iconSize = icon;
+    settings.folderIconSize = icon;
+    settings.connectionIconSize = icon;
+  }
+  const sshFamily = settings.basicapp_terminal_font_family || settings.basicapp_font_family;
+  const sshSize = settings.basicapp_terminal_font_size || settings.basicapp_font_size;
+  if (sshFamily) {
+    settings.basicapp_terminal_font_family = sshFamily;
+    settings.basicapp_font_family = sshFamily;
+  }
+  if (sshSize) {
+    const size = String(sshSize);
+    settings.basicapp_terminal_font_size = size;
+    settings.basicapp_font_size = size;
+  }
+}
 
 /**
  * PresetManager handles saving, loading, and applying appearance presets.
@@ -152,6 +186,8 @@ class PresetManager {
    */
   applyPreset(preset) {
     if (!preset || !preset.settings) return;
+
+    unifyPresetTypography(preset.settings);
 
     // 1. Reset ALL managed keys first, then apply the preset values.
     // Ensure uiFont and homeTabFont are synchronized if missing from preset

@@ -10,13 +10,11 @@ import {
   isColorLight,
 } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
-import { explorerFonts } from '../themes';
-import { buildAppFontStack, UI_FONT_SIZE_DEFAULT } from '../utils/sidebarFontStack';
+import { buildAppFontStack, formatUiFontSize, UI_FONT_SIZE_DEFAULT } from '../utils/sidebarFontStack';
 import {
   resolveLiteEffectsEnabled,
   persistLiteEffectsEnabled,
 } from '../utils/uiLiteEffects';
-import UiFontSizeControl from './common/UiFontSizeControl';
 import '../styles/components/theme-selector.css';
 
 const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
@@ -215,9 +213,7 @@ const ThemeThumbnailCard = memo(({ theme, isActive, onSelect }) => {
 const ThemeSelector = ({
   showPreview = false,
   uiFont: uiFontProp,
-  setUiFont: setUiFontProp,
-  uiFontSize: uiFontSizeProp,
-  setUiFontSize: setUiFontSizeProp
+  uiFontSize: uiFontSizeProp
 }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
   const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
@@ -235,9 +231,9 @@ const ThemeSelector = ({
   const [themesPerRow, setThemesPerRow] = useState(4);
   const [localUiFont, setLocalUiFont] = useState(() => {
     try {
-      return uiFontProp || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0];
+      return uiFontProp || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || 'Segoe UI';
     } catch {
-      return explorerFonts[0];
+      return 'Segoe UI';
     }
   });
 
@@ -253,26 +249,29 @@ const ThemeSelector = ({
   const uiFont = uiFontProp || localUiFont;
   const uiFontSize = uiFontSizeProp != null ? uiFontSizeProp : localUiFontSize;
 
-  const handleUiFontChange = useCallback((newFont) => {
-    if (!newFont) return;
-    if (setUiFontProp) {
-      setUiFontProp(newFont);
-      return;
-    }
-    setLocalUiFont(newFont);
-  }, [setUiFontProp]);
+  useEffect(() => {
+    const syncFont = (event) => {
+      const font = event?.detail?.font || localStorage.getItem('uiFont');
+      if (font) setLocalUiFont(font);
+    };
+    const syncSize = (event) => {
+      const size = event?.detail?.size ?? localStorage.getItem('uiFontSize');
+      if (size != null && size !== '') setLocalUiFontSize(parseFloat(size));
+    };
+    window.addEventListener('ui-font-changed', syncFont);
+    window.addEventListener('ui-font-size-changed', syncSize);
+    return () => {
+      window.removeEventListener('ui-font-changed', syncFont);
+      window.removeEventListener('ui-font-size-changed', syncSize);
+    };
+  }, []);
 
-  const handleUiFontSizeChange = useCallback((newSize) => {
-    if (setUiFontSizeProp) {
-      setUiFontSizeProp(newSize);
-      return;
-    }
-    setLocalUiFontSize(newSize);
-  }, [setUiFontSizeProp]);
-
-  const handleResetUiFontSize = useCallback(() => {
-    handleUiFontSizeChange(UI_FONT_SIZE_DEFAULT);
-  }, [handleUiFontSizeChange]);
+  const openUiTypography = useCallback((event) => {
+    const anchor = event.currentTarget;
+    window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
+      detail: { anchor, section: 'ui', chip: 'typography' }
+    }));
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
@@ -589,61 +588,36 @@ const ThemeSelector = ({
 
             {/* Panel de opciones en el hero banner (2 columnas) */}
             <div className="theme-options-wrapper">
-              {/* Columna Izquierda: Tipografía */}
+              {/* Columna Izquierda: resumen de tipografía de interfaz */}
               <div className="theme-options-col">
                 <div className="theme-anim-card theme-typography-card">
                   <div className="theme-anim-card-header">
-                    <span className="theme-anim-card-title">🔤 Tipografía</span>
-                    <button
-                      type="button"
-                      className="theme-size-reset-btn"
-                      onClick={handleResetUiFontSize}
-                      title="Restablecer tamaño por defecto (14px)"
-                    >
-                      <i className="pi pi-refresh" style={{ fontSize: '0.625rem' }}></i>
-                    </button>
+                    <span className="theme-anim-card-title">Tipografía</span>
                   </div>
                   <div className="theme-anim-card-options">
-                    {/* Selector de Fuente */}
-                    <div className="theme-anim-speed-wrapper">
-                      <span style={{
-                        fontSize: '0.6875rem',
-                        fontWeight: 500,
-                        color: 'var(--ui-dialog-text)',
-                        marginBottom: '0.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.375rem',
-                        paddingLeft: '0.375rem'
-                      }}>
-                        <i className="pi pi-pencil" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
-                        Fuente interfaz
-                      </span>
-                      <div
-                        className="theme-anim-speed"
-                        title="Selecciona la fuente de la interfaz"
-                      >
-                        <select
-                          className="theme-speed-select-mini"
-                          value={uiFont}
-                          onChange={(e) => handleUiFontChange(e.target.value)}
-                          style={{ fontFamily: buildAppFontStack(uiFont), width: '100%' }}
-                        >
-                          {explorerFonts.map((f) => (
-                            <option key={f} value={f} style={{ fontFamily: buildAppFontStack(f) }}>
-                              {f}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div
+                      className="theme-typography-preview"
+                      style={{ fontFamily: buildAppFontStack(uiFont), fontSize: `${uiFontSize}px` }}
+                    >
+                      {uiFont}
                     </div>
-
-                    <div className="theme-anim-speed-wrapper" style={{ marginTop: '0.125rem' }}>
-                      <UiFontSizeControl
-                        value={uiFontSize}
-                        onChange={handleUiFontSizeChange}
-                      />
+                    <div style={{
+                      fontSize: '0.65rem',
+                      opacity: 0.7,
+                      textAlign: 'center',
+                      color: 'var(--ui-dialog-text)'
+                    }}>
+                      {formatUiFontSize(uiFontSize)} px · toda la interfaz
                     </div>
+                    <button
+                      type="button"
+                      className="theme-anim-option"
+                      onClick={openUiTypography}
+                      title="Abrir el catálogo de tipografía de la interfaz"
+                    >
+                      <i className="pi pi-pencil"></i>
+                      <span>Editar tipografía</span>
+                    </button>
                   </div>
                 </div>
               </div>

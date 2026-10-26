@@ -486,23 +486,6 @@ const HomeTab = ({
     };
   }, [syncHomeOptionsFromStorage]);
 
-  // Configuraci\u00F3n de tipograf\u00EDa de HomeTab
-  const [homeTabFont, setHomeTabFont] = useState(() => {
-    try {
-      return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
-    } catch {
-      return '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
-    }
-  });
-  const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('homeTabFontSize');
-      return saved ? parseInt(saved, 10) : null;
-    } catch {
-      return null;
-    }
-  });
-
   const versionInfo = getVersionInfo();
   const embeddedTabbedTerminalRef = useRef();
   const embeddedTerminalInitialized = useRef(false); // evitar crear tabs nuevas al cambiar de vista
@@ -1223,36 +1206,6 @@ const HomeTab = ({
     return () => {
       window.removeEventListener('storage', handleIconThemeChange);
       window.removeEventListener('icon-theme-changed', handleIconThemeChange);
-    };
-  }, []);
-
-  // Escuchar cambios en la fuente de HomeTab
-  useEffect(() => {
-    const handleHomeTabFontChange = () => {
-      try {
-        const newFont = localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
-        const newSize = localStorage.getItem('homeTabFontSize');
-        const parsedSize = newSize ? parseInt(newSize, 10) : null;
-        setHomeTabFont(newFont);
-        setHomeTabFontSize(parsedSize);
-      } catch { }
-    };
-
-    const handleStorageChange = (e) => {
-      if (e.key === 'homeTabFont' || e.key === 'homeTabFontSize' || e.key === 'sidebarFont') {
-        handleHomeTabFontChange();
-      }
-    };
-
-    // Escuchar evento personalizado y cambios en localStorage
-    window.addEventListener('home-tab-font-changed', handleHomeTabFontChange);
-    window.addEventListener('sidebar-font-changed', handleHomeTabFontChange);
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('home-tab-font-changed', handleHomeTabFontChange);
-      window.removeEventListener('sidebar-font-changed', handleHomeTabFontChange);
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 

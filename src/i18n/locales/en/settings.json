@@ -338,13 +338,15 @@
     },
     "sessionExplorer": {
       "title": "Session Explorer",
-      "description": "Customize icons, sizes, typography and tree color",
+      "description": "Customize icons, sizes and the tree color",
       "selectTheme": "Select a theme",
       "selectFont": "Select a font",
+      "treeColor": "Tree color",
       "restoreColor": "Restore default color"
     },
     "homePage": {
-      "description": "Customize the typography of the home page menu",
+      "description": "Customize home page icons, terminal and status bar",
+      "optionsTitle": "Home options",
       "menuTypography": "Menu Typography",
       "typography": "Typography",
       "font": "Font",
