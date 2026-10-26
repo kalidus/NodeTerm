@@ -12,72 +12,155 @@ export const TOOL_CATEGORIES = [
     color: '#22c55e',
     tools: [
       { id: 'ping', label: 'Ping', icon: 'pi pi-clock', description: 'Test de conectividad con estadísticas' },
-      { id: 'traceroute', label: 'Traceroute', icon: 'pi pi-sitemap', description: 'Trazado de rutas de red' }
-    ]
-  },
-  {
-    id: 'scanning',
-    label: 'Escaneo',
-    icon: 'pi pi-search',
-    color: '#f59e0b',
-    tools: [
+      { id: 'traceroute', label: 'Traceroute', icon: 'pi pi-sitemap', description: 'Trazado de rutas de red' },
       { id: 'port-scan', label: 'Port Scanner', icon: 'pi pi-th-large', description: 'Escaneo de puertos TCP' },
-      { id: 'network-scan', label: 'Network Scan', icon: 'pi pi-globe', description: 'Descubrimiento de hosts en red' }
+      { id: 'network-scan', label: 'Network Scan', icon: 'pi pi-globe', description: 'Descubrimiento de hosts en red' },
+      { id: 'ssh-fingerprint', label: 'Huella SSH', icon: 'pi pi-key', description: 'Banner y fingerprint de la clave del host' }
     ]
   },
   {
-    id: 'dns',
-    label: 'DNS',
+    id: 'domain',
+    label: 'Dominio',
     icon: 'pi pi-database',
     color: '#3b82f6',
     tools: [
-      { id: 'dns-lookup', label: 'DNS Lookup', icon: 'pi pi-search-plus', description: 'Resolución de registros DNS' },
-      { id: 'reverse-dns', label: 'Reverse DNS', icon: 'pi pi-replay', description: 'DNS inverso (IP a hostname)' }
+      { id: 'dns-lookup', label: 'DNS', icon: 'pi pi-search-plus', description: 'Resolución, comparación y correo del dominio' },
+      { id: 'whois', label: 'WHOIS', icon: 'pi pi-id-card', description: 'Información de dominio y de IP' }
     ]
   },
   {
-    id: 'security',
-    label: 'Seguridad',
-    icon: 'pi pi-shield',
+    id: 'web',
+    label: 'Web',
+    icon: 'pi pi-globe',
+    color: '#f59e0b',
+    tools: [
+      { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Certificado SSL/TLS y caducidad en lote' },
+      { id: 'web-security-scan', label: 'Seguridad web', icon: 'pi pi-shield', description: 'Auditoría, cabeceras y redirecciones' }
+    ]
+  },
+  {
+    id: 'vulnerabilities',
+    label: 'Vulnerabilidades',
+    icon: 'pi pi-exclamation-triangle',
     color: '#ef4444',
     tools: [
-      { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Auditoria de certificados SSL/TLS' },
-      { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
       { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs en servicios' },
-      { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' },
       { id: 'cvss-calculator', label: 'CVSS Calculator', icon: 'pi pi-chart-bar', description: 'Calcula CVSS 3.1 y 4.0 · Templates · Reportes HTML/PDF' },
       { id: 'recent-vulns', label: 'Critical Vulns', icon: 'pi pi-shield', description: 'Consulta vulnerabilidades críticas globales de los últimos años' }
     ]
   },
   {
-    id: 'utilities',
-    label: 'Utilidades',
-    icon: 'pi pi-cog',
+    id: 'local',
+    label: 'Red local',
+    icon: 'pi pi-server',
     color: '#8b5cf6',
     tools: [
-      { id: 'whois', label: 'WHOIS', icon: 'pi pi-id-card', description: 'Información de dominio' },
-      { id: 'subnet-calc', label: 'Subnet Calculator', icon: 'pi pi-calculator', description: 'Calculadora de subredes' },
-      { id: 'wake-on-lan', label: 'Wake on LAN', icon: 'pi pi-power-off', description: 'Despertar equipos en red' }
+      { id: 'subnet-calc', label: 'Subnet Calculator', icon: 'pi pi-calculator', description: 'Subredes y si una IP pertenece al CIDR' },
+      { id: 'wake-on-lan', label: 'Wake on LAN', icon: 'pi pi-power-off', description: 'Despertar equipos en red' },
+      { id: 'my-network', label: 'Este equipo', icon: 'pi pi-desktop', description: 'Interfaces, vecinos y rutas de esta máquina' }
     ]
   }
 ];
+
+const TOOL_ALIASES = {
+  'reverse-dns': {
+    id: 'reverse-dns',
+    label: 'Reverse DNS',
+    icon: 'pi pi-replay',
+    description: 'DNS inverso (IP a hostname)',
+    categoryId: 'domain',
+    categoryLabel: 'Dominio',
+    categoryColor: '#3b82f6'
+  },
+  'dns-compare': {
+    id: 'dns-compare',
+    label: 'DNS comparado',
+    icon: 'pi pi-clone',
+    description: 'La misma consulta en varios resolvers',
+    categoryId: 'domain',
+    categoryLabel: 'Dominio',
+    categoryColor: '#3b82f6'
+  },
+  'mail-dns': {
+    id: 'mail-dns',
+    label: 'Correo del dominio',
+    icon: 'pi pi-envelope',
+    description: 'MX, SPF, DMARC y DKIM',
+    categoryId: 'domain',
+    categoryLabel: 'Dominio',
+    categoryColor: '#3b82f6'
+  },
+  'whois-ip': {
+    id: 'whois-ip',
+    label: 'WHOIS de IP',
+    icon: 'pi pi-map-marker',
+    description: 'RDAP: rango, RIR y organización',
+    categoryId: 'domain',
+    categoryLabel: 'Dominio',
+    categoryColor: '#3b82f6'
+  },
+  'http-headers': {
+    id: 'http-headers',
+    label: 'HTTP Headers',
+    icon: 'pi pi-file',
+    description: 'Análisis de cabeceras HTTP',
+    categoryId: 'web',
+    categoryLabel: 'Web',
+    categoryColor: '#f59e0b'
+  },
+  'redirect-chain': {
+    id: 'redirect-chain',
+    label: 'Redirecciones',
+    icon: 'pi pi-directions',
+    description: 'Cadena de saltos HTTP',
+    categoryId: 'web',
+    categoryLabel: 'Web',
+    categoryColor: '#f59e0b'
+  },
+  'neighbors': {
+    id: 'neighbors',
+    label: 'Vecinos',
+    icon: 'pi pi-share-alt',
+    description: 'Tabla ARP de esta máquina',
+    categoryId: 'local',
+    categoryLabel: 'Red local',
+    categoryColor: '#8b5cf6'
+  },
+  'routes': {
+    id: 'routes',
+    label: 'Rutas locales',
+    icon: 'pi pi-directions-alt',
+    description: 'Tabla de rutas y puerta de enlace',
+    categoryId: 'local',
+    categoryLabel: 'Red local',
+    categoryColor: '#8b5cf6'
+  }
+};
 
 export const TOOL_COMPONENTS = {
   'ping': React.lazy(() => import('./panels/PingPanel')),
   'traceroute': React.lazy(() => import('./panels/TraceroutePanel')),
   'port-scan': React.lazy(() => import('./panels/PortScannerPanel')),
   'network-scan': React.lazy(() => import('./panels/NetworkScannerPanel')),
-  'dns-lookup': React.lazy(() => import('./panels/DnsLookupPanel')),
+  'dns-lookup': React.lazy(() => import('./panels/DnsSuitePanel')),
   'reverse-dns': React.lazy(() => import('./panels/ReverseDnsPanel')),
+  'ssh-fingerprint': React.lazy(() => import('./panels/SshFingerprintPanel')),
+  'whois-ip': React.lazy(() => import('./panels/WhoisIpAlias')),
+  'dns-compare': React.lazy(() => import('./panels/DnsCompareAlias')),
+  'mail-dns': React.lazy(() => import('./panels/MailDnsAlias')),
   'ssl-check': React.lazy(() => import('./panels/SslCheckerPanel')),
-  'http-headers': React.lazy(() => import('./panels/HttpHeadersPanel')),
-  'host-vuln-scan': React.lazy(() => import('./panels/HostVulnScanPanel')),
+  'http-headers': React.lazy(() => import('./panels/HttpHeadersAlias')),
   'web-security-scan': React.lazy(() => import('./panels/WebSecurityScanPanel')),
+  'redirect-chain': React.lazy(() => import('./panels/RedirectChainAlias')),
+  'host-vuln-scan': React.lazy(() => import('./panels/HostVulnScanPanel')),
   'cvss-calculator': React.lazy(() => import('./CvssCalculatorPanel')),
   'recent-vulns': React.lazy(() => import('./RecentVulnsPanel')),
-  'whois': React.lazy(() => import('./panels/WhoisPanel')),
+  'whois': React.lazy(() => import('./panels/WhoisSuitePanel')),
   'subnet-calc': React.lazy(() => import('./panels/SubnetCalculatorPanel')),
-  'wake-on-lan': React.lazy(() => import('./panels/WakeOnLanPanel'))
+  'wake-on-lan': React.lazy(() => import('./panels/WakeOnLanPanel')),
+  'my-network': React.lazy(() => import('./panels/LocalHostPanel')),
+  'neighbors': React.lazy(() => import('./panels/NeighborsAlias')),
+  'routes': React.lazy(() => import('./panels/RoutesAlias'))
 };
 
 export const DNS_RECORD_TYPES = [
@@ -144,6 +227,7 @@ export const getStatItemStyle = (isMobile = false) => ({
 });
 
 export const findToolMetadata = (toolId) => {
+  if (TOOL_ALIASES[toolId]) return { ...TOOL_ALIASES[toolId] };
   for (const cat of TOOL_CATEGORIES) {
     const tool = cat.tools.find(t => t.id === toolId);
     if (tool) {

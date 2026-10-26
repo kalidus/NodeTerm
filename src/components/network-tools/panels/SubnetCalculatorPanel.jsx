@@ -10,13 +10,16 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('subnet-calc');
   const history = useNetworkToolHistory('subnet-calc');
   const [subnetCalcCidr, setSubnetCalcCidr] = useState('');
+  const [queryIp, setQueryIp] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
   const executeSubnetCalc = async (overrides) => {
     const trimmed = String(overrides?.cidr ?? subnetCalcCidr).trim();
+    const ip = String(overrides?.ip ?? queryIp).trim();
     if (overrides?.cidr != null) setSubnetCalcCidr(String(overrides.cidr));
+    if (overrides?.ip != null) setQueryIp(String(overrides.ip));
     if (!trimmed) {
       setError('Por favor, introduce una dirección IP con máscara CIDR (ej: 192.168.1.0/24).');
       return;
@@ -31,16 +34,19 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
       if (!ipc) throw new Error('IPC no disponible');
 
       const response = await ipc.invoke('network-tools:subnet-calc', {
-        cidr: trimmed
+        cidr: trimmed,
+        ip: ip || undefined
       });
 
       if (response) {
         setResult(response);
         history.record({
-          target: trimmed,
-          params: { cidr: trimmed },
+          target: ip ? `${ip} en ${trimmed}` : trimmed,
+          params: { cidr: trimmed, ip },
           result: response,
-          summary: response.network || response.broadcast || 'CIDR'
+          summary: ip
+            ? (response.contains ? `${ip} dentro` : `${ip} fuera`)
+            : (response.networkAddress || 'CIDR')
         });
       } else {
         setError('No se pudieron calcular los parámetros de la subred');
@@ -68,6 +74,7 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
         history={history}
         onViewHistory={(entry) => {
           setSubnetCalcCidr(entry.params.cidr || entry.target);
+          setQueryIp(entry.params.ip || '');
           setError(null);
           setResult(entry.result || null);
         }}
@@ -118,6 +125,25 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
             }}
             onKeyDown={(e) => e.key === 'Enter' && executeSubnetCalc()}
           />
+          <span style={{ color: '#8b5cf6', fontSize: '0.78rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+            IP:
+          </span>
+          <InputText
+            value={queryIp}
+            onChange={(e) => setQueryIp(e.target.value)}
+            placeholder="opcional, ¿está en la red?"
+            style={{
+              width: isMobile ? '100%' : '180px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '6px',
+              color: 'var(--text-color)',
+              padding: '0.35rem 0.5rem',
+              fontSize: '0.8rem',
+              height: '30px'
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && executeSubnetCalc()}
+          />
           <Button
             label={loading ? 'Calculando...' : 'Calcular'}
             icon={loading ? 'pi pi-spin pi-spinner' : 'pi pi-calculator'}
@@ -157,6 +183,12 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
               <strong style={{ fontSize: '1rem' }}>Subred: {result.input}</strong>
               {result.ipClass && <Badge value={`Clase ${result.ipClass}`} severity="info" />}
               {result.isPrivate && <Badge value="Red Privada" severity="success" />}
+              {result.queryIp && (
+                <Badge
+                  value={result.contains ? `${result.queryIp} dentro` : `${result.queryIp} fuera`}
+                  severity={result.contains ? 'success' : 'danger'}
+                />
+              )}
             </div>
 
             <div style={statItemStyle}>

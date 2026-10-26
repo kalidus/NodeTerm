@@ -206,13 +206,13 @@ function registerNetworkToolsHandlers() {
   });
 
   // === SUBNET CALCULATOR ===
-  ipcMain.handle('network-tools:subnet-calc', async (event, { cidr }) => {
+  ipcMain.handle('network-tools:subnet-calc', async (event, { cidr, ip }) => {
     try {
       if (!cidr) {
         return { success: false, error: 'CIDR es requerido' };
       }
       const service = getService();
-      const result = service.subnetCalc(cidr);
+      const result = ip ? service.ipInCidr(ip, cidr) : service.subnetCalc(cidr);
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
@@ -394,6 +394,51 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+
+  const handleSimple = (channel, run) => {
+    ipcMain.handle(channel, async (event, payload = {}) => {
+      try {
+        const service = getService();
+        const result = await run(service, payload || {});
+        if (!result || typeof result !== 'object') {
+          return { success: false, error: 'Respuesta inválida del servicio' };
+        }
+        return result;
+      } catch (err) {
+        console.error(`[${channel}] Error:`, err);
+        return { success: false, error: err?.message || 'Error desconocido' };
+      }
+    });
+  };
+
+  handleSimple('network-tools:ssh-fingerprint', (service, { host, port = 22 }) => {
+    if (!host) return { success: false, error: 'Host es requerido' };
+    return service.sshFingerprint(host, port);
+  });
+
+  handleSimple('network-tools:whois-ip', (service, { ip }) => {
+    if (!ip) return { success: false, error: 'IP es requerida' };
+    return service.whoisIp(ip);
+  });
+
+  handleSimple('network-tools:dns-compare', (service, { domain, type = 'A' }) => {
+    if (!domain) return { success: false, error: 'Dominio es requerido' };
+    return service.dnsCompare(domain, type);
+  });
+
+  handleSimple('network-tools:mail-dns', (service, { domain, selector }) => {
+    if (!domain) return { success: false, error: 'Dominio es requerido' };
+    return service.mailDns(domain, selector);
+  });
+
+  handleSimple('network-tools:redirect-chain', (service, { url }) => {
+    if (!url) return { success: false, error: 'URL es requerida' };
+    return service.redirectChain(url);
+  });
+
+  handleSimple('network-tools:neighbors', (service) => service.getNeighbors());
+
+  handleSimple('network-tools:routes', (service) => service.getLocalRoutes());
 
   // === GET NETWORK INTERFACES ===
   ipcMain.handle('network-tools:get-interfaces', async () => {

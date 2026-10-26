@@ -3,6 +3,9 @@
  */
 
 import React, { useState } from 'react';
+import HttpHeadersPanel from './HttpHeadersPanel';
+import RedirectChainPanel from './RedirectChainPanel';
+import ToolViewSwitch from '../common/ToolViewSwitch';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
@@ -10,7 +13,7 @@ import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
 import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
-const WebSecurityScanPanel = ({ isMobile = false }) => {
+const WebSecurityAudit = ({ isMobile = false }) => {
   const tool = findToolMetadata('web-security-scan');
   const history = useNetworkToolHistory('web-security-scan');
   const [webSecurityUrl, setWebSecurityUrl] = useState('');
@@ -440,6 +443,27 @@ const WebSecurityScanPanel = ({ isMobile = false }) => {
         )}
 
         {renderResults()}
+      </div>
+    </div>
+  );
+};
+
+const WEB_VIEWS = [
+  { id: 'audit', label: 'Auditoría' },
+  { id: 'headers', label: 'Cabeceras' },
+  { id: 'redirects', label: 'Redirecciones' }
+];
+
+const WebSecurityScanPanel = ({ isMobile = false, initialView = 'audit' }) => {
+  const start = WEB_VIEWS.some((item) => item.id === initialView) ? initialView : 'audit';
+  const [view, setView] = useState(start);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <ToolViewSwitch views={WEB_VIEWS} value={view} onChange={setView} accent="#f59e0b" />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {view === 'headers' && <HttpHeadersPanel isMobile={isMobile} />}
+        {view === 'redirects' && <RedirectChainPanel isMobile={isMobile} />}
+        {view === 'audit' && <WebSecurityAudit isMobile={isMobile} />}
       </div>
     </div>
   );

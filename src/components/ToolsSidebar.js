@@ -3,59 +3,7 @@ import { Tree } from 'primereact/tree';
 import { iconThemes } from '../themes/icon-themes';
 import { themeManager, getThemeGroupColorPalette } from '../utils/themeManager';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
-
-const TOOL_CATEGORIES = [
-  {
-    id: 'connectivity',
-    label: 'Conectividad',
-    icon: 'pi pi-wifi',
-    tools: [
-      { id: 'ping', label: 'Ping', icon: 'pi pi-clock', description: 'Test de conectividad con estadísticas' },
-      { id: 'traceroute', label: 'Traceroute', icon: 'pi pi-sitemap', description: 'Trazado de rutas de red' }
-    ]
-  },
-  {
-    id: 'scanning',
-    label: 'Escaneo',
-    icon: 'pi pi-search',
-    tools: [
-      { id: 'port-scan', label: 'Port Scanner', icon: 'pi pi-th-large', description: 'Escaneo de puertos TCP' },
-      { id: 'network-scan', label: 'Network Scan', icon: 'pi pi-globe', description: 'Descubrimiento de hosts en red' }
-    ]
-  },
-  {
-    id: 'dns',
-    label: 'DNS',
-    icon: 'pi pi-database',
-    tools: [
-      { id: 'dns-lookup', label: 'DNS Lookup', icon: 'pi pi-search-plus', description: 'Resolución de registros DNS' },
-      { id: 'reverse-dns', label: 'Reverse DNS', icon: 'pi pi-replay', description: 'DNS inverso (IP a hostname)' }
-    ]
-  },
-  {
-    id: 'security',
-    label: 'Seguridad',
-    icon: 'pi pi-shield',
-    tools: [
-      { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Auditoria de certificados SSL/TLS' },
-      { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
-      { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs' },
-      { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web' },
-      { id: 'cvss-calculator', label: 'CVSS Calculator', icon: 'pi pi-chart-bar', description: 'Calcula CVSS 3.1 y 4.0' },
-      { id: 'recent-vulns', label: 'Critical Vulns', icon: 'pi pi-shield', description: 'Vulnerabilidades críticas globales recientes' }
-    ]
-  },
-  {
-    id: 'utilities',
-    label: 'Utilidades',
-    icon: 'pi pi-cog',
-    tools: [
-      { id: 'whois', label: 'WHOIS', icon: 'pi pi-id-card', description: 'Información de dominio' },
-      { id: 'subnet-calc', label: 'Subnet Calculator', icon: 'pi pi-calculator', description: 'Calculadora de subredes' },
-      { id: 'wake-on-lan', label: 'Wake on LAN', icon: 'pi pi-power-off', description: 'Despertar equipos en red' }
-    ]
-  }
-];
+import { TOOL_CATEGORIES } from './network-tools/toolRegistry';
 
 // Helper para obtener el color por defecto de las carpetas según el tema
 const getThemeDefaultColor = (themeName) => {
@@ -133,10 +81,10 @@ const ToolsSidebar = ({
     // Fallbacks
     switch (categoryId) {
       case 'connectivity': return '#22c55e';
-      case 'scanning': return '#f59e0b';
-      case 'dns': return '#3b82f6';
-      case 'security': return '#ef4444';
-      case 'utilities': return '#8b5cf6';
+      case 'domain': return '#3b82f6';
+      case 'web': return '#f59e0b';
+      case 'vulnerabilities': return '#ef4444';
+      case 'local': return '#8b5cf6';
       default: return '#5e81ac';
     }
   }, [themePalette]);

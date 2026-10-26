@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
 import { InputNumber } from 'primereact/inputnumber';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
@@ -443,6 +444,9 @@ const SslCheckerPanel = ({ isMobile = false }) => {
   const history = useNetworkToolHistory('ssl-check');
   const [sslCheckHost, setSslCheckHost] = useState('');
   const [sslCheckPort, setSslCheckPort] = useState(443);
+  const [checkMode, setCheckMode] = useState('single');
+  const [batchText, setBatchText] = useState('');
+  const [batchRows, setBatchRows] = useState(null);
   const [loading, setLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [result, setResult] = useState(null);
@@ -503,8 +507,87 @@ const SslCheckerPanel = ({ isMobile = false }) => {
     }
   };
 
+  const splitHostPort = (token, fallbackPort) => {
+    const value = String(token || '').trim();
+    const bracket = value.match(/^\[([^\]]+)\]:(\d+)$/);
+    if (bracket) return { host: bracket[1], port: Number(bracket[2]) };
+    const simple = value.match(/^([^:\s]+):(\d+)$/);
+    if (simple && !simple[1].includes(':')) return { host: simple[1], port: Number(simple[2]) };
+    return { host: value, port: fallbackPort || 443 };
+  };
+
+  const executeBatch = async (overrides) => {
+    const source = overrides?.hosts != null ? overrides.hosts : batchText;
+    const fallbackPort = overrides?.port ?? sslCheckPort ?? 443;
+    if (overrides?.hosts != null) setBatchText(String(overrides.hosts));
+    if (overrides?.port != null) setSslCheckPort(overrides.port);
+    const tokens = String(source || '').split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+    const unique = [];
+    const seen = new Set();
+    tokens.forEach((token) => {
+      const key = token.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      unique.push(token);
+    });
+    if (!unique.length) {
+      setError('Introduce al menos un host.');
+      return;
+    }
+    if (unique.length > 20) {
+      setError('Máximo 20 hosts por consulta.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setBatchRows(null);
+    setActionMessage(null);
+    try {
+      const ipc = window?.electron?.ipcRenderer;
+      if (!ipc) throw new Error('IPC no disponible');
+      const rows = new Array(unique.length);
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < unique.length) {
+          const index = cursor;
+          cursor += 1;
+          const target = splitHostPort(unique[index], fallbackPort);
+          try {
+            const response = await ipc.invoke('network-tools:ssl-check', target);
+            const cert = response?.certificate;
+            rows[index] = {
+              host: target.host,
+              port: target.port,
+              subject: cert?.subjectDn || cert?.subject?.CN || '',
+              issuer: cert?.issuerDn || cert?.issuer?.O || cert?.issuer?.CN || '',
+              days: typeof cert?.daysUntilExpiry === 'number' ? cert.daysUntilExpiry : null,
+              error: response && response.success === false ? (response.error || 'Error') : (response ? null : 'Sin respuesta')
+            };
+          } catch (err) {
+            rows[index] = { host: target.host, port: target.port, subject: '', issuer: '', days: null, error: err.message || 'Error' };
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(3, unique.length) }, () => worker()));
+      setBatchRows(rows);
+      history.record({
+        target: `${unique.length} hosts`,
+        params: { mode: 'batch', hosts: unique.join('\n'), port: fallbackPort },
+        result: { rows },
+        summary: `${rows.filter(r => !r.error).length}/${rows.length} OK`
+      });
+    } catch (err) {
+      setError(err.message || 'Error al verificar el lote');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearResults = () => {
     setResult(null);
+    setBatchRows(null);
     setError(null);
     setActionMessage(null);
   };
@@ -1085,39 +1168,56 @@ const SslCheckerPanel = ({ isMobile = false }) => {
         isMobile={isMobile}
         history={history}
         onViewHistory={(entry) => {
-          setSslCheckHost(entry.params.host || entry.target);
-          if (entry.params.port) setSslCheckPort(entry.params.port);
           setError(null);
           setActionMessage(null);
+          if (entry.params?.mode === 'batch') {
+            setCheckMode('batch');
+            setBatchText(entry.params.hosts || '');
+            if (entry.params.port) setSslCheckPort(entry.params.port);
+            setResult(null);
+            setBatchRows(entry.result?.rows || null);
+            return;
+          }
+          setCheckMode('single');
+          setBatchRows(null);
+          setSslCheckHost(entry.params.host || entry.target);
+          if (entry.params.port) setSslCheckPort(entry.params.port);
           setResult(entry.result || null);
         }}
-        onRerunHistory={(entry) => executeSslCheck(entry.params)}
+        onRerunHistory={(entry) => {
+          if (entry.params?.mode === 'batch') executeBatch(entry.params);
+          else executeSslCheck(entry.params);
+        }}
         extraActions={
-          result && (
+          (result || batchRows) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Button
-                icon="pi pi-copy"
-                className="p-button-text p-button-sm p-button-secondary"
-                tooltip="Copiar JSON"
-                onClick={handleCopyJson}
-                style={{ padding: '0.35rem 0.5rem' }}
-              />
-              <Button
-                icon="pi pi-key"
-                className="p-button-text p-button-sm p-button-secondary"
-                tooltip="Copiar PEM"
-                onClick={handleCopyPem}
-                disabled={!result?.certificate?.pem}
-                style={{ padding: '0.35rem 0.5rem' }}
-              />
-              <Button
-                icon={exportingPdf ? 'pi pi-spin pi-spinner' : 'pi pi-file-pdf'}
-                className="p-button-text p-button-sm p-button-secondary"
-                tooltip="Exportar PDF"
-                onClick={handleExportPdf}
-                disabled={exportingPdf}
-                style={{ padding: '0.35rem 0.5rem' }}
-              />
+              {result && (
+                <>
+                  <Button
+                    icon="pi pi-copy"
+                    className="p-button-text p-button-sm p-button-secondary"
+                    tooltip="Copiar JSON"
+                    onClick={handleCopyJson}
+                    style={{ padding: '0.35rem 0.5rem' }}
+                  />
+                  <Button
+                    icon="pi pi-key"
+                    className="p-button-text p-button-sm p-button-secondary"
+                    tooltip="Copiar PEM"
+                    onClick={handleCopyPem}
+                    disabled={!result?.certificate?.pem}
+                    style={{ padding: '0.35rem 0.5rem' }}
+                  />
+                  <Button
+                    icon={exportingPdf ? 'pi pi-spin pi-spinner' : 'pi pi-file-pdf'}
+                    className="p-button-text p-button-sm p-button-secondary"
+                    tooltip="Exportar PDF"
+                    onClick={handleExportPdf}
+                    disabled={exportingPdf}
+                    style={{ padding: '0.35rem 0.5rem' }}
+                  />
+                </>
+              )}
               <Button
                 icon="pi pi-trash"
                 className="p-button-text p-button-sm p-button-secondary"
@@ -1144,9 +1244,50 @@ const SslCheckerPanel = ({ isMobile = false }) => {
             flexWrap: isMobile ? 'wrap' : 'nowrap'
           }}
         >
-          <span style={{ color: '#06b6d4', fontSize: '0.78rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-            Host:
-          </span>
+          <button
+            type="button"
+            onClick={() => { setCheckMode('single'); setBatchRows(null); setError(null); }}
+            style={{
+              border: 'none',
+              borderRadius: '6px',
+              height: '30px',
+              padding: '0 0.65rem',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: checkMode === 'single' ? '#0891b2' : 'rgba(255,255,255,0.08)',
+              color: checkMode === 'single' ? '#fff' : 'var(--text-color)'
+            }}
+          >
+            Un host
+          </button>
+          <button
+            type="button"
+            onClick={() => { setCheckMode('batch'); setResult(null); setError(null); }}
+            style={{
+              border: 'none',
+              borderRadius: '6px',
+              height: '30px',
+              padding: '0 0.65rem',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: checkMode === 'batch' ? '#0891b2' : 'rgba(255,255,255,0.08)',
+              color: checkMode === 'batch' ? '#fff' : 'var(--text-color)'
+            }}
+          >
+            Varios
+          </button>
+          {checkMode === 'batch' ? (
+            <InputTextarea
+              value={batchText}
+              onChange={(e) => setBatchText(e.target.value)}
+              placeholder={'ejemplo.com\notro.com:8443'}
+              rows={3}
+              autoResize
+              style={{ width: isMobile ? '100%' : '280px', fontSize: '0.8rem' }}
+            />
+          ) : (
           <InputText
             value={sslCheckHost}
             onChange={(e) => setSslCheckHost(e.target.value)}
@@ -1163,6 +1304,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
             }}
             onKeyDown={(e) => e.key === 'Enter' && executeSslCheck()}
           />
+          )}
           <span style={{ color: '#06b6d4', fontSize: '0.78rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
             Puerto:
           </span>
@@ -1186,7 +1328,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
           <Button
             label={loading ? 'Verificando...' : 'Verificar'}
             icon={loading ? 'pi pi-spin pi-spinner' : 'pi pi-shield'}
-            onClick={executeSslCheck}
+            onClick={checkMode === 'batch' ? executeBatch : executeSslCheck}
             disabled={loading}
             style={{
               background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
@@ -1209,14 +1351,38 @@ const SslCheckerPanel = ({ isMobile = false }) => {
           </div>
         )}
 
-        {!result && !loading && !error && (
+        {!result && !batchRows && !loading && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', color: 'var(--text-color-secondary)' }}>
             <i className="pi pi-lock" style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.4, color: '#06b6d4' }} />
-            <span>Introduce un host, IP o dominio para auditar confianza, protocolos y cadena del certificado SSL/TLS.</span>
+            <span>
+              {checkMode === 'batch'
+                ? 'Pega hasta 20 hosts, uno por línea. Puedes indicar el puerto como host:8443.'
+                : 'Introduce un host, IP o dominio para auditar confianza, protocolos y cadena del certificado SSL/TLS.'}
+            </span>
           </div>
         )}
 
-        {renderSslResults()}
+        {checkMode === 'batch' && batchRows && (
+          <div style={resultBoxStyle}>
+            {batchRows.map((row) => {
+              const daysColor = row.days == null ? 'var(--text-color-secondary)' : row.days < 30 ? '#ef4444' : row.days < 90 ? '#f59e0b' : '#22c55e';
+              return (
+                <div key={`${row.host}:${row.port}`} style={{ ...statItemStyle, alignItems: 'flex-start' }}>
+                  <div>
+                    <strong>{row.host}:{row.port}</strong>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-color-secondary)' }}>{row.subject || row.error || 'Sin sujeto'}</div>
+                    {row.issuer && <div style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>{row.issuer}</div>}
+                  </div>
+                  <strong style={{ color: row.error ? '#ef4444' : daysColor }}>
+                    {row.error ? 'Error' : row.days == null ? '—' : `${row.days} días`}
+                  </strong>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {checkMode === 'single' && renderSslResults()}
       </div>
     </div>
   );
