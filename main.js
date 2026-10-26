@@ -3765,7 +3765,7 @@ function applyWindowCornersForLayout(win, layoutId) {
   // 3 = DWMWCP_ROUNDSMALL (Slightly rounded corners)
   let preference = 2; // Default to rounded
   
-  if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'cyberpunk') {
+  if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'cyberpunk' || layoutId === 'studio') {
     preference = 1; // Square corners
   } else if (layoutId === 'tablero') {
     preference = 3; // Slightly rounded corners

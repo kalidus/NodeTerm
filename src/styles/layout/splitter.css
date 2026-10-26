@@ -1,5 +1,7 @@
 .p-splitter {
   border: none;
+  display: flex;
+  flex-wrap: nowrap;
 }
 
 .main-splitter {

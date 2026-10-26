@@ -28,156 +28,7 @@ const LayoutThemeSelector = () => {
   }, []);
 
   const layouts = [
-    {
-      id: 'islas',
-      name: 'Islas',
-      description: 'Lienzo de fondo y cada región como una tarjeta suelta, con hueco amplio y sombra suave.',
-      icon: 'pi-th-large',
-      preview: () => (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px', backgroundColor: '#07080a', boxSizing: 'border-box' }}>
-          <div style={{ height: '8px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
-          <div style={{ display: 'flex', flex: 1, gap: '4px', minHeight: 0 }}>
-            <div style={{ width: '28%', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
-            <div style={{ flex: 1, borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
-          </div>
-          <div style={{ height: '7px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
-        </div>
-      )
-    },
-    {
-      id: 'dock',
-      name: 'Dock',
-      description: 'Titlebar casi invisible y una barra inferior gruesa, con pestañas y búsqueda en píldora.',
-      icon: 'pi-arrow-down',
-      preview: () => (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#12141a', boxSizing: 'border-box' }}>
-          <div style={{ height: '6px', backgroundColor: '#181b22' }} />
-          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            <div style={{ width: '26%', backgroundColor: '#181b22' }} />
-            <div style={{ flex: 1, padding: '6px', display: 'flex', alignItems: 'flex-start', gap: '3px' }}>
-              <div style={{ width: '18px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.55)' }} />
-              <div style={{ width: '14px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
-            </div>
-          </div>
-          <div style={{ height: '12px', margin: '0 4px 4px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.28)', border: '1px solid rgba(59,130,246,0.45)' }} />
-        </div>
-      )
-    },
-    {
-      id: 'tablero',
-      name: 'Tablero',
-      description: 'Banda superior sólida, marca vertical en el ítem activo y tarjetas redondeadas sobre un lienzo plano.',
-      icon: 'pi-id-card',
-      preview: () => (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1c1e', boxSizing: 'border-box' }}>
-          <div style={{ height: '10px', backgroundColor: '#1e3a8a' }} />
-          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            <div style={{ width: '22%', backgroundColor: '#141618', padding: '5px 4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ height: '8px', borderRadius: '2px', backgroundColor: 'rgba(234,179,8,0.2)', boxShadow: 'inset 2px 0 0 #eab308' }} />
-              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
-            </div>
-            <div style={{ flex: 1, padding: '5px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
-              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
-              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
-              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
-            </div>
-          </div>
-          <div style={{ height: '6px', backgroundColor: '#1a1c1e' }} />
-        </div>
-      )
-    },
-    {
-      id: 'atelier',
-      name: 'Atelier',
-      description: 'Consola refinada. Radios suaves, un solo acento del tema y las mismas superficies en inicio, diálogos y herramientas.',
-      icon: 'pi-star',
-      preview: () => (
-        <div style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#0e1116',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ height: '10px', backgroundColor: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
-          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            <div style={{ width: '28%', backgroundColor: '#161b22', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ height: '6px', width: '80%', borderRadius: '2px', backgroundColor: 'rgba(61,190,182,0.35)', boxShadow: 'inset 2px 0 0 #3dbeb6' }} />
-              <div style={{ height: '4px', width: '60%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
-              <div style={{ height: '4px', width: '70%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
-            </div>
-            <div style={{ flex: 1, padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ height: '18px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }} />
-              <div style={{ flex: 1, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#12171e' }} />
-            </div>
-          </div>
-          <div style={{ height: '8px', backgroundColor: '#0e1116', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
-        </div>
-      )
-    },
-    {
-      id: 'mux',
-      name: 'Mux',
-      description: 'La ventana como un multiplexor de TTY: cada región es un pane con cabecera de consola, sin neón ni mayúsculas.',
-      icon: 'pi-table',
-      preview: () => (
-        <div style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#0a0c0f',
-          boxSizing: 'border-box',
-          gap: '3px',
-          padding: '3px'
-        }}>
-          <div style={{
-            height: '9px',
-            backgroundColor: '#101418',
-            border: '1px solid rgba(125,206,160,0.28)',
-            borderRadius: '2px',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 4px'
-          }}>
-            <div style={{ width: '28%', height: '3px', backgroundColor: 'rgba(125,206,160,0.45)', borderRadius: '1px' }} />
-          </div>
-          <div style={{ display: 'flex', flex: 1, gap: '3px', minHeight: 0 }}>
-            <div style={{
-              width: '30%',
-              backgroundColor: '#101418',
-              border: '1px solid rgba(125,206,160,0.28)',
-              borderRadius: '2px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
-              <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <div style={{ height: '3px', width: '85%', backgroundColor: 'rgba(125,206,160,0.35)' }} />
-                <div style={{ height: '3px', width: '62%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
-                <div style={{ height: '3px', width: '70%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
-              </div>
-            </div>
-            <div style={{
-              flex: 1,
-              backgroundColor: '#101418',
-              border: '1px solid rgba(125,206,160,0.28)',
-              borderRadius: '2px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
-              <div style={{ flex: 1, backgroundColor: '#0a0c0f' }} />
-            </div>
-          </div>
-          <div style={{ height: '7px', backgroundColor: '#101418', border: '1px solid rgba(125,206,160,0.2)', borderRadius: '2px' }} />
-        </div>
-      )
-    },
-    {
+{
       id: 'default',
       name: 'Moderno (Redondeado)',
       description: 'El diseño original de NodeTerm con bordes redondeados, márgenes sutiles y sombras suaves.',
@@ -248,7 +99,7 @@ const LayoutThemeSelector = () => {
         </div>
       )
     },
-    {
+{
       id: 'unified',
       name: 'Unificado (Seamless)',
       description: 'Estilo continuo sin bordes ni márgenes. La barra de título, la barra lateral y la pantalla de contenido se integran.',
@@ -316,7 +167,7 @@ const LayoutThemeSelector = () => {
         </div>
       )
     },
-    {
+{
       id: 'unified-rounded',
       name: 'Moderno (Personalizado)',
       description: 'Estilo continuo basado en el unificado, pero manteniendo las esquinas redondeadas en las pantallas para un toque elegante.',
@@ -395,7 +246,7 @@ const LayoutThemeSelector = () => {
         </div>
       )
     },
-    {
+{
       id: 'unified-app-rounded',
       name: 'Unificado (Ventana Redondeada)',
       description: 'Estilo continuo sin bordes internos, pero con las esquinas exteriores de la ventana de la aplicación redondeadas.',
@@ -466,7 +317,7 @@ const LayoutThemeSelector = () => {
         </div>
       )
     },
-    {
+{
       id: 'cyberpunk',
       name: 'Cyberpunk (Angular)',
       description: 'Estética futurista con bordes rectos, fuentes tecnológicas y luces de neón vibrantes.',
@@ -532,6 +383,174 @@ const LayoutThemeSelector = () => {
               <div style={{ flex: 1, backgroundColor: '#05070f', border: '1px solid #00f0ff' }}></div>
             </div>
           </div>
+        </div>
+      )
+    },
+{
+      id: 'atelier',
+      name: 'Atelier',
+      description: 'Consola refinada. Radios suaves, un solo acento del tema y las mismas superficies en inicio, diálogos y herramientas.',
+      icon: 'pi-star',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0e1116',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ height: '10px', backgroundColor: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '28%', backgroundColor: '#161b22', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '6px', width: '80%', borderRadius: '2px', backgroundColor: 'rgba(61,190,182,0.35)', boxShadow: 'inset 2px 0 0 #3dbeb6' }} />
+              <div style={{ height: '4px', width: '60%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+              <div style={{ height: '4px', width: '70%', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+            </div>
+            <div style={{ flex: 1, padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '18px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }} />
+              <div style={{ flex: 1, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#12171e' }} />
+            </div>
+          </div>
+          <div style={{ height: '8px', backgroundColor: '#0e1116', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+        </div>
+      )
+    },
+{
+      id: 'mux',
+      name: 'Mux',
+      description: 'La ventana como un multiplexor de TTY: cada región es un pane con cabecera de consola, sin neón ni mayúsculas.',
+      icon: 'pi-table',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0a0c0f',
+          boxSizing: 'border-box',
+          gap: '3px',
+          padding: '3px'
+        }}>
+          <div style={{
+            height: '9px',
+            backgroundColor: '#101418',
+            border: '1px solid rgba(125,206,160,0.28)',
+            borderRadius: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 4px'
+          }}>
+            <div style={{ width: '28%', height: '3px', backgroundColor: 'rgba(125,206,160,0.45)', borderRadius: '1px' }} />
+          </div>
+          <div style={{ display: 'flex', flex: 1, gap: '3px', minHeight: 0 }}>
+            <div style={{
+              width: '30%',
+              backgroundColor: '#101418',
+              border: '1px solid rgba(125,206,160,0.28)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
+              <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ height: '3px', width: '85%', backgroundColor: 'rgba(125,206,160,0.35)' }} />
+                <div style={{ height: '3px', width: '62%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
+                <div style={{ height: '3px', width: '70%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
+              </div>
+            </div>
+            <div style={{
+              flex: 1,
+              backgroundColor: '#101418',
+              border: '1px solid rgba(125,206,160,0.28)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ height: '7px', borderBottom: '1px solid rgba(125,206,160,0.22)', backgroundColor: 'rgba(125,206,160,0.08)' }} />
+              <div style={{ flex: 1, backgroundColor: '#0a0c0f' }} />
+            </div>
+          </div>
+          <div style={{ height: '7px', backgroundColor: '#101418', border: '1px solid rgba(125,206,160,0.2)', borderRadius: '2px' }} />
+        </div>
+      )
+    },
+{
+      id: 'studio',
+      name: 'Studio',
+      description: 'Sidebar a la derecha, como un editor. Titlebar y pestañas arriba.',
+      icon: 'pi-desktop',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#101216', boxSizing: 'border-box' }}>
+          <div style={{ height: '8px', backgroundColor: '#1a1d24', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ flex: 1, backgroundColor: '#12151a' }} />
+            <div style={{ width: '28%', backgroundColor: '#1a1d24', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ height: '4px', width: '80%', backgroundColor: 'rgba(99,102,241,0.45)' }} />
+              <div style={{ height: '3px', width: '65%', backgroundColor: 'rgba(255,255,255,0.14)' }} />
+            </div>
+          </div>
+          <div style={{ height: '7px', backgroundColor: '#101216', borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+        </div>
+      )
+    },
+{
+      id: 'islas',
+      name: 'Islas',
+      description: 'Lienzo de fondo y cada región como una tarjeta suelta, con hueco amplio y sombra suave.',
+      icon: 'pi-th-large',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px', backgroundColor: '#07080a', boxSizing: 'border-box' }}>
+          <div style={{ height: '8px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+          <div style={{ display: 'flex', flex: 1, gap: '4px', minHeight: 0 }}>
+            <div style={{ width: '28%', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+            <div style={{ flex: 1, borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+          </div>
+          <div style={{ height: '7px', borderRadius: '6px', backgroundColor: '#1c1f26', boxShadow: '0 2px 6px rgba(0,0,0,0.45)' }} />
+        </div>
+      )
+    },
+{
+      id: 'dock',
+      name: 'Dock',
+      description: 'Titlebar casi invisible y una barra inferior gruesa, con pestañas y búsqueda en píldora.',
+      icon: 'pi-arrow-down',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#12141a', boxSizing: 'border-box' }}>
+          <div style={{ height: '6px', backgroundColor: '#181b22' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '26%', backgroundColor: '#181b22' }} />
+            <div style={{ flex: 1, padding: '6px', display: 'flex', alignItems: 'flex-start', gap: '3px' }}>
+              <div style={{ width: '18px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.55)' }} />
+              <div style={{ width: '14px', height: '6px', borderRadius: '99px', backgroundColor: 'rgba(255,255,255,0.16)' }} />
+            </div>
+          </div>
+          <div style={{ height: '12px', margin: '0 4px 4px', borderRadius: '99px', backgroundColor: 'rgba(59,130,246,0.28)', border: '1px solid rgba(59,130,246,0.45)' }} />
+        </div>
+      )
+    },
+{
+      id: 'tablero',
+      name: 'Tablero',
+      description: 'Banda superior sólida, marca vertical en el ítem activo y tarjetas redondeadas sobre un lienzo plano.',
+      icon: 'pi-id-card',
+      preview: () => (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1c1e', boxSizing: 'border-box' }}>
+          <div style={{ height: '10px', backgroundColor: '#1e3a8a' }} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <div style={{ width: '22%', backgroundColor: '#141618', padding: '5px 4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ height: '8px', borderRadius: '2px', backgroundColor: 'rgba(234,179,8,0.2)', boxShadow: 'inset 2px 0 0 #eab308' }} />
+              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ height: '6px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+            </div>
+            <div style={{ flex: 1, padding: '5px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+              <div style={{ borderRadius: '4px', backgroundColor: '#243056', border: '1px solid rgba(59,108,255,0.35)' }} />
+            </div>
+          </div>
+          <div style={{ height: '6px', backgroundColor: '#1a1c1e' }} />
         </div>
       )
     }

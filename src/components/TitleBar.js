@@ -1323,11 +1323,13 @@ const TitleBar = ({
           {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
             (() => {
               const rect = layoutBtnRef.current.getBoundingClientRect();
+              const estimated = Math.min(360, UI_LAYOUT_OPTIONS.length * 32 + 16);
+              const openUp = window.innerHeight - rect.bottom < estimated;
               return (
                 <div
                   className="title-bar-layout-popover"
                   style={{
-                    top: rect.bottom + 4,
+                    top: openUp ? Math.max(8, rect.top - estimated - 4) : rect.bottom + 4,
                     right: Math.max(8, window.innerWidth - rect.right),
                   }}
                   role="menu"

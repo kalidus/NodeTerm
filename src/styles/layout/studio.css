@@ -1,0 +1,64 @@
+/* Studio: sidebar a la derecha (splitter invertido). Titlebar y tabs arriba. */
+
+body.layout-studio {
+  --layout-border-radius-main: 6px;
+  --layout-border-radius-sm: 4px;
+  --layout-border-radius-lg: 8px;
+  --layout-border-width: 1px;
+  --layout-panel-shadow: none;
+  --layout-font-family: var(--ui-font-family);
+}
+
+body.layout-studio .app-container {
+  background: var(--ui-content-bg, #101216);
+}
+
+html[data-custom-titlebar="true"] body.layout-studio .title-bar {
+  background: var(--ui-titlebar-accent) !important;
+  color: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-studio .title-bar span,
+html[data-custom-titlebar="true"] body.layout-studio .title-bar svg {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+body.layout-studio .title-bar {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16)) !important;
+  box-shadow: none !important;
+}
+
+body.layout-studio .main-splitter.p-splitter {
+  display: flex !important;
+  flex-direction: row-reverse !important;
+}
+
+body.layout-studio .main-splitter > .p-splitter-panel:first-child {
+  padding: 8px 8px 8px 2px !important;
+}
+
+body.layout-studio .main-splitter > .p-splitter-panel:last-child {
+  padding: 8px 2px 8px 8px !important;
+}
+
+body.layout-studio .sidebar-container.sidebar-root {
+  border-right: none !important;
+  border-left: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16)) !important;
+}
+
+body.layout-studio .sidebar-tree .p-treenode-content.p-highlight::after {
+  box-shadow: inset -2px 0 0 var(--ui-button-primary, #6366f1);
+}
+
+body.layout-studio .home-shell-status .status-bar {
+  border-top: 1px solid var(--ui-border-subtle, rgba(127, 127, 127, 0.16)) !important;
+}
+
+body.layout-studio .terminal-frame {
+  border-radius: 0;
+  box-shadow: none;
+}

@@ -4,20 +4,21 @@ import { persistSyncedSetting } from './persistSyncedSetting';
 /** Clave localStorage del estilo de apariencia (layout global de la UI). */
 export const UI_LAYOUT_STORAGE_KEY = 'ui_layout';
 
-const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux', 'layout-islas', 'layout-dock', 'layout-tablero'];
+const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux', 'layout-islas', 'layout-dock', 'layout-tablero', 'layout-studio'];
 
 /** Opciones de layout para selectores rápidos (titlebar, etc.). */
 export const UI_LAYOUT_OPTIONS = [
-  { id: 'islas', name: 'Islas', icon: 'pi-th-large' },
-  { id: 'dock', name: 'Dock', icon: 'pi-arrow-down' },
-  { id: 'tablero', name: 'Tablero', icon: 'pi-id-card' },
-  { id: 'atelier', name: 'Atelier', icon: 'pi-star' },
-  { id: 'mux', name: 'Mux', icon: 'pi-th-large' },
   { id: 'default', name: 'Default', icon: 'pi-box' },
   { id: 'unified', name: 'Unified', icon: 'pi-stop' },
   { id: 'unified-rounded', name: 'Unified Rounded', icon: 'pi-circle' },
   { id: 'unified-app-rounded', name: 'App Rounded', icon: 'pi-window-maximize' },
   { id: 'cyberpunk', name: 'Cyberpunk', icon: 'pi-bolt' },
+  { id: 'atelier', name: 'Atelier', icon: 'pi-star' },
+  { id: 'mux', name: 'Mux', icon: 'pi-th-large' },
+  { id: 'studio', name: 'Studio', icon: 'pi-desktop' },
+  { id: 'islas', name: 'Islas', icon: 'pi-th-large' },
+  { id: 'dock', name: 'Dock', icon: 'pi-arrow-down' },
+  { id: 'tablero', name: 'Tablero', icon: 'pi-id-card' },
 ];
 
 function syncIconThemeForLayout(layoutId) {
@@ -34,7 +35,8 @@ function syncIconThemeForLayout(layoutId) {
     layoutId === 'atelier' ||
     layoutId === 'mux' ||
     layoutId === 'islas' ||
-    layoutId === 'dock'
+    layoutId === 'dock' ||
+    layoutId === 'studio'
   ) {
     localStorage.setItem('iconTheme', 'cupertino');
     localStorage.setItem('iconThemeSidebar', 'cupertino');
@@ -65,6 +67,10 @@ export function applyUILayoutFromStorage() {
   }
   if (layoutId === 'brutal' || layoutId === 'gaceta') {
     layoutId = 'atelier';
+    localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
+  }
+  if (layoutId === 'rail' || layoutId === 'console' || layoutId === 'kiosk') {
+    layoutId = 'studio';
     localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
   }
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);

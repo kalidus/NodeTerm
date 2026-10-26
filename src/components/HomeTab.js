@@ -2550,12 +2550,9 @@ const HomeTab = ({
   return (
     <div
       ref={containerRef}
+      className="home-shell"
       style={{
-        height: '100%',
-        width: '100%',
-        position: 'relative',
         background: dashboardBg,
-        overflow: 'hidden',
         '--home-backdrop-filter': homeBackdropFilterValue,
         '--home-backdrop-filter-glass': homeBackdropFilterGlass
       }}>
@@ -2607,7 +2604,7 @@ const HomeTab = ({
             {topPanel}
           </div>
       </div>
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div className="home-shell-status" style={{ position: 'relative', zIndex: 1 }}>
         <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
       </div>
     </div>

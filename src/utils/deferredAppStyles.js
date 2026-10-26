@@ -15,7 +15,8 @@ export function loadDeferredFeatureCss() {
       import('../styles/layout/mux.css'),
       import('../styles/layout/islas.css'),
       import('../styles/layout/dock.css'),
-      import('../styles/layout/tablero.css')
+      import('../styles/layout/tablero.css'),
+      import('../styles/layout/studio.css')
     ]).catch(() => {});
   }
   return featuresPromise;
