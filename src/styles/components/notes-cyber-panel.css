@@ -22,7 +22,8 @@
   border: 1px solid rgba(100, 181, 246, 0.25);
   background: rgba(0, 0, 0, 0.35);
   color: rgba(215, 255, 248, 0.88);
-  font-size: 0.82rem;
+  font-family: var(--ui-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--ui-font-size, 14px);
   line-height: 1.5;
   position: relative;
   z-index: 4;
@@ -74,7 +75,8 @@
 .notes-cyber-editor .document-editor-content .tiptap,
 .notes-cyber-editor .document-editor-content .tiptap-note-editor,
 .notes-cyber-editor .document-editor-content .ProseMirror {
-  font-size: 0.82rem;
+  font-family: var(--ui-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--ui-font-size, 14px);
   padding: 0.65rem 0.75rem;
 }
 

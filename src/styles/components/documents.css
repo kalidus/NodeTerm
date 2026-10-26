@@ -265,8 +265,8 @@
   padding: 24px 32px;
   min-height: 100%;
   outline: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.95rem;
+  font-family: var(--ui-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--ui-font-size, 14px);
   line-height: 1.7;
   font-weight: 400;
   font-synthesis: weight style;
@@ -315,27 +315,27 @@
   margin-top: 0;
 }
 
-/* Headings */
+/* Headings: em relativo al cuerpo (que usa --ui-font-size) */
 .document-editor-content .tiptap h1 {
-  font-size: 1.8rem;
+  font-size: 1.8em;
   font-weight: 700;
-  margin: 1.5rem 0 0.8rem;
+  margin: 1.5em 0 0.8em;
   color: var(--ui-content-text, #fff);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.4em;
 }
 
 .document-editor-content .tiptap h2 {
-  font-size: 1.4rem;
+  font-size: 1.4em;
   font-weight: 600;
-  margin: 1.3rem 0 0.6rem;
+  margin: 1.3em 0 0.6em;
   color: var(--ui-content-text, #f0f0f0);
 }
 
 .document-editor-content .tiptap h3 {
-  font-size: 1.15rem;
+  font-size: 1.15em;
   font-weight: 600;
-  margin: 1rem 0 0.5rem;
+  margin: 1em 0 0.5em;
   color: var(--ui-content-text, #e8e8e8);
 }
 
@@ -533,8 +533,8 @@
   border: none;
   outline: none;
   resize: none;
-  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
-  font-size: 0.9rem;
+  font-family: var(--ui-font-family, 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace);
+  font-size: var(--ui-font-size, 14px);
   line-height: 1.7;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2))) transparent;
@@ -882,7 +882,7 @@
 .zen-mode-active .document-editor-content .tiptap {
   max-width: 740px !important;
   width: 100% !important;
-  font-size: 1.15rem !important;
+  font-size: calc(var(--ui-font-size, 14px) * 1.15) !important;
   line-height: 1.85 !important;
   padding: 0 !important;
 }
@@ -1194,8 +1194,8 @@
   box-sizing: border-box;
   background-color: var(--ui-sidebar-bg);
   color: var(--ui-sidebar-text, #e0e0e0);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.85rem;
+  font-family: var(--ui-font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--ui-font-size, 14px);
   line-height: 1.6;
 }
 
@@ -1241,9 +1241,9 @@
   line-height: 1.3;
 }
 
-.document-details-panel .note-preview-content h1 { font-size: 1.2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 3px; }
-.document-details-panel .note-preview-content h2 { font-size: 1.05rem; }
-.document-details-panel .note-preview-content h3 { font-size: 0.95rem; }
+.document-details-panel .note-preview-content h1 { font-size: 1.2em; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 3px; }
+.document-details-panel .note-preview-content h2 { font-size: 1.05em; }
+.document-details-panel .note-preview-content h3 { font-size: 0.95em; }
 
 .document-details-panel .note-preview-content ul,
 .document-details-panel .note-preview-content ol {
