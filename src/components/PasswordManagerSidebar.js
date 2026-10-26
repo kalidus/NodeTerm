@@ -13,8 +13,15 @@ import { Message } from 'primereact/message';
 import { FolderDialog } from './Dialogs';
 import PasswordDetailsPanel from './PasswordDetailsPanel';
 import { appConfirm } from './ui/AppConfirm';
-import { iconThemes } from '../themes/icon-themes';
-import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
+import { FolderIconPresets } from './FolderIconSelector';
+import VaultBrowser from './vault/VaultBrowser';
+import { getThemeDefaultColor, renderPasswordNodeIcon } from './vault/passwordNodeIcon';
+import { findFolderPath, isVaultFolder, isVaultSecret } from './vault/vaultBrowse';
+import {
+  VAULT_LAYOUT_STORAGE_KEY,
+  isVaultLayout,
+  readSavedVaultLayout
+} from './vault/vaultLayoutModes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   sessionActionIconThemes,
@@ -209,38 +216,39 @@ const PasswordManagerSidebar = ({
     noteContent: ''
   });
   
-  // Función para obtener el color por defecto del tema actual
-  const getThemeDefaultColor = (themeName) => {
-    const theme = iconThemes[themeName];
-    if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac';
-    
-    const folderIcon = theme.icons.folder;
-    
-    if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
-      return folderIcon.props.fill;
-    }
-    
-    if (folderIcon.props && folderIcon.props.stroke) {
-      return folderIcon.props.stroke;
-    }
-    
-    if (folderIcon.props && folderIcon.props.children) {
-      const children = Array.isArray(folderIcon.props.children) 
-        ? folderIcon.props.children 
-        : [folderIcon.props.children];
-      
-      for (const child of children) {
-        if (child.props && child.props.fill && child.props.fill !== 'none') {
-          return child.props.fill;
-        }
-        if (child.props && child.props.stroke) {
-          return child.props.stroke;
-        }
+  const [vaultLayout, setVaultLayout] = useState(readSavedVaultLayout);
+  const [browseStack, setBrowseStack] = useState([]);
+
+  useEffect(() => {
+    try { localStorage.setItem(VAULT_LAYOUT_STORAGE_KEY, vaultLayout); } catch {}
+    window.dispatchEvent(new CustomEvent('passwords-sidebar:layout-state', {
+      detail: { layout: vaultLayout }
+    }));
+  }, [vaultLayout]);
+
+  useEffect(() => {
+    const onSetLayout = (event) => {
+      const next = event.detail?.layout;
+      if (isVaultLayout(next)) setVaultLayout(next);
+    };
+    window.addEventListener('passwords-sidebar:set-layout', onSetLayout);
+    return () => window.removeEventListener('passwords-sidebar:set-layout', onSetLayout);
+  }, []);
+
+  useEffect(() => {
+    setBrowseStack((prev) => {
+      const resolved = [];
+      let level = passwordNodes;
+      for (const key of prev) {
+        const folder = (level || []).find((node) => node && node.key === key && isVaultFolder(node));
+        if (!folder) break;
+        resolved.push(key);
+        level = folder.children || [];
       }
-    }
-    
-    return '#5e81ac';
-  };
+      if (resolved.length === prev.length && resolved.every((key, index) => key === prev[index])) return prev;
+      return resolved;
+    });
+  }, [passwordNodes]);
 
   // Estados para carpetas
   const [folderName, setFolderName] = useState('');
@@ -1103,6 +1111,32 @@ const PasswordManagerSidebar = ({
     window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
   }, []);
 
+  const activateVaultItem = useCallback((node, mode = 'preview') => {
+    if (!node) return;
+    if (isVaultFolder(node) && !isVaultSecret(node)) {
+      if (mode !== 'permanent') {
+        const path = findFolderPath(passwordNodes, node.key);
+        if (path) setBrowseStack(path);
+      }
+      return;
+    }
+    if (!isVaultSecret(node)) return;
+    setSelectedNodeKey(node.key);
+    if (mode === 'preview') {
+      if (passwordClickTimerRef.current) clearTimeout(passwordClickTimerRef.current);
+      passwordClickTimerRef.current = setTimeout(() => {
+        passwordClickTimerRef.current = null;
+        dispatchPasswordTab(node, 'preview');
+      }, 250);
+      return;
+    }
+    if (passwordClickTimerRef.current) {
+      clearTimeout(passwordClickTimerRef.current);
+      passwordClickTimerRef.current = null;
+    }
+    dispatchPasswordTab(node, 'permanent');
+  }, [passwordNodes, dispatchPasswordTab]);
+
   // Función para recolectar todos los passwords de una carpeta recursivamente
   const collectPasswordsFromFolder = (node) => {
     const passwords = [];
@@ -1176,185 +1210,14 @@ const PasswordManagerSidebar = ({
     const secretType = node.data?.type || 'password';
     const isSecret = node.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
     
-    let icon = null;
-    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
-    
-    const renderStandardIcon = (id, sizePx) => {
-      const ids = [
-        'pi-key',           // 0 key
-        'pi-globe',         // 1 globe
-        'pi-exclamation-triangle', // 2 warn
-        'pi-user',          // 3 user
-        'pi-save',          // 4 disk
-        'pi-calendar',      // 5 calendar
-        'pi-cog',           // 6 cog
-        'pi-envelope',      // 7 mail
-        'pi-database',      // 8 db
-        'pi-lock',          // 9 lock
-        'pi-unlock',        // 10 unlock
-        'pi-link',          // 11 link
-        'pi-book',          // 12 book
-        'pi-shield',        // 13 shield
-        'pi-wifi',          // 14 wifi
-        'pi-desktop',       // 15 pc
-        'pi-mobile',        // 16 phone
-        'pi-chart-line',    // 17 chart
-        'pi-sitemap',       // 18 network
-        'pi-cloud',         // 19 cloud
-        'pi-server',        // 20 server
-        'pi-bolt',          // 21 lightning
-        'pi-star',          // 22 star
-        'pi-wrench',        // 23 wrench
-        'pi-credit-card',   // 24 card
-        'pi-map',           // 25 map
-        'pi-question-circle', // 26 help
-        'pi-info-circle',   // 27 info
-        'pi-times-circle',  // 28 cancel
-        'pi-check-circle',  // 29 ok
-        'pi-download',      // 30 download
-        'pi-upload',        // 31 upload
-        'pi-bell',          // 32 bell
-        'pi-image',         // 33 image
-        'pi-briefcase',     // 34 briefcase
-        'pi-clipboard',     // 35 clipboard
-        'pi-list',          // 36 list
-        'pi-prime',         // 37 cube
-        'pi-building',      // 38 building
-        'pi-folder'         // 39 folder
-      ];
-      const colors = [
-        '#ffc107','#00bcd4','#ff7043','#8bc34a','#90caf9','#ffb74d','#9fa8da','#f48fb1','#ce93d8','#ff5252',
-        '#4db6ac','#64b5f6','#bdbdbd','#81c784','#ffca28','#42a5f5','#26a69a','#9575cd','#4dd0e1','#90a4ae',
-        '#ff8a65','#ffd54f','#fbc02d','#78909c','#8d6e63','#a5d6a7','#4fc3f7','#f06292','#ef9a9a','#66bb6a',
-        '#29b6f6','#ab47bc','#7e57c2','#5c6bc0','#26c6da','#9ccc65','#ffa726','#607d8b','#ffd54f'
-      ];
-      const cls = ids[(id || 0) % ids.length];
-      const color = colors[(id || 0) % colors.length];
-      return <span className={`pi ${cls}`} style={{ color, fontSize: `${sizePx}px` }} />;
-    };
+    const icon = (isSecret || isFolder)
+      ? renderPasswordNodeIcon(node, {
+          iconTheme,
+          size: isSecret ? connectionIconSize : folderIconSize,
+          expanded: Boolean(options.expanded)
+        })
+      : null;
 
-    if (isSecret) {
-      // Determinar icono según tipo de secreto
-      const getSecretIcon = () => {
-        // Si tiene icono personalizado, usarlo
-        if (node.data?.iconImage) {
-          return (
-            <img 
-              src={node.data.iconImage} 
-              alt="icon" 
-              style={{ width: `${connectionIconSize}px`, height: `${connectionIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
-            />
-          );
-        }
-        if (node.data?.iconId != null) {
-          return renderStandardIcon(Number(node.data.iconId), connectionIconSize);
-        }
-        
-        const themeColor = getThemeDefaultColor(iconTheme);
-        
-        // Icono por defecto según tipo
-        switch (secretType) {
-          case 'crypto_wallet':
-            return (
-              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h14v4" />
-                <path d="M4 6v12a2 2 0 0 0 2 2h14v-4" />
-                <path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6h-4z" />
-              </svg>
-            );
-          case 'api_key':
-            return (
-              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-              </svg>
-            );
-          case 'secure_note':
-            if (themeIcons.file) {
-              return React.cloneElement(themeIcons.file, {
-                width: connectionIconSize,
-                height: connectionIconSize,
-                style: {
-                  ...themeIcons.file.props.style,
-                  color: themeColor,
-                  width: `${connectionIconSize}px`,
-                  height: `${connectionIconSize}px`,
-                  flexShrink: 0
-                }
-              });
-            }
-            return (
-              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-            );
-          default: // password
-            if (themeIcons.password) {
-              return React.cloneElement(themeIcons.password, {
-                width: connectionIconSize,
-                height: connectionIconSize,
-                style: {
-                  ...themeIcons.password.props.style,
-                  color: themeColor,
-                  width: `${connectionIconSize}px`,
-                  height: `${connectionIconSize}px`,
-                  flexShrink: 0
-                }
-              });
-            }
-            return (
-              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            );
-        }
-      };
-      icon = getSecretIcon();
-    } else if (isFolder) {
-      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
-      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
-        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
-        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
-      } else if (node.data && node.data.iconImage) {
-        icon = (
-          <img 
-            src={node.data.iconImage} 
-            alt="icon" 
-            style={{ width: `${folderIconSize}px`, height: `${folderIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
-          />
-        );
-      } else {
-        // Mapear por iconId para dar variación visual si existe
-        let tintColor = node.color || getThemeDefaultColor(iconTheme);
-        if (node.data && node.data.iconId != null) {
-          const id = Number(node.data.iconId);
-          const palette = ['#5e81ac', '#88c0d0', '#a3be8c', '#ebcb8b', '#d08770', '#b48ead', '#bf616a', '#8fbcbb'];
-          tintColor = palette[id % palette.length];
-        }
-        const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
-        
-        if (themeIcon) {
-          icon = React.cloneElement(themeIcon, {
-            width: folderIconSize,
-            height: folderIconSize,
-            style: { 
-              ...themeIcon.props.style, 
-              color: tintColor,
-              width: `${folderIconSize}px`,
-              height: `${folderIconSize}px`
-            }
-          });
-        } else {
-          icon = options.expanded
-            ? <span className="pi pi-folder-open" style={{ color: tintColor }} />
-            : <span className="pi pi-folder" style={{ color: tintColor }} />;
-        }
-      }
-    }
-    
     // Detectar si tiene icono personalizado (para ajustar alineación del texto)
     const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
     
@@ -2264,6 +2127,21 @@ const PasswordManagerSidebar = ({
       >
         {isLoading ? (
           <PasswordSkeleton />
+        ) : vaultLayout !== 'tree' ? (
+          <VaultBrowser
+            nodes={passwordNodes}
+            layout={vaultLayout}
+            browseStack={browseStack}
+            searching={Boolean(sidebarFilter && String(sidebarFilter).trim())}
+            searchTerm={sidebarFilter}
+            selectedKey={typeof selectedNodeKey === 'string' ? selectedNodeKey : (selectedNodeKey ? Object.keys(selectedNodeKey)[0] : null)}
+            iconTheme={iconTheme}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            onCrumb={(index) => setBrowseStack((prev) => prev.slice(0, index))}
+            onActivate={activateVaultItem}
+            onContextMenu={onNodeContextMenu}
+          />
         ) : filteredPasswordNodes.length === 0 ? (
           <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.

@@ -6,6 +6,8 @@ import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
+import VaultLayoutMenu from './vault/VaultLayoutMenu';
+import { readSavedVaultLayout, isVaultLayout } from './vault/vaultLayoutModes';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
@@ -3072,6 +3074,7 @@ const Sidebar = React.memo(({
 
   const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
   const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
+  const [passwordsVaultLayout, setPasswordsVaultLayout] = useState(readSavedVaultLayout);
   const [toolsTreeAllExpanded, setToolsTreeAllExpanded] = useState(true);
   const [settingsTreeAllExpanded, setSettingsTreeAllExpanded] = useState(true);
 
@@ -3082,6 +3085,9 @@ const Sidebar = React.memo(({
     const onPassExpandState = (e) => {
       if (typeof e.detail?.allExpanded === 'boolean') setPasswordsTreeAllExpanded(e.detail.allExpanded);
     };
+    const onPassLayoutState = (e) => {
+      if (isVaultLayout(e.detail?.layout)) setPasswordsVaultLayout(e.detail.layout);
+    };
     const onToolsExpandState = (e) => {
       if (typeof e.detail?.allExpanded === 'boolean') setToolsTreeAllExpanded(e.detail.allExpanded);
     };
@@ -3090,11 +3096,13 @@ const Sidebar = React.memo(({
     };
     window.addEventListener('documents-sidebar:expand-state', onDocExpandState);
     window.addEventListener('passwords-sidebar:expand-state', onPassExpandState);
+    window.addEventListener('passwords-sidebar:layout-state', onPassLayoutState);
     window.addEventListener('tools-sidebar:expand-state', onToolsExpandState);
     window.addEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     return () => {
       window.removeEventListener('documents-sidebar:expand-state', onDocExpandState);
       window.removeEventListener('passwords-sidebar:expand-state', onPassExpandState);
+      window.removeEventListener('passwords-sidebar:layout-state', onPassLayoutState);
       window.removeEventListener('tools-sidebar:expand-state', onToolsExpandState);
       window.removeEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     };
@@ -3238,7 +3246,16 @@ const Sidebar = React.memo(({
         )}
         <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
         <div className="sidebar-panel-toolbar-right-end">
-          {showToolbarExpandAll && (
+          {activeTab === 'passwords' && (
+            <VaultLayoutMenu
+              layout={passwordsVaultLayout}
+              onSelect={(layout) => {
+                setPasswordsVaultLayout(layout);
+                window.dispatchEvent(new CustomEvent('passwords-sidebar:set-layout', { detail: { layout } }));
+              }}
+            />
+          )}
+          {showToolbarExpandAll && !(activeTab === 'passwords' && passwordsVaultLayout !== 'tree') && (
             <button
               type="button"
               className="sidebar-panel-toolbar-btn"
