@@ -10,6 +10,14 @@ import VaultLayoutMenu from './vault/VaultLayoutMenu';
 import { readSavedVaultLayout, isVaultLayout } from './vault/vaultLayoutModes';
 import NotesLayoutMenu from './notes/NotesLayoutMenu';
 import { readSavedNotesLayout, isNotesLayout } from './notes/notesLayoutModes';
+import ConnectionsLayoutMenu from './connections/ConnectionsLayoutMenu';
+import ConnectionsBrowser from './connections/ConnectionsBrowser';
+import {
+  CONNECTIONS_LAYOUT_STORAGE_KEY,
+  isConnectionsLayout,
+  readSavedConnectionsLayout
+} from './connections/connectionsLayoutModes';
+import { findFolderPath, isConnectionFolder } from './connections/connectionsBrowse';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
@@ -38,7 +46,7 @@ const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { getFavorites, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
+import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import { setSidebarView } from '../utils/sidebarViewBus';
@@ -3076,7 +3084,32 @@ const Sidebar = React.memo(({
 
   const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
   const [documentsNotesLayout, setDocumentsNotesLayout] = useState(readSavedNotesLayout);
+  const [connectionsLayout, setConnectionsLayout] = useState(readSavedConnectionsLayout);
+  const [connectionsBrowseStack, setConnectionsBrowseStack] = useState([]);
   const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem(CONNECTIONS_LAYOUT_STORAGE_KEY, connectionsLayout); } catch {}
+  }, [connectionsLayout]);
+
+  useEffect(() => {
+    setConnectionsBrowseStack([]);
+  }, [showFavoritesView]);
+
+  useEffect(() => {
+    setConnectionsBrowseStack((prev) => {
+      const resolved = [];
+      let level = displayNodes;
+      for (const key of prev) {
+        const folder = (level || []).find((node) => node && node.key === key && isConnectionFolder(node));
+        if (!folder) break;
+        resolved.push(key);
+        level = folder.children || [];
+      }
+      if (resolved.length === prev.length && resolved.every((key, index) => key === prev[index])) return prev;
+      return resolved;
+    });
+  }, [displayNodes]);
   const [passwordsVaultLayout, setPasswordsVaultLayout] = useState(readSavedVaultLayout);
   const [toolsTreeAllExpanded, setToolsTreeAllExpanded] = useState(true);
   const [settingsTreeAllExpanded, setSettingsTreeAllExpanded] = useState(true);
@@ -3139,6 +3172,106 @@ const Sidebar = React.memo(({
       toggleExpandAll();
     }
   }, [activeTab, toggleExpandAll]);
+
+  const sessionKeyForConnection = useCallback((node) => {
+    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    return actionNode?.key || node?.key;
+  }, [nodes]);
+
+  const isFavoriteConnection = useCallback((node) => {
+    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    return isFavorite(actionNode?.key)
+      || isFavorite(node?.favoriteId)
+      || isFavorite(actionNode?.data?.id)
+      || isFavorite(actionNode?.data);
+  }, [nodes]);
+
+  const activateConnectionsItem = useCallback((node, mode = 'preview') => {
+    if (!node) return;
+    if (isConnectionFolder(node)) {
+      if (mode !== 'connect') {
+        const path = findFolderPath(displayNodes, node.key);
+        if (path) setConnectionsBrowseStack(path);
+      }
+      return;
+    }
+
+    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    setSelectedNodeKey(node.key);
+
+    if (mode === 'preview') {
+      if (detailsPanelTimeoutRef.current) {
+        clearTimeout(detailsPanelTimeoutRef.current);
+        detailsPanelTimeoutRef.current = null;
+      }
+      const connType = String(actionNode?.data?.type || '').toLowerCase();
+      const isHomeConnection = getHomeTabActive()
+        && !actionNode?.droppable
+        && ['ssh', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole', 'sftp', 'ftp', 'scp', 'ssh-tunnel'].includes(connType);
+      if (isHomeConnection) {
+        setSelectedNodeForDetails(null);
+        window.dispatchEvent(new CustomEvent('open-home-connection-panel', {
+          detail: { key: actionNode.key || node.key }
+        }));
+        return;
+      }
+      detailsPanelTimeoutRef.current = setTimeout(() => {
+        setSelectedNodeForDetails(actionNode);
+        detailsPanelTimeoutRef.current = null;
+        if (typeof onSyncActiveEditTab === 'function') {
+          onSyncActiveEditTab(actionNode);
+        }
+      }, 250);
+      return;
+    }
+
+    if (detailsPanelTimeoutRef.current) {
+      clearTimeout(detailsPanelTimeoutRef.current);
+      detailsPanelTimeoutRef.current = null;
+    }
+
+    const type = String(actionNode?.data?.type || '').toLowerCase();
+    if (type === 'ssh' && onOpenSSHConnection) {
+      onOpenSSHConnection(actionNode, nodes);
+    } else if ((type === 'rdp' || type === 'rdp-guacamole') && sidebarCallbacksRef?.current?.connectRDP) {
+      sidebarCallbacksRef.current.connectRDP(actionNode);
+    } else if ((type === 'vnc' || type === 'vnc-guacamole') && onOpenVncConnection) {
+      onOpenVncConnection(actionNode, nodes);
+    } else if (['sftp', 'ftp', 'scp'].includes(type) && sidebarCallbacksRef?.current?.openFileConnection) {
+      sidebarCallbacksRef.current.openFileConnection(actionNode, nodes);
+    } else if (type === 'ssh-tunnel' && sidebarCallbacksRef?.current?.openSSHTunnel) {
+      sidebarCallbacksRef.current.openSSHTunnel(actionNode, nodes);
+    } else if (actionNode?.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(type)) {
+      const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
+      window.dispatchEvent(new CustomEvent('open-password-tab', {
+        detail: {
+          key: openKey,
+          label: actionNode.label || actionNode.name,
+          title: actionNode.label || actionNode.name,
+          type: actionNode.data.type,
+          mode: 'permanent',
+          ...actionNode.data,
+          id: openKey
+        }
+      }));
+    } else if (actionNode?.data && ['document', 'quick-note'].includes(type)) {
+      const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
+      window.dispatchEvent(new CustomEvent('open-document-tab', {
+        detail: {
+          key: openKey,
+          label: actionNode.label || actionNode.name,
+          data: actionNode.data
+        }
+      }));
+    }
+  }, [displayNodes, nodes, onOpenSSHConnection, onOpenVncConnection, onSyncActiveEditTab, sidebarCallbacksRef, setSelectedNodeKey]);
+
+  const onConnectionsBrowserContextMenu = useCallback((event, node) => {
+    const resolved = (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node))
+      ? node
+      : resolveFavoriteShortcutNode(node, nodes);
+    if (onNodeContextMenu) onNodeContextMenu(event, resolved);
+  }, [nodes, onNodeContextMenu]);
 
   const showToolbarExpandAll = activeTab === 'connections'
     || activeTab === 'favorites'
@@ -3254,6 +3387,14 @@ const Sidebar = React.memo(({
         )}
         <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
         <div className="sidebar-panel-toolbar-right-end">
+          {(activeTab === 'connections' || activeTab === 'favorites') && (
+            <ConnectionsLayoutMenu
+              layout={connectionsLayout}
+              onSelect={(layout) => {
+                if (isConnectionsLayout(layout)) setConnectionsLayout(layout);
+              }}
+            />
+          )}
           {activeTab === 'documents' && (
             <NotesLayoutMenu
               layout={documentsNotesLayout}
@@ -3275,6 +3416,7 @@ const Sidebar = React.memo(({
           {showToolbarExpandAll && !(
             (activeTab === 'passwords' && passwordsVaultLayout !== 'tree')
             || (activeTab === 'documents' && documentsNotesLayout !== 'tree')
+            || ((activeTab === 'connections' || activeTab === 'favorites') && connectionsLayout !== 'tree')
           ) && (
             <button
               type="button"
@@ -3341,6 +3483,26 @@ const Sidebar = React.memo(({
         >
           {isLoading ? (
             <SidebarSkeleton />
+          ) : connectionsLayout !== 'tree' ? (
+            <ConnectionsBrowser
+              nodes={displayNodes}
+              layout={connectionsLayout}
+              browseStack={connectionsBrowseStack}
+              searching={Boolean(sidebarFilter && String(sidebarFilter).trim())}
+              searchTerm={sidebarFilter}
+              selectedKey={typeof selectedNodeKey === 'string' ? selectedNodeKey : (selectedNodeKey ? Object.keys(selectedNodeKey)[0] : null)}
+              iconTheme={iconTheme}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+              favoritesView={showFavoritesView && viewMode === 'connections'}
+              rootLabel={showFavoritesView ? 'Favoritos' : 'Conexiones'}
+              openSessionNodeKeys={openSessionNodeKeys}
+              sessionKeyFor={sessionKeyForConnection}
+              isFavoriteFn={isFavoriteConnection}
+              onCrumb={(index) => setConnectionsBrowseStack((prev) => prev.slice(0, index))}
+              onActivate={activateConnectionsItem}
+              onContextMenu={onConnectionsBrowserContextMenu}
+            />
           ) : !hasRenderableTreeNodes ? (
             <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
               {showFavoritesView
