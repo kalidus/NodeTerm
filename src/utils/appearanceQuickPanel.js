@@ -7,7 +7,22 @@ import { presetManager } from './presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList } from './tabThemeLoader';
 import { setUILayout, UI_LAYOUT_OPTIONS, getCurrentUILayoutId } from './appearanceLayout';
 import { getAvailableFonts } from './fontsList';
-import { themes } from '../themes';
+import { explorerFonts, themes } from '../themes';
+import fontCatalog from './fontCatalog';
+import { persistSyncedSetting } from './persistSyncedSetting';
+import {
+  applyAppTypography,
+  buildAppFontStack,
+  clampUiFontSize,
+  deriveUiIconSize,
+  formatUiFontSize,
+  migrateStoredFont,
+  UI_FONT_SIZE_DEFAULT,
+  UI_FONT_SIZE_MAX,
+  UI_FONT_SIZE_MIN,
+  UI_FONT_SIZE_PRESETS,
+  UI_FONT_SIZE_STEP
+} from './sidebarFontStack';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemeManager } from './statusBarThemeManager';
@@ -174,6 +189,7 @@ const RAIL_GROUPS = [
         chips: [
           { id: 'themes', labelKey: 'settings.quickPanel.chips.themes' },
           { id: 'styles', labelKey: 'settings.quickPanel.chips.styles' },
+          { id: 'typography', labelKey: 'settings.quickPanel.chips.typography' },
           { id: 'presets', labelKey: 'settings.quickPanel.chips.presets' }
         ]
       },
@@ -251,6 +267,33 @@ function norm(value) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+}
+
+const UI_FONT_KEYS = ['uiFont', 'sidebarFont', 'explorerFont', 'homeTabFont'];
+const UI_FONT_SIZE_KEYS = ['uiFontSize', 'sidebarFontSize', 'explorerFontSize', 'homeTabFontSize'];
+const UI_ICON_SIZE_KEYS = ['iconSize', 'folderIconSize', 'connectionIconSize', 'sidebarIconSize'];
+const UI_FONT_FALLBACKS = new Set(['-apple-system', 'BlinkMacSystemFont', 'system-ui']);
+const UI_FONT_META = new Map((fontCatalog.fonts || []).map((font) => [font.family, font]));
+const UI_FONT_GROUPS = [
+  { id: 'sans', labelKey: 'settings.quickPanel.uiTypography.sans' },
+  { id: 'mono', labelKey: 'settings.quickPanel.uiTypography.mono' },
+  { id: 'system', labelKey: 'settings.quickPanel.uiTypography.system' }
+];
+
+function uiFontGroup(name) {
+  if (UI_FONT_FALLBACKS.has(name)) return 'system';
+  const meta = UI_FONT_META.get(name);
+  if (!meta || meta.source === 'system') return 'system';
+  if (meta.role === 'mono') return 'mono';
+  return 'sans';
+}
+
+function primaryFontName(value) {
+  const migrated = migrateStoredFont(value || '');
+  const trimmed = String(migrated || '').trim();
+  if (!trimmed) return '';
+  const match = trimmed.match(/^["']?([^"',]+)["']?/);
+  return match ? match[1].trim() : trimmed;
 }
 
 function readStorage(key, fallback) {
@@ -1009,6 +1052,146 @@ export function openAppearanceQuickPanel(anchorEl) {
     };
   }
 
+  function readUiFontName() {
+    if (picked.uiFont != null) return primaryFontName(picked.uiFont);
+    return primaryFontName(
+      readStorage('uiFont', '') || readStorage('sidebarFont', explorerFonts[0] || 'Inter')
+    );
+  }
+
+  function readUiFontSize() {
+    const raw = picked.uiFontSize != null
+      ? picked.uiFontSize
+      : (readStorage('uiFontSize', '') || readStorage('sidebarFontSize', String(UI_FONT_SIZE_DEFAULT)));
+    return clampUiFontSize(raw);
+  }
+
+  function paintUiTypography(fontName, size) {
+    applyAppTypography({
+      uiFont: fontName,
+      uiFontSize: size,
+      sidebarFont: fontName,
+      sidebarFontSize: size,
+      explorerFont: fontName,
+      explorerFontSize: size
+    });
+  }
+
+  function persistUiFont(fontName) {
+    picked.uiFont = fontName;
+    UI_FONT_KEYS.forEach((key) => persistSyncedSetting(key, fontName));
+    paintUiTypography(fontName, readUiFontSize());
+    window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: fontName } }));
+    window.dispatchEvent(new Event('settings-updated'));
+    refreshSelection();
+  }
+
+  function persistUiFontSize(size, { refresh = false, live = false } = {}) {
+    const num = clampUiFontSize(size);
+    const str = String(num);
+    picked.uiFontSize = str;
+    paintUiTypography(readUiFontName(), num);
+    const options = live ? { debounceMs: 180 } : {};
+    UI_FONT_SIZE_KEYS.forEach((key) => persistSyncedSetting(key, str, options));
+    const iconStr = String(deriveUiIconSize(num));
+    UI_ICON_SIZE_KEYS.forEach((key) => persistSyncedSetting(key, iconStr, options));
+    if (live) return num;
+    window.dispatchEvent(new CustomEvent('ui-font-size-changed', { detail: { size: num } }));
+    window.dispatchEvent(new Event('settings-updated'));
+    if (refresh) refreshSelection();
+    return num;
+  }
+
+  function buildUiTypographyCatalog() {
+    const currentFont = readUiFontName();
+    const currentSize = readUiFontSize();
+    const stack = buildAppFontStack(currentFont);
+    const card = el('div', 'aqp-form-card aqp-type-card');
+    card.addEventListener('click', (ev) => ev.stopPropagation());
+
+    const specimen = el('div', 'aqp-type-specimen');
+    const sample = el('div', 'aqp-type-sample', t('settings.quickPanel.uiTypography.sample'));
+    sample.style.fontFamily = stack;
+    sample.style.fontSize = `${currentSize}px`;
+    const meta = el('div', 'aqp-type-meta', `${currentFont} · ${formatUiFontSize(currentSize)} px`);
+    specimen.append(sample, meta);
+
+    const sizeRow = el('div', 'aqp-form-row');
+    sizeRow.append(el('span', 'aqp-form-label', t('settings.quickPanel.uiTypography.size')));
+    const sizeValue = el('span', 'aqp-type-size-value', `${formatUiFontSize(currentSize)} px`);
+    sizeRow.append(sizeValue);
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = String(UI_FONT_SIZE_MIN);
+    slider.max = String(UI_FONT_SIZE_MAX);
+    slider.step = String(UI_FONT_SIZE_STEP);
+    slider.value = String(currentSize);
+    slider.className = 'aqp-range';
+    slider.addEventListener('input', () => {
+      const num = persistUiFontSize(slider.value, { live: true });
+      const label = `${formatUiFontSize(num)} px`;
+      sizeValue.textContent = label;
+      sample.style.fontSize = `${num}px`;
+      meta.textContent = `${readUiFontName()} · ${label}`;
+      card.querySelectorAll('.aqp-type-presets .aqp-option-btn[data-size]').forEach((button) => {
+        button.classList.toggle('is-active', Math.abs(parseFloat(button.dataset.size) - num) < 0.25);
+      });
+    });
+    slider.addEventListener('change', () => {
+      persistUiFontSize(slider.value, { refresh: true });
+    });
+
+    const presets = el('div', 'aqp-type-presets');
+    UI_FONT_SIZE_PRESETS.forEach((preset) => {
+      const button = el('button', `aqp-option-btn${Math.abs(currentSize - preset) < 0.25 ? ' is-active' : ''}`, String(preset));
+      button.type = 'button';
+      button.dataset.size = String(preset);
+      button.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        persistUiFontSize(preset, { refresh: true });
+      });
+      presets.append(button);
+    });
+    const reset = el('button', 'aqp-option-btn', t('settings.quickPanel.uiTypography.reset'));
+    reset.type = 'button';
+    reset.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      persistUiFontSize(UI_FONT_SIZE_DEFAULT, { refresh: true });
+    });
+    presets.append(reset);
+    card.append(specimen, sizeRow, slider, presets);
+
+    const cards = [card];
+    let matches = 0;
+    UI_FONT_GROUPS.forEach((group) => {
+      const fonts = explorerFonts.filter((name) => uiFontGroup(name) === group.id && matchesQuery([name]));
+      if (!fonts.length) return;
+      matches += fonts.length;
+      cards.push(el('div', 'aqp-type-heading', t(group.labelKey)));
+      fonts.forEach((name) => {
+        const preview = el('div', 'aqp-font-preview aqp-font-preview--ui', 'Ag');
+        preview.style.fontFamily = buildAppFontStack(name);
+        const fontCard = makeCard({
+          active: name === currentFont,
+          name,
+          preview,
+          onPick: () => persistUiFont(name)
+        });
+        fontCard.classList.add('aqp-gallery-card--font');
+        const nameEl = fontCard.querySelector('.aqp-gallery-name');
+        if (nameEl) nameEl.style.fontFamily = buildAppFontStack(name);
+        cards.push(fontCard);
+      });
+    });
+
+    if (!matches) {
+      cards.push(el('div', 'aqp-empty', t('settings.quickPanel.noResults')));
+    }
+
+    return { mode: 'typography', cards };
+  }
+
   function currentCatalog() {
     const section = state.section;
     const chip = state.chip;
@@ -1072,6 +1255,10 @@ export function openAppearanceQuickPanel(anchorEl) {
           }
         }))
       };
+    }
+
+    if (section === 'ui' && chip === 'typography') {
+      return buildUiTypographyCatalog();
     }
 
     if (section === 'ui' && chip === 'presets') {

@@ -103,6 +103,14 @@
       "cursorBlock": "Bloque",
       "cursorUnderline": "Subrayado"
     },
+    "uiTypography": {
+      "sample": "El veloz murciélago hindú",
+      "size": "Tamaño",
+      "reset": "Restablecer",
+      "sans": "Sans",
+      "mono": "Mono",
+      "system": "Sistema"
+    },
     "groups": {
       "preferences": "Ajustes",
       "appearance": "Apariencia",

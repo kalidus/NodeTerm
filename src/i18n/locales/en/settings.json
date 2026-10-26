@@ -103,6 +103,14 @@
       "cursorBlock": "Block",
       "cursorUnderline": "Underline"
     },
+    "uiTypography": {
+      "sample": "The quick brown fox",
+      "size": "Size",
+      "reset": "Reset",
+      "sans": "Sans",
+      "mono": "Mono",
+      "system": "System"
+    },
     "groups": {
       "preferences": "Settings",
       "appearance": "Appearance",
