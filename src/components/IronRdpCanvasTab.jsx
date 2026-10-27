@@ -43,9 +43,19 @@ const {
   beginEgfxResizeCapture = null,
   takeEgfxResizeCapture = null,
   egfx = null,
+  gfxSession = null,
+  releaseGfxSession = null,
   rdpsndAudio = null,
   setRdpsndWaveCallback = null
 } = IronRdpRdp;
+
+let nextGfxSessionId = 1;
+const allocGfxSessionId = () => {
+  const id = nextGfxSessionId;
+  nextGfxSessionId = (nextGfxSessionId + 1) >>> 0;
+  if (nextGfxSessionId === 0) nextGfxSessionId = 1;
+  return id;
+};
 import {
   fileTransferNameOf,
   formatTransferSize,
@@ -239,6 +249,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const containerRef = useRef(null);
   const updateCanvasRectRef = useRef(null);
   const sessionRef = useRef(null);
+  const gfxSessionIdRef = useRef(0);
+  const udpOwnedRef = useRef(false);
   const fileTransferProviderRef = useRef(null);
   const toastRef = useRef(null);
   const resolutionMenuRef = useRef(null);
@@ -1010,18 +1022,26 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     let udpPayloadCount = 0;
     const handleUdpPayload = (payload) => {
-      if (typeof pushUdpPayload !== 'function' || !payload) return;
-      const bytes = payload instanceof Uint8Array
-        ? payload
-        : (payload?.type === 'Buffer' && Array.isArray(payload.data)
-          ? new Uint8Array(payload.data)
-          : new Uint8Array(payload));
+      const gfxSessionId = gfxSessionIdRef.current;
+      if (!gfxSessionId || typeof pushUdpPayload !== 'function' || !payload) return;
+      let body = payload;
+      if (payload && typeof payload === 'object' && !ArrayBuffer.isView(payload) && payload.tokenId) {
+        if (payload.tokenId !== currentTokenIdRef.current) return;
+        body = payload.bytes ?? payload.payload ?? payload.data;
+      } else if (!udpOwnedRef.current) {
+        return;
+      }
+      const bytes = body instanceof Uint8Array
+        ? body
+        : (body?.type === 'Buffer' && Array.isArray(body.data)
+          ? new Uint8Array(body.data)
+          : new Uint8Array(body || []));
       if (bytes.length === 0) return;
       udpPayloadCount += 1;
       if (udpPayloadCount === 1 || udpPayloadCount === 20) {
         writeEgfxLine({ t: 'udp-data', n: udpPayloadCount, bytes: bytes.length });
       }
-      pushUdpPayload(bytes);
+      pushUdpPayload(gfxSessionId, bytes);
     };
 
     window.electron.ipcRenderer.on('rdp:native-session-closed', handleSessionClosed);
@@ -1039,6 +1059,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   }, []);
 
   useEffect(() => {
+    const gfxSessionId = allocGfxSessionId();
+    gfxSessionIdRef.current = gfxSessionId;
+    udpOwnedRef.current = false;
     let isMounted = true;
     let aborted = false;
     let currentSession = null;
@@ -1156,10 +1179,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (isAborted()) return;
         if (typeof setEgfxAvcThinClient === 'function') {
           // Thin-client ya no cambia caps; se deja apagado en el reintento sin AVC.
-          setEgfxAvcThinClient(!gfxNoAvcFallbackUsedRef.current);
+          setEgfxAvcThinClient(gfxSessionId, !gfxNoAvcFallbackUsedRef.current);
         }
         if (typeof setUdpOpenCallback === 'function') {
-          setUdpOpenCallback(async (destination, requestId, cookie) => {
+          setUdpOpenCallback(gfxSessionId, async (destination, requestId, cookie) => {
             const text = String(destination || '');
             const colon = text.lastIndexOf(':');
             const host = colon > 0 ? text.slice(0, colon) : text;
@@ -1180,12 +1203,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 ? `🛰️ [IronRDP UDP] Canal fiable abierto hacia ${host}:${port}`
                 : `⚠️ [IronRDP UDP] Sin canal (${result?.error || 'rechazado'}); la sesion sigue por TCP`);
             }
+            if (result?.ok) udpOwnedRef.current = true;
             return !!result?.ok;
           });
         }
         if (typeof setUdpSendCallback === 'function') {
-          setUdpSendCallback((payload) => {
-            window.electron.ipcRenderer.send('rdp:udp-send', payload);
+          setUdpSendCallback(gfxSessionId, (payload) => {
+            window.electron.ipcRenderer.send('rdp:udp-send', {
+              tokenId: currentTokenIdRef.current,
+              gfxSessionId,
+              payload
+            });
           });
         }
         gfxFallbackPendingRef.current = false;
@@ -1426,7 +1454,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           };
           setNegotiatedCodec('progressive');
           if (typeof setEgfxCapsCallback === 'function') {
-            setEgfxCapsCallback((version, avc420, avc444) => {
+            setEgfxCapsCallback(gfxSessionId, (version, avc420, avc444) => {
               writeEgfxLine({
                 t: 'caps',
                 v: String(version || ''),
@@ -1437,7 +1465,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
           }
           if (typeof setEgfxResetCallback === 'function') {
-            setEgfxResetCallback((width, height) => {
+            setEgfxResetCallback(gfxSessionId, (width, height) => {
               const w = Math.round(Number(width) || 0);
               const h = Math.round(Number(height) || 0);
               if (w > 0 && h > 0) {
@@ -1491,7 +1519,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
             webCodecsDecoder = createRdpWebCodecsDecoder({
               applyRgba: (epoch, surfaceId, left, top, right, bottom, rgba) => {
-                applyEgfxRgba(epoch, surfaceId, left, top, right, bottom, rgba);
+                applyEgfxRgba(gfxSessionId, epoch, surfaceId, left, top, right, bottom, rgba);
               },
               presentFrame: (frame, regions) => h264Presenter.present(frame, regions),
               presentChromaRgba: (left, top, width, height, rgba) => {
@@ -1507,7 +1535,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               // Sin esto, con AVC_THIN_CLIENT el ACK queda aplazado y Windows congela la sesion.
               onFrameSettled: (count) => {
                 if (typeof acknowledgeEgfxPresented === 'function') {
-                  acknowledgeEgfxPresented(count || 1);
+                  acknowledgeEgfxPresented(gfxSessionId, count || 1);
                 }
               },
               onError: (err) => {
@@ -1519,7 +1547,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             // Contadores en el borde WASM→JS (antes de push): si wireChroma=0,
             // el residual AVC444 no llega al decoder (servidor o trait Rust).
             let wireSamples = 0;
-            setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom, rects, epoch, display) => {
+            setAvc420WebcodecsCallback(gfxSessionId, (data, surfaceId, left, top, right, bottom, rects, epoch, display) => {
               if (wireSamples < 6) {
                 wireSamples += 1;
                 writeEgfxLine({
@@ -1537,11 +1565,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             if (isRdpDebugEnabled()) {
               console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
             }
-            try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
+            try { setAvc420WebcodecsCallback(gfxSessionId, null); } catch (_) { /* noop */ }
             webCodecsDecoder = null;
           }
-        } else if (typeof setAvc420WebcodecsCallback === 'function') {
-          try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
         }
 
         // RDPSND audio (MS-RDPEA): PCM → Web Audio. Opt-in explícito (no abre DynVC solo).
@@ -1560,7 +1586,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               : { maxQueueSec: 0.6, hardDropSec: 1.2, playaheadSec: 0 });
             webAudioPlayerRef.current = player;
             let waveBlocks = 0;
-            setRdpsndWaveCallback((pcm, sampleRate, channels, bitsPerSample) => {
+            setRdpsndWaveCallback(gfxSessionId, (pcm, sampleRate, channels, bitsPerSample) => {
               waveBlocks += 1;
               if (isRdpDebugEnabled() && (waveBlocks === 1 || waveBlocks % 50 === 0)) {
                 console.log(`[IronRDP Audio] wave #${waveBlocks} ${pcm?.byteLength || 0}B ${sampleRate}Hz ch=${channels}`);
@@ -1578,14 +1604,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             }
           } catch (audioErr) {
             console.warn('[IronRDP] Audio RDPSND no disponible:', audioErr?.message || audioErr);
-            try { setRdpsndWaveCallback(null); } catch (_) { /* noop */ }
+            try { setRdpsndWaveCallback(gfxSessionId, null); } catch (_) { /* noop */ }
             if (webAudioPlayerRef.current) {
               try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
               webAudioPlayerRef.current = null;
             }
           }
-        } else if (typeof setRdpsndWaveCallback === 'function') {
-          try { setRdpsndWaveCallback(null); } catch (_) { /* noop */ }
         }
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
@@ -1792,6 +1816,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           });
         }
 
+        if (typeof gfxSession === 'function') {
+          builder.extension(gfxSession(gfxSessionId));
+        }
+
         if (domainStr) {
           builder.serverDomain(domainStr);
         }
@@ -1833,6 +1861,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (isAborted()) {
           abandonSession(currentSession);
           currentSession = null;
+          try { releaseGfxSession?.(gfxSessionId); } catch (_) {}
           return;
         }
         sessionRef.current = currentSession;
@@ -2030,17 +2059,24 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         h264Presenter = null;
       }
       try {
-        if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);
-        if (typeof setEgfxCapsCallback === 'function') setEgfxCapsCallback(null);
-        if (typeof setEgfxResetCallback === 'function') setEgfxResetCallback(null);
-        if (typeof setRdpsndWaveCallback === 'function') setRdpsndWaveCallback(null);
+        if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(gfxSessionId, null);
+        if (typeof setEgfxCapsCallback === 'function') setEgfxCapsCallback(gfxSessionId, null);
+        if (typeof setEgfxResetCallback === 'function') setEgfxResetCallback(gfxSessionId, null);
+        if (typeof setRdpsndWaveCallback === 'function') setRdpsndWaveCallback(gfxSessionId, null);
         if (webAudioPlayerRef.current) {
           try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
           webAudioPlayerRef.current = null;
         }
-        if (typeof setUdpOpenCallback === 'function') setUdpOpenCallback(null);
-        if (typeof setUdpSendCallback === 'function') setUdpSendCallback(null);
-        try { window.electron?.ipcRenderer?.send('rdp:udp-close'); } catch (_) {}
+        if (typeof setUdpOpenCallback === 'function') setUdpOpenCallback(gfxSessionId, null);
+        if (typeof setUdpSendCallback === 'function') setUdpSendCallback(gfxSessionId, null);
+        udpOwnedRef.current = false;
+        if (gfxSessionIdRef.current === gfxSessionId) gfxSessionIdRef.current = 0;
+        try {
+          window.electron?.ipcRenderer?.send('rdp:udp-close', {
+            tokenId: currentTokenIdRef.current,
+            gfxSessionId
+          });
+        } catch (_) {}
         if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
         finishEgfxJournal('ok');
       } catch (_) { /* noop */ }
@@ -2051,6 +2087,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (currentSession) {
         notifyUserClose();
         try { currentSession.shutdown(); } catch (e) {}
+      } else if (typeof releaseGfxSession === 'function') {
+        // run() no llegó a arrancar: no hay bucle que suelte el slot.
+        try { releaseGfxSession(gfxSessionId); } catch (_) {}
       }
       sessionRef.current = null;
       clearTransferDismissTimers();

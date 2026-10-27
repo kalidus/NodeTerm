@@ -1778,12 +1778,11 @@ index 2df63ef..2c901ea 100644
  }
 +
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..209a0a0 100644
+index a47bd3d..ded719f 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -1,4 +1,5 @@
--use core::cell::RefCell;
-+use core::cell::{Cell, RefCell};
+ use core::cell::RefCell;
 +use std::collections::VecDeque;
  use core::net::{Ipv4Addr, SocketAddrV4};
  use core::num::NonZeroU32;
@@ -1820,68 +1819,130 @@ index a47bd3d..209a0a0 100644
  use wasm_bindgen::{JsCast as _, JsValue};
  use wasm_bindgen_futures::spawn_local;
  use web_sys::HtmlCanvasElement;
-@@ -55,6 +61,564 @@ const DEFAULT_HEIGHT: u16 = 720;
+@@ -55,6 +61,602 @@ const DEFAULT_HEIGHT: u16 = 720;
  #[derive(Clone, Default)]
  pub(crate) struct SessionBuilder(Rc<RefCell<SessionBuilderInner>>);
  
-+thread_local! {
-+    static AVC420_WEBCODECS_CALLBACK: RefCell<Option<js_sys::Function>> =
-+        const { RefCell::new(None) };
-+    static EGFX_CAPS_CALLBACK: RefCell<Option<js_sys::Function>> =
-+        const { RefCell::new(None) };
-+    static EGFX_RESET_CALLBACK: RefCell<Option<js_sys::Function>> =
-+        const { RefCell::new(None) };
-+    /// `(pcm: Uint8Array, sampleRate, channels, bitsPerSample, ts) => void`
-+    static RDPSND_WAVE_CALLBACK: RefCell<Option<js_sys::Function>> =
-+        const { RefCell::new(None) };
++struct PendingAvcRect {
++    epoch: u32,
++    surface_id: u16,
++    left: u16,
++    top: u16,
++    right: u16,
++    bottom: u16,
++    rgba: Vec<u8>,
++}
++
++/// Estado gráfico de una sesión. El módulo WASM es único; sin este mapa la
++/// última pestaña pisa callbacks, epochs y el canal UDP de las demás.
++struct GfxSlot {
++    avc_callback: Option<js_sys::Function>,
++    caps_callback: Option<js_sys::Function>,
++    reset_callback: Option<js_sys::Function>,
++    rdpsnd_callback: Option<js_sys::Function>,
++    udp_open_callback: Option<js_sys::Function>,
++    udp_send_callback: Option<js_sys::Function>,
 +    /// Conservado por el export WASM. El anuncio real es V10.7 + SMALL_CACHE, sin thin-client.
-+    static EGFX_AVC_THIN_CLIENT: Cell<bool> = const { Cell::new(false) };
-+    /// `(destination, requestId, cookie) => Promise<boolean>`
-+    static UDP_OPEN_CALLBACK: RefCell<Option<js_sys::Function>> = const { RefCell::new(None) };
-+    /// `(payload: Uint8Array) => void` ÔÇö PDU DRDYNVC hacia el proceso UDP.
-+    static UDP_SEND_CALLBACK: RefCell<Option<js_sys::Function>> = const { RefCell::new(None) };
-+    static UDP_TX: RefCell<Option<mpsc::UnboundedSender<Vec<u8>>>> = const { RefCell::new(None) };
-+    static UDP_RX: RefCell<Option<mpsc::UnboundedReceiver<Vec<u8>>>> = const { RefCell::new(None) };
-+    static UDP_READY: Cell<bool> = const { Cell::new(false) };
++    avc_thin_client: bool,
++    avc_epoch: u32,
++    surface_epoch: std::collections::BTreeMap<u16, u32>,
++    pending_avc: Vec<PendingAvcRect>,
++    pending_egfx_ack: u32,
++    avc_wake: Option<mpsc::UnboundedSender<()>>,
++    udp_tx: Option<mpsc::UnboundedSender<Vec<u8>>>,
++    udp_rx: Option<mpsc::UnboundedReceiver<Vec<u8>>>,
++    udp_ready: bool,
++}
++
++impl Default for GfxSlot {
++    fn default() -> Self {
++        Self {
++            avc_callback: None,
++            caps_callback: None,
++            reset_callback: None,
++            rdpsnd_callback: None,
++            udp_open_callback: None,
++            udp_send_callback: None,
++            avc_thin_client: false,
++            avc_epoch: 0,
++            surface_epoch: std::collections::BTreeMap::new(),
++            pending_avc: Vec::new(),
++            pending_egfx_ack: 0,
++            avc_wake: None,
++            udp_tx: None,
++            udp_rx: None,
++            udp_ready: false,
++        }
++    }
++}
++
++thread_local! {
++    static GFX_SLOTS: RefCell<std::collections::BTreeMap<u32, GfxSlot>> =
++        const { RefCell::new(std::collections::BTreeMap::new()) };
++}
++
++fn with_gfx_slot<R>(session_id: u32, f: impl FnOnce(&mut GfxSlot) -> R) -> R {
++    GFX_SLOTS.with(|slots| {
++        let mut slots = slots.borrow_mut();
++        let slot = slots.entry(session_id).or_default();
++        f(slot)
++    })
++}
++
++fn js_fn(callback: JsValue) -> Option<js_sys::Function> {
++    callback.dyn_into::<js_sys::Function>().ok()
++}
++
++fn gfx_callback(session_id: u32, pick: impl Fn(&GfxSlot) -> Option<js_sys::Function>) -> Option<js_sys::Function> {
++    GFX_SLOTS.with(|slots| slots.borrow().get(&session_id).and_then(pick))
++}
++
++/// Quita el estado gráfico de una sesión. No toca las demás.
++#[wasm_bindgen]
++pub fn release_gfx_session(session_id: u32) {
++    GFX_SLOTS.with(|slots| {
++        slots.borrow_mut().remove(&session_id);
++    });
 +}
 +
 +/// El renderer abre el socket UDP (RDPEUDP2 + TLS) y resuelve cuando el tunel responde.
 +#[wasm_bindgen]
-+pub fn set_udp_open_callback(callback: JsValue) {
-+    UDP_OPEN_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_udp_open_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.udp_open_callback = js_fn(callback);
 +    });
 +}
 +
 +/// El renderer reenvia estos bytes al proceso que tiene el socket UDP.
 +#[wasm_bindgen]
-+pub fn set_udp_send_callback(callback: JsValue) {
-+    UDP_SEND_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_udp_send_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.udp_send_callback = js_fn(callback);
 +    });
 +}
 +
-+/// PDU DRDYNVC ya descifrado, llegado por el tunel UDP.
++/// PDU DRDYNVC ya descifrado, llegado por el tunel UDP de esta sesión.
 +#[wasm_bindgen]
-+pub fn push_udp_payload(bytes: &[u8]) {
-+    UDP_TX.with(|slot| {
-+        if let Some(tx) = slot.borrow().as_ref() {
-+            let _ = tx.unbounded_send(bytes.to_vec());
-+        }
-+    });
++pub fn push_udp_payload(session_id: u32, bytes: &[u8]) {
++    let tx = with_gfx_slot(session_id, |slot| slot.udp_tx.clone());
++    if let Some(tx) = tx {
++        let _ = tx.unbounded_send(bytes.to_vec());
++    }
 +}
 +
 +/// El anuncio EGFX no depende de este flag: siempre V10.7 + SMALL_CACHE, sin AVC_THINCLIENT.
 +#[wasm_bindgen]
-+pub fn set_egfx_avc_thin_client(enabled: bool) {
-+    EGFX_AVC_THIN_CLIENT.with(|flag| flag.set(enabled));
++pub fn set_egfx_avc_thin_client(session_id: u32, enabled: bool) {
++    with_gfx_slot(session_id, |slot| {
++        slot.avc_thin_client = enabled;
++    });
 +}
 +
 +/// Register a JS callback for RDPSND PCM wave blocks. Pass `null` to clear.
 +#[wasm_bindgen]
-+pub fn set_rdpsnd_wave_callback(callback: JsValue) {
-+    RDPSND_WAVE_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_rdpsnd_wave_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.rdpsnd_callback = js_fn(callback);
 +    });
 +}
 +
@@ -1938,14 +1999,16 @@ index a47bd3d..209a0a0 100644
 +/// RDPSND backend that forwards PCM WAVE blocks to JS (Web Audio).
 +#[derive(Debug)]
 +struct WebAudioRdpsndBackend {
++    session_id: u32,
 +    formats: Vec<AudioFormat>,
 +    volume_left: u16,
 +    volume_right: u16,
 +}
 +
 +impl WebAudioRdpsndBackend {
-+    fn new() -> Self {
++    fn new(session_id: u32) -> Self {
 +        Self {
++            session_id,
 +            formats: web_pcm_formats(),
 +            volume_left: 0xFFFF,
 +            volume_right: 0xFFFF,
@@ -1972,23 +2035,20 @@ index a47bd3d..209a0a0 100644
 +            self.volume_right,
 +        );
 +
-+        RDPSND_WAVE_CALLBACK.with(|slot| {
-+            let borrowed = slot.borrow();
-+            let Some(cb) = borrowed.as_ref() else {
-+                return;
-+            };
-+            let arr = js_sys::Uint8Array::new_with_length(pcm.len() as u32);
-+            arr.copy_from(&pcm);
-+            let args = js_sys::Array::new_with_length(5);
-+            args.set(0, arr.into());
-+            args.set(1, JsValue::from_f64(f64::from(format.n_samples_per_sec)));
-+            args.set(2, JsValue::from_f64(f64::from(format.n_channels)));
-+            args.set(3, JsValue::from_f64(f64::from(format.bits_per_sample)));
-+            args.set(4, JsValue::from_f64(f64::from(ts)));
-+            if let Err(err) = cb.apply(&JsValue::NULL, &args) {
-+                warn!(?err, "rdpsnd wave JS callback failed");
-+            }
-+        });
++        let Some(cb) = gfx_callback(self.session_id, |slot| slot.rdpsnd_callback.clone()) else {
++            return;
++        };
++        let arr = js_sys::Uint8Array::new_with_length(pcm.len() as u32);
++        arr.copy_from(&pcm);
++        let args = js_sys::Array::new_with_length(5);
++        args.set(0, arr.into());
++        args.set(1, JsValue::from_f64(f64::from(format.n_samples_per_sec)));
++        args.set(2, JsValue::from_f64(f64::from(format.n_channels)));
++        args.set(3, JsValue::from_f64(f64::from(format.bits_per_sample)));
++        args.set(4, JsValue::from_f64(f64::from(ts)));
++        if let Err(err) = cb.apply(&JsValue::NULL, &args) {
++            warn!(?err, "rdpsnd wave JS callback failed");
++        }
 +    }
 +
 +    fn set_volume(&mut self, volume: VolumePdu) {
@@ -2029,9 +2089,9 @@ index a47bd3d..209a0a0 100644
 +}
 +
 +impl AudioPlaybackDvc {
-+    fn new() -> Self {
++    fn new(session_id: u32) -> Self {
 +        Self {
-+            rdpsnd: Rdpsnd::new(Box::new(WebAudioRdpsndBackend::new())),
++            rdpsnd: Rdpsnd::new(Box::new(WebAudioRdpsndBackend::new(session_id))),
 +        }
 +    }
 +}
@@ -2104,27 +2164,27 @@ index a47bd3d..209a0a0 100644
 +}
 +
 +/// Register a JS callback `(Uint8Array, surfaceId, left, top, right, bottom) => void`
-+/// for EGFX AVC420 passthrough via WebCodecs. Pass `null` to clear.
++/// for EGFX AVC420 passthrough via WebCodecs. Pass `null` to clear this session only.
 +#[wasm_bindgen]
-+pub fn set_avc420_webcodecs_callback(callback: JsValue) {
-+    AVC420_WEBCODECS_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_avc420_webcodecs_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.avc_callback = js_fn(callback);
 +    });
 +}
 +
 +/// Register a JS callback `(version, avc420, avc444) => void` for CapabilitiesConfirm.
 +#[wasm_bindgen]
-+pub fn set_egfx_caps_callback(callback: JsValue) {
-+    EGFX_CAPS_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_egfx_caps_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.caps_callback = js_fn(callback);
 +    });
 +}
 +
 +/// Register a JS callback `(width, height) => void` fired on ResetGraphics.
 +#[wasm_bindgen]
-+pub fn set_egfx_reset_callback(callback: JsValue) {
-+    EGFX_RESET_CALLBACK.with(|slot| {
-+        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++pub fn set_egfx_reset_callback(session_id: u32, callback: JsValue) {
++    with_gfx_slot(session_id, |slot| {
++        slot.reset_callback = js_fn(callback);
 +    });
 +}
 +
@@ -2157,73 +2217,51 @@ index a47bd3d..209a0a0 100644
 +/// After WebCodecs presents (or discards) a frame, release that many deferred
 +/// FrameAcknowledge PDUs so the server can pace Adaptive Graphics.
 +#[wasm_bindgen]
-+pub fn acknowledge_egfx_presented(count: u32) {
++pub fn acknowledge_egfx_presented(session_id: u32, count: u32) {
 +    if count == 0 {
 +        return;
 +    }
-+    PENDING_EGFX_ACK.with(|slot| {
-+        slot.set(slot.get().saturating_add(count));
++    let wake = with_gfx_slot(session_id, |slot| {
++        slot.pending_egfx_ack = slot.pending_egfx_ack.saturating_add(count);
++        slot.avc_wake.clone()
 +    });
-+    AVC_WAKE.with(|slot| {
-+        if let Some(tx) = slot.borrow().as_ref() {
-+            let _ = tx.unbounded_send(());
-+        }
-+    });
++    if let Some(tx) = wake {
++        let _ = tx.unbounded_send(());
++    }
 +}
 +
-+struct PendingAvcRect {
-+    epoch: u32,
-+    surface_id: u16,
-+    left: u16,
-+    top: u16,
-+    right: u16,
-+    bottom: u16,
-+    rgba: Vec<u8>,
++fn bump_avc_epoch(slot: &mut GfxSlot) -> u32 {
++    let next = slot.avc_epoch.wrapping_add(1).max(1);
++    slot.avc_epoch = next;
++    next
 +}
 +
-+thread_local! {
-+    static AVC_EPOCH: Cell<u32> = const { Cell::new(0) };
-+    static SURFACE_EPOCH: RefCell<std::collections::BTreeMap<u16, u32>> =
-+        const { RefCell::new(std::collections::BTreeMap::new()) };
-+    static PENDING_AVC: RefCell<Vec<PendingAvcRect>> = const { RefCell::new(Vec::new()) };
-+    static AVC_WAKE: RefCell<Option<mpsc::UnboundedSender<()>>> = const { RefCell::new(None) };
-+    /// How many deferred FrameAcknowledge PDUs JS wants flushed.
-+    static PENDING_EGFX_ACK: Cell<u32> = const { Cell::new(0) };
-+}
-+
-+fn bump_avc_epoch() -> u32 {
-+    AVC_EPOCH.with(|epoch| {
-+        let next = epoch.get().wrapping_add(1).max(1);
-+        epoch.set(next);
-+        next
-+    })
-+}
-+
-+/// Epoch estable por superficie. Varios bitmaps del mismo frame tienen que
-+/// pintarse todos: subir el epoch en cada bitstream tira la imagen y deja
-+/// el canvas en negro cuando el servidor manda solo H.264.
-+fn current_avc_epoch(surface_id: u16) -> u32 {
-+    SURFACE_EPOCH.with(|epochs| {
-+        let mut map = epochs.borrow_mut();
-+        if let Some(epoch) = map.get(&surface_id).copied() {
++/// Epoch estable por superficie de esta sesión. Varios bitmaps del mismo frame
++/// tienen que pintarse todos: subir el epoch en cada bitstream tira la imagen.
++fn current_avc_epoch(session_id: u32, surface_id: u16) -> u32 {
++    with_gfx_slot(session_id, |slot| {
++        if let Some(epoch) = slot.surface_epoch.get(&surface_id).copied() {
 +            return epoch;
 +        }
-+        let next = bump_avc_epoch();
-+        map.insert(surface_id, next);
++        let next = bump_avc_epoch(slot);
++        slot.surface_epoch.insert(surface_id, next);
 +        next
 +    })
 +}
 +
-+fn invalidate_avc_epochs() {
-+    let _ = bump_avc_epoch();
-+    SURFACE_EPOCH.with(|epochs| epochs.borrow_mut().clear());
-+    PENDING_AVC.with(|queue| queue.borrow_mut().clear());
++fn invalidate_avc_epochs(session_id: u32) {
++    with_gfx_slot(session_id, |slot| {
++        let _ = bump_avc_epoch(slot);
++        slot.surface_epoch.clear();
++        slot.pending_avc.clear();
++    });
 +}
 +
 +/// GPU decoder writes one exclusive rectangle back into the EGFX framebuffer.
 +/// Stale epochs (a newer bitstream already arrived) are dropped.
 +#[wasm_bindgen]
 +pub fn apply_egfx_rgba(
++    session_id: u32,
 +    epoch: u32,
 +    surface_id: u16,
 +    left: u16,
@@ -2232,12 +2270,12 @@ index a47bd3d..209a0a0 100644
 +    bottom: u16,
 +    rgba: &[u8],
 +) {
-+    let latest = SURFACE_EPOCH.with(|epochs| epochs.borrow().get(&surface_id).copied());
-+    if latest != Some(epoch) || rgba.is_empty() || right <= left || bottom <= top {
-+        return;
-+    }
-+    PENDING_AVC.with(|queue| {
-+        queue.borrow_mut().push(PendingAvcRect {
++    let wake = with_gfx_slot(session_id, |slot| {
++        let latest = slot.surface_epoch.get(&surface_id).copied();
++        if latest != Some(epoch) || rgba.is_empty() || right <= left || bottom <= top {
++            return None;
++        }
++        slot.pending_avc.push(PendingAvcRect {
 +            epoch,
 +            surface_id,
 +            left,
@@ -2246,23 +2284,23 @@ index a47bd3d..209a0a0 100644
 +            bottom,
 +            rgba: rgba.to_vec(),
 +        });
++        slot.avc_wake.clone()
 +    });
-+    AVC_WAKE.with(|slot| {
-+        if let Some(tx) = slot.borrow().as_ref() {
-+            let _ = tx.unbounded_send(());
-+        }
-+    });
++    if let Some(tx) = wake {
++        let _ = tx.unbounded_send(());
++    }
 +}
 +
 +fn present_pending_avc(
++    session_id: u32,
 +    active_stage: &mut ActiveStage,
 +    image: &mut DecodedImage,
 +    gui: &mut Canvas,
 +    draw_buffer: &mut WriteBuf,
 +) -> anyhow::Result<()> {
-+    let pending = PENDING_AVC.with(|queue| core::mem::take(&mut *queue.borrow_mut()));
++    let pending = with_gfx_slot(session_id, |slot| core::mem::take(&mut slot.pending_avc));
 +    for update in pending {
-+        let latest = SURFACE_EPOCH.with(|epochs| epochs.borrow().get(&update.surface_id).copied());
++        let latest = with_gfx_slot(session_id, |slot| slot.surface_epoch.get(&update.surface_id).copied());
 +        if latest != Some(update.epoch) || update.right <= update.left || update.bottom <= update.top {
 +            continue;
 +        }
@@ -2295,12 +2333,13 @@ index a47bd3d..209a0a0 100644
 +}
 +
 +fn flush_deferred_egfx_acks(
++    session_id: u32,
 +    active_stage: &mut ActiveStage,
 +    writer_tx: &mpsc::UnboundedSender<Vec<u8>>,
 +) -> anyhow::Result<()> {
-+    let count = PENDING_EGFX_ACK.with(|slot| {
-+        let n = slot.get();
-+        slot.set(0);
++    let count = with_gfx_slot(session_id, |slot| {
++        let n = slot.pending_egfx_ack;
++        slot.pending_egfx_ack = 0;
 +        n
 +    });
 +    if count == 0 {
@@ -2325,7 +2364,7 @@ index a47bd3d..209a0a0 100644
 +            let payload = message
 +                .encode_unframed_pdu()
 +                .context("encode tunneled FrameAcknowledge")?;
-+            emit_udp_payload(&payload);
++            emit_udp_payload(session_id, &payload);
 +        }
 +        return Ok(());
 +    }
@@ -2340,18 +2379,16 @@ index a47bd3d..209a0a0 100644
 +    Ok(())
 +}
 +
-+fn emit_udp_payload(bytes: &[u8]) {
-+    UDP_SEND_CALLBACK.with(|slot| {
-+        let callback = slot.borrow();
-+        let Some(callback) = callback.as_ref() else {
-+            return;
-+        };
-+        let payload = js_sys::Uint8Array::from(bytes);
-+        let _ = callback.call1(&JsValue::NULL, &payload);
-+    });
++fn emit_udp_payload(session_id: u32, bytes: &[u8]) {
++    let Some(callback) = gfx_callback(session_id, |slot| slot.udp_send_callback.clone()) else {
++        return;
++    };
++    let payload = js_sys::Uint8Array::from(bytes);
++    let _ = callback.call1(&JsValue::NULL, &payload);
 +}
 +
 +fn apply_udp_payload(
++    session_id: u32,
 +    active_stage: &mut ActiveStage,
 +    image: &mut DecodedImage,
 +    payload: &[u8],
@@ -2361,7 +2398,7 @@ index a47bd3d..209a0a0 100644
 +        .context("process UDP DVC")?;
 +    for message in batch.into_messages() {
 +        let encoded = message.encode_unframed_pdu().context("encode tunneled DVC reply")?;
-+        emit_udp_payload(&encoded);
++        emit_udp_payload(session_id, &encoded);
 +    }
 +    Ok(outputs)
 +}
@@ -2385,37 +2422,50 @@ index a47bd3d..209a0a0 100644
  struct SessionBuilderInner {
      username: Option<String>,
      destination: Option<String>,
-@@ -90,6 +654,9 @@ struct SessionBuilderInner {
+@@ -90,6 +692,10 @@ struct SessionBuilderInner {
      printer_driver_name: Option<String>,
  
      use_display_control: bool,
 +    use_egfx: bool,
 +    avc420_webcodecs: bool,
 +    use_rdpsnd_audio: bool,
++    gfx_session_id: u32,
      enable_credssp: bool,
      enable_server_pointer: bool,
      legacy_graphics: bool,
-@@ -134,6 +701,9 @@ impl Default for SessionBuilderInner {
+@@ -134,6 +740,10 @@ impl Default for SessionBuilderInner {
              printer_driver_name: None,
  
              use_display_control: false,
 +            use_egfx: false,
 +            avc420_webcodecs: false,
 +            use_rdpsnd_audio: false,
++            gfx_session_id: 0,
              enable_credssp: true,
              enable_server_pointer: true,
              legacy_graphics: false,
-@@ -254,6 +824,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -254,6 +864,20 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              |vmconnect: String| { self.0.borrow_mut().vmconnect = Some(vmconnect) };
              |kdc_proxy_url: String| { self.0.borrow_mut().kdc_proxy_url = Some(kdc_proxy_url) };
              |display_control: bool| { self.0.borrow_mut().use_display_control = display_control };
 +            |egfx: bool| { self.0.borrow_mut().use_egfx = egfx };
 +            |avc420_webcodecs: bool| { self.0.borrow_mut().avc420_webcodecs = avc420_webcodecs };
 +            |rdpsnd_audio: bool| { self.0.borrow_mut().use_rdpsnd_audio = rdpsnd_audio };
++            |gfx_session: f64| {
++                let id = if gfx_session > 0.0 && gfx_session <= f64::from(u32::MAX) {
++                    #[expect(clippy::as_conversions, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
++                    {
++                        gfx_session as u32
++                    }
++                } else {
++                    0
++                };
++                self.0.borrow_mut().gfx_session_id = id;
++            };
              |enable_credssp: bool| { self.0.borrow_mut().enable_credssp = enable_credssp };
              |enable_server_pointer: bool| { self.0.borrow_mut().enable_server_pointer = enable_server_pointer };
              |legacy_graphics: bool| { self.0.borrow_mut().legacy_graphics = legacy_graphics };
-@@ -364,6 +937,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -364,6 +988,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name,
              outbound_message_size_limit,
              legacy_graphics,
@@ -2423,7 +2473,7 @@ index a47bd3d..209a0a0 100644
          );
  
          {
-@@ -407,6 +981,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -407,6 +1032,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name = inner.printer_driver_name.clone();
              outbound_message_size_limit = inner.outbound_message_size_limit;
              legacy_graphics = inner.legacy_graphics;
@@ -2431,7 +2481,7 @@ index a47bd3d..209a0a0 100644
          }
  
          if pcb.is_some() && vmconnect.is_some() {
-@@ -422,10 +997,14 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -422,10 +1048,14 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              client_name.clone(),
              desktop_size,
              legacy_graphics,
@@ -2446,7 +2496,7 @@ index a47bd3d..209a0a0 100644
  
          let enable_server_pointer = self.0.borrow().enable_server_pointer;
          config.enable_server_pointer = enable_server_pointer;
-@@ -500,6 +1079,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -500,6 +1130,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
          }
  
          let use_display_control = self.0.borrow().use_display_control;
@@ -2455,17 +2505,26 @@ index a47bd3d..209a0a0 100644
  
          let (connection_result, ws) = connect(ConnectParams {
              ws,
-@@ -516,6 +1097,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -516,6 +1148,10 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name,
              computer_name: client_name.clone(),
              use_display_control,
 +            use_egfx,
 +            avc420_webcodecs,
 +            use_rdpsnd_audio,
++            gfx_session_id: self.0.borrow().gfx_session_id,
          })
          .await?;
  
-@@ -562,6 +1146,8 @@ pub(crate) enum RdpInputEvent {
+@@ -542,6 +1178,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             connection_result: RefCell::new(Some(connection_result)),
+             clipboard: RefCell::new(Some(clipboard)),
+             printer: RefCell::new(Some(printer)),
++            gfx_session_id: self.0.borrow().gfx_session_id,
+         })
+     }
+ }
+@@ -562,6 +1199,8 @@ pub(crate) enum RdpInputEvent {
          scale_factor: Option<u32>,
          physical_size: Option<(u32, u32)>,
      },
@@ -2474,7 +2533,15 @@ index a47bd3d..209a0a0 100644
      TerminateSession,
  }
  
-@@ -658,6 +1244,9 @@ impl iron_remote_desktop::Session for Session {
+@@ -591,6 +1230,7 @@ pub(crate) struct Session {
+     rdp_reader: RefCell<Option<ReadHalf<WebSocket>>>,
+     clipboard: RefCell<Option<Option<WasmClipboard>>>,
+     printer: RefCell<Option<Option<WasmPrinter>>>,
++    gfx_session_id: u32,
+ }
+ 
+ impl Session {
+@@ -658,6 +1298,9 @@ impl iron_remote_desktop::Session for Session {
              .take()
              .expect("run called only once");
  
@@ -2484,50 +2551,41 @@ index a47bd3d..209a0a0 100644
          let mut clipboard = self.clipboard.borrow_mut().take().expect("run called only once");
          let mut wasm_printer = self.printer.borrow_mut().take().expect("run called only once");
  
-@@ -688,6 +1277,18 @@ impl iron_remote_desktop::Session for Session {
+@@ -688,6 +1331,17 @@ impl iron_remote_desktop::Session for Session {
          // Reused across frames so per-region extraction doesn't allocate on every draw.
          let mut draw_buffer = WriteBuf::new();
  
++        let gfx_session_id = self.gfx_session_id;
 +        let (avc_tx, mut avc_rx) = mpsc::unbounded();
-+        AVC_WAKE.with(|slot| *slot.borrow_mut() = Some(avc_tx));
-+        struct ClearAvcWake;
-+        impl Drop for ClearAvcWake {
++        with_gfx_slot(gfx_session_id, |slot| slot.avc_wake = Some(avc_tx));
++        struct ClearGfxSession(u32);
++        impl Drop for ClearGfxSession {
 +            fn drop(&mut self) {
-+                AVC_WAKE.with(|slot| slot.borrow_mut().take());
-+                PENDING_AVC.with(|queue| queue.borrow_mut().clear());
-+                SURFACE_EPOCH.with(|epochs| epochs.borrow_mut().clear());
++                release_gfx_session(self.0);
 +            }
 +        }
-+        let _clear_avc_wake = ClearAvcWake;
++        let _clear_gfx_session = ClearGfxSession(gfx_session_id);
 +
          // We retain the factory to drive the Deactivation-Reactivation Sequence locally.
          let activation_factory = connection_result.activation_factory;
  
-@@ -703,11 +1304,33 @@ impl iron_remote_desktop::Session for Session {
+@@ -703,11 +1357,25 @@ impl iron_remote_desktop::Session for Session {
          }
          .build();
  
-+        let udp_ready = UDP_READY.with(|flag| flag.replace(false));
++        let (udp_ready, udp_rx_raw) = with_gfx_slot(gfx_session_id, |slot| {
++            let ready = std::mem::replace(&mut slot.udp_ready, false);
++            let rx = slot.udp_rx.take().unwrap_or_else(|| mpsc::unbounded().1);
++            (ready, rx)
++        });
 +        if udp_ready {
 +            match active_stage.enable_reliable_udp_dvc_tunnel() {
 +                Ok(()) => info!("Soft-Sync puede mover los canales dinamicos al UDP fiable"),
 +                Err(error) => warn!(%error, "no se pudo habilitar Soft-Sync sobre UDP"),
 +            }
 +        }
-+        let mut udp_rx = UDP_RX
-+            .with(|slot| slot.borrow_mut().take())
-+            .unwrap_or_else(|| mpsc::unbounded().1)
-+            .fuse();
++        let mut udp_rx = udp_rx_raw.fuse();
 +        let mut pending_udp: VecDeque<Vec<u8>> = VecDeque::new();
-+        struct ClearUdpTunnel;
-+        impl Drop for ClearUdpTunnel {
-+            fn drop(&mut self) {
-+                UDP_TX.with(|slot| slot.borrow_mut().take());
-+                UDP_RX.with(|slot| slot.borrow_mut().take());
-+                UDP_READY.with(|flag| flag.set(false));
-+            }
-+        }
-+        let _clear_udp_tunnel = ClearUdpTunnel;
 +
          // Timer interval for driving clipboard lock timeouts (5 second interval)
          let mut cleanup_interval = IntervalStream::new(5_000).fuse();
@@ -2538,7 +2596,7 @@ index a47bd3d..209a0a0 100644
                  frame = framed.read_pdu().fuse() => {
                      let (action, payload) = frame.context("read frame")?;
                      trace!(?action, frame_length = payload.len(), "Frame received");
-@@ -874,6 +1497,48 @@ impl iron_remote_desktop::Session for Session {
+@@ -874,6 +1542,48 @@ impl iron_remote_desktop::Session for Session {
                                  Vec::new()
                              }
                          },
@@ -2587,19 +2645,19 @@ index a47bd3d..209a0a0 100644
                          RdpInputEvent::Printer(message) => {
                              // The printer backend lives inside the Rdpdr SVC
                              // processor (Send-only); the front-end
-@@ -892,6 +1557,23 @@ impl iron_remote_desktop::Session for Session {
+@@ -892,6 +1602,23 @@ impl iron_remote_desktop::Session for Session {
                          }
                      }
                  }
 +                _ = avc_rx.next() => {
-+                    present_pending_avc(&mut active_stage, &mut image, &mut gui, &mut draw_buffer)?;
-+                    flush_deferred_egfx_acks(&mut active_stage, &self.writer_tx)?;
++                    present_pending_avc(gfx_session_id, &mut active_stage, &mut image, &mut gui, &mut draw_buffer)?;
++                    flush_deferred_egfx_acks(gfx_session_id, &mut active_stage, &self.writer_tx)?;
 +                    continue;
 +                }
 +                payload = udp_rx.next() => {
 +                    match payload {
 +                        Some(bytes) if active_stage.reliable_udp_dvc_tunnel_in_use() => {
-+                            apply_udp_payload(&mut active_stage, &mut image, &bytes)?
++                            apply_udp_payload(gfx_session_id, &mut active_stage, &mut image, &bytes)?
 +                        }
 +                        Some(bytes) => {
 +                            pending_udp.push_back(bytes);
@@ -2611,17 +2669,17 @@ index a47bd3d..209a0a0 100644
                  _ = cleanup_interval.next() => {
                      // Drive clipboard lock timeout cleanup
                      if let Some(cliprdr) = active_stage.get_svc_processor_mut::<CliprdrClient>() {
-@@ -915,14 +1597,36 @@ impl iron_remote_desktop::Session for Session {
+@@ -915,14 +1642,36 @@ impl iron_remote_desktop::Session for Session {
                  }
              };
  
 +            if active_stage.reliable_udp_dvc_tunnel_in_use() {
 +                while let Some(payload) = pending_udp.pop_front() {
-+                    outputs.extend(apply_udp_payload(&mut active_stage, &mut image, &payload)?);
++                    outputs.extend(apply_udp_payload(gfx_session_id, &mut active_stage, &mut image, &payload)?);
 +                }
 +            }
 +
-+            present_pending_avc(&mut active_stage, &mut image, &mut gui, &mut draw_buffer)?;
++            present_pending_avc(gfx_session_id, &mut active_stage, &mut image, &mut gui, &mut draw_buffer)?;
 +
 +            let mut graphics_updates: u16 = 0;
 +            let mut deferred_responses: Vec<Vec<u8>> = Vec::new();
@@ -2651,7 +2709,7 @@ index a47bd3d..209a0a0 100644
                          let region = extract_partial_image(&image, region, &mut draw_buffer);
                          gui.draw(draw_buffer.filled_mut(), region)
                              .context("draw updated region")?;
-@@ -1111,9 +1815,19 @@ impl iron_remote_desktop::Session for Session {
+@@ -1111,9 +1860,19 @@ impl iron_remote_desktop::Session for Session {
                      ActiveStageOutput::SaveSessionInfo { logon_complete: false } => {
                          debug!("RDP session info notification");
                      }
@@ -2672,7 +2730,7 @@ index a47bd3d..209a0a0 100644
          };
  
          info!(%disconnect_reason, "RDP session terminated");
-@@ -1201,6 +1915,12 @@ impl iron_remote_desktop::Session for Session {
+@@ -1201,6 +1960,12 @@ impl iron_remote_desktop::Session for Session {
          }
      }
  
@@ -2685,7 +2743,7 @@ index a47bd3d..209a0a0 100644
      fn supports_unicode_keyboard_shortcuts(&self) -> bool {
          // RDP does not support Unicode keyboard shortcuts.
          // When key combinations are executed, only plain scancode events are allowed to function correctly.
-@@ -1459,6 +2179,7 @@ fn build_config(
+@@ -1459,6 +2224,7 @@ fn build_config(
      client_name: String,
      desktop_size: DesktopSize,
      legacy_graphics: bool,
@@ -2693,7 +2751,7 @@ index a47bd3d..209a0a0 100644
  ) -> connector::Config {
      // Win7-class servers need 32-bpp lossless bitmaps and no advertised codecs.
      let bitmap = if legacy_graphics {
-@@ -1468,10 +2189,15 @@ fn build_config(
+@@ -1468,10 +2234,15 @@ fn build_config(
              codecs: BitmapCodecs(Vec::new()),
          }
      } else {
@@ -2712,7 +2770,7 @@ index a47bd3d..209a0a0 100644
          }
      };
  
-@@ -1484,7 +2210,9 @@ fn build_config(
+@@ -1484,7 +2255,9 @@ fn build_config(
          enable_standard_rdp_security: false,
          keyboard_type: ironrdp::pdu::gcc::KeyboardType::IBM_ENHANCED,
          keyboard_subtype: 0,
@@ -2723,7 +2781,7 @@ index a47bd3d..209a0a0 100644
          keyboard_functional_keys_count: 12,
          connection_type: ironrdp::pdu::gcc::ConnectionType::Lan,
          ime_file_name: String::new(),
-@@ -1495,19 +2223,15 @@ fn build_config(
+@@ -1495,19 +2268,15 @@ fn build_config(
          },
          monitor_layout: None,
          bitmap: Some(bitmap),
@@ -2748,7 +2806,7 @@ index a47bd3d..209a0a0 100644
          compression_type: None,
          enable_server_pointer: true,
          autologon: false,
-@@ -1515,10 +2239,21 @@ fn build_config(
+@@ -1515,10 +2284,21 @@ fn build_config(
          enable_audio_capture: false,
          request_data: None,
          pointer_software_rendering: false,
@@ -2773,21 +2831,23 @@ index a47bd3d..209a0a0 100644
          hardware_id: None,
          license_cache: None,
          timezone_info: TimezoneInfo::default(),
-@@ -1584,6 +2319,9 @@ struct ConnectParams {
+@@ -1584,6 +2364,10 @@ struct ConnectParams {
      /// `computer_name` when constructing the `Rdpdr` processor.
      computer_name: String,
      use_display_control: bool,
 +    use_egfx: bool,
 +    avc420_webcodecs: bool,
 +    use_rdpsnd_audio: bool,
++    gfx_session_id: u32,
  }
  
  fn default_printer_driver_name() -> String {
-@@ -1618,6 +2356,56 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
+@@ -1618,6 +2402,57 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
          .and_then(|major| major.parse().ok())
  }
  
 +async fn open_reliable_udp(
++    session_id: u32,
 +    destination: &str,
 +    request: &ironrdp::pdu::rdp::multitransport::MultitransportRequestPdu,
 +    soft_sync: bool,
@@ -2802,7 +2862,7 @@ index a47bd3d..209a0a0 100644
 +        return Ok(MultitransportResult::Failure(MultitransportResponsePdu::E_ABORT));
 +    }
 +
-+    let callback = UDP_OPEN_CALLBACK.with(|slot| slot.borrow().clone());
++    let callback = gfx_callback(session_id, |slot| slot.udp_open_callback.clone());
 +    let Some(callback) = callback else {
 +        warn!("sin callback UDP; la sesion sigue por TCP");
 +        return Ok(MultitransportResult::Failure(MultitransportResponsePdu::E_ABORT));
@@ -2829,7 +2889,7 @@ index a47bd3d..209a0a0 100644
 +    };
 +    if value.is_truthy() {
 +        info!("tunel UDP fiable establecido");
-+        UDP_READY.with(|flag| flag.set(true));
++        with_gfx_slot(session_id, |slot| slot.udp_ready = true);
 +        Ok(MultitransportResult::Success)
 +    } else {
 +        warn!("tunel UDP no disponible; la sesion sigue por TCP");
@@ -2840,17 +2900,18 @@ index a47bd3d..209a0a0 100644
  async fn connect(
      ConnectParams {
          ws,
-@@ -1634,6 +2422,9 @@ async fn connect(
+@@ -1634,6 +2469,10 @@ async fn connect(
          printer_driver_name,
          computer_name,
          use_display_control,
 +        use_egfx,
 +        avc420_webcodecs,
 +        use_rdpsnd_audio,
++        gfx_session_id,
      }: ConnectParams,
  ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
      let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
-@@ -1647,11 +2438,15 @@ async fn connect(
+@@ -1647,11 +2486,15 @@ async fn connect(
          connector.attach_static_channel(CliprdrClient::new(Box::new(clipboard_backend)));
      }
  
@@ -2861,7 +2922,7 @@ index a47bd3d..209a0a0 100644
 +    // RDPSND: real Web Audio backend when opted in; otherwise Noop when RDPDR/printer
 +    // needs the channel advertised (MS-RDPEFS Appendix A<1>).
 +    if use_rdpsnd_audio {
-+        connector.attach_static_channel(Rdpsnd::new(Box::new(WebAudioRdpsndBackend::new())));
++        connector.attach_static_channel(Rdpsnd::new(Box::new(WebAudioRdpsndBackend::new(gfx_session_id))));
 +    } else if printer_backend.is_some() {
          connector.attach_static_channel(Rdpsnd::new(Box::new(NoopRdpsndBackend)));
 +    }
@@ -2870,7 +2931,7 @@ index a47bd3d..209a0a0 100644
          connector.attach_static_channel(
              Rdpdr::new(Box::new(printer_backend), computer_name).with_printer_driver(
                  printer_device_id,
-@@ -1661,10 +2456,206 @@ async fn connect(
+@@ -1661,10 +2504,202 @@ async fn connect(
          );
      }
  
@@ -2882,6 +2943,7 @@ index a47bd3d..209a0a0 100644
 +    // Anunciamos hasta V10.7 + SMALL_CACHE, sin AVC_THINCLIENT (thin rompió un
 +    // host con 0x112f). El servidor elige el mejor codec que ambas partes sepan.
 +    struct EgfxHandler {
++        session_id: u32,
 +        webcodecs: bool,
 +        prefer_v101: bool,
 +    }
@@ -2985,31 +3047,25 @@ index a47bd3d..209a0a0 100644
 +                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV107Flags::AVC_DISABLED),
 +                ),
 +            };
-+            EGFX_CAPS_CALLBACK.with(|slot| {
-+                let binding = slot.borrow();
-+                let Some(cb) = binding.as_ref() else {
-+                    return;
-+                };
-+                let args = js_sys::Array::new();
-+                args.push(&JsValue::from_str(version));
-+                args.push(&JsValue::from_bool(avc420));
-+                args.push(&JsValue::from_bool(avc444));
-+                let _ = cb.apply(&JsValue::NULL, &args);
-+            });
++            let Some(cb) = gfx_callback(self.session_id, |slot| slot.caps_callback.clone()) else {
++                return;
++            };
++            let args = js_sys::Array::new();
++            args.push(&JsValue::from_str(version));
++            args.push(&JsValue::from_bool(avc420));
++            args.push(&JsValue::from_bool(avc444));
++            let _ = cb.apply(&JsValue::NULL, &args);
 +        }
 +
 +        fn on_reset_graphics(&mut self, width: u32, height: u32) {
-+            invalidate_avc_epochs();
-+            EGFX_RESET_CALLBACK.with(|slot| {
-+                let binding = slot.borrow();
-+                let Some(cb) = binding.as_ref() else {
-+                    return;
-+                };
-+                let args = js_sys::Array::new();
-+                args.push(&JsValue::from(f64::from(width)));
-+                args.push(&JsValue::from(f64::from(height)));
-+                let _ = cb.apply(&JsValue::NULL, &args);
-+            });
++            invalidate_avc_epochs(self.session_id);
++            let Some(cb) = gfx_callback(self.session_id, |slot| slot.reset_callback.clone()) else {
++                return;
++            };
++            let args = js_sys::Array::new();
++            args.push(&JsValue::from(f64::from(width)));
++            args.push(&JsValue::from(f64::from(height)));
++            let _ = cb.apply(&JsValue::NULL, &args);
 +        }
 +
 +        fn on_avc_access_unit(
@@ -3023,12 +3079,11 @@ index a47bd3d..209a0a0 100644
 +            if !self.webcodecs {
 +                return false;
 +            }
-+            AVC420_WEBCODECS_CALLBACK.with(|slot| {
-+                let binding = slot.borrow();
-+                let Some(cb) = binding.as_ref() else {
-+                    return false;
-+                };
-+                let epoch = current_avc_epoch(surface_id);
++            let Some(cb) = gfx_callback(self.session_id, |slot| slot.avc_callback.clone()) else {
++                return false;
++            };
++            let epoch = current_avc_epoch(self.session_id, surface_id);
++            let consumed = {
 +                let bytes = js_sys::Uint8Array::new_with_length(h264_avc_data.len() as u32);
 +                bytes.copy_from(h264_avc_data);
 +                let mut flat = Vec::with_capacity(regions.len().saturating_mul(4));
@@ -3049,7 +3104,8 @@ index a47bd3d..209a0a0 100644
 +                args.push(&JsValue::from_bool(display));
 +                let _ = cb.apply(&JsValue::NULL, &args);
 +                true
-+            })
++            };
++            consumed
 +        }
 +    }
 +
@@ -3060,9 +3116,10 @@ index a47bd3d..209a0a0 100644
 +    if use_egfx || use_display_control {
 +        let mut drdynvc = DrdynvcClient::new();
 +        if use_egfx {
-+            let prefer_v101 = EGFX_AVC_THIN_CLIENT.with(|flag| flag.get());
++            let prefer_v101 = with_gfx_slot(gfx_session_id, |slot| slot.avc_thin_client);
 +            let gfx = GraphicsPipelineClient::new(
 +                Box::new(EgfxHandler {
++                    session_id: gfx_session_id,
 +                    webcodecs: avc420_webcodecs,
 +                    prefer_v101,
 +                }),
@@ -3075,40 +3132,45 @@ index a47bd3d..209a0a0 100644
 +            drdynvc = drdynvc.with_dynamic_channel(DisplayControlClient::new(|_| Ok(Vec::new())));
 +        }
 +        if use_rdpsnd_audio && !use_egfx {
-+            drdynvc = drdynvc.with_dynamic_channel(AudioPlaybackDvc::new());
++            drdynvc = drdynvc.with_dynamic_channel(AudioPlaybackDvc::new(gfx_session_id));
 +        }
 +        connector.attach_static_channel(drdynvc);
      }
  
      let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
-@@ -1693,7 +2684,13 @@ async fn connect(
+@@ -1693,7 +2728,16 @@ async fn connect(
      )
      .await?;
  
 -    let connection_result = ironrdp_futures::connect_finalize(
-+    UDP_READY.with(|flag| flag.set(false));
 +    let (udp_tx, udp_rx) = mpsc::unbounded();
-+    UDP_TX.with(|slot| *slot.borrow_mut() = Some(udp_tx));
-+    UDP_RX.with(|slot| *slot.borrow_mut() = Some(udp_rx));
++    with_gfx_slot(gfx_session_id, |slot| {
++        slot.udp_ready = false;
++        slot.udp_tx = Some(udp_tx);
++        slot.udp_rx = Some(udp_rx);
++    });
 +
 +    let destination_for_udp = destination.clone();
++    let udp_session_id = gfx_session_id;
 +    let connection_result = ironrdp_futures::connect_finalize_with_multitransport(
          upgraded,
          connector,
          &mut framed,
-@@ -1701,6 +2698,7 @@ async fn connect(
+@@ -1701,6 +2745,9 @@ async fn connect(
          server_name,
          server_public_key,
          kerberos_config,
-+        async move |request, soft_sync| open_reliable_udp(&destination_for_udp, &request, soft_sync).await,
++        async move |request, soft_sync| {
++            open_reliable_udp(udp_session_id, &destination_for_udp, &request, soft_sync).await
++        },
      )
      .await?;
  
 diff --git a/web-client/iron-remote-desktop-rdp/src/main.ts b/web-client/iron-remote-desktop-rdp/src/main.ts
-index acd28b2..ee9c1d0 100644
+index acd28b2..394391d 100644
 --- a/web-client/iron-remote-desktop-rdp/src/main.ts
 +++ b/web-client/iron-remote-desktop-rdp/src/main.ts
-@@ -7,6 +7,19 @@ import wasm_init, {
+@@ -7,6 +7,20 @@ import wasm_init, {
      ClipboardData,
      Extension,
      RdpFile,
@@ -3125,16 +3187,27 @@ index acd28b2..ee9c1d0 100644
 +    set_udp_open_callback,
 +    set_udp_send_callback,
 +    push_udp_payload,
++    release_gfx_session,
  } from '../../../crates/ironrdp-web/pkg/ironrdp_web';
  
  export async function init(log_level: string) {
-@@ -65,6 +78,113 @@ export function legacyGraphics(enable: boolean): Extension {
+@@ -65,6 +79,129 @@ export function legacyGraphics(enable: boolean): Extension {
      return new Extension('legacy_graphics', enable);
  }
  
 +/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesi├│n usa bitmap RLE. */
 +export function egfx(enable: boolean): Extension {
 +    return new Extension('egfx', enable);
++}
++
++/** Id de la sesión gráfica. Cada pestaña usa el suyo; el WASM no comparte callbacks. */
++export function gfxSession(sessionId: number): Extension {
++    return new Extension('gfx_session', sessionId >>> 0);
++}
++
++/** Borra callbacks, epochs y canales UDP de esta sesión. */
++export function releaseGfxSession(sessionId: number): void {
++    release_gfx_session(sessionId >>> 0);
 +}
 +
 +/** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
@@ -3149,6 +3222,7 @@ index acd28b2..ee9c1d0 100644
 +
 +/** Register PCM wave callback: `(pcm, sampleRate, channels, bitsPerSample, ts) => void`. */
 +export function setRdpsndWaveCallback(
++    sessionId: number,
 +    callback: ((
 +        pcm: Uint8Array,
 +        sampleRate: number,
@@ -3157,10 +3231,11 @@ index acd28b2..ee9c1d0 100644
 +        ts: number,
 +    ) => void) | null,
 +): void {
-+    set_rdpsnd_wave_callback(callback as unknown as never);
++    set_rdpsnd_wave_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
 +export function setAvc420WebcodecsCallback(
++    sessionId: number,
 +    callback: ((
 +        data: Uint8Array,
 +        surfaceId: number,
@@ -3172,11 +3247,12 @@ index acd28b2..ee9c1d0 100644
 +        epoch: number,
 +    ) => void) | null,
 +): void {
-+    set_avc420_webcodecs_callback(callback as unknown as never);
++    set_avc420_webcodecs_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
-+/** Write one decoded AVC rectangle into the EGFX framebuffer. */
++/** Write one decoded AVC rectangle into the EGFX framebuffer of this session. */
 +export function applyEgfxRgba(
++    sessionId: number,
 +    epoch: number,
 +    surfaceId: number,
 +    left: number,
@@ -3185,46 +3261,49 @@ index acd28b2..ee9c1d0 100644
 +    bottom: number,
 +    rgba: Uint8Array,
 +): void {
-+    apply_egfx_rgba(epoch, surfaceId, left, top, right, bottom, rgba);
++    apply_egfx_rgba(sessionId >>> 0, epoch, surfaceId, left, top, right, bottom, rgba);
 +}
 +
 +/** Release deferred FrameAcknowledge after WebCodecs present/discard. */
-+export function acknowledgeEgfxPresented(count: number = 1): void {
-+    acknowledge_egfx_presented(count >>> 0);
++export function acknowledgeEgfxPresented(sessionId: number, count: number = 1): void {
++    acknowledge_egfx_presented(sessionId >>> 0, count >>> 0);
 +}
 +
 +export function setEgfxCapsCallback(
++    sessionId: number,
 +    callback: ((version: string, avc420: boolean, avc444: boolean) => void) | null,
 +): void {
-+    set_egfx_caps_callback(callback as unknown as never);
++    set_egfx_caps_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
 +/** `true` anuncia solo V10.1. `false` anuncia solo V10.7 con SMALL_CACHE. */
-+export function setEgfxAvcThinClient(enabled: boolean): void {
-+    set_egfx_avc_thin_client(enabled);
++export function setEgfxAvcThinClient(sessionId: number, enabled: boolean): void {
++    set_egfx_avc_thin_client(sessionId >>> 0, enabled);
 +}
 +
 +/** Abre RDPEUDP2. `cookie` son los 16 bytes del Initiate Multitransport Request. */
 +export function setUdpOpenCallback(
++    sessionId: number,
 +    callback: ((destination: string, requestId: number, cookie: Uint8Array) => Promise<boolean> | boolean) | null,
 +): void {
-+    set_udp_open_callback(callback as unknown as never);
++    set_udp_open_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
 +/** Envia un PDU DRDYNVC sin encapsular por el tunel UDP. */
-+export function setUdpSendCallback(callback: ((payload: Uint8Array) => void) | null): void {
-+    set_udp_send_callback(callback as unknown as never);
++export function setUdpSendCallback(sessionId: number, callback: ((payload: Uint8Array) => void) | null): void {
++    set_udp_send_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
-+/** Entrega al sesion un PDU DRDYNVC llegado por el tunel UDP. */
-+export function pushUdpPayload(payload: Uint8Array): void {
-+    push_udp_payload(payload);
++/** Entrega a esta sesión un PDU DRDYNVC llegado por el tunel UDP. */
++export function pushUdpPayload(sessionId: number, payload: Uint8Array): void {
++    push_udp_payload(sessionId >>> 0, payload);
 +}
 +
 +export function setEgfxResetCallback(
++    sessionId: number,
 +    callback: ((width: number, height: number) => void) | null,
 +): void {
-+    set_egfx_reset_callback(callback as unknown as never);
++    set_egfx_reset_callback(sessionId >>> 0, callback as unknown as never);
 +}
 +
 +export function beginEgfxResizeCapture(): void {
