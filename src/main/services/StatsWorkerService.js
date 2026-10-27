@@ -20,6 +20,42 @@ let statsWorkerReady = false;
 let statsWorkerQueue = [];
 let pendingStatsSkips = 0;
 let isShuttingDown = false;
+let demandActive = false;
+let powerPaused = false;
+let baseIntervalMs = 2000;
+let windowActivity = { minimized: false, focused: true };
+
+function clampInterval(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n)) return 2000;
+  return Math.max(1000, Math.min(20000, Math.round(n)));
+}
+
+function desiredIntervalMs() {
+  if (windowActivity.minimized) return Math.max(baseIntervalMs, 10000);
+  if (!windowActivity.focused) {
+    return Math.max(baseIntervalMs, Math.min(10000, baseIntervalMs * 2));
+  }
+  return baseIntervalMs;
+}
+
+function sendToWorker(msg) {
+  if (!statsWorker || !statsWorkerReady) return;
+  try {
+    statsWorker.send(msg);
+  } catch (_) {}
+}
+
+function syncWorkerRunState() {
+  if (isShuttingDown) return;
+  if (powerPaused || !demandActive) {
+    sendToWorker('pause-stats');
+    return;
+  }
+  ensureStatsWorker();
+  sendToWorker('resume-stats');
+  sendToWorker({ type: 'set-interval', interval: desiredIntervalMs() });
+}
 
 function startStatsWorker() {
   if (statsWorker || isShuttingDown) return;
@@ -44,7 +80,11 @@ function startStatsWorker() {
     statsWorkerReady = false;
     statsWorker = null;
     if (!isShuttingDown) {
-      setTimeout(startStatsWorker, 1000);
+      setTimeout(() => {
+        if (isShuttingDown || !demandActive || powerPaused) return;
+        startStatsWorker();
+        syncWorkerRunState();
+      }, 1000);
     }
   });
 
@@ -93,6 +133,10 @@ function ensureStatsWorker() {
 
 async function getSystemStats() {
   return new Promise((resolve) => {
+    if (!demandActive || powerPaused || isShuttingDown) {
+      resolve(getFallbackStats(powerPaused ? 'PowerPaused' : 'NoDemand'));
+      return;
+    }
     ensureStatsWorker();
     if (!statsWorkerReady) {
       resolve(getFallbackStats('NoWorker'));
@@ -141,28 +185,45 @@ function stopStatsWorker() {
   pendingStatsSkips = 0;
 }
 
-function setStatsWorkerInterval(intervalMs) {
-  if (statsWorker && statsWorkerReady) {
-    try {
-      statsWorker.send({ type: 'set-interval', interval: intervalMs });
-    } catch (_) {}
+function setStatsBaseInterval(intervalMs) {
+  baseIntervalMs = clampInterval(intervalMs);
+  if (demandActive && !powerPaused) {
+    sendToWorker({ type: 'set-interval', interval: desiredIntervalMs() });
   }
+}
+
+function setStatsWorkerInterval(intervalMs) {
+  setStatsBaseInterval(intervalMs);
+}
+
+function setWindowActivity(activity = {}) {
+  if (typeof activity.minimized === 'boolean') windowActivity.minimized = activity.minimized;
+  if (typeof activity.focused === 'boolean') windowActivity.focused = activity.focused;
+  if (demandActive && !powerPaused) {
+    sendToWorker({ type: 'set-interval', interval: desiredIntervalMs() });
+  }
+}
+
+/**
+ * Hay (o no) consumidores visibles en el renderer.
+ * Sin demanda el worker permanece residente pero sin temporizador.
+ */
+function setStatsDemand(active, intervalMs) {
+  if (intervalMs != null && intervalMs !== '') {
+    baseIntervalMs = clampInterval(intervalMs);
+  }
+  demandActive = !!active;
+  syncWorkerRunState();
 }
 
 function pauseStatsWorker() {
-  if (statsWorker && statsWorkerReady) {
-    try {
-      statsWorker.send('pause-stats');
-    } catch (_) {}
-  }
+  powerPaused = true;
+  sendToWorker('pause-stats');
 }
 
 function resumeStatsWorker() {
-  if (statsWorker && statsWorkerReady) {
-    try {
-      statsWorker.send('resume-stats');
-    } catch (_) {}
-  }
+  powerPaused = false;
+  syncWorkerRunState();
 }
 
 function parentProcessAlive(parentPid) {
@@ -246,6 +307,9 @@ module.exports = {
   stopStatsWorker,
   getFallbackStats,
   setStatsWorkerInterval,
+  setStatsBaseInterval,
+  setWindowActivity,
+  setStatsDemand,
   pauseStatsWorker,
   resumeStatsWorker,
   reapOrphanStatsWorkers

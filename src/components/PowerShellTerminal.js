@@ -80,45 +80,16 @@ const PowerShellTerminal = forwardRef(({
         };
     };
 
-    // Poll local system stats to feed the StatusBar
+    // Poll local system stats only while this terminal's status bar is on screen.
     useEffect(() => {
-        let stopped = false;
-        let timer = null;
-        const POLL_KEY = 'statusBarPollingInterval';
-        const getIntervalMs = () => {
-            try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
-        };
-
-        // Optimizaci??n: pausar polling cuando la ventana pierda foco
-        const handleFocus = () => {
-            if (window.electronAPI?.send) {
-                window.electronAPI.send('window:focus-changed', true);
+        if (!active || hideStatusBar) return undefined;
+        return systemStatsService.subscribe((stats) => {
+            if (stats) {
+                setStatusStats(stats);
+                setIsLoadingStats(false);
             }
-        };
-        const handleBlur = () => {
-            if (window.electronAPI?.send) {
-                window.electronAPI.send('window:focus-changed', false);
-            }
-        };
-
-        window.addEventListener('focus', handleFocus);
-        window.addEventListener('blur', handleBlur);
-
-        const unsubscribe = active
-            ? systemStatsService.subscribe((stats) => {
-                if (stats) {
-                    setStatusStats(stats);
-                    setIsLoadingStats(false);
-                }
-            })
-            : () => {};
-
-        return () => {
-            unsubscribe();
-            window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('blur', handleBlur);
-        };
-    }, [active]);
+        });
+    }, [active, hideStatusBar]);
 
     // Listen for changes to icon theme and local PS status bar theme via storage updates
     useEffect(() => {

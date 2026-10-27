@@ -3,6 +3,7 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { appConfirm } from './ui/AppConfirm';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { useSshTabStats } from '../services/SshStatsStore';
+import { systemStatsService } from '../services/SystemStatsService';
 import '../styles/ssh-monitor.css';
 
 /**
@@ -418,50 +419,43 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     }, [activeSubtab, servicesLoaded, fetchServicesAndPorts, tab?.type]);
 
 
-    // ── Fetch local stats ONLY for local terminal ────────────────────────────
+    // Estadísticas locales por el muestreador compartido.
+    // Si este panel se cierra y no queda otra barra, el worker se pausa.
     const [localStats, setLocalStats] = useState(null);
     useEffect(() => {
-        if (tab?.type !== 'local-terminal') return;
+        if (tab?.type !== 'local-terminal') return undefined;
+        return systemStatsService.subscribe((stats) => {
+            if (!stats) return;
+            setLocalStats({
+                cpu: (Number(stats.cpu) || 0).toFixed(2),
+                mem: {
+                    total: stats.mem?.total || 0,
+                    used: stats.mem?.used || 0
+                },
+                network: {
+                    rx_speed: stats.network?.rx_speed || 0,
+                    tx_speed: stats.network?.tx_speed || 0
+                },
+                disk: Array.isArray(stats.disk)
+                    ? stats.disk.map((d) => ({ fs: d.fs, use: d.use }))
+                    : [],
+                hostname: stats.hostname,
+                ip: stats.ip,
+                distro: stats.distro || (window.electron?.platform === 'darwin' ? 'macos' : (window.electron?.platform === 'win32' ? 'windows' : 'linux')),
+                uptime: stats.uptime || ''
+            });
+        });
+    }, [tab?.type]);
 
-        let stopped = false;
-        let timer = null;
-
-        const fetchLocalStats = async () => {
-            if (stopped) return;
-            const systemStats = await window.electronAPI?.getSystemStats();
-            if (systemStats && !stopped) {
-                // Adapt stats for what the UI expects (matching SSHStatsService format)
-                const adapted = {
-                    cpu: (systemStats.cpu?.usage || 0).toFixed(2),
-                    mem: {
-                        total: (systemStats.memory?.total || 0) * 1024 * 1024 * 1024,
-                        used: (systemStats.memory?.used || 0) * 1024 * 1024 * 1024
-                    },
-                    network: {
-                        rx_speed: (systemStats.network?.download || 0) * 1024 * 1024 / 8,
-                        tx_speed: (systemStats.network?.upload || 0) * 1024 * 1024 / 8
-                    },
-                    disk: Array.isArray(systemStats.disks)
-                        ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage }))
-                        : [],
-                    hostname: systemStats.hostname,
-                    ip: systemStats.ip,
-                    distro: window.electron?.platform === 'darwin' ? 'macos' : (window.electron?.platform === 'win32' ? 'windows' : 'linux'),
-                    uptime: systemStats.uptime || ''
-                };
-                setLocalStats(adapted);
-            }
-            if (!stopped) {
-                timer = setTimeout(fetchLocalStats, refreshInterval);
-            }
-        };
-
-        fetchLocalStats();
+    useEffect(() => {
+        if (!tabId || tab?.type === 'local-terminal') return undefined;
+        const send = window.electron?.ipcRenderer?.send;
+        if (typeof send !== 'function') return undefined;
+        send('ssh:set-monitor-stats', tabId, true);
         return () => {
-            stopped = true;
-            if (timer) clearTimeout(timer);
+            send('ssh:set-monitor-stats', tabId, false);
         };
-    }, [tab?.type, refreshInterval]);
+    }, [tabId, tab?.type]);
 
     // Obtener estadísticas reactivas de SSH directamente del almacén (sin re-renderizar la raíz)
     const liveSshStats = useSshTabStats(tabId);

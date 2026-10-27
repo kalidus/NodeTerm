@@ -10,6 +10,10 @@ class SSHStatsService {
     this.activeStatsTabId = null;
     /** Sesiones SSH visibles en la Home: siguen sondeándose aunque no sean la pestaña del grupo. */
     this.pinnedStatsTabIds = new Set();
+    /** Pestañas cuya barra de estado está oculta: no ejecutan el script remoto. */
+    this.hiddenStatusBarTabIds = new Set();
+    /** Paneles de monitor abiertos: siguen pidiendo stats aunque la barra esté oculta. */
+    this.monitorStatsTabIds = new Set();
     this.statusBarPollingIntervalMs = 5000; // 5 segundos por defecto (reducir contención SSH)
     /** @type {Map<string, string>} tabId -> último mensaje de error ya logueado */
     this._statsErrorLoggedByTab = new Map();
@@ -53,13 +57,32 @@ class SSHStatsService {
   }
 
   /**
-   * La pestaña del grupo o una sesión SSH visible en la Home.
+   * La pestaña del grupo o una sesión SSH visible en la Home,
+   * y solo si hay un consumidor: barra visible, monitor o anclaje en Home.
    */
   shouldPollStats(tabId) {
     if (tabId == null || tabId === '') return false;
     const id = String(tabId);
-    if (this.activeStatsTabId != null && String(this.activeStatsTabId) === id) return true;
-    return this.pinnedStatsTabIds.has(id);
+    if (this.monitorStatsTabIds.has(id)) return true;
+    const pinned = this.pinnedStatsTabIds.has(id);
+    const active = this.activeStatsTabId != null && String(this.activeStatsTabId) === id;
+    if (!pinned && !active) return false;
+    if (pinned) return true;
+    return !this.hiddenStatusBarTabIds.has(id);
+  }
+
+  setStatusBarVisible(tabId, visible) {
+    const id = tabId == null ? '' : String(tabId);
+    if (!id) return;
+    if (visible) this.hiddenStatusBarTabIds.delete(id);
+    else this.hiddenStatusBarTabIds.add(id);
+  }
+
+  setMonitorStatsConsumer(tabId, active) {
+    const id = tabId == null ? '' : String(tabId);
+    if (!id) return;
+    if (active) this.monitorStatsTabIds.add(id);
+    else this.monitorStatsTabIds.delete(id);
   }
 
   /**
@@ -969,21 +992,21 @@ class SSHStatsService {
    */
   stopStatsLoop(tabId, sshConnections) {
     const conn = sshConnections[tabId];
-    if (conn && conn.statsTimeout) {
+    if (!conn) return;
+    if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
       conn.statsTimeout = null;
-      conn.statsLoopRunning = false;
     }
+    conn.statsLoopRunning = false;
     this.clearStatsError(tabId);
   }
 
   /**
-   * Detiene todos los loops de estadísticas excepto el activo
+   * Detiene los loops que ya no tienen un consumidor visible.
    */
-  stopInactiveStatsLoops(sshConnections, activeTabId) {
-    const activeId = activeTabId == null ? '' : String(activeTabId);
+  stopInactiveStatsLoops(sshConnections) {
     Object.entries(sshConnections).forEach(([id, conn]) => {
-      if (id === activeId || this.pinnedStatsTabIds.has(id)) return;
+      if (this.shouldPollStats(id)) return;
       if (conn.statsTimeout) {
         clearTimeout(conn.statsTimeout);
         conn.statsTimeout = null;

@@ -76,7 +76,7 @@ const DockerTerminal = forwardRef(({
 
     // Poll system stats consolidado
     useEffect(() => {
-        if (!active) return undefined;
+        if (!active || hideStatusBar) return undefined;
         const unsubscribe = systemStatsService.subscribe((stats) => {
             if (stats) {
                 setStatusStats(stats);
@@ -84,7 +84,7 @@ const DockerTerminal = forwardRef(({
             }
         });
         return unsubscribe;
-    }, [active]);
+    }, [active, hideStatusBar]);
 
     // Sincronizar scrollback dinámicamente si cambia en Settings
     useEffect(() => {

@@ -87,6 +87,16 @@ const TerminalComponent = forwardRef(({
         return !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
     }, [sshConfig]);
 
+    useEffect(() => {
+        if (isLocalTerminal || tabId == null) return undefined;
+        const send = window.electron?.ipcRenderer?.send;
+        if (typeof send !== 'function') return undefined;
+        send('ssh:set-statusbar-visible', tabId, !hideStatusBar && localStatusBarVisible);
+        return () => {
+            send('ssh:set-statusbar-visible', tabId, false);
+        };
+    }, [isLocalTerminal, tabId, hideStatusBar, localStatusBarVisible]);
+
     // Ref para local echo SSH (se lee de localStorage y se actualiza con eventos)
     const sshLocalEchoRef = useRef(
         localStorage.getItem('nodeterm_ssh_local_echo') === 'true'

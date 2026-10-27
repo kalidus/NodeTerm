@@ -30,6 +30,8 @@ if (process.platform === 'linux') {
 
 let lastNetStats = null;
 let lastNetTime = null;
+let lastDiskSampleAt = 0;
+const DISK_SAMPLE_INTERVAL_MS = 15000;
 let lastValidStats = {
   cpu: { usage: 0, cores: 0, model: 'Iniciando...', perCpuLoad: [] },
   memory: { used: 0, total: 0, free: 0, percentage: 0 },
@@ -194,19 +196,25 @@ async function getSystemStats() {
   } catch (_) {}
 
   // ── Discos ──
+  // Windows: fsSize() pasa por WMI. No hace falta en cada tick de CPU/RAM.
   if (process.platform === 'win32') {
-    try {
-      const d = await Promise.race([getSI().fsSize(), new Promise((_, rej) => setTimeout(() => rej(), 3000))]);
-      if (Array.isArray(d) && d.length > 0) {
-        stats.disks = d.map(disk => ({
-          name: String(disk.fs || ''), mount: String(disk.mount || ''),
-          used: Math.round(Number(disk.used || 0) / (1024 ** 3) * 10) / 10,
-          total: Math.round(Number(disk.size || 0) / (1024 ** 3) * 10) / 10,
-          percentage: Number(disk.size) > 0 ? Math.round((Number(disk.used) / Number(disk.size)) * 100) : 0,
-          isNetwork: false
-        }));
-      }
-    } catch (_) {}
+    const nowDisk = Date.now();
+    const needDisk = !lastDiskSampleAt || (nowDisk - lastDiskSampleAt) >= DISK_SAMPLE_INTERVAL_MS;
+    if (needDisk) {
+      try {
+        const d = await Promise.race([getSI().fsSize(), new Promise((_, rej) => setTimeout(() => rej(), 3000))]);
+        if (Array.isArray(d) && d.length > 0) {
+          stats.disks = d.map(disk => ({
+            name: String(disk.fs || ''), mount: String(disk.mount || ''),
+            used: Math.round(Number(disk.used || 0) / (1024 ** 3) * 10) / 10,
+            total: Math.round(Number(disk.size || 0) / (1024 ** 3) * 10) / 10,
+            percentage: Number(disk.size) > 0 ? Math.round((Number(disk.used) / Number(disk.size)) * 100) : 0,
+            isNetwork: false
+          }));
+          lastDiskSampleAt = nowDisk;
+        }
+      } catch (_) {}
+    }
   } else {
     const disks = readDisksSync();
     if (disks.length > 0) stats.disks = disks;
@@ -265,7 +273,7 @@ async function getSystemStats() {
   return stats;
 }
 
-let shouldGenerateStats = true;
+let shouldGenerateStats = false;
 let latestStats = { ...lastValidStats };
 let isUpdating = false;
 let updateTimer = null;
@@ -277,12 +285,9 @@ async function updateStatsLoop() {
     updateTimer = null;
   }
 
-  if (isUpdating) {
-    updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
-    return;
-  }
+  if (!shouldGenerateStats) return;
 
-  if (!shouldGenerateStats) {
+  if (isUpdating) {
     updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
     return;
   }
@@ -295,7 +300,9 @@ async function updateStatsLoop() {
     // Ignorar para mantener el bucle activo
   } finally {
     isUpdating = false;
-    updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
+    if (shouldGenerateStats) {
+      updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
+    }
   }
 }
 
@@ -312,9 +319,7 @@ function shutdownWorker() {
 // y este proceso no debe quedarse en bucle como node.exe huérfano.
 process.on('disconnect', shutdownWorker);
 
-// Iniciar el bucle de actualización inmediatamente
-updateStatsLoop();
-
+// El bucle no arranca al fork: solo con resume-stats (hay un consumidor visible).
 process.on('message', async (msg) => {
   if (typeof msg === 'object' && msg !== null) {
     if (msg.type === 'set-interval') {
@@ -332,10 +337,14 @@ process.on('message', async (msg) => {
     }
   } else if (msg === 'pause-stats') {
     shouldGenerateStats = false;
+    if (updateTimer) {
+      clearTimeout(updateTimer);
+      updateTimer = null;
+    }
   } else if (msg === 'resume-stats') {
-    if (!shouldGenerateStats) {
-      shouldGenerateStats = true;
-      updateStatsLoop(); // Forzar una actualización inmediata
+    shouldGenerateStats = true;
+    if (!updateTimer && !isUpdating) {
+      updateStatsLoop();
     }
   }
 });

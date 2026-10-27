@@ -3538,30 +3538,39 @@ ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
 // Sesiones SSH abiertas dentro de la Home: sondear todas las que estén visibles.
 ipcMain.on('ssh:set-pinned-stats-tabs', (event, tabIds) => {
   const { next, removed } = sshStatsService.setPinnedStatsTabs(tabIds);
-  const activeId = sshStatsService.getActiveStatsTab();
   removed.forEach((tabId) => {
-    if (activeId != null && String(activeId) === String(tabId)) return;
+    if (sshStatsService.shouldPollStats(tabId)) return;
     sshStatsService.stopStatsLoop(tabId, sshConnections);
   });
   next.forEach((tabId) => startStatsLoopIfIdle(tabId));
 });
 
-// ✅ REFACTORIZADO: Intervalo de polling ahora se maneja en SSHStatsService
+function syncSshStatsDemand(tabId) {
+  if (sshStatsService.shouldPollStats(tabId)) startStatsLoopIfIdle(tabId);
+  else sshStatsService.stopStatsLoop(tabId, sshConnections);
+}
+
+// La barra de esa sesión está oculta: no ejecutar el script remoto
+// salvo monitor abierto o sesión anclada en la Home.
+ipcMain.on('ssh:set-statusbar-visible', (event, tabId, visible) => {
+  sshStatsService.setStatusBarVisible(tabId, visible);
+  syncSshStatsDemand(tabId);
+});
+
+ipcMain.on('ssh:set-monitor-stats', (event, tabId, active) => {
+  sshStatsService.setMonitorStatsConsumer(tabId, !!active);
+  syncSshStatsDemand(tabId);
+});
+
+// Intervalo de la barra: SSH remoto y base del worker local.
+// El foco/minimizado no pausa: lo aplica setWindowActivity (handlers/index.js).
 ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
   const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 3));
   const intervalMs = sec * 1000;
   sshStatsService.setPollingInterval(intervalMs);
-});
-
-// Optimización: pausar estadísticas cuando la ventana pierda el foco
-ipcMain.on('window:focus-changed', (event, isFocused) => {
-  if (statsWorkerReady && statsWorker) {
-    if (isFocused) {
-      statsWorker.send('resume-stats');
-    } else {
-      statsWorker.send('pause-stats');
-    }
-  }
+  try {
+    require('./src/main/services/StatsWorkerService').setStatsBaseInterval(intervalMs);
+  } catch (_) {}
 });
 
 // window:minimize|maximize|unmaximize|isMaximized|close|set-corners

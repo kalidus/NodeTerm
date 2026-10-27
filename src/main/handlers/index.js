@@ -223,6 +223,19 @@ function registerSystemStatsIpcHandler() {
   } catch (_) {
     /* noop */
   }
+  try {
+    ipcMain.removeHandler('stats:set-demand');
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle('stats:set-demand', (_event, payload) => {
+    const StatsWorkerService = require('../services/StatsWorkerService');
+    const active = !!(payload && payload.active);
+    const intervalMs = payload ? payload.intervalMs : undefined;
+    StatsWorkerService.setStatsDemand(active, intervalMs);
+    return true;
+  });
+
   ipcMain.handle('get-system-stats', async () => {
     try {
       const StatsWorkerService = require('../services/StatsWorkerService');
@@ -388,19 +401,18 @@ function registerAllHandlers(dependencies) {
       const StatsWorkerService = require('../services/StatsWorkerService');
 
       const updateTelemetryInterval = () => {
-        if (mainWindow.isMinimized()) {
-          StatsWorkerService.setStatsWorkerInterval(10000); // 10s si está minimizada
-        } else if (mainWindow.isFocused()) {
-          StatsWorkerService.setStatsWorkerInterval(2000);  // 2s si está enfocada y activa
-        } else {
-          StatsWorkerService.setStatsWorkerInterval(5000);  // 5s en segundo plano
-        }
+        if (mainWindow.isDestroyed()) return;
+        StatsWorkerService.setWindowActivity({
+          minimized: mainWindow.isMinimized(),
+          focused: mainWindow.isFocused()
+        });
       };
 
       mainWindow.on('focus', updateTelemetryInterval);
       mainWindow.on('blur', updateTelemetryInterval);
       mainWindow.on('minimize', updateTelemetryInterval);
       mainWindow.on('restore', updateTelemetryInterval);
+      updateTelemetryInterval();
     } catch (_) {}
   }
 }

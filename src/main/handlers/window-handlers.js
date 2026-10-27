@@ -1,6 +1,6 @@
 /**
  * Handlers IPC de chrome de ventana (minimize/maximize/close/corners).
- * window:focus-changed permanece en main.js (acoplado al statsWorker).
+ * El ritmo del worker de estadísticas lo ajusta setWindowActivity en handlers/index.js.
  */
 
 const { ipcMain } = require('electron');

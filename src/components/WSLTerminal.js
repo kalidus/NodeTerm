@@ -140,7 +140,7 @@ const WSLTerminal = forwardRef(({
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
-        const unsubscribe = active
+        const unsubscribe = (active && !hideStatusBar)
             ? systemStatsService.subscribe((stats) => {
                 if (stats) {
                     setStatusStats(stats);
@@ -158,7 +158,7 @@ const WSLTerminal = forwardRef(({
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [active]);
+    }, [active, hideStatusBar]);
 
     useEffect(() => {
         const onStorage = (e) => {

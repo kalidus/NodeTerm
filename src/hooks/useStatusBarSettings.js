@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useLocalStorage, useLocalStorageString, useLocalStorageNumber } from './useLocalStorage';
+import { systemStatsService } from '../services/SystemStatsService';
 import {
   STATUSBAR_LAYOUT_STORAGE_KEY,
   DEFAULT_STATUSBAR_LAYOUT,
@@ -31,6 +32,8 @@ export const useStatusBarSettings = () => {
   }, [statusBarLayout]);
 
   useEffect(() => {
+    const intervalMs = Math.max(1000, Math.min(20000, (Number(statusBarPollingInterval) || 3) * 1000));
+    systemStatsService.setIntervalMs(intervalMs);
     if (window?.electron?.ipcRenderer) {
       window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
     }

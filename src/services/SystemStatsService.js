@@ -61,15 +61,27 @@ function mapSystemStatsToPayload(systemStats) {
   };
 }
 
+function readPollIntervalMs() {
+  const isLinux = typeof window !== 'undefined' && window.electron?.platform === 'linux';
+  const fallback = isLinux ? 5000 : 2000;
+  try {
+    const saved = localStorage.getItem('statusBarPollingInterval');
+    const sec = parseInt(saved, 10);
+    if (Number.isFinite(sec) && sec >= 1) {
+      return Math.max(1000, Math.min(20000, sec * 1000));
+    }
+  } catch (_) {}
+  return fallback;
+}
+
 class SystemStatsService {
   constructor() {
     this.subscribers = new Set();
     this.timer = null;
+    this.pollArmed = false;
     this.isFetching = false;
     this.latestStats = null;
-    // Linux: poll más espaciado por defecto (menos carga idle)
-    const isLinux = typeof window !== 'undefined' && window.electron?.platform === 'linux';
-    this.pollIntervalMs = isLinux ? 5000 : 2000;
+    this.pollIntervalMs = readPollIntervalMs();
     this.isPaused = false;
 
     // Escuchar eventos del sistema para suspender el polling cuando la pantalla se bloquee o entre en reposo
@@ -84,13 +96,34 @@ class SystemStatsService {
   handleSystemPause() {
     this.isPaused = true;
     this.stopPolling();
+    this.notifyDemand();
   }
 
   handleSystemResume() {
     this.isPaused = false;
     if (this.subscribers.size > 0) {
-      this.startPolling();
+      this.beginPollingAfterDemand();
     }
+  }
+
+  notifyDemand() {
+    if (typeof window === 'undefined' || typeof window.electron?.ipcRenderer?.invoke !== 'function') {
+      return Promise.resolve();
+    }
+    const active = this.subscribers.size > 0 && !this.isPaused;
+    return window.electron.ipcRenderer.invoke('stats:set-demand', {
+      active,
+      intervalMs: this.pollIntervalMs
+    }).catch(() => {});
+  }
+
+  beginPollingAfterDemand() {
+    const start = () => {
+      if (this.subscribers.size > 0 && !this.isPaused) this.startPolling();
+    };
+    const pending = this.notifyDemand();
+    if (pending && typeof pending.finally === 'function') pending.finally(start);
+    else start();
   }
 
   /**
@@ -104,11 +137,13 @@ class SystemStatsService {
    * Sets custom polling interval (in milliseconds).
    */
   setIntervalMs(ms) {
-    const validMs = Math.max(1000, Number(ms) || 2000);
+    const validMs = Math.max(1000, Math.min(20000, Number(ms) || 2000));
     this.pollIntervalMs = validMs;
+    this.notifyDemand();
     if (this.timer) {
       clearTimeout(this.timer);
-      if (!this.isPaused) {
+      this.timer = null;
+      if (this.subscribers.size > 0 && !this.isPaused) {
         this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
       }
     }
@@ -136,7 +171,7 @@ class SystemStatsService {
 
     // Iniciar bucle si es el primer suscriptor y no está en pausa
     if (this.subscribers.size === 1 && !this.isPaused) {
-      this.startPolling();
+      this.beginPollingAfterDemand();
     }
 
     return () => {
@@ -144,20 +179,24 @@ class SystemStatsService {
       // Detener bucle si ya no quedan suscriptores
       if (this.subscribers.size === 0) {
         this.stopPolling();
+        this.notifyDemand();
       }
     };
   }
 
   startPolling() {
-    if (this.timer || this.isPaused) return;
+    if (this.timer || this.isPaused || this.pollArmed) return;
+    this.pollArmed = true;
     this.fetchOnce().finally(() => {
-      if (this.subscribers.size > 0 && !this.isPaused) {
+      this.pollArmed = false;
+      if (this.subscribers.size > 0 && !this.isPaused && !this.timer) {
         this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
       }
     });
   }
 
   stopPolling() {
+    this.pollArmed = false;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;

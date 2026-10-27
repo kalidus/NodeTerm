@@ -75,7 +75,7 @@ const CygwinTerminal = forwardRef(({
 
     // Poll system stats consolidado
     useEffect(() => {
-        if (!active) return undefined;
+        if (!active || hideStatusBar) return undefined;
         const unsubscribe = systemStatsService.subscribe((stats) => {
             if (stats) {
                 setStatusStats(stats);
@@ -83,7 +83,7 @@ const CygwinTerminal = forwardRef(({
             }
         });
         return unsubscribe;
-    }, [active]);
+    }, [active, hideStatusBar]);
 
     // Listen for storage events
     useEffect(() => {
