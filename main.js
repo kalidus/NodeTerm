@@ -1649,6 +1649,7 @@ function createWindow() {
     const { registerCriticalHandlers } = require('./src/main/handlers');
     registerCriticalHandlers({
       mainWindow,
+      getMainWindow: () => mainWindow,
       packageJson,
       disconnectAllGuacamoleConnections,
       sshConnections,
@@ -1660,6 +1661,10 @@ function createWindow() {
       agentZeroService: createServiceProxy(getAgentZeroService),
       openClawService: createServiceProxy(getOpenClawService),
       openNotebookService: createServiceProxy(getOpenNotebookService),
+      // Platform terminal detection (WSL / Cygwin / Docker)
+      WSL,
+      Cygwin,
+      getDocker,
       // Guacamole dependencies for critical phase registration (no instanciar si esta off)
       getGuacdService,
       peekGuacdService,
@@ -1786,6 +1791,7 @@ function createWindow() {
       if (initialBounds.isMaximized) {
         try { mainWindow.maximize(); } catch (_) {}
       }
+      const { applyWindowCornersOnStartup } = require('./src/main/handlers/window-handlers');
       applyWindowCornersOnStartup(mainWindow);
     }
     closeSplash();
@@ -1837,6 +1843,7 @@ function createWindow() {
       // Recrear dependencias aquí ya que getHandlerDependencies está en otro scope
       const handlerDependencies = {
         mainWindow,
+        getMainWindow: () => mainWindow,
         findSSHConnection,
         disconnectAllGuacamoleConnections,
         getGuacdService,
@@ -1856,6 +1863,7 @@ function createWindow() {
         sshConnectionPool,
         cleanupOrphanedConnections,
         isAppQuitting,
+        getUpdateService: getUpdateServiceLazy,
         getGuacamoleServer: () => guacamoleServer,
         getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
         getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
@@ -2132,197 +2140,8 @@ function createWindow() {
 // Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
 // NO es necesario registrarlos aquí para evitar duplicados
 
-// Cache para evitar logs repetidos de WSL
-let wslDetectionLogged = false;
-let wslDetectionResultLogged = false;
-
-// IPC handler para detectar todas las distribuciones WSL
-ipcMain.handle('detect-wsl-distributions', async () => {
-  if (!wslDetectionLogged) {
-    console.log('🚀 [MAIN] Detectando distribuciones WSL...');
-    wslDetectionLogged = true;
-  }
-
-  try {
-    const distributions = await WSL.detectAllWSLDistributions();
-    if (!wslDetectionResultLogged) {
-      if (process.env.DEBUG_WSL === 'true') {
-        console.log('✅ [MAIN] WSL Detección:', distributions.length, 'distribuciones encontradas');
-        distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
-      }
-      wslDetectionResultLogged = true;
-    }
-    return distributions;
-  } catch (error) {
-    console.error('❌ [MAIN] Error en detección de distribuciones WSL:', error);
-    return [];
-  }
-});
-
-// Mantener compatibilidad con el handler anterior para Ubuntu
-ipcMain.handle('detect-ubuntu-availability', async () => {
-  try {
-    const distributions = await WSL.detectAllWSLDistributions();
-    return distributions;
-  } catch (error) {
-    console.error('❌ Error en detección de distribuciones WSL:', error);
-    return [];
-  }
-});
-
-// Handler para detectar disponibilidad de Cygwin embebido
-ipcMain.handle('cygwin:detect', async () => {
-  try {
-    const result = Cygwin.CygwinHandlers.detect();
-    return result;
-  } catch (error) {
-    console.error('❌ Error detecting Cygwin:', error);
-    return { available: false, path: null, error: error.message };
-  }
-});
-
-// Handler para listar contenedores Docker
-
-ipcMain.handle('docker:list', async () => {
-  try {
-    const docker = getDocker();
-    if (!docker || !docker.DockerHandlers) {
-      return { success: false, available: false, containers: [], error: 'Docker service not initialized' };
-    }
-    const result = docker.DockerHandlers.list();
-    return result;
-  } catch (error) {
-    console.error('❌ Error listing Docker containers:', error.message);
-    return { success: false, available: false, containers: [], error: error.message };
-  }
-});
-
-
-// Variable global para controlar instalacion de Cygwin
-let cygwinInstalling = false;
-
-function emitCygwinInstallProgress(phase, current, total) {
-  try {
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-      const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
-      mainWindow.webContents.send('cygwin:install-progress', {
-        phase,
-        current,
-        total,
-        percent
-      });
-    }
-  } catch (e) {
-    // ignore
-  }
-}
-
-// Instala Cygwin portable desde cygwin.com (setup-x86_64.exe) a %APPDATA%/nodeterm/cygwin64
-// options: { tier: 'minimal' | 'medium' | 'full' }
-ipcMain.handle('cygwin:install', async (_event, options = {}) => {
-  if (process.platform !== 'win32') {
-    return { success: false, error: 'Cygwin solo esta disponible en Windows.' };
-  }
-
-  if (cygwinInstalling) {
-    return {
-      success: false,
-      error: 'Ya hay una instalacion de Cygwin en progreso. Espera a que termine.'
-    };
-  }
-
-  try {
-    cygwinInstalling = true;
-    const tier = options?.tier || 'medium';
-    console.log(`[Cygwin] Iniciando instalacion oficial (tier=${tier})...`);
-
-    const {
-      installCygwinPackage,
-      getInstallStatus
-    } = require('./src/main/services/CygwinDownloader');
-
-    const result = await installCygwinPackage({
-      tier,
-      progressCallback: (phase, current, total) => {
-        emitCygwinInstallProgress(phase, current, total);
-      }
-    });
-
-    Cygwin.resetCygwinPaths();
-
-    if (result.success) {
-      const status = getInstallStatus();
-      console.log('[Cygwin] Instalacion completada en:', status.root, 'tier:', status.tier);
-      return { success: true, ...status };
-    }
-
-    return result;
-  } catch (error) {
-    console.error('[Cygwin] Error en cygwin:install:', error);
-    return {
-      success: false,
-      error: error.message || String(error)
-    };
-  } finally {
-    cygwinInstalling = false;
-  }
-});
-
-ipcMain.handle('cygwin:uninstall', async () => {
-  if (process.platform !== 'win32') {
-    return { success: false, error: 'Cygwin solo esta disponible en Windows.' };
-  }
-
-  if (cygwinInstalling) {
-    return {
-      success: false,
-      error: 'Hay una instalacion en progreso. Espera a que termine.'
-    };
-  }
-
-  try {
-    // Liberar DLLs: cerrar sesiones PTY y procesos bajo cygwin64
-    if (Cygwin && Cygwin.CygwinHandlers && typeof Cygwin.CygwinHandlers.cleanupAndWait === 'function') {
-      await Cygwin.CygwinHandlers.cleanupAndWait();
-    } else if (Cygwin && Cygwin.CygwinHandlers) {
-      Cygwin.CygwinHandlers.cleanup();
-    }
-
-    const { uninstallCygwinPackage } = require('./src/main/services/CygwinDownloader');
-    const result = await uninstallCygwinPackage();
-    Cygwin.resetCygwinPaths();
-    return result;
-  } catch (error) {
-    console.error('[Cygwin] Error en cygwin:uninstall:', error);
-    return {
-      success: false,
-      error: error.message || String(error)
-    };
-  }
-});
-
-ipcMain.handle('cygwin:install-status', async () => {
-  try {
-    const { getInstallStatus } = require('./src/main/services/CygwinDownloader');
-    const downloadStatus = getInstallStatus();
-    const detect = Cygwin.CygwinHandlers.detect();
-    return {
-      success: true,
-      ...downloadStatus,
-      available: detect.available === true,
-      path: detect.path || downloadStatus.path,
-      root: detect.root || downloadStatus.root,
-      installing: cygwinInstalling
-    };
-  } catch (error) {
-    return {
-      success: false,
-      installed: false,
-      available: false,
-      error: error.message || String(error)
-    };
-  }
-});
+// detect-wsl / cygwin:* / docker:list viven en
+// src/main/handlers/platform-terminal-handlers.js (registerCriticalHandlers)
 
 app.on('ready', () => {
   logTiming('app ready event');
@@ -3731,219 +3550,10 @@ ipcMain.on('window:focus-changed', (event, isFocused) => {
   }
 });
 
-ipcMain.handle('window:minimize', () => {
-  if (mainWindow) mainWindow.minimize();
-});
-ipcMain.handle('window:maximize', () => {
-  if (mainWindow) mainWindow.maximize();
-});
-ipcMain.handle('window:unmaximize', () => {
-  if (mainWindow) mainWindow.unmaximize();
-});
-ipcMain.handle('window:isMaximized', () => {
-  if (mainWindow) return mainWindow.isMaximized();
-  return false;
-});
-ipcMain.handle('window:close', () => {
-  if (mainWindow) mainWindow.close();
-});
-ipcMain.handle('window:set-corners', (event, layoutId) => {
-  if (mainWindow) {
-    applyWindowCornersForLayout(mainWindow, layoutId);
-  }
-});
+// window:minimize|maximize|unmaximize|isMaximized|close|set-corners
+// y applyWindowCorners* viven en src/main/handlers/window-handlers.js
 
-function applyWindowCornersForLayout(win, layoutId) {
-  if (process.platform !== 'win32' || !win || win.isDestroyed()) {
-    return;
-  }
-  
-  // Preference values:
-  // 0 = DWMWCP_DEFAULT (System decides)
-  // 1 = DWMWCP_DONOTROUND (Square corners)
-  // 2 = DWMWCP_ROUND (Rounded corners)
-  // 3 = DWMWCP_ROUNDSMALL (Slightly rounded corners)
-  let preference = 2; // Default to rounded
-  
-  if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'cyberpunk' || layoutId === 'studio') {
-    preference = 1; // Square corners
-  } else if (layoutId === 'tablero') {
-    preference = 3; // Slightly rounded corners
-  }
-  
-  try {
-    const hwnd = win.getNativeWindowHandle();
-    let hwndAddress = 0;
-    try {
-      if (hwnd.length >= 8) {
-        hwndAddress = hwnd.readBigInt64LE(0).toString();
-      } else if (hwnd.length >= 4) {
-        hwndAddress = hwnd.readInt32LE(0).toString();
-      } else {
-        hwndAddress = hwnd.readUInt32LE(0).toString();
-      }
-    } catch (e) {
-      hwndAddress = parseInt(hwnd.toString('hex'), 16).toString();
-    }
-
-    const { spawn } = require('child_process');
-    
-    const minimalEnv = {};
-    const keysToKeep = ['SystemRoot', 'windir', 'PATH', 'PSModulePath', 'USERPROFILE', 'SystemDrive', 'TEMP', 'TMP'];
-    for (const key of keysToKeep) {
-      if (process.env[key]) {
-        minimalEnv[key] = process.env[key];
-      }
-    }
-
-    const psScript = `
-$code = @"
-using System;
-using System.Runtime.InteropServices;
-public class DwmApi {
-    [DllImport("dwmapi.dll")]
-    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
-}
-public class User32 {
-    [DllImport("user32.dll")]
-    public static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter, int x, int y, int cx, int cy, uint flags);
-}
-"@
-Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
-$hwndIntPtr = [IntPtr]([long]${hwndAddress})
-$pref = ${preference}
-$res = [DwmApi]::DwmSetWindowAttribute($hwndIntPtr, 33, [ref]$pref, 4)
-$flags = 0x0020 -bor 0x0002 -bor 0x0001 -bor 0x0004 -bor 0x0010
-$posRes = [User32]::SetWindowPos($hwndIntPtr, [IntPtr]0, 0, 0, 0, 0, $flags)
-Write-Host "SUCCESS HWND=${hwndAddress} preference=${preference} DwmRes=$res SetWindowPosRes=$posRes"
-`;
-
-    const encodedScript = Buffer.from(psScript, 'utf-16le').toString('base64');
-
-    const child = spawn('powershell.exe', [
-      '-NoProfile',
-      '-ExecutionPolicy', 'Bypass',
-      '-EncodedCommand', encodedScript
-    ], {
-      env: minimalEnv
-    });
-
-    // Sub-process listeners defined to consume stdout/stderr stream but output nothing to console
-    child.on('error', (err) => {
-      // Ignored console.error
-    });
-    
-    child.stdout.on('data', (data) => {
-      // Ignored console.log
-    });
-
-    child.stderr.on('data', (data) => {
-      // Ignored console.error
-    });
-
-    child.on('close', (code) => {
-      // Ignored close log
-    });
-  } catch (err) {
-    // Ignored error log
-  }
-}
-
-function applyWindowCornersOnStartup(win) {
-  try {
-    const appDataPath = path.join(getNodeTermDataDir(), 'app-data.json');
-    if (fs.existsSync(appDataPath)) {
-      const raw = fs.readFileSync(appDataPath, 'utf8');
-      const { parseAppDataFileContent } = require('./src/main/utils/file-utils');
-      const parsed = parseAppDataFileContent(raw);
-      if (parsed && parsed.ui_layout) {
-        applyWindowCornersForLayout(win, parsed.ui_layout);
-      }
-    }
-  } catch (err) {
-    console.error('[WindowCorners] Error applying startup corners:', err);
-  }
-}
-
-
-// === Update System Handlers ===
-ipcMain.handle('updater:check', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const result = await updateService.checkForUpdates();
-    return result;
-  } catch (error) {
-    console.error('[UPDATER] Error checking for updates:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:download', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const result = await updateService.downloadUpdate();
-    return result;
-  } catch (error) {
-    console.error('[UPDATER] Error downloading update:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:quit-and-install', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    updateService.quitAndInstall();
-    return { success: true };
-  } catch (error) {
-    console.error('[UPDATER] Error installing update:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:get-config', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const config = updateService.getConfig();
-    return { success: true, config };
-  } catch (error) {
-    console.error('[UPDATER] Error getting config:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:update-config', async (event, newConfig) => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const config = updateService.updateConfig(newConfig);
-    updateService.restart(); // Reiniciar el servicio con la nueva configuración
-    return { success: true, config };
-  } catch (error) {
-    console.error('[UPDATER] Error updating config:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:get-info', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const info = updateService.getUpdateInfo();
-    return { success: true, ...info };
-  } catch (error) {
-    console.error('[UPDATER] Error getting update info:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('updater:clear-cache', async () => {
-  try {
-    const updateService = getUpdateServiceLazy();
-    const result = updateService.clearUpdateCache();
-    return result;
-  } catch (error) {
-    console.error('[UPDATER] Error clearing update cache:', error);
-    return { success: false, error: error.message };
-  }
-});
+// updater:* vive en src/main/handlers/updater-handlers.js (registerSecondaryHandlers)
 
 // === RDP Support ===
 // ✅ OPTIMIZACIÓN: Handlers de RDP movidos a src/main/handlers/rdp-handlers.js

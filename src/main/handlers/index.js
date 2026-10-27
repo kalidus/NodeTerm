@@ -39,6 +39,9 @@ let _antigravitycliHandlers = null;
 let _hermescliHandlers = null;
 let _browserImportHandlers = null;
 let _mcpApiHandlers = null;
+let _updaterHandlers = null;
+let _windowHandlers = null;
+let _platformTerminalHandlers = null;
 
 function getBrowserImportHandlers() {
   if (!_browserImportHandlers) _browserImportHandlers = require('./browser-import-handlers');
@@ -48,6 +51,21 @@ function getBrowserImportHandlers() {
 function getMcpApiHandlers() {
   if (!_mcpApiHandlers) _mcpApiHandlers = require('./mcp-api-handlers');
   return _mcpApiHandlers;
+}
+
+function getUpdaterHandlers() {
+  if (!_updaterHandlers) _updaterHandlers = require('./updater-handlers');
+  return _updaterHandlers;
+}
+
+function getWindowHandlers() {
+  if (!_windowHandlers) _windowHandlers = require('./window-handlers');
+  return _windowHandlers;
+}
+
+function getPlatformTerminalHandlers() {
+  if (!_platformTerminalHandlers) _platformTerminalHandlers = require('./platform-terminal-handlers');
+  return _platformTerminalHandlers;
 }
 
 function getAppHandlers() {
@@ -285,6 +303,8 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('AI clients IPC', () => registerAIClientHandlers(dependencies));
   runHandlerStep('guacamole IPC', () => getGuacamoleHandlers().registerGuacamoleHandlers(dependencies));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
+  runHandlerStep('window chrome IPC', () => getWindowHandlers().registerWindowHandlers(dependencies));
+  runHandlerStep('platform terminal IPC', () => getPlatformTerminalHandlers().registerPlatformTerminalHandlers(dependencies));
 }
 
 /**
@@ -316,8 +336,12 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers de MCP API (servidor HTTP local)
   getMcpApiHandlers().registerMcpApiHandlers();
 
+  // Handlers de actualizaciones (servicio lazy; no críticos para pintar UI)
+  getUpdaterHandlers().registerUpdaterHandlers(dependencies);
+
   // NOTA: Handlers de clientes IA en registerAIClientHandlers() (fase crítica)
   // NOTA: Theme handlers ahora se registran en registerCriticalHandlers()
+  // NOTA: Window chrome + WSL/Cygwin/Docker en registerCriticalHandlers()
 
   // 🚀 OPTIMIZACIÓN: Handlers de túneles SSH se registran DESPUÉS de ready-to-show
   // Ver registerSSHTunnelHandlers() que se llama desde main.js
@@ -417,5 +441,8 @@ module.exports = {
   getAntigravityCliHandlers,
   getHermesCliHandlers,
   getBrowserImportHandlers,
-  getMcpApiHandlers
+  getMcpApiHandlers,
+  getUpdaterHandlers,
+  getWindowHandlers,
+  getPlatformTerminalHandlers
 };
