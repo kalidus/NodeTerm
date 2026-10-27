@@ -18,11 +18,13 @@ describe('Content Security Policy (CSP) Security Tests', () => {
     assert.ok(htmlContent.includes("base-uri 'self'"), 'Debe restringir base-uri');
     assert.ok(htmlContent.includes("https://fonts.googleapis.com"), 'Debe permitir estilos de Google Fonts');
     assert.ok(htmlContent.includes("https://fonts.gstatic.com"), 'Debe permitir fuentes de Google Fonts');
+    assert.ok(htmlContent.includes('nodeterm-library:'), 'Debe permitir el esquema del visor de la biblioteca');
   });
 
   it('main.js debe registrar listener de onHeadersReceived para inyectar cabecera CSP', () => {
     const mainContent = fs.readFileSync(mainJsPath, 'utf8');
     assert.ok(mainContent.includes('onHeadersReceived'), 'main.js debe incluir onHeadersReceived');
     assert.ok(mainContent.includes("'Content-Security-Policy'"), 'main.js debe inyectar Content-Security-Policy');
+    assert.ok(mainContent.includes('nodeterm-library:'), 'La CSP inyectada debe permitir el visor de la biblioteca');
   });
 });
