@@ -1,0 +1,209 @@
+/* Biblioteca: diálogo de propiedades de carpeta y zona de soltar del árbol */
+
+.library-props {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.library-props__summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.library-props__summary i {
+  margin-right: 5px;
+  font-size: 11px;
+}
+
+.library-props__section h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+.library-props__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.library-props__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.library-props__option:hover {
+  background: var(--ui-context-hover, rgba(255, 255, 255, 0.05));
+}
+
+.library-props__option.is-selected {
+  border-color: color-mix(in srgb, var(--ui-primary-color, #3b82f6) 55%, transparent);
+  background: color-mix(in srgb, var(--ui-primary-color, #3b82f6) 12%, transparent);
+}
+
+.library-props__option input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.library-props__option > i {
+  font-size: 14px;
+  margin-top: 2px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.library-props__option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.library-props__option-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.library-props__option-text {
+  font-size: 11.5px;
+  opacity: 0.7;
+  line-height: 1.45;
+}
+
+.library-props__hint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  opacity: 0.75;
+  line-height: 1.45;
+}
+
+.library-props__hint i {
+  margin-right: 5px;
+}
+
+.library-props__hint--warn {
+  color: #fbbf24;
+  opacity: 0.95;
+}
+
+/* --- Arrastrar y soltar sobre el árbol --------------------------------- */
+
+.documents-drop-active {
+  outline: 2px dashed color-mix(in srgb, var(--ui-primary-color, #3b82f6) 70%, transparent);
+  outline-offset: -4px;
+  background: color-mix(in srgb, var(--ui-primary-color, #3b82f6) 8%, transparent);
+}
+
+.library-drop-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--ui-primary-color, #3b82f6);
+  color: #fff;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Progreso de importación ------------------------------------------- */
+
+.library-ingest-progress {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+  z-index: 20;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(10, 15, 31, 0.92);
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.1));
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.library-ingest-progress__bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.library-ingest-progress__fill {
+  height: 100%;
+  background: var(--ui-primary-color, #3b82f6);
+  transition: width 0.2s ease;
+}
+
+.tree-container:has(.library-source-bar) {
+  display: flex;
+  flex-direction: column;
+}
+
+.library-source-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.library-source-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.library-source-bar button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.library-source-bar label {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.tree-container:has(.library-source-bar) > .documents-empty-state,
+.tree-container:has(.library-source-bar) > .notes-browser {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

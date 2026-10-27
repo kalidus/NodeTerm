@@ -4,12 +4,12 @@ export const NOTES_LAYOUTS = [
   {
     id: 'tree',
     name: 'Árbol',
-    description: 'Jerarquía con libretas anidadas'
+    description: 'Jerarquía con carpetas anidadas'
   },
   {
     id: 'shelf',
     name: 'Estantería',
-    description: 'Libretas como lomos de una biblioteca'
+    description: 'Carpetas como lomos en una estantería'
   },
   {
     id: 'index',

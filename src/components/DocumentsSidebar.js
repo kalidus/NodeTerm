@@ -21,7 +21,8 @@ import {
   addNodeToTree,
   removeNodeFromTree,
   updateNodeInTree,
-  findNodeInTree
+  findNodeInTree,
+  collectManagedFiles
 } from '../utils/documentStore';
 import TreeContextMenu from './contextmenus/TreeContextMenu';
 import {
@@ -39,7 +40,47 @@ import { FolderIconSelectorModal } from './FolderIconSelector';
 import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import NotesBrowser from './notes/NotesBrowser';
 import { renderDocumentNodeIcon } from './notes/documentNodeIcon';
-import { findFolderPath, isNotebook, isNote, isQuickNotesGroup } from './notes/notesBrowse';
+import {
+  findFolderPath,
+  isNotebook,
+  isNote,
+  isQuickNotesGroup,
+  isLibraryFile,
+  isLinkedFolder,
+  isCloudFolder,
+  isManagedFolder
+} from './notes/notesBrowse';
+import { useLibraryIngest } from './library/useLibraryIngest';
+import LibraryFolderPropertiesDialog from './library/LibraryFolderPropertiesDialog';
+import LibraryUrlImportDialog from './library/LibraryUrlImportDialog';
+import LibraryCloudBrowserDialog from './library/LibraryCloudBrowserDialog';
+import {
+  runLibrarySync,
+  applySyncResult,
+  LIBRARY_SYNC_EVENTS
+} from '../utils/LibrarySyncService';
+import { mimeForName, formatFileSize } from '../shared/library-mime';
+import NextcloudService from '../services/NextcloudService';
+
+/** Ruta de usuario a partir del href que devuelve el PROPFIND. */
+function webdavRelativePath(href, username) {
+  let clean = String(href || '').trim();
+  try {
+    if (/^https?:\/\//i.test(clean)) clean = new URL(clean).pathname;
+  } catch (_) {
+    /* href relativo */
+  }
+  clean = clean.replace(/\/+$/, '');
+  const markers = [
+    `/remote.php/dav/files/${encodeURIComponent(username)}`,
+    `/remote.php/dav/files/${username}`
+  ];
+  for (const marker of markers) {
+    const at = clean.indexOf(marker);
+    if (at !== -1) return clean.slice(at + marker.length).replace(/^\/+/, '');
+  }
+  return clean.replace(/^\/+/, '');
+}
 import {
   NOTES_LAYOUT_STORAGE_KEY,
   isNotesLayout,
@@ -47,6 +88,7 @@ import {
 } from './notes/notesLayoutModes';
 import { ghostCatalog } from '../themes/icon-themes/ghost-catalog';
 import '../styles/components/documents.css';
+import '../styles/components/library-sidebar.css';
 
 const GHOST_NOTEBOOK_COLORS = Object.fromEntries(
   ghostCatalog.map(({ id, color }) => [id.toLowerCase(), color])
@@ -374,6 +416,9 @@ const DocumentsSidebar = ({
   useEffect(() => {
     setFavoriteSourceTrees({ documentNodes });
   }, [documentNodes]);
+  // Lectura del árbol desde callbacks asíncronos sin arrastrar closures obsoletas
+  const documentNodesRef = useRef(documentNodes);
+  useEffect(() => { documentNodesRef.current = documentNodes; }, [documentNodes]);
   const [expandedKeys, setExpandedKeys] = useState(() => {
     try {
       const saved = localStorage.getItem('documents_expanded_keys');
@@ -598,7 +643,13 @@ const DocumentsSidebar = ({
 
 
   const handleOpenDocument = useCallback((node, mode = 'reuse') => {
-    if (node.data?.type === 'document-folder' || node.droppable) return;
+    if (isLinkedFolder(node) || isCloudFolder(node) || node.data?.type === 'document-folder' || node.droppable) return;
+    if (isLibraryFile(node)) {
+      window.dispatchEvent(new CustomEvent('open-library-file-tab', {
+        detail: { key: node.key, label: node.label, data: node.data, mode }
+      }));
+      return;
+    }
     if (getHomeTabActive() && mode === 'reuse') {
       window.dispatchEvent(new CustomEvent('open-home-note-panel', {
         detail: {
@@ -633,7 +684,7 @@ const DocumentsSidebar = ({
       }
       return;
     }
-    if (!isNote(node)) return;
+    if (!isNote(node) && !isLibraryFile(node)) return;
     setSelectedNodeKey(node.key);
     setQuickNotesPanelOpen(false);
     if (mode === 'reuse') {
@@ -800,7 +851,7 @@ const DocumentsSidebar = ({
     setParentKeyForNew(null);
     showToast?.({
       severity: 'success',
-      summary: 'Libreta creada',
+      summary: 'Carpeta creada',
       detail: `"${newFolder.label}" creada correctamente`,
       life: 3000
     });
@@ -812,6 +863,11 @@ const DocumentsSidebar = ({
     setDocumentNodes(prev =>
       updateNodeInTree(prev, renamingNode.key, { label: newName })
     );
+    if (isLibraryFile(renamingNode)) {
+      window.dispatchEvent(new CustomEvent('library-file-updated', {
+        detail: { key: renamingNode.key, label: newName }
+      }));
+    }
     connectionStore.updateFavoriteFields(renamingNode.key, { name: newName });
     setShowRenameDialog(false);
     setNewItemName('');
@@ -889,9 +945,302 @@ const DocumentsSidebar = ({
   }, [docTrashConfirm]);
   // ────────────────────────────────────────────────────────────────────────────
 
+  // ── Biblioteca: ingesta de archivos y carpetas ──────────────────────────
+  const {
+    busy: ingestBusy,
+    unlocked: libraryUnlocked,
+    policyFor,
+    pickAndAddFiles,
+    linkLocalFolder,
+    mountCloudFolder,
+    saveCopyOfNode,
+    importFromUrl,
+    importFromClipboard,
+    importFromDataTransfer,
+    removeFileBlob
+  } = useLibraryIngest({ documentNodes, setDocumentNodes, setExpandedKeys, showToast });
+
+  const [urlImportTarget, setUrlImportTarget] = useState(null);
+  const [cloudMountTarget, setCloudMountTarget] = useState(null);
+  const [saveCopyInApp, setSaveCopyInApp] = useState(false);
+  const [folderPropsNode, setFolderPropsNode] = useState(null);
+  const [dropTargetKey, setDropTargetKey] = useState(null);
+  const dropDepthRef = useRef(0);
+
+  /** Carpeta destino por defecto: la seleccionada, o la raíz. */
+  const resolveIngestFolderKey = useCallback((node) => {
+    if (node && isManagedFolder(node)) return node.key;
+    if (notesLayout !== 'tree' && browseStack.length) return browseStack[browseStack.length - 1];
+    return getParentKeyForNewNote();
+  }, [notesLayout, browseStack, getParentKeyForNewNote]);
+
+  /** Entradas de menú: leer en el sitio, y copiar solo si la casilla está marcada. */
+  const buildIngestMenuItems = useCallback((folderKey, folderLabel) => ([
+    {
+      label: 'Enlazar carpeta de Windows…',
+      icon: 'pi pi-desktop',
+      command: () => linkLocalFolder(folderKey)
+    },
+    {
+      label: 'Montar carpeta de Nextcloud…',
+      icon: 'pi pi-cloud',
+      command: () => setCloudMountTarget({ key: folderKey, label: folderLabel })
+    },
+    { separator: true },
+    {
+      label: saveCopyInApp ? 'Añadir archivos y guardar copia…' : 'Enlazar archivos…',
+      icon: saveCopyInApp ? 'pi pi-save' : 'pi pi-file',
+      command: () => pickAndAddFiles(folderKey, { saveCopy: saveCopyInApp })
+    },
+    {
+      label: 'Añadir desde URL…',
+      icon: 'pi pi-cloud-download',
+      command: () => setUrlImportTarget({ key: folderKey, label: folderLabel })
+    },
+    {
+      label: 'Pegar del portapapeles',
+      icon: 'pi pi-clipboard',
+      command: () => importFromClipboard(folderKey, { saveCopy: saveCopyInApp })
+    }
+  ]), [linkLocalFolder, pickAndAddFiles, importFromClipboard, saveCopyInApp]);
+
+  const folderPropsPolicy = useMemo(
+    () => (folderPropsNode ? policyFor(folderPropsNode.key) : { vaultMode: 'plain', syncMode: 'none', inheritedFrom: null }),
+    [folderPropsNode, policyFor]
+  );
+
+  const folderPropsStats = useMemo(() => {
+    if (!folderPropsNode) return { files: 0, bytes: 0 };
+    const current = findNodeInTree(documentNodes, folderPropsNode.key) || folderPropsNode;
+    const managed = collectManagedFiles([current]);
+    return {
+      files: managed.length,
+      bytes: managed.reduce((sum, { node }) => sum + (Number(node.data?.size) || 0), 0)
+    };
+  }, [folderPropsNode, documentNodes]);
+
+  /**
+   * Guarda la política de la carpeta. Si cambia el cifrado, reescribe en disco
+   * los blobs de todo el subárbol antes de persistir el nuevo modo.
+   */
+  const handleFolderPropsConfirm = useCallback(async ({ vaultMode, syncMode }) => {
+    const target = folderPropsNode;
+    if (!target) return;
+    setFolderPropsNode(null);
+
+    const previous = policyFor(target.key);
+    const current = findNodeInTree(documentNodes, target.key) || target;
+
+    if (vaultMode !== previous.vaultMode) {
+      const relPaths = collectManagedFiles([current])
+        .map(({ node }) => node.data?.relPath)
+        .filter(Boolean);
+      if (relPaths.length) {
+        const result = await window.electron?.library?.convertBlobs({
+          relPaths,
+          encrypt: vaultMode === 'encrypted'
+        });
+        if (!result?.success) {
+          showToast?.({
+            severity: 'error',
+            summary: 'No se pudo cambiar el cifrado',
+            detail: result?.error || 'Revisa que el vault esté desbloqueado.',
+            life: 6000
+          });
+          return;
+        }
+        if (result.failed?.length) {
+          showToast?.({
+            severity: 'warn',
+            summary: 'Cifrado parcialmente aplicado',
+            detail: `${result.converted} convertidos, ${result.failed.length} con errores.`,
+            life: 6000
+          });
+        }
+      }
+    }
+
+    setDocumentNodes(prev => updateNodeInTree(prev, target.key, {
+      data: { ...(findNodeInTree(prev, target.key)?.data || {}), vaultMode, syncMode }
+    }));
+    showToast?.({
+      severity: 'success',
+      summary: 'Propiedades guardadas',
+      detail: `"${target.label}": ${vaultMode === 'encrypted' ? 'copias cifradas' : 'copias sin cifrar'}, ${syncMode === 'nextcloud' ? 'se copian a otros equipos' : 'solo en este equipo'}.`,
+      life: 3500
+    });
+  }, [folderPropsNode, policyFor, documentNodes, showToast]);
+
+  // Carga bajo demanda del contenido de una carpeta local enlazada
+  const loadLinkedFolderChildren = useCallback(async (node) => {
+    if (!isLinkedFolder(node) || !node.data?.absPath) return;
+    const result = await window.electron?.library?.listLinked(node.data.absPath);
+    if (!result?.success) {
+      showToast?.({
+        severity: 'error',
+        summary: 'No se pudo leer la carpeta',
+        detail: result?.error || node.data.absPath,
+        life: 5000
+      });
+      return;
+    }
+    const children = (result.files || [])
+      .sort((a, b) => {
+        if ((a.type === 'directory') !== (b.type === 'directory')) return a.type === 'directory' ? -1 : 1;
+        return String(a.name).localeCompare(String(b.name), 'es');
+      })
+      .map((item) => (
+        item.type === 'directory'
+          ? {
+              key: `libmount_${item.path}`,
+              label: item.name,
+              type: 'linked-folder',
+              droppable: false,
+              leaf: false,
+              children: [],
+              data: { type: 'linked-folder', absPath: item.path, lazy: true, virtual: true }
+            }
+          : {
+              key: `libfile_linked_${item.path}`,
+              label: item.name,
+              type: 'library-file',
+              droppable: false,
+              leaf: true,
+              data: {
+                type: 'library-file',
+                storage: 'linked',
+                relPath: null,
+                absPath: item.path,
+                mime: item.mime || mimeForName(item.name),
+                size: item.size || 0,
+                virtual: true,
+                origin: { kind: 'local', ref: item.path, fetchedAt: Date.now() }
+              }
+            }
+      ));
+
+    setDocumentNodes(prev => updateNodeInTree(prev, node.key, { children, leaf: children.length === 0 }));
+  }, [setDocumentNodes, showToast]);
+
+  const loadCloudFolderChildren = useCallback(async (node) => {
+    if (!isCloudFolder(node)) return;
+    const service = new NextcloudService();
+    const ok = await service.loadConfig();
+    if (!ok || !service.isConfigured) {
+      showToast?.({
+        severity: 'warn',
+        summary: 'Nextcloud',
+        detail: 'Configura la cuenta en Ajustes → Sincronización.',
+        life: 5000
+      });
+      return;
+    }
+    const result = await window.electron?.library?.listWebdav({
+      baseUrl: service.baseUrl,
+      username: service.username,
+      password: service.password,
+      ignoreSSLErrors: !!service.ignoreSSLErrors,
+      path: node.data?.remotePath || ''
+    });
+    if (!result?.success) {
+      showToast?.({
+        severity: 'error',
+        summary: 'No se pudo leer Nextcloud',
+        detail: result?.error || node.data?.remotePath,
+        life: 5000
+      });
+      return;
+    }
+    const children = (result.entries || []).map((item) => {
+      const remotePath = webdavRelativePath(item.path, service.username);
+      if (item.isDirectory) {
+        return {
+          key: `libcloud_${remotePath}`,
+          label: item.name,
+          type: 'cloud-folder',
+          droppable: false,
+          leaf: false,
+          children: [],
+          data: { type: 'cloud-folder', remotePath, lazy: true, virtual: true }
+        };
+      }
+      return {
+        key: `libfile_webdav_${remotePath}`,
+        label: item.name,
+        type: 'library-file',
+        droppable: false,
+        leaf: true,
+        data: {
+          type: 'library-file',
+          storage: 'webdav',
+          remotePath,
+          relPath: null,
+          absPath: null,
+          mime: item.mime || mimeForName(item.name),
+          size: item.size || 0,
+          virtual: true,
+          origin: { kind: 'webdav', ref: remotePath, fetchedAt: Date.now() }
+        }
+      };
+    });
+    setDocumentNodes((prev) => updateNodeInTree(prev, node.key, { children, leaf: children.length === 0 }));
+  }, [setDocumentNodes, showToast]);
+
+  // Soltar archivos del explorador del sistema sobre el árbol
+  const handleNativeDragOver = useCallback((e) => {
+    if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleNativeDragEnter = useCallback((e) => {
+    if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
+    e.preventDefault();
+    dropDepthRef.current += 1;
+    setDropTargetKey(resolveIngestFolderKey(null) || '__root__');
+  }, [resolveIngestFolderKey]);
+
+  const handleNativeDragLeave = useCallback((e) => {
+    if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
+    dropDepthRef.current = Math.max(0, dropDepthRef.current - 1);
+    if (dropDepthRef.current === 0) setDropTargetKey(null);
+  }, []);
+
+  const handleNativeDrop = useCallback(async (e) => {
+    if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropDepthRef.current = 0;
+    setDropTargetKey(null);
+    const folderKey = resolveIngestFolderKey(null);
+    await importFromDataTransfer(folderKey, e.dataTransfer, { saveCopy: saveCopyInApp });
+  }, [resolveIngestFolderKey, importFromDataTransfer, saveCopyInApp]);
+
+  // Ctrl+V sobre el árbol pega una captura o texto como archivo
+  useEffect(() => {
+    const root = sidebarRootRef.current;
+    if (!root) return undefined;
+    const onPaste = (e) => {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (!root.contains(target)) return;
+      e.preventDefault();
+      importFromClipboard(resolveIngestFolderKey(null), { saveCopy: saveCopyInApp });
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [importFromClipboard, resolveIngestFolderKey, saveCopyInApp]);
+
   const handleDelete = (node) => {
     // Guardar copia del nodo antes de eliminar
     const nodeCopy = JSON.parse(JSON.stringify(node));
+    // Los blobs managed del subárbol se borran del disco al eliminar el nodo
+    const managed = collectManagedFiles([nodeCopy]);
+    managed.forEach(({ node: fileNode }) => removeFileBlob(fileNode));
+    const removedKeys = [nodeCopy.key, ...managed.map(({ node: fileNode }) => fileNode.key)];
+    window.dispatchEvent(new CustomEvent('library-file-removed', { detail: { keys: removedKeys } }));
     // Eliminar del árbol
     setDocumentNodes(prev => removeNodeFromTree(prev, node.key));
     // Mover a papelera
@@ -937,6 +1286,123 @@ const DocumentsSidebar = ({
       return;
     }
 
+    if (isCloudFolder(node)) {
+      items.push(
+        {
+          label: 'Actualizar contenido',
+          icon: 'pi pi-refresh',
+          command: () => loadCloudFolderChildren(node)
+        }
+      );
+      if (!node.data?.virtual) {
+        items.push(
+          { separator: true },
+          {
+            label: 'Quitar montaje',
+            icon: 'pi pi-times',
+            command: () => handleDelete(node)
+          }
+        );
+      }
+      setContextMenuItems(items);
+      contextMenuRef.current?.show(event.originalEvent);
+      return;
+    }
+
+    if (isLinkedFolder(node)) {
+      items.push(
+        {
+          label: 'Actualizar contenido',
+          icon: 'pi pi-refresh',
+          command: () => loadLinkedFolderChildren(node)
+        },
+        {
+          label: 'Abrir en el explorador',
+          icon: 'pi pi-folder-open',
+          command: () => window.electron?.library?.reveal({ storage: 'linked', absPath: node.data?.absPath })
+        }
+      );
+      // Las carpetas virtuales descubiertas al navegar no viven en el árbol
+      if (!node.data?.virtual) {
+        items.push(
+          { separator: true },
+          {
+            label: 'Quitar enlace',
+            icon: 'pi pi-times',
+            command: () => handleDelete(node)
+          }
+        );
+      }
+      setContextMenuItems(items);
+      contextMenuRef.current?.show(event.originalEvent);
+      return;
+    }
+
+    if (isLibraryFile(node)) {
+      items.push(
+        { label: 'Abrir', icon: 'pi pi-external-link', command: () => handleOpenDocument(node, 'reuse') },
+        { label: 'Abrir en pestaña nueva', icon: 'pi pi-plus', command: () => handleOpenDocument(node, 'new') },
+        { separator: true }
+      );
+      if (node.data?.storage === 'linked' || node.data?.storage === 'webdav') {
+        items.push({
+          label: 'Guardar copia en NodeTerm',
+          icon: 'pi pi-save',
+          command: () => saveCopyOfNode(node)
+        });
+      }
+      if (node.data?.storage !== 'webdav') {
+        items.push(
+        {
+          label: 'Abrir con aplicación externa',
+          icon: 'pi pi-desktop',
+          command: () => window.electron?.library?.openExternal({
+            storage: node.data?.storage,
+            relPath: node.data?.relPath,
+            absPath: node.data?.absPath
+          })
+        },
+        {
+          label: 'Mostrar en el explorador',
+          icon: 'pi pi-folder-open',
+          command: () => window.electron?.library?.reveal({
+            storage: node.data?.storage,
+            relPath: node.data?.relPath,
+            absPath: node.data?.absPath
+          })
+        },
+        {
+          label: 'Guardar una copia…',
+          icon: 'pi pi-download',
+          command: () => window.electron?.library?.exportFile({
+            storage: node.data?.storage,
+            relPath: node.data?.relPath,
+            absPath: node.data?.absPath,
+            fileName: node.label
+          })
+        }
+      );
+      }
+      if (!node.data?.virtual) {
+        items.push(
+          { separator: true },
+          {
+            label: 'Renombrar',
+            icon: 'pi pi-pencil',
+            command: () => {
+              setRenamingNode(node);
+              setNewItemName(node.label);
+              setShowRenameDialog(true);
+            }
+          },
+          { label: 'Eliminar', icon: 'pi pi-trash', command: () => handleDelete(node) }
+        );
+      }
+      setContextMenuItems(items);
+      contextMenuRef.current?.show(event.originalEvent);
+      return;
+    }
+
     if (isFolder) {
       items.push(
         {
@@ -945,14 +1411,17 @@ const DocumentsSidebar = ({
           command: () => createNewDocumentInTree(node.key)
         },
         {
-          label: 'Nueva sublibreta',
-          icon: 'pi pi-book',
+          label: 'Nueva subcarpeta',
+          icon: 'pi pi-folder-plus',
           command: () => {
             setParentKeyForNew(node.key);
             setNewItemName('');
             setShowNewFolderDialog(true);
           }
         },
+        { separator: true },
+        ...buildIngestMenuItems(node.key, node.label),
+        { separator: true },
         {
           label: 'Cambiar icono',
           icon: 'pi pi-image',
@@ -960,6 +1429,11 @@ const DocumentsSidebar = ({
             setIconTargetNode(node);
             setShowIconSelector(true);
           }
+        },
+        {
+          label: 'Propiedades…',
+          icon: 'pi pi-sliders-h',
+          command: () => setFolderPropsNode(node)
         },
         { separator: true }
       );
@@ -1027,6 +1501,9 @@ const DocumentsSidebar = ({
     e.preventDefault();
     e.stopPropagation();
 
+    const targetKey = resolveIngestFolderKey(null);
+    const targetLabel = targetKey ? findNodeInTree(documentNodes, targetKey)?.label : null;
+
     const items = [
       {
         label: 'Nueva nota',
@@ -1034,14 +1511,16 @@ const DocumentsSidebar = ({
         command: () => handleCreateNewNote()
       },
       {
-        label: 'Nueva libreta',
-        icon: 'pi pi-book',
+        label: 'Nueva carpeta',
+        icon: 'pi pi-folder-plus',
         command: () => {
           setParentKeyForNew(null);
           setNewItemName('');
           setShowNewFolderDialog(true);
         }
-      }
+      },
+      { separator: true },
+      ...buildIngestMenuItems(targetKey, targetLabel)
     ];
 
     setContextMenuItems(items);
@@ -1053,8 +1532,29 @@ const DocumentsSidebar = ({
     if (!dragNode?.key || dragNode.key === 'quick_note') return;
     if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) return;
 
+    // El contenido de una carpeta enlazada es un reflejo del disco: ni se
+    // reordena ni se puede soltar nada dentro desde el árbol.
+    if (dragNode.data?.virtual || isLinkedFolder(dropNode) || isCloudFolder(dropNode) || dropNode?.data?.virtual) {
+      return;
+    }
+
     if (dropNode?.key && isDescendantInFullTree(documentNodes, dragNode.key, dropNode.key)) {
       return;
+    }
+
+    // Mover un archivo managed entre carpetas reubica también su blob
+    if (isLibraryFile(dragNode) && dragNode.data?.storage === 'managed' && dragNode.data?.relPath) {
+      const targetFolderKey = dropPoint === 0 ? dropNode?.key : null;
+      window.electron?.library
+        ?.moveFile({ relPath: dragNode.data.relPath, folderKey: targetFolderKey, fileName: dragNode.label })
+        .then((result) => {
+          if (result?.success && result.relPath !== dragNode.data.relPath) {
+            setDocumentNodes((prev) => updateNodeInTree(prev, dragNode.key, {
+              data: { ...(findNodeInTree(prev, dragNode.key)?.data || {}), relPath: result.relPath }
+            }));
+          }
+        })
+        .catch(() => {});
     }
 
     setDocumentNodes((prevNodes) => {
@@ -1098,8 +1598,9 @@ const DocumentsSidebar = ({
   }, [folderKeysAll, allDocTreeExpanded]);
 
   const nodeTemplate = (node) => {
-    const isFolder = node.droppable || node.data?.type === 'document-folder';
+    const isFolder = node.droppable || node.data?.type === 'document-folder' || isLinkedFolder(node) || isCloudFolder(node);
     const isInlineRenaming = inlineRenamingKey === node.key;
+    const fileNode = isLibraryFile(node);
     return (
       <span
         className="document-tree-node"
@@ -1204,12 +1705,20 @@ const DocumentsSidebar = ({
             {node.label}
           </span>
         )}
-        {!isInlineRenaming && isFolder && (() => {
+        {!isInlineRenaming && isFolder && !isLinkedFolder(node) && !isCloudFolder(node) && (() => {
           const count = countNotesInFolder(node);
           return count > 0 ? (
             <span className="qnp-count-badge" style={{ marginLeft: 'auto', marginRight: '4px', flexShrink: 0 }}>{count}</span>
           ) : null;
         })()}
+        {!isInlineRenaming && fileNode && node.data?.size > 0 && (
+          <span
+            className="qnp-count-badge"
+            style={{ marginLeft: 'auto', marginRight: '4px', flexShrink: 0, opacity: 0.65 }}
+          >
+            {formatFileSize(node.data.size)}
+          </span>
+        )}
       </span>
     );
   };
@@ -1280,15 +1789,21 @@ const DocumentsSidebar = ({
     const onNewDoc = () => handleCreateNewNote();
     const onNewFolder = () => openNewFolderDialog();
     const onToggleExpandAll = () => toggleExpandAllDocuments();
+    const onLinkFolder = () => linkLocalFolder(resolveIngestFolderKey(null));
+    const onMountCloud = () => setCloudMountTarget({ key: resolveIngestFolderKey(null) });
     window.addEventListener('documents-sidebar:new-doc', onNewDoc);
     window.addEventListener('documents-sidebar:new-folder', onNewFolder);
     window.addEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
+    window.addEventListener('documents-sidebar:link-folder', onLinkFolder);
+    window.addEventListener('documents-sidebar:mount-cloud', onMountCloud);
     return () => {
       window.removeEventListener('documents-sidebar:new-doc', onNewDoc);
       window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
       window.removeEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
+      window.removeEventListener('documents-sidebar:link-folder', onLinkFolder);
+      window.removeEventListener('documents-sidebar:mount-cloud', onMountCloud);
     };
-  }, [hideHeader, toggleExpandAllDocuments, handleCreateNewNote]);
+  }, [hideHeader, toggleExpandAllDocuments, handleCreateNewNote, linkLocalFolder, resolveIngestFolderKey]);
 
   useEffect(() => {
     if (!hideHeader) return;
@@ -1296,6 +1811,38 @@ const DocumentsSidebar = ({
       detail: { allExpanded: allDocTreeExpanded }
     }));
   }, [hideHeader, allDocTreeExpanded]);
+
+  // Sincronización de blobs: la pide SyncManager y se resuelve aquí porque el
+  // árbol vivo es estado de este componente.
+  useEffect(() => {
+    const onSyncRequest = async (event) => {
+      const requestId = event.detail?.requestId;
+      let result;
+      try {
+        result = await runLibrarySync(documentNodesRef.current || []);
+        if (result?.success && !result.skipped) {
+          const { tree, inserted } = applySyncResult(documentNodesRef.current || [], result);
+          // El efecto de persistencia se encarga de guardar el árbol
+          if (inserted > 0) setDocumentNodes(tree);
+          if (result.conflicts?.length) {
+            showToast?.({
+              severity: 'warn',
+              summary: 'Conflictos en la biblioteca',
+              detail: `${result.conflicts.length} archivo(s) cambiaron en los dos lados. Se conservó la versión remota como copia aparte.`,
+              life: 8000
+            });
+          }
+        }
+      } catch (err) {
+        result = { success: false, error: err?.message || String(err) };
+      }
+      window.dispatchEvent(new CustomEvent(LIBRARY_SYNC_EVENTS.DONE_EVENT, {
+        detail: { requestId, result }
+      }));
+    };
+    window.addEventListener(LIBRARY_SYNC_EVENTS.REQUEST_EVENT, onSyncRequest);
+    return () => window.removeEventListener(LIBRARY_SYNC_EVENTS.REQUEST_EVENT, onSyncRequest);
+  }, [showToast]);
 
   const isFolderSelected = useMemo(() => {
     const node = selectedNodeForDetails;
@@ -1314,7 +1861,7 @@ const DocumentsSidebar = ({
   const activePanelTitle = useMemo(() => {
     if (isQuickNoteSelected) return 'Notas rápidas';
     if (isFolderSelected && selectedNodeForDetails) return selectedNodeForDetails.label;
-    return 'Notas';
+    return 'Biblioteca';
   }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails]);
 
   const activePanelIconClass = useMemo(() => {
@@ -1573,12 +2120,36 @@ const DocumentsSidebar = ({
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={openNewFolderDialog}
-              tooltip="Nueva libreta"
+              tooltip="Nueva carpeta"
               tooltipOptions={{ position: 'bottom' }}
               style={DOC_HEADER_GLASS_BTN}
             >
               <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-                <i className="pi pi-book" style={{ fontSize: '1.05rem' }} />
+                <i className="pi pi-folder-plus" style={{ fontSize: '1.05rem' }} />
+              </span>
+            </Button>
+
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => linkLocalFolder(resolveIngestFolderKey(null))}
+              tooltip="Enlazar carpeta de Windows"
+              tooltipOptions={{ position: 'bottom' }}
+              style={DOC_HEADER_GLASS_BTN}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
+                <i className="pi pi-desktop" style={{ fontSize: '1.05rem' }} />
+              </span>
+            </Button>
+
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => setCloudMountTarget({ key: resolveIngestFolderKey(null) })}
+              tooltip="Montar carpeta de Nextcloud"
+              tooltipOptions={{ position: 'bottom' }}
+              style={DOC_HEADER_GLASS_BTN}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
+                <i className="pi pi-cloud" style={{ fontSize: '1.05rem' }} />
               </span>
             </Button>
 
@@ -1637,8 +2208,12 @@ const DocumentsSidebar = ({
 
       {/* Tree — mismo contenedor que conexiones/passwords para alinear márgenes */}
       <div
-        className="tree-container"
+        className={`tree-container${dropTargetKey ? ' documents-drop-active' : ''}`}
         onContextMenu={handleEmptySpaceContextMenu}
+        onDragEnter={handleNativeDragEnter}
+        onDragOver={handleNativeDragOver}
+        onDragLeave={handleNativeDragLeave}
+        onDrop={handleNativeDrop}
         style={{
           flex: 1,
           minHeight: 0,
@@ -1648,10 +2223,46 @@ const DocumentsSidebar = ({
           fontSize: `${explorerFontSize}px`
         }}
       >
+        <div className="library-source-bar">
+          <button type="button" onClick={() => linkLocalFolder(resolveIngestFolderKey(null))}>
+            <i className="pi pi-desktop" /> Enlazar Windows
+          </button>
+          <button type="button" onClick={() => setCloudMountTarget({ key: resolveIngestFolderKey(null) })}>
+            <i className="pi pi-cloud" /> Montar Nextcloud
+          </button>
+          <label>
+            <input
+              type="checkbox"
+              checked={saveCopyInApp}
+              onChange={(e) => setSaveCopyInApp(e.target.checked)}
+            />
+            Guardar copia en NodeTerm
+          </label>
+        </div>
+        {dropTargetKey && (
+          <div className="library-drop-hint">
+            {saveCopyInApp
+              ? 'Soltar y guardar una copia en NodeTerm'
+              : 'Soltar para enlazar, sin copiar'}
+          </div>
+        )}
+        {ingestBusy && (
+          <div className="library-ingest-progress">
+            <span>
+              {ingestBusy.label || `Importando ${ingestBusy.done + 1} de ${ingestBusy.total}…`}
+            </span>
+            <div className="library-ingest-progress__bar">
+              <div
+                className="library-ingest-progress__fill"
+                style={{ width: `${Math.round(((ingestBusy.done + 1) / Math.max(1, ingestBusy.total)) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div className="documents-empty-state">
             <i className="pi pi-spin pi-spinner" />
-            <p>Cargando notas...</p>
+            <p>Cargando biblioteca...</p>
           </div>
         ) : notesLayout !== 'tree' ? (
           <NotesBrowser
@@ -1670,7 +2281,7 @@ const DocumentsSidebar = ({
             onContextMenu={onBrowserContextMenu}
           />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Pinned Quick Note Row */}
             <div 
               className={`pinned-quick-note-row ${selectedNodeKey === 'quick_note' ? 'selected' : ''}`}
@@ -1714,15 +2325,27 @@ const DocumentsSidebar = ({
 
             {filteredDocumentNodes.length === 0 ? (
               <div className="documents-empty-state" style={{ flex: 1 }}>
-                <i className="pi pi-file-edit" />
-                <p>No hay notas creadas en el árbol.</p>
+                <i className="pi pi-book" />
+                <p>La biblioteca está vacía.</p>
+                <p style={{ fontSize: '0.78rem', opacity: 0.65 }}>
+                  Enlaza una carpeta de Windows o monta una de Nextcloud. Los archivos se leen en su sitio.
+                </p>
               </div>
             ) : (
               <div className="documents-tree-scroll-area" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
                 <Tree
                   value={treeValue}
                   expandedKeys={expandedKeys}
-                  onToggle={(e) => setExpandedKeys(e.value)}
+                  onToggle={(e) => {
+                    setExpandedKeys(e.value);
+                    // Las carpetas enlazadas leen el disco al desplegarse
+                    Object.keys(e.value || {}).forEach((key) => {
+                      if (expandedKeys[key]) return;
+                      const node = findNodeInTree(documentNodes, key);
+                      if (isLinkedFolder(node)) loadLinkedFolderChildren(node);
+                      if (isCloudFolder(node)) loadCloudFolderChildren(node);
+                    });
+                  }}
                   selectionMode="single"
                   selectionKeys={selectedNodeKey}
                   onSelectionChange={(e) => {
@@ -1795,8 +2418,8 @@ const DocumentsSidebar = ({
 
       {/* New Folder Dialog */}
       <AppDialog
-        headerTitle="Nueva libreta"
-        headerIcon="pi pi-book"
+        headerTitle="Nueva carpeta"
+        headerIcon="pi pi-folder-plus"
         visible={showNewFolderDialog}
         onHide={() => setShowNewFolderDialog(false)}
         size="sm"
@@ -1806,12 +2429,12 @@ const DocumentsSidebar = ({
         onConfirm={handleCreateFolder}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la libreta</label>
+          <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la carpeta</label>
           <InputText
             id="notebook-name"
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Mi libreta..."
+            placeholder="Mi carpeta..."
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
           />
@@ -1852,6 +2475,35 @@ const DocumentsSidebar = ({
         onSelectIcon={handleSelectFolderIcon}
         theme={uiTheme}
         defaultCategory="notes"
+      />
+
+      <LibraryUrlImportDialog
+        visible={Boolean(urlImportTarget)}
+        folderLabel={urlImportTarget?.label}
+        defaultSaveCopy={saveCopyInApp}
+        onHide={() => setUrlImportTarget(null)}
+        onConfirm={(url, options) => {
+          const target = urlImportTarget;
+          setUrlImportTarget(null);
+          importFromUrl(target?.key || null, url, options);
+        }}
+      />
+
+      <LibraryCloudBrowserDialog
+        visible={Boolean(cloudMountTarget)}
+        onHide={() => setCloudMountTarget(null)}
+        onMount={(folder) => mountCloudFolder(cloudMountTarget?.key || null, folder)}
+      />
+
+      <LibraryFolderPropertiesDialog
+        visible={Boolean(folderPropsNode)}
+        folder={folderPropsNode}
+        policy={folderPropsPolicy}
+        inheritedPolicy={folderPropsPolicy}
+        stats={folderPropsStats}
+        vaultUnlocked={libraryUnlocked}
+        onHide={() => setFolderPropsNode(null)}
+        onConfirm={handleFolderPropsConfirm}
       />
       {/* ─ Botón flotante papelera docs ─ */}
       <button
@@ -1900,7 +2552,7 @@ const DocumentsSidebar = ({
             <div className="app-dialog-header">
               <span className="app-dialog-header-icon" aria-hidden="true"><i className="pi pi-trash" /></span>
               <div className="app-dialog-header-text">
-                <span className="app-dialog-header-title">Papelera de notas</span>
+                <span className="app-dialog-header-title">Papelera de la biblioteca</span>
                 <span className="app-dialog-header-subtitle">
                   {trashedDocuments.length === 0 ? 'Vacía' : `${trashedDocuments.length} elemento${trashedDocuments.length !== 1 ? 's' : ''} • Se pueden restaurar`}
                 </span>
@@ -1938,7 +2590,7 @@ const DocumentsSidebar = ({
                   <i className="pi pi-check" style={{ fontSize: '24px', color: '#4ade80' }} />
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Papelera vacía</div>
-                <div style={{ fontSize: '12px', color: '#475569' }}>Las notas eliminadas aparecerán aquí</div>
+                <div style={{ fontSize: '12px', color: '#475569' }}>Las notas y archivos eliminados aparecerán aquí</div>
               </div>
             ) : trashedDocuments.map((item, idx) => (
               <div key={item.id} className="dtrash-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: idx < trashedDocuments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>

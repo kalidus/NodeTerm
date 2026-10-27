@@ -657,6 +657,70 @@ export const useGlobalAppEvents = ({
     return () => window.removeEventListener('open-document-tab', handler);
   }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously, filteredTabs, activeTabIndex]);
 
+  // 12b. Pestaña de archivo de la biblioteca (visor PDF/imagen/texto/media)
+  useEffect(() => {
+    const handler = (e) => {
+      const info = e.detail || {};
+      if (!info.key) return;
+      const mode = info.mode === 'new' ? 'new' : 'reuse';
+
+      const fileData = {
+        key: info.key,
+        label: info.label,
+        storage: info.data?.storage === 'linked'
+          ? 'linked'
+          : info.data?.storage === 'webdav'
+            ? 'webdav'
+            : 'managed',
+        relPath: info.data?.relPath || null,
+        absPath: info.data?.absPath || null,
+        remotePath: info.data?.remotePath || null,
+        mime: info.data?.mime || '',
+        ext: info.data?.ext || '',
+        size: Number(info.data?.size) || 0,
+        origin: info.data?.origin || null,
+        tags: Array.isArray(info.data?.tags) ? info.data.tags : []
+      };
+
+      const createNewTab = () => {
+        const tabId = `libfile_${info.key}_${Date.now()}`;
+        const newTab = {
+          key: tabId,
+          label: info.label,
+          type: TAB_TYPES.LIBRARY_FILE,
+          fileData,
+          createdAt: Date.now()
+        };
+        promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
+      };
+
+      if (mode === 'new') {
+        createNewTab();
+        return;
+      }
+
+      const existingTab = getAllTabs().find(
+        t => t.type === TAB_TYPES.LIBRARY_FILE && t.fileData?.key === info.key
+      );
+      if (existingTab) {
+        activateTabSynchronously(existingTab.key);
+        return;
+      }
+
+      // Reutiliza la pestaña de visor activa en vez de acumular pestañas
+      const activeTab = filteredTabs?.[activeTabIndex];
+      if (activeTab?.type === TAB_TYPES.LIBRARY_FILE) {
+        promoteAndActivateTab(activeTab.key, (prev) =>
+          prev.map(t => (t.key === activeTab.key ? { ...t, label: info.label, fileData } : t))
+        );
+        return;
+      }
+      createNewTab();
+    };
+    window.addEventListener('open-library-file-tab', handler);
+    return () => window.removeEventListener('open-library-file-tab', handler);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously, filteredTabs, activeTabIndex]);
+
   // 13. Sincronizar título e icono de documentos
   useEffect(() => {
     const handleTitle = (e) => {
@@ -723,13 +787,44 @@ export const useGlobalAppEvents = ({
       );
     };
 
+    // Renombrar o borrar un archivo en el sidebar debe reflejarse en su pestaña
+    const handleLibraryFileUpdated = (e) => {
+      const { key, label, data } = e.detail || {};
+      if (!key) return;
+      setSshTabs(prev =>
+        prev.map(t => {
+          if (t.type === TAB_TYPES.LIBRARY_FILE && t.fileData?.key === key) {
+            return {
+              ...t,
+              label: label || t.label,
+              fileData: { ...t.fileData, ...(data || {}), label: label || t.fileData.label }
+            };
+          }
+          return t;
+        })
+      );
+    };
+
+    const handleLibraryFileRemoved = (e) => {
+      const keys = e.detail?.keys || (e.detail?.key ? [e.detail.key] : []);
+      if (!keys.length) return;
+      const removed = new Set(keys);
+      setSshTabs(prev =>
+        prev.filter(t => !(t.type === TAB_TYPES.LIBRARY_FILE && removed.has(t.fileData?.key)))
+      );
+    };
+
     window.addEventListener('document-title-updated', handleTitle);
     window.addEventListener('document-icon-updated', handleIcon);
     window.addEventListener('document-content-updated', handleContent);
+    window.addEventListener('library-file-updated', handleLibraryFileUpdated);
+    window.addEventListener('library-file-removed', handleLibraryFileRemoved);
     return () => {
       window.removeEventListener('document-title-updated', handleTitle);
       window.removeEventListener('document-icon-updated', handleIcon);
       window.removeEventListener('document-content-updated', handleContent);
+      window.removeEventListener('library-file-updated', handleLibraryFileUpdated);
+      window.removeEventListener('library-file-removed', handleLibraryFileRemoved);
     };
   }, [setSshTabs]);
 

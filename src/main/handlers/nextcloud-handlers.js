@@ -11,6 +11,21 @@ const { assertSafeOutboundUrl, isLoopbackHost, isPrivateHost } = require('../uti
 const { assertTrustedIpcSender } = require('../utils/ipc-trust');
 
 /**
+ * En Electron, rejectUnauthorized en la petición no basta: el agente global
+ * sigue verificando el certificado. Solo se usa si Ignorar SSL está activo.
+ */
+let insecureAgent = null;
+function getInsecureAgent() {
+  if (!insecureAgent) {
+    insecureAgent = new https.Agent({
+      rejectUnauthorized: false,
+      checkServerIdentity: () => undefined
+    });
+  }
+  return insecureAgent;
+}
+
+/**
  * Registra manejadores IPC para Nextcloud
  */
 function registerNextcloudHandlers() {
@@ -64,11 +79,8 @@ function registerNextcloudHandlers() {
       path: urlObj.pathname + urlObj.search,
       method: (options && options.method) || 'GET',
       headers: (options && options.headers) || {},
-      ...(relaxTls && {
-        rejectUnauthorized: false,
-        requestCert: false,
-        agent: false
-      })
+      servername: urlObj.hostname,
+      ...(relaxTls && { agent: getInsecureAgent() })
     };
 
     return new Promise((resolve, reject) => {

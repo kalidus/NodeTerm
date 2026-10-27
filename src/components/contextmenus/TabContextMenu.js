@@ -7,7 +7,7 @@ import { findNodeByKey } from '../../utils/favoritesSidebarTree';
 const getConnectionNodeForTab = (tab, nodes = []) => {
   if (!tab) return null;
   // Excluir pestañas que no son conexiones editables
-  if (['edit-connection', 'settings', 'home', 'network-tool', 'document', 'document-folder', 'password', 'password-folder', 'audit'].includes(tab.type)) {
+  if (['edit-connection', 'settings', 'home', 'network-tool', 'document', 'document-folder', 'library-file', 'password', 'password-folder', 'audit'].includes(tab.type)) {
     return null;
   }
 
@@ -179,8 +179,8 @@ const TabContextMenu = ({
     if (type === 'password' || type === 'password-folder') {
       return 'password';
     }
-    if (type === 'document' || type === 'document-folder') {
-      return 'notas';
+    if (type === 'document' || type === 'document-folder' || type === 'library-file') {
+      return 'biblioteca';
     }
     const sessionTypes = [
       'terminal', 'split', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole',
@@ -196,7 +196,7 @@ const TabContextMenu = ({
   const section = getTabSection(currentTab);
   const matchingTabs = section ? allTabs.filter(t => getTabSection(t) === section) : [];
   const hasMoreTabsOfSameSection = matchingTabs.length > 1;
-  const sectionLabel = section === 'password' ? 'contraseñas' : (section === 'notas' ? 'notas' : 'sesiones');
+  const sectionLabel = section === 'password' ? 'contraseñas' : (section === 'biblioteca' ? 'biblioteca' : 'sesiones');
 
 
 

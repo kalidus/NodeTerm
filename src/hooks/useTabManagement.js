@@ -444,8 +444,8 @@ export const useTabManagement = (toast, {
       if (type === 'password' || type === 'password-folder') {
         return 'password';
       }
-      if (type === 'document' || type === 'document-folder') {
-        return 'notas';
+      if (type === 'document' || type === 'document-folder' || type === 'library-file') {
+        return 'biblioteca';
       }
       const sessionTypes = [
         'terminal', 'split', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole',
@@ -464,7 +464,7 @@ export const useTabManagement = (toast, {
     const matchingTabs = allTabs.filter(t => getTabSection(t) === section);
     if (matchingTabs.length <= 1) return;
 
-    const baseName = section === 'password' ? 'Contraseñas' : (section === 'notas' ? 'Notas' : 'Sesiones');
+    const baseName = section === 'password' ? 'Contraseñas' : (section === 'biblioteca' ? 'Biblioteca' : 'Sesiones');
     let groupName = baseName;
     let counter = 1;
     while (tabGroups.some(g => g.name.toLowerCase() === groupName.toLowerCase())) {
@@ -734,8 +734,8 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas de carpetas de contraseñas (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
-    } else if (closedTab.type === 'document') {
-      // Cerrar pestañas de notas/documentos (almacenadas en sshTabs)
+    } else if (closedTab.type === 'document' || closedTab.type === 'library-file') {
+      // Cerrar pestañas de la biblioteca: notas y archivos (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
     } else if (closedTab.type === 'network-tool') {

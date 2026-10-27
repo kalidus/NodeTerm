@@ -161,8 +161,27 @@ if (process.env.NODE_ENV === 'development') {
   } catch (_) { }
 }
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell, session, protocol } = require('electron');
 logTiming('Electron cargado');
+
+// 📚 Biblioteca: el esquema debe declararse antes de app.ready para que el visor
+// pueda usar el lector PDF nativo y <img>/<video> sin cargar el blob en el renderer.
+try {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'nodeterm-library',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        stream: true,
+        bypassCSP: false
+      }
+    }
+  ]);
+} catch (err) {
+  console.error('[MAIN] Error registrando esquema nodeterm-library:', err?.message || err);
+}
 
 try {
   require('./src/main/handlers/home-wallpaper-handlers').registerHomeWallpaperHandlers();
@@ -1498,6 +1517,9 @@ function createWindow() {
       contextIsolation: true,
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
+      // Necesario para el visor PDF integrado de Chromium (Biblioteca).
+      // En Electron moderno solo habilita ese visor: NPAPI/PPAPI ya no existen.
+      plugins: true,
       v8CacheOptions: 'code',
       enableBlinkFeatures: 'PreciseMemoryInfo',
       backgroundThrottling: false
@@ -2172,7 +2194,7 @@ app.on('ready', () => {
             responseHeaders: {
               ...details.responseHeaders,
               'Content-Security-Policy': [
-                "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' ws: wss: http: https: blob: data:; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self';"
+                "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: nodeterm-library:; media-src 'self' blob: data: nodeterm-library:; connect-src 'self' ws: wss: http: https: blob: data: nodeterm-library:; worker-src 'self' blob:; frame-src 'self' nodeterm-library:; object-src 'none'; base-uri 'self';"
               ]
             }
           });
@@ -2184,6 +2206,14 @@ app.on('ready', () => {
   }
 
   sshKnownHostsService.setUserDataPath(getNodeTermDataDir());
+
+  try {
+    require('./src/main/utils/library-protocol').registerLibraryProtocol();
+    logTiming('Protocolo nodeterm-library registrado');
+  } catch (err) {
+    console.error('❌ Error registrando protocolo de biblioteca:', err?.message || err);
+  }
+
   try {
     const { registerBootstrapIpcHandlers } = require('./src/main/handlers');
     registerBootstrapIpcHandlers();

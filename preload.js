@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // No require('os'): en preload sandboxed tumba el bridge (window.electron undefined).
 function readWindowsBuildNumber() {
@@ -228,6 +228,47 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.on('appdata:changed', subscription);
       return () => ipcRenderer.off('appdata:changed', subscription);
     }
+  },
+  // File.path desapareció en Electron 32; webUtils es la vía para resolver la
+  // ruta real de un archivo arrastrado desde el explorador del sistema.
+  webUtils: {
+    getPathForFile: (file) => {
+      try {
+        return webUtils?.getPathForFile ? webUtils.getPathForFile(file) : '';
+      } catch (_) {
+        return '';
+      }
+    }
+  },
+  library: {
+    unlock: (masterKey) => ipcRenderer.invoke('library:unlock', { masterKey }),
+    lock: () => ipcRenderer.invoke('library:lock'),
+    getStatus: () => ipcRenderer.invoke('library:get-status'),
+    getUsage: () => ipcRenderer.invoke('library:get-usage'),
+    createAccess: (descriptor) => ipcRenderer.invoke('library:create-access', descriptor),
+    revokeAccess: (token) => ipcRenderer.invoke('library:revoke-access', { token }),
+    readFile: (descriptor) => ipcRenderer.invoke('library:read-file', descriptor),
+    stat: (descriptor) => ipcRenderer.invoke('library:stat', descriptor),
+    pickFiles: (options) => ipcRenderer.invoke('library:pick-files', options),
+    pickFolder: () => ipcRenderer.invoke('library:pick-folder'),
+    importPath: (payload) => ipcRenderer.invoke('library:import-path', payload),
+    importBuffer: (payload) => ipcRenderer.invoke('library:import-buffer', payload),
+    scanFolder: (payload) => ipcRenderer.invoke('library:scan-folder', payload),
+    downloadUrl: (payload) => ipcRenderer.invoke('library:download-url', payload),
+    stageBuffer: (payload) => ipcRenderer.invoke('library:stage-buffer', payload),
+    stageUrl: (payload) => ipcRenderer.invoke('library:stage-url', payload),
+    classifyPath: (absPath) => ipcRenderer.invoke('library:classify-path', { absPath }),
+    listWebdav: (payload) => ipcRenderer.invoke('library:list-webdav', payload),
+    importWebdav: (payload) => ipcRenderer.invoke('library:import-webdav', payload),
+    sync: (payload) => ipcRenderer.invoke('library:sync', payload),
+    readClipboardImage: () => ipcRenderer.invoke('library:read-clipboard-image'),
+    deleteFile: (payload) => ipcRenderer.invoke('library:delete-file', payload),
+    moveFile: (payload) => ipcRenderer.invoke('library:move-file', payload),
+    convertBlobs: (payload) => ipcRenderer.invoke('library:convert-blobs', payload),
+    listLinked: (absPath) => ipcRenderer.invoke('library:list-linked', { absPath }),
+    openExternal: (descriptor) => ipcRenderer.invoke('library:open-external', descriptor),
+    reveal: (descriptor) => ipcRenderer.invoke('library:reveal', descriptor),
+    exportFile: (payload) => ipcRenderer.invoke('library:export-file', payload)
   },
   claude: {
     getConfig: () => ipcRenderer.invoke('claude:get-config'),

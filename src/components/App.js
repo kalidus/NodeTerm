@@ -467,6 +467,27 @@ const App = () => {
     return () => window.removeEventListener('master-key-updated', onMasterKeyUpdated);
   }, []);
 
+  // 📚 Biblioteca: el proceso principal necesita la clave derivada en memoria para
+  // descifrar al vuelo los blobs de las carpetas marcadas como cifradas.
+  useEffect(() => {
+    const library = window.electron?.library;
+    if (!library) return;
+    const announce = (unlocked) => {
+      window.dispatchEvent(new CustomEvent('library-vault-state', { detail: { unlocked } }));
+    };
+    if (masterKey) {
+      library.unlock(masterKey)
+        .then((result) => announce(Boolean(result?.success)))
+        .catch((err) => {
+          console.warn('[Library] No se pudo desbloquear el almacén:', err?.message || err);
+          announce(false);
+        });
+    } else {
+      library.lock().catch(() => {});
+      announce(false);
+    }
+  }, [masterKey]);
+
   // Handler cuando se cambia master password desde Settings
   const handleMasterPasswordChanged = useCallback((key) => {
     setMasterKey(key);

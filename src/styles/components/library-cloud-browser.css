@@ -1,0 +1,126 @@
+/* Explorador de Nextcloud para la Biblioteca */
+
+.library-cloud {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 320px;
+}
+
+.library-cloud__crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.library-cloud__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-cloud__crumb:hover {
+  background: var(--ui-context-hover, rgba(255, 255, 255, 0.07));
+}
+
+.library-cloud__crumb.is-current {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.library-cloud__crumb + .library-cloud__crumb::before {
+  content: '/';
+  opacity: 0.35;
+  margin-right: 4px;
+}
+
+.library-cloud__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+}
+
+.library-cloud__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.library-cloud__item:last-child {
+  border-bottom: 0;
+}
+
+.library-cloud__item:hover {
+  background: var(--ui-context-hover, rgba(255, 255, 255, 0.05));
+}
+
+.library-cloud__item.is-selected {
+  background: color-mix(in srgb, var(--ui-primary-color, #3b82f6) 18%, transparent);
+}
+
+.library-cloud__item > i:first-child {
+  font-size: 13px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.library-cloud__item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-cloud__item-size,
+.library-cloud__item-chevron {
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.library-cloud__state {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 24px;
+  text-align: center;
+  font-size: 12.5px;
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+.library-cloud__state--error {
+  color: #fca5a5;
+  opacity: 1;
+}
+
+.library-cloud__footer {
+  font-size: 11.5px;
+  opacity: 0.65;
+}

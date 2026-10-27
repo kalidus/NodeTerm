@@ -31,6 +31,7 @@ let _themeHandlers = null;
 let _securityHandlers = null;
 let _appdataHandlers = null;
 let _localFsHandlers = null;
+let _libraryHandlers = null;
 let _homeWallpaperHandlers = null;
 let _claudeHandlers = null;
 let _opencodeHandlers = null;
@@ -173,6 +174,11 @@ function getLocalFsHandlers() {
   return _localFsHandlers;
 }
 
+function getLibraryHandlers() {
+  if (!_libraryHandlers) _libraryHandlers = require('./library-handlers');
+  return _libraryHandlers;
+}
+
 function getHomeWallpaperHandlers() {
   if (!_homeWallpaperHandlers) _homeWallpaperHandlers = require('./home-wallpaper-handlers');
   return _homeWallpaperHandlers;
@@ -276,6 +282,8 @@ function registerBootstrapIpcHandlers() {
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers({}));
   runHandlerStep('home wallpaper IPC', () => getHomeWallpaperHandlers().registerHomeWallpaperHandlers());
+  // Biblioteca: el renderer llama library:unlock justo tras desbloquear el vault
+  runHandlerStep('library IPC', () => getLibraryHandlers().registerLibraryHandlers());
   // Security solo aquí (evita ×3 al combinar whenReady + critical + registerSecurity)
   runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers({}));
 }
@@ -445,6 +453,7 @@ module.exports = {
   getSecurityHandlers,
   getAppDataHandlers,
   getLocalFsHandlers,
+  getLibraryHandlers,
   getHomeWallpaperHandlers,
   getClaudeHandlers,
   getOpenCodeHandlers,

@@ -16,9 +16,9 @@ const RAIL_WIDTH = 48;
 const SECTIONS = [
   { id: 'connections', icon: 'pi pi-server', color: '#4fc3f7', labelKey: 'tooltips.connections' },
   { id: 'passwords',  icon: 'pi pi-shield',  color: '#ef9a9a', labelKey: 'tooltips.passwords' },
-  { id: 'documents',  icon: 'pi pi-file',    color: '#64b5f6', labelKey: null, label: 'Notas' },
+  { id: 'documents',  icon: 'pi pi-book',    color: '#64b5f6', labelKey: 'tooltips.library' },
   { id: 'favorites',  icon: 'pi pi-star-fill', color: '#ffc107', labelKey: 'tooltips.showFavorites' },
-  { id: 'tools',      icon: 'pi pi-wrench',  color: '#06b6d4', labelKey: null, label: 'Herramientas' },
+  { id: 'tools',      icon: 'pi pi-wrench',  color: '#06b6d4', labelKey: 'tooltips.tools' },
 ];
 
 const SidebarIconRail = React.memo(({

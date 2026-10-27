@@ -1,3 +1,5 @@
+import { viewerKindFor, formatFileSize } from '../../shared/library-mime';
+
 const NOTE_TYPES = ['document', 'quick-note'];
 
 export const TIMELINE_SECTIONS = [
@@ -10,9 +12,30 @@ export function isQuickNotesGroup(node) {
   return Boolean(node && node.key === 'quick_note');
 }
 
+/** Carpeta local montada: sus hijos se listan bajo demanda, no se persisten. */
+export function isLinkedFolder(node) {
+  return Boolean(node && (node.data?.type === 'linked-folder' || node.type === 'linked-folder'));
+}
+
+/** Carpeta de Nextcloud montada: se lista por WebDAV y no se copia a la app. */
+export function isCloudFolder(node) {
+  return Boolean(node && (node.data?.type === 'cloud-folder' || node.type === 'cloud-folder'));
+}
+
+/** Archivo de la biblioteca (PDF, imagen, media, texto...). */
+export function isLibraryFile(node) {
+  return Boolean(node && (node.data?.type === 'library-file' || node.type === 'library-file'));
+}
+
 export function isNotebook(node) {
   if (!node || isQuickNotesGroup(node)) return false;
+  if (isLinkedFolder(node) || isCloudFolder(node)) return true;
   return Boolean(node.droppable || node.data?.type === 'document-folder');
+}
+
+/** Solo carpetas reales de la biblioteca: admiten crear, importar y pegar dentro. */
+export function isManagedFolder(node) {
+  return Boolean(node) && isNotebook(node) && !isLinkedFolder(node) && !isCloudFolder(node);
 }
 
 export function isNote(node) {
@@ -20,8 +43,19 @@ export function isNote(node) {
   return Boolean(node && NOTE_TYPES.includes(type) && !isNotebook(node) && !isQuickNotesGroup(node));
 }
 
+/** Cualquier hoja abrible: nota del editor o archivo del visor. */
+export function isOpenableItem(node) {
+  return isNote(node) || isLibraryFile(node);
+}
+
 export function isBrowsableItem(node) {
-  return Boolean(node && (isNotebook(node) || isNote(node) || isQuickNotesGroup(node)));
+  return Boolean(node && (isNotebook(node) || isNote(node) || isLibraryFile(node) || isQuickNotesGroup(node)));
+}
+
+/** Categoría de visor del nodo de archivo. */
+export function libraryFileKind(node) {
+  if (!isLibraryFile(node)) return 'unsupported';
+  return viewerKindFor(node.data?.mime, node.label || node.data?.relPath || node.data?.absPath || node.data?.remotePath);
 }
 
 function htmlToSearchText(html) {
@@ -31,6 +65,11 @@ function htmlToSearchText(html) {
 
 export function noteSnippet(node, maxLen = 120) {
   if (isNotebook(node) || isQuickNotesGroup(node)) return '';
+  if (isLibraryFile(node)) {
+    const size = formatFileSize(node.data?.size);
+    const ext = (node.data?.ext || '').toUpperCase();
+    return [ext, size].filter(Boolean).join(' · ') || 'Archivo';
+  }
   const md = (node.data?.markdownSource || '').replace(/\s+/g, ' ').trim();
   const html = htmlToSearchText(node.data?.content || '');
   const text = md || html;
@@ -56,7 +95,7 @@ export function collectSearchHits(nodes, searchTerm) {
   const walk = (list) => {
     (list || []).forEach((node) => {
       if (!node) return;
-      if (isNote(node)) {
+      if (isNote(node) || isLibraryFile(node)) {
         if (nodeMatchesQuery(node, search)) hits.push(node);
         return;
       }
@@ -89,7 +128,7 @@ export function findFolderPath(nodes, key, trail = []) {
 }
 
 export function resolveBrowse(nodes, stack) {
-  const crumbs = [{ key: null, label: 'Notas' }];
+  const crumbs = [{ key: null, label: 'Biblioteca' }];
   let children = nodes || [];
   const nextStack = [];
 
@@ -97,7 +136,7 @@ export function resolveBrowse(nodes, stack) {
     const folder = children.find((node) => node && node.key === key && isNotebook(node));
     if (!folder) break;
     nextStack.push(key);
-    crumbs.push({ key: folder.key, label: folder.label || 'Libreta' });
+    crumbs.push({ key: folder.key, label: folder.label || 'Carpeta' });
     children = folder.children || [];
   }
 
@@ -109,7 +148,7 @@ export function resolveBrowse(nodes, stack) {
       if (!node) return false;
       if (atRoot && isQuickNotesGroup(node)) return true;
       if (isQuickNotesGroup(node)) return false;
-      return isNotebook(node) || isNote(node);
+      return isNotebook(node) || isNote(node) || isLibraryFile(node);
     })
   };
 }
@@ -119,7 +158,7 @@ export function countNotesInFolder(folderNode) {
   const walk = (node) => {
     (node?.children || []).forEach((child) => {
       if (isNotebook(child)) walk(child);
-      else if (isNote(child)) count += 1;
+      else if (isNote(child) || isLibraryFile(child)) count += 1;
     });
   };
   walk(folderNode);
@@ -157,7 +196,7 @@ export function collectDescendantNotes(nodes) {
   const notes = [];
   const walk = (list) => {
     (list || []).forEach((node) => {
-      if (isNote(node)) notes.push(node);
+      if (isNote(node) || isLibraryFile(node)) notes.push(node);
       else if (isNotebook(node) || isQuickNotesGroup(node)) walk(node.children);
     });
   };
@@ -223,9 +262,18 @@ export function notesSubtitle(node) {
     const count = (node.children || []).filter(isNote).length;
     return count === 1 ? '1 nota rápida' : `${count} notas rápidas`;
   }
+  if (isLinkedFolder(node)) {
+    return node.data?.absPath || 'Carpeta enlazada';
+  }
+  if (isCloudFolder(node)) {
+    return node.data?.remotePath ? `Nextcloud · ${node.data.remotePath}` : 'Carpeta de Nextcloud';
+  }
   if (isNotebook(node)) {
     const count = countNotesInFolder(node);
-    return count === 1 ? '1 nota' : `${count} notas`;
+    return count === 1 ? '1 elemento' : `${count} elementos`;
+  }
+  if (isLibraryFile(node)) {
+    return formatFileSize(node.data?.size) || (node.data?.ext || '').toUpperCase() || 'Archivo';
   }
   return relativeNoteDate(node.data?.updatedAt || node.data?.createdAt) || 'Nota';
 }

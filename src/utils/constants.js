@@ -66,6 +66,7 @@ export const TAB_TYPES = {
   PASSWORD_FOLDER: 'password-folder',
   DOCUMENT: 'document',
   DOCUMENT_FOLDER: 'document-folder',
+  LIBRARY_FILE: 'library-file',
   NETWORK_TOOL: 'network-tool',
   SETTINGS: 'settings',
   BROWSER: 'browser'

@@ -35,6 +35,7 @@ import {
   LazySSHTunnelTab,
   LazyNetworkToolTab,
   LazyTiptapDocumentEditor,
+  LazyLibraryFileViewer,
   LazySettingsContent,
   LazyBrowserTab
 } from './tabLoaders';
@@ -191,6 +192,17 @@ const TabContentRendererInner = React.memo(({
         key={tab.documentData.key}
         documentKey={tab.documentData.key}
         documentData={tab.documentData}
+      />
+    );
+  }
+
+  // Library file viewer tab (PDF, imagen, texto, media)
+  if (tab.type === TAB_TYPES.LIBRARY_FILE && tab.fileData) {
+    return (
+      <LazyLibraryFileViewer
+        key={tab.fileData.key}
+        fileData={tab.fileData}
+        isActiveTab={isActiveTab}
       />
     );
   }

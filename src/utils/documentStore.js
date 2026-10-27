@@ -1,11 +1,15 @@
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { setVaultEncryptedItem } from '../shared/vault-write';
+import { mimeForName, extensionOf } from '../shared/library-mime';
 
 const STORAGE_KEY_TREE = 'documents_encrypted';
 const STORAGE_KEY_TREE_PLAIN = 'documentManagerNodes';
 
 export const generateDocumentId = () => `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 export const generateFolderId = () => `docfolder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export const generateLibraryFileId = () => `libfile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export const generateLinkedFolderId = () => `libmount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export const generateCloudFolderId = () => `libcloud_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 export async function loadDocumentTree(secureStorage, masterKey) {
   try {
@@ -113,9 +117,149 @@ export function createFolderNode(label) {
     children: [],
     data: {
       type: 'document-folder',
+      createdAt: Date.now(),
+      vaultMode: 'plain',
+      syncMode: 'none'
+    }
+  };
+}
+
+/**
+ * Nodo de archivo de la biblioteca (PDF, imagen, vídeo, texto...).
+ * `managed` apunta a un blob copiado bajo library/ (relPath);
+ * `linked` apunta a un archivo que sigue viviendo donde estaba (absPath).
+ *
+ * @param {{ label: string, storage?: 'managed'|'linked', relPath?: string,
+ *           absPath?: string, mime?: string, size?: number, hash?: string,
+ *           origin?: object, tags?: string[] }} options
+ */
+export function createLibraryFileNode(options = {}) {
+  const label = options.label || 'archivo';
+  const storage = options.storage === 'linked' ? 'linked' : 'managed';
+  const now = Date.now();
+  return {
+    key: generateLibraryFileId(),
+    label,
+    type: 'library-file',
+    droppable: false,
+    data: {
+      type: 'library-file',
+      storage,
+      relPath: storage === 'managed' ? options.relPath || '' : null,
+      absPath: storage === 'linked' ? options.absPath || '' : null,
+      mime: options.mime || mimeForName(label),
+      ext: extensionOf(label),
+      size: Number(options.size) || 0,
+      hash: options.hash || '',
+      origin: options.origin || { kind: 'local', ref: '', fetchedAt: now },
+      tags: Array.isArray(options.tags) ? options.tags : [],
+      createdAt: now,
+      updatedAt: now
+    }
+  };
+}
+
+/**
+ * Carpeta local montada en la biblioteca. Sus hijos se listan bajo demanda
+ * y nunca se persisten en el árbol.
+ */
+export function createLinkedFolderNode(label, absPath) {
+  return {
+    key: generateLinkedFolderId(),
+    label: label || absPath || 'Carpeta enlazada',
+    type: 'linked-folder',
+    droppable: false,
+    leaf: false,
+    children: [],
+    data: {
+      type: 'linked-folder',
+      absPath: absPath || '',
+      lazy: true,
       createdAt: Date.now()
     }
   };
+}
+
+/**
+ * Carpeta de Nextcloud montada. Guarda solo la ruta remota: las credenciales
+ * no entran en el árbol y los archivos se leen al abrirlos.
+ */
+export function createCloudFolderNode(label, remotePath) {
+  const clean = String(remotePath || '').replace(/^\/+|\/+$/g, '');
+  return {
+    key: generateCloudFolderId(),
+    label: label || clean.split('/').pop() || 'Nextcloud',
+    type: 'cloud-folder',
+    droppable: false,
+    leaf: false,
+    children: [],
+    data: {
+      type: 'cloud-folder',
+      remotePath: clean,
+      lazy: true,
+      createdAt: Date.now()
+    }
+  };
+}
+
+const DEFAULT_FOLDER_POLICY = { vaultMode: 'plain', syncMode: 'none' };
+
+/**
+ * Política de cifrado/sync efectiva de una carpeta: la propia si la declara,
+ * si no la del ancestro más cercano que la declare.
+ *
+ * @returns {{ vaultMode: 'plain'|'encrypted', syncMode: 'none'|'nextcloud',
+ *             inheritedFrom: string|null }}
+ */
+export function resolveFolderPolicy(tree, folderKey) {
+  if (!folderKey) return { ...DEFAULT_FOLDER_POLICY, inheritedFrom: null };
+
+  const trail = [];
+  const walk = (nodes, path) => {
+    for (const node of nodes || []) {
+      if (!node) continue;
+      const nextPath = [...path, node];
+      if (node.key === folderKey) {
+        trail.push(...nextPath);
+        return true;
+      }
+      if (node.children?.length && walk(node.children, nextPath)) return true;
+    }
+    return false;
+  };
+  walk(tree || [], []);
+  if (!trail.length) return { ...DEFAULT_FOLDER_POLICY, inheritedFrom: null };
+
+  const policy = { ...DEFAULT_FOLDER_POLICY, inheritedFrom: null };
+  let vaultSource = null;
+  let syncSource = null;
+  for (const node of trail) {
+    const data = node?.data || {};
+    if (data.vaultMode === 'plain' || data.vaultMode === 'encrypted') {
+      policy.vaultMode = data.vaultMode;
+      vaultSource = node.key;
+    }
+    if (data.syncMode === 'none' || data.syncMode === 'nextcloud') {
+      policy.syncMode = data.syncMode;
+      syncSource = node.key;
+    }
+  }
+  const ownKey = trail[trail.length - 1]?.key;
+  const source = vaultSource && vaultSource !== ownKey ? vaultSource : (syncSource !== ownKey ? syncSource : null);
+  policy.inheritedFrom = source || null;
+  return policy;
+}
+
+/** Recorre el árbol y devuelve todos los nodos de archivo managed con su carpeta. */
+export function collectManagedFiles(tree, parentKey = null, acc = []) {
+  for (const node of tree || []) {
+    if (!node) continue;
+    if (node.data?.type === 'library-file' && node.data?.storage === 'managed') {
+      acc.push({ node, folderKey: parentKey });
+    }
+    if (node.children?.length) collectManagedFiles(node.children, node.key, acc);
+  }
+  return acc;
 }
 
 export function addNodeToTree(tree, parentKey, newNode) {
@@ -214,7 +358,10 @@ export function filterDocumentTree(tree, searchText, tagFilter = '') {
   if (!lower && !tag) return tree;
 
   return tree.reduce((acc, node) => {
-    const isFolder = node.droppable || node.data?.type === 'document-folder';
+    const isFolder =
+      node.droppable ||
+      node.data?.type === 'document-folder' ||
+      node.data?.type === 'linked-folder';
     const filteredChildren =
       node.children && node.children.length > 0
         ? filterDocumentTree(node.children, searchText, tagFilter)

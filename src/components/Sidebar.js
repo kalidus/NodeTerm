@@ -2828,7 +2828,7 @@ const Sidebar = React.memo(({
           {createTabGroupBtn}
         </>)}
 
-        {/* ── NOTAS ── */}
+        {/* ── BIBLIOTECA ── */}
         {activeTab === 'documents' && (<>
           <button
             type="button"
@@ -2842,9 +2842,25 @@ const Sidebar = React.memo(({
             type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
-            title="Nueva libreta"
+            title="Nueva carpeta"
           >
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
+          </button>
+          <button
+            type="button"
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:link-folder'))}
+            title="Enlazar carpeta de Windows"
+          >
+            <span style={TB_ICON}><i className="pi pi-desktop" /></span>
+          </button>
+          <button
+            type="button"
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:mount-cloud'))}
+            title="Montar carpeta de Nextcloud"
+          >
+            <span style={TB_ICON}><i className="pi pi-cloud" /></span>
           </button>
           {createTabGroupBtn}
         </>)}

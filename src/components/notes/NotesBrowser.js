@@ -125,8 +125,8 @@ const NotesBrowser = ({
     const message = searching
       ? 'Sin resultados.'
       : browse.stack.length === 0
-        ? 'No hay notas. Usa el botón + para crear una.'
-        : 'Esta libreta está vacía.';
+        ? 'La biblioteca está vacía. Usa el botón + o arrastra archivos aquí.'
+        : 'Esta carpeta está vacía.';
     body = <div className="notes-browser-empty">{message}</div>;
   } else if (layout === 'timeline') {
     const folders = items.filter((node) => isNotebook(node) || isQuickNotesGroup(node));
@@ -135,7 +135,7 @@ const NotesBrowser = ({
       <div className="notes-layout-sections">
         {folders.length > 0 && (
           <section className="notes-section">
-            <h3 className="notes-section-title">Libretas</h3>
+            <h3 className="notes-section-title">Carpetas</h3>
             <div className="notes-section-items">
               {folders.map((node) => renderItem(node))}
             </div>
@@ -163,7 +163,7 @@ const NotesBrowser = ({
       <div className="notes-layout-sections">
         {folders.length > 0 && (
           <section className="notes-section">
-            <h3 className="notes-section-title">Libretas</h3>
+            <h3 className="notes-section-title">Carpetas</h3>
             <div className="notes-section-items">
               {folders.map((node) => renderItem(node))}
             </div>
@@ -205,7 +205,7 @@ const NotesBrowser = ({
       {searching ? (
         <div className="notes-browser-search">Resultados de «{searchTerm.trim()}»</div>
       ) : (
-        <nav className="notes-browser-crumbs" aria-label="Ruta de la libreta">
+        <nav className="notes-browser-crumbs" aria-label="Ruta de la biblioteca">
           {browse.crumbs.map((crumb, index) => {
             const last = index === browse.crumbs.length - 1;
             return (

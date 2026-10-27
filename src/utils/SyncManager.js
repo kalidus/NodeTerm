@@ -7,6 +7,7 @@ import { themeManager } from './themeManager';
 import { statusBarThemeManager } from './statusBarThemeManager';
 import { setVaultEncryptedItem } from '../shared/vault-write';
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+import { requestLibrarySync } from './LibrarySyncService';
 
 /** Claves empaquetadas en JSON en Nextcloud (mismos nombres en localStorage) */
 const NC_BUNDLE_DOCUMENTS = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
@@ -702,6 +703,22 @@ class SyncManager {
         passwordsMetaResult = { success: false, error: err.message };
       }
 
+      // Binarios de la biblioteca: van aparte porque no caben en el bundle JSON
+      let libraryResult = null;
+      try {
+        libraryResult = await requestLibrarySync();
+        if (libraryResult?.success && !libraryResult.skipped) {
+          console.log('[SYNC] Biblioteca:', {
+            subidos: libraryResult.uploaded,
+            descargados: libraryResult.downloaded,
+            conflictos: libraryResult.conflicts?.length || 0
+          });
+        }
+      } catch (err) {
+        console.warn('[SYNC] Error sincronizando la biblioteca:', err);
+        libraryResult = { success: false, error: err.message };
+      }
+
       try {
         const manifest = buildSyncManifest({
           connectionsVault: connectionsVaultUploaded,
@@ -730,7 +747,8 @@ class SyncManager {
         passwords: passwordsResult,
         documents: documentsResult,
         favorites: favoritesResult,
-        passwordsMeta: passwordsMetaResult
+        passwordsMeta: passwordsMetaResult,
+        library: libraryResult
       };
     } finally {
       this.syncInProgress = false;
