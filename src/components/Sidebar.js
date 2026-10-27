@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Suspense } from 'react';
-import ReactDOM from 'react-dom';
-import { Button } from 'primereact/button';
-import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
-import { Divider } from 'primereact/divider';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import VaultLayoutMenu from './vault/VaultLayoutMenu';
@@ -18,7 +14,6 @@ import {
   readSavedConnectionsLayout
 } from './connections/connectionsLayoutModes';
 import { findFolderPath, isConnectionFolder } from './connections/connectionsBrowse';
-import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { iconThemes, ensureIconTheme, onIconThemeLoaded } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
@@ -29,7 +24,6 @@ import {
   ensureSessionActionIconTheme,
   onSessionActionIconThemeLoaded
 } from '../themes/session-action-icons';
-import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import SidebarIconRail from './SidebarIconRail';
 import { TabChunkFallback } from './tabLoaders';
@@ -43,9 +37,7 @@ const LazyDocumentsSidebar = React.lazy(() => import('./DocumentsSidebar'));
 const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplorerSidebar'));
 const LazyToolsSidebar = React.lazy(() => import('./ToolsSidebar'));
 const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
-import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
-import ImportService from '../services/ImportService';
-import localStorageSyncService from '../services/LocalStorageSyncService';
+import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
@@ -71,7 +63,6 @@ import {
   resolveFavoriteShortcutNode
 } from '../utils/favoritesSidebarTree';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
-import { STORAGE_KEYS } from '../utils/constants';
 import {
   findNodeInTree,
   isDescendantInFullTree,
@@ -79,9 +70,18 @@ import {
   isTreeFolderNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
-import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
+import SidebarSkeleton from './sidebar/SidebarSkeleton';
+import { getCachedIcon, clearSidebarIconCaches } from './sidebar/iconCache';
+import {
+  modifySVGColors,
+  isDefaultThemeColor,
+  getThemeDefaultColor
+} from './sidebar/svgColorUtils';
+import { openAIClientById } from './sidebar/openAIClientTabs';
+import { useSidebarTrash } from './sidebar/useSidebarTrash';
+import SidebarTrashModal from './sidebar/SidebarTrashModal';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
@@ -108,45 +108,6 @@ function safeUnblockForms(showToast) {
     console.warn('Error al desbloquear formularios:', error);
   }
 }
-
-// Skeleton loader para simular árbol de directorios de forma premium
-const SidebarSkeleton = () => {
-  return (
-    <div className="sidebar-skeleton">
-      {[...Array(6)].map((_, idx) => {
-        let indent = '0px';
-        if (idx === 1 || idx === 4) indent = '16px';
-        else if (idx === 2) indent = '32px';
-        
-        let width = '70%';
-        if (idx === 1) width = '50%';
-        else if (idx === 2) width = '60%';
-        else if (idx === 4) width = '55%';
-        else if (idx === 5) width = '40%';
-        
-        return (
-          <div key={idx} className="sidebar-skeleton-item" style={{ paddingLeft: indent }}>
-            <div className="sidebar-skeleton-icon" />
-            <div className="sidebar-skeleton-text" style={{ width }} />
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Caché global para optimizar el renderizado de iconos en el árbol y evitar bloqueos/congelamientos
-const iconCache = new Map();
-const defaultColorCache = new Map();
-
-const getCachedIcon = (key, creatorFn) => {
-  if (iconCache.has(key)) {
-    return iconCache.get(key);
-  }
-  const result = creatorFn();
-  iconCache.set(key, result);
-  return result;
-};
 
 const Sidebar = React.memo(({
   isLoading = false,
@@ -188,11 +149,7 @@ const Sidebar = React.memo(({
   setSelectedNodeKey, // setter de selección del hook
 
   // Props para conexiones (estado de formularios SSH/RDP vive en App/diálogos)
-  getAllFolders,
-  createNewSSH,
-  saveEditSSH,
   openEditSSHDialog,
-  handleSaveRdpToSidebar,
 
   // Encriptación
   masterKey,
@@ -217,8 +174,6 @@ const Sidebar = React.memo(({
   onShowImportWizard,
   isExternalReloadRef, // Nuevo prop para control de polling sync
   updateTreeHash,      // Nuevo prop para actualizar hash tras cambios locales
-  hasActiveSshSession = false,
-  onOpenFileExplorer,
   onOpenWallixRefresh,  // callback para refrescar carpetas importadas de Wallix
   openSessionNodeKeys = new Set(),
   isTransitioningSidebar = false,
@@ -229,8 +184,7 @@ const Sidebar = React.memo(({
 
   // Limpiar caché de iconos cuando cambian temas o tamaños de iconos para evitar fugas de memoria o iconos obsoletos
   useEffect(() => {
-    iconCache.clear();
-    defaultColorCache.clear();
+    clearSidebarIconCaches();
   }, [iconTheme, folderIconSize, connectionIconSize]);
 
   // Lazy icon packs: ensure active theme chunk, then re-render tree when it arrives
@@ -242,8 +196,7 @@ const Sidebar = React.memo(({
     return onIconThemeLoaded((id) => {
       const cur = (iconTheme || 'nord').toLowerCase();
       if (id.toLowerCase() !== cur) return;
-      iconCache.clear();
-      defaultColorCache.clear();
+      clearSidebarIconCaches();
       setIconThemePackVersion((v) => v + 1);
     });
   }, [iconTheme]);
@@ -267,58 +220,19 @@ const Sidebar = React.memo(({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
 
   // ── Papelera de conexiones ──────────────────────────────────────────────────
-  const TRASH_STORAGE_KEY = 'nodeterm_trash_connections';
-  const loadTrash = () => { try { return JSON.parse(localStorage.getItem(TRASH_STORAGE_KEY) || '[]'); } catch { return []; } };
-  const [showTrashModal, setShowTrashModal] = useState(false);
-  const [trashedConnections, setTrashedConnections] = useState(loadTrash);
-  // null | { type: 'empty' } | { type: 'single', id, label }
-  const [trashConfirm, setTrashConfirm] = useState(null);
-
-  // Persistir papelera cada vez que cambia
-  useEffect(() => {
-    try { localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(trashedConnections)); } catch(e) { console.warn('Error guardando papelera:', e); }
-  }, [trashedConnections]);
-
-  const moveToTrash = useCallback((nodeKey, nodeLabel, nodeData) => {
-    const trashItem = {
-      id: `trash_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      key: nodeKey,
-      label: nodeLabel,
-      type: 'connection',
-      deletedAt: new Date().toISOString(),
-      nodeData: nodeData, // Nodo completo con su subárbol
-    };
-    setTrashedConnections(prev => [trashItem, ...prev]);
-  }, []);
-
-  const restoreFromTrash = useCallback((trashId) => {
-    const item = trashedConnections.find(i => i.id === trashId);
-    if (!item || !item.nodeData) return;
-    // Reinsertar en la raíz del árbol de conexiones
-    setNodes(prev => [item.nodeData, ...prev]);
-    setTrashedConnections(prev => prev.filter(i => i.id !== trashId));
-    showToast && showToast({ severity: 'success', summary: 'Restaurado', detail: `"${item.label}" restaurado al árbol`, life: 3000 });
-  }, [trashedConnections, setNodes, showToast]);
-
-  const deleteFromTrashPermanently = useCallback((trashId, label) => {
-    // Mostrar confirmación inline (sin depender del diálogo global)
-    setTrashConfirm({ type: 'single', id: trashId, label });
-  }, []);
-
-  const emptyTrash = useCallback(() => {
-    // Mostrar confirmación inline
-    setTrashConfirm({ type: 'empty' });
-  }, []);
-
-  const executeTrashConfirm = useCallback(() => {
-    if (!trashConfirm) return;
-    if (trashConfirm.type === 'empty') {
-      setTrashedConnections([]);
-    } else if (trashConfirm.type === 'single') {
-      setTrashedConnections(prev => prev.filter(i => i.id !== trashConfirm.id));
-    }
-    setTrashConfirm(null);
-  }, [trashConfirm]);
+  const {
+    showTrashModal,
+    setShowTrashModal,
+    trashedConnections,
+    trashConfirm,
+    setTrashConfirm,
+    moveToTrash,
+    restoreFromTrash,
+    deleteFromTrashPermanently,
+    emptyTrash,
+    executeTrashConfirm,
+    closeTrashModal,
+  } = useSidebarTrash({ setNodes, showToast });
   // ────────────────────────────────────────────────────────────────────────────
 
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
@@ -448,7 +362,6 @@ const Sidebar = React.memo(({
   const sshSyncHandleRef = useRef(null); // idle callback id o timeout id
   const sidebarResizeRafRef = useRef(null);
   const sidebarResizeWidthRef = useRef(null);
-  const expandedContentReady = true;
   const expandedContentRef = useRef(null);
   const treeContainerRef = useRef(null);
   const dragAutoScrollRafRef = useRef(null);
@@ -517,10 +430,6 @@ const Sidebar = React.memo(({
     const t = setTimeout(warmSecondarySidebars, 0);
     return () => clearTimeout(t);
   }, [sidebarCollapsed, isLoading]);
-
-  const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed(prev => !prev);
-  }, [setSidebarCollapsed]);
 
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
@@ -681,239 +590,6 @@ const Sidebar = React.memo(({
       window.removeEventListener('show-local-file-explorer', handleShowLocalExplorer);
     };
   }, []);
-
-  // --- Utilidades para manipulación de colores en SVGs ---
-
-  // Función para convertir hex a HSL
-  const hexToHsl = (hex) => {
-    if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return [0, 0, 0];
-    const r = parseInt(hex.substr(1, 2), 16) / 255;
-    const g = parseInt(hex.substr(3, 2), 16) / 255;
-    const b = parseInt(hex.substr(5, 2), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max === min) {
-      h = s = 0;
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-
-    return [h * 360, s * 100, l * 100];
-  };
-
-  // Función para convertir HSL a hex
-  const hslToHex = (h, s, l) => {
-    h /= 360;
-    s /= 100;
-    l /= 100;
-
-    const hue2rgb = (p, q, t) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-
-    let r, g, b;
-    if (s === 0) {
-      r = g = b = l;
-    } else {
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1 / 3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1 / 3);
-    }
-
-    const toHex = (c) => {
-      const hex = Math.round(c * 255).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  // Función para modificar colores de un elemento SVG de forma recursiva
-  const modifySVGColors = (element, newColor, themeKey, index = 0) => {
-    if (!element || !element.props) return element;
-
-    const newProps = { ...element.props };
-
-    // Añadir key única si no existe para evitar warnings de React
-    if (!newProps.key) {
-      newProps.key = `svg-child-${index}-${Date.now()}`;
-    }
-
-    // Lista de temas que deben preservar sus colores originales
-    const preserveOriginalColorsThemes = [
-      'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
-      'cyberpunk', 'retroGaming', 'corporate', 'space', 'ocean',
-      'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient',
-      'rainbow', 'metallic', 'holographic', 'glitch',
-      'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional',
-      'acrylic', 'neumorphic'
-    ];
-
-    // Si es un tema que debe preservar colores originales, no modificar nada
-    if (preserveOriginalColorsThemes.includes(themeKey)) {
-      return element;
-    }
-
-    // Mapeo de colores específicos del tema a colores adaptados
-    const colorMapping = {
-      // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
-      '#ff007c': newColor,
-      '#00d4ff': '#00d4ff',
-
-      // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
-      '#5e81ac': newColor,
-      '#88c0d0': '#88c0d0',
-
-      // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
-      '#bd93f9': newColor,
-      '#ff79c6': '#ff79c6',
-
-      // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
-      '#0078d4': newColor,
-      '#50e6ff': '#50e6ff',
-
-      // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
-      '#b58900': newColor,
-      '#268bd2': '#268bd2',
-
-      // Material: #007ad9 (azul) -> color personalizado, #42a5f5 (azul claro) -> MANTENER (parte superior)
-      // También añadimos variantes comunes de Material
-      '#007ad9': newColor,
-      '#42a5f5': '#42a5f5',
-      '#1976d2': newColor,
-      '#2196f3': newColor,
-
-      // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
-      '#dcb67a': newColor,
-      '#f5d18a': '#f5d18a',
-    };
-
-    // Cambiar colores de manera inteligente (fill y stroke)
-    if (newProps.fill && newProps.fill !== 'none' && !newProps.fill.startsWith('url')) {
-      if (colorMapping[newProps.fill]) {
-        newProps.fill = colorMapping[newProps.fill];
-      } else {
-        newProps.fill = newColor;
-      }
-    }
-
-    if (newProps.stroke && newProps.stroke !== 'none' && !newProps.stroke.startsWith('url')) {
-      if (colorMapping[newProps.stroke]) {
-        newProps.stroke = colorMapping[newProps.stroke];
-      } else {
-        newProps.stroke = newColor;
-      }
-    }
-
-    // Procesar children recursivamente
-    if (newProps.children) {
-      if (Array.isArray(newProps.children)) {
-        newProps.children = newProps.children.map((child, idx) =>
-          typeof child === 'object' ? modifySVGColors(child, newColor, themeKey, idx) : child
-        );
-      } else if (typeof newProps.children === 'object') {
-        newProps.children = modifySVGColors(newProps.children, newColor, themeKey, 0);
-      }
-    }
-
-    return React.cloneElement(element, newProps);
-  };
-
-  // Función para verificar si un color es el color por defecto de algún tema
-  const isDefaultThemeColor = (color) => {
-    if (!color || typeof color !== 'string') return false;
-
-    const lowerColor = color.toLowerCase();
-    if (defaultColorCache.has(lowerColor)) {
-      return defaultColorCache.get(lowerColor);
-    }
-
-    // 1. Verificar contra lista explícita de colores de temas
-    const defaultThemeColors = [
-      '#007ad9', '#42a5f5', '#1976d2', '#2196f3', // Material
-      '#0078d4', '#50e6ff', // Fluent
-      '#ff007c', '#00d4ff', // Synthwave
-      '#5e81ac', '#88c0d0', // Nord
-      '#bd93f9', '#ff79c6', // Dracula
-      '#b58900', '#268bd2', // Solarized
-      '#dcb67a', '#f5d18a', // VS Code
-      '#6c7086', '#808080', '#999999', '#7f8c8d', '#95a5a6' // Minimal / Grises comunes
-    ];
-
-    if (defaultThemeColors.includes(lowerColor)) {
-      defaultColorCache.set(lowerColor, true);
-      return true;
-    }
-
-    // 2. Heurística: Cualquier color con saturación muy baja (< 15%) se trata como gris/default
-    try {
-      const [h, s, l] = hexToHsl(color);
-      if (s < 15) {
-        defaultColorCache.set(lowerColor, true);
-        return true;
-      }
-    } catch (e) {
-      // Ignorar errores de parseo
-    }
-
-    defaultColorCache.set(lowerColor, false);
-    return false;
-  };
-
-  // Función para obtener el color por defecto del tema actual
-  const getThemeDefaultColor = (themeName) => {
-    const theme = iconThemes[themeName?.toLowerCase() || 'nord'];
-    if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
-
-    const folderIcon = theme.icons.folder;
-
-    // Si el SVG tiene fill y no es "none", usar ese color
-    if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
-      return folderIcon.props.fill;
-    }
-
-    // Si el SVG tiene stroke, usar ese color (para temas como linea que usan stroke)
-    if (folderIcon.props && folderIcon.props.stroke) {
-      return folderIcon.props.stroke;
-    }
-
-    // Fallback: buscar en los children del SVG
-    if (folderIcon.props && folderIcon.props.children) {
-      const children = Array.isArray(folderIcon.props.children)
-        ? folderIcon.props.children
-        : [folderIcon.props.children];
-
-      for (const child of children) {
-        if (child.props && child.props.fill && child.props.fill !== 'none') {
-          return child.props.fill;
-        }
-        if (child.props && child.props.stroke) {
-          return child.props.stroke;
-        }
-      }
-    }
-
-    return '#5e81ac'; // Nord color por defecto
-  };
-
-
 
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -1100,162 +776,8 @@ const Sidebar = React.memo(({
     };
   }, []);
 
-  // Lógica para redimensionado inteligente de iconos en sidebar colapsada
-  const [collapsedIconSize, setCollapsedIconSize] = useState(40);
-  const [collapsedGap, setCollapsedGap] = useState(8);
-
-  useEffect(() => {
-    if (!sidebarCollapsed) return;
-
-    const calculateSizes = () => {
-      const baseSize = 40;
-      const minSize = 24;
-      const baseGap = 8;
-      const minGap = 2;
-      
-      // Contar elementos activos en la sidebar colapsada
-      let count = 7; // fijos: collapse, conn, pass, group, tools, settings, menu
-      
-      if (aiClientsEnabled) {
-        const enabledClients = Object.values(aiClientsEnabled).filter(Boolean).length;
-        count += enabledClients;
-        if (enabledClients > 0) count += 1; // separador de clientes
-        // separador entre CLIs y Apps
-        if ((aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
-            (aiClientsEnabled.opencode || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.hermescli || aiClientsEnabled.claude)) {
-          count += 1;
-        }
-      }
-      
-      // Altura disponible aproximada (restando márgenes)
-      const availableHeight = window.innerHeight - 60;
-      const totalNeeded = count * (baseSize + baseGap);
-      
-      if (totalNeeded > availableHeight) {
-        const ratio = availableHeight / totalNeeded;
-        setCollapsedIconSize(Math.max(minSize, Math.floor(baseSize * ratio)));
-        setCollapsedGap(Math.max(minGap, Math.floor(baseGap * ratio)));
-      } else {
-        setCollapsedIconSize(baseSize);
-        setCollapsedGap(baseGap);
-      }
-    };
-
-    calculateSizes();
-    window.addEventListener('resize', calculateSizes);
-    return () => window.removeEventListener('resize', calculateSizes);
-  }, [sidebarCollapsed, aiClientsEnabled]);
-
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
-
-  const openOpenCodeTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'opencode' }
-    }));
-  };
-
-  const openCodexCliTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'codexcli' }
-    }));
-  };
-
-  const openAntigravityCliTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'antigravitycli' }
-    }));
-  };
-
-  const openHermesCliTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'hermescli' }
-    }));
-  };
-
-  const openClaudeTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'claude' }
-    }));
-  };
-
-  const openAnythingLLMTab = () => {
-    const newTab = {
-      key: `anythingllm-${Date.now()}`,
-      label: 'AnythingLLM',
-      type: 'anything-llm',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
-      detail: { tab: newTab }
-    }));
-  };
-
-  const openOpenWebUITab = () => {
-    const newTab = {
-      key: `openwebui-${Date.now()}`,
-      label: 'Open WebUI',
-      type: 'openwebui',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
-      detail: { tab: newTab }
-    }));
-  };
-
-  const openLibreChatTab = () => {
-    const newTab = {
-      key: `librechat-${Date.now()}`,
-      label: 'LibreChat',
-      type: 'librechat',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-librechat-tab', {
-      detail: { tab: newTab }
-    }));
-  };
-
-  const openAgentZeroTab = () => {
-    const newTab = {
-      key: `agentzero-${Date.now()}`,
-      label: 'Agent Zero',
-      type: 'agentzero',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-agentzero-tab', {
-      detail: { tab: newTab }
-    }));
-  };
-
-  const openOpenClawTab = () => {
-    const newTab = {
-      key: `openclaw-${Date.now()}`,
-      label: 'OpenClaw',
-      type: 'openclaw',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-openclaw-tab', {
-      detail: { tab: newTab }
-    }));
-  };
-
-  const openOpenNotebookTab = () => {
-    const newTab = {
-      key: `open-notebook-${Date.now()}`,
-      label: 'Open Notebook',
-      type: 'open-notebook',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-open-notebook-tab', {
-      detail: { tab: newTab }
-    }));
-  };
 
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = useCallback((event) => {
@@ -1442,23 +964,6 @@ const Sidebar = React.memo(({
     setShowFavoritesView((prev) => !prev);
     setSidebarCollapsed(false);
   }, [setSidebarCollapsed]);
-
-  // Función para obtener todas las carpetas (fallback si no viene como prop)
-  const getAllFoldersFallback = (nodes, prefix = '') => {
-    let folders = [];
-    for (const node of nodes) {
-      if (node.droppable) {
-        folders.push({ label: prefix + node.label, value: node.key });
-        if (node.children && node.children.length > 0) {
-          folders = folders.concat(getAllFoldersFallback(node.children, prefix + node.label + ' / '));
-        }
-      }
-    }
-    return folders;
-  };
-
-  // Usar la función del prop o el fallback
-  const getAllFoldersToUse = getAllFolders || getAllFoldersFallback;
 
   // Función para manejar la importación completa (estructura + conexiones) con deduplicación local
   const handleImportComplete = async (importResult) => {
@@ -1943,19 +1448,6 @@ const Sidebar = React.memo(({
   };
 
 
-  // Drag and drop helpers y lógica igual que antes
-  // Clona el árbol y actualiza solo el subárbol con la key indicada
-  function cloneTreeWithUpdatedNode(tree, targetKey, updateFn) {
-    return tree.map(node => {
-      if (node.key === targetKey) {
-        return updateFn({ ...node });
-      }
-      if (node.children) {
-        return { ...node, children: cloneTreeWithUpdatedNode(node.children, targetKey, updateFn) };
-      }
-      return node;
-    });
-  }
   const onFavoritesDragDrop = (event) => {
     if (applyFavoritesDragDropFromEvent(event)) {
       bumpFavoritesRevision();
@@ -2585,7 +2077,6 @@ const Sidebar = React.memo(({
 
 
 
-  const colors = uiThemes[uiTheme]?.colors || uiThemes['Light'].colors;
 
   const sidebarTypographyStyle = useMemo(() => {
     const stack = buildSidebarFontStack(explorerFont);
@@ -3816,20 +3307,7 @@ const Sidebar = React.memo(({
   }, [sidebarCollapsed, viewMode, showFavoritesView, setSidebarCollapsed]);
 
   const handleOpenAIClient = useCallback((clientId) => {
-    const openers = {
-      opencode: openOpenCodeTab,
-      codexcli: openCodexCliTab,
-      antigravitycli: openAntigravityCliTab,
-      hermescli: openHermesCliTab,
-      claude: openClaudeTab,
-      anythingllm: openAnythingLLMTab,
-      openwebui: openOpenWebUITab,
-      librechat: openLibreChatTab,
-      agentzero: openAgentZeroTab,
-      openclaw: openOpenClawTab,
-      opennotebook: openOpenNotebookTab,
-    };
-    if (openers[clientId]) openers[clientId]();
+    openAIClientById(clientId);
   }, []);
 
   const activeIconRailSection = (() => {
@@ -3995,168 +3473,17 @@ const Sidebar = React.memo(({
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
 
 
-      {/* ── Modal Papelera (portal → document.body para escapar overflow:hidden) ── */}
-      {showTrashModal && ReactDOM.createPortal(
-        <div
-          className="app-dialog-portal-mask"
-          onClick={e => { if (e.target === e.currentTarget) { setShowTrashModal(false); setTrashConfirm(null); } }}
-        >
-          <style>{`
-            @keyframes trashModalIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
-            .trash-item-row { transition: background 0.15s ease; }
-            .trash-item-row:hover { background: rgba(255,255,255,0.06) !important; }
-            .trash-restore-btn:hover { background: rgba(34,197,94,0.22) !important; }
-            .trash-delete-btn:hover { background: rgba(239,68,68,0.22) !important; }
-            .trash-empty-btn:hover { background: rgba(239,68,68,0.25) !important; }
-          `}</style>
-          <div className="app-dialog app-dialog-portal" style={{ width: '460px', maxHeight: '560px' }}>
-            <div className="app-dialog-portal-header">
-              <div className="app-dialog-header">
-                <span className="app-dialog-header-icon" aria-hidden="true"><i className="pi pi-trash" /></span>
-                <div className="app-dialog-header-text">
-                  <span className="app-dialog-header-title">Papelera de conexiones</span>
-                  <span className="app-dialog-header-subtitle">
-                    {trashedConnections.length === 0 ? 'Vacía' : `${trashedConnections.length} elemento${trashedConnections.length !== 1 ? 's' : ''} • Se pueden restaurar`}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="app-dialog-portal-close"
-                onClick={() => { setShowTrashModal(false); setTrashConfirm(null); }}
-                title="Cerrar"
-              >
-                <i className="pi pi-times" />
-              </button>
-            </div>
-
-            {/* ─ Confirmación inline */}
-            {trashConfirm && (
-              <div style={{
-                margin: '0', padding: '12px 16px',
-                background: 'rgba(239,68,68,0.12)',
-                borderBottom: '1px solid rgba(239,68,68,0.25)',
-                display: 'flex', alignItems: 'center', gap: '10px',
-              }}>
-                <i className="pi pi-exclamation-triangle" style={{ color: '#f87171', fontSize: '14px', flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: '12px', color: '#fca5a5', lineHeight: 1.4 }}>
-                  {trashConfirm.type === 'empty'
-                    ? '¿Vaciar toda la papelera? No se puede deshacer.'
-                    : `¿Eliminar permanentemente «${trashConfirm.label}»?`
-                  }
-                </span>
-                <button
-                  onClick={executeTrashConfirm}
-                  style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
-                >
-                  Confirmar
-                </button>
-                <button
-                  onClick={() => setTrashConfirm(null)}
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-            {/* ─ Toolbar */}
-            {trashedConnections.length > 0 && (
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)' }}>
-                <span style={{ fontSize: '11px', color: '#475569' }}>Haz clic en «Restaurar» para recuperar un elemento</span>
-                <button
-                  className="trash-empty-btn"
-                  onClick={emptyTrash}
-                  style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
-                >
-                  <i className="pi pi-trash" style={{ fontSize: '10px' }} /> Vaciar todo
-                </button>
-              </div>
-            )}
-
-            {/* ─ Lista */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
-              {trashedConnections.length === 0 ? (
-                <div style={{ padding: '50px 20px', textAlign: 'center' }}>
-                  <div style={{
-                    width: '64px', height: '64px', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 16px',
-                  }}>
-                    <i className="pi pi-check" style={{ fontSize: '24px', color: '#4ade80' }} />
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Papelera vacía</div>
-                  <div style={{ fontSize: '12px', color: '#475569' }}>Los elementos eliminados aparecerán aquí</div>
-                </div>
-              ) : (
-                trashedConnections.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="trash-item-row"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '10px 16px',
-                      borderBottom: idx < trashedConnections.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    }}
-                  >
-                    {/* Icono tipo nodo */}
-                    <div style={{
-                      width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
-                      background: 'rgba(100,116,139,0.15)',
-                      border: '1px solid rgba(100,116,139,0.2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <i className="pi pi-server" style={{ color: '#64748b', fontSize: '13px' }} />
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.label}
-                      </div>
-                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <i className="pi pi-clock" style={{ fontSize: '9px' }} />
-                        {new Date(item.deletedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-
-                    {/* Acciones */}
-                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <button
-                        className="trash-restore-btn"
-                        onClick={() => restoreFromTrash(item.id)}
-                        title="Restaurar al árbol"
-                        style={{
-                          background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)',
-                          color: '#4ade80', borderRadius: '7px', padding: '5px 10px',
-                          fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600,
-                        }}
-                      >
-                        <i className="pi pi-undo" style={{ fontSize: '10px' }} /> Restaurar
-                      </button>
-                      <button
-                        className="trash-delete-btn"
-                        onClick={() => deleteFromTrashPermanently(item.id, item.label)}
-                        title="Eliminar permanentemente"
-                        style={{
-                          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.22)',
-                          color: '#f87171', borderRadius: '7px', padding: '5px 8px',
-                          fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                        }}
-                      >
-                        <i className="pi pi-times" style={{ fontSize: '10px' }} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <SidebarTrashModal
+        visible={showTrashModal}
+        onClose={closeTrashModal}
+        trashedConnections={trashedConnections}
+        trashConfirm={trashConfirm}
+        setTrashConfirm={setTrashConfirm}
+        executeTrashConfirm={executeTrashConfirm}
+        emptyTrash={emptyTrash}
+        restoreFromTrash={restoreFromTrash}
+        deleteFromTrashPermanently={deleteFromTrashPermanently}
+      />
 
       {showImportDialog && (
         <Suspense fallback={null}>
