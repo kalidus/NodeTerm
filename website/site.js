@@ -1,5 +1,5 @@
 (function () {
-  var PAYPAL = 'https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=kalidus%40gmail.com&item_name=NodeTerm&currency_code=EUR';
+  var PAYPAL = 'https://paypal.me/k4lidus';
   var FALLBACK = 'https://github.com/kalidus/NodeTerm/releases/latest';
   var API = 'https://api.github.com/repos/kalidus/NodeTerm/releases/latest';
   var ETH = '0x7D18e60b2717edA94e6a48d05e6d09038dCf9342';
