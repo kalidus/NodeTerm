@@ -10,6 +10,7 @@ import {
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { applyAppTypography, deriveUiIconSize } from './sidebarFontStack';
 import { applyUILayoutFromStorage } from './appearanceLayout';
+import { clearSidebarSectionAppearance } from './sidebarSectionAppearance';
 
 function unifyPresetTypography(settings) {
   if (!settings) return;
@@ -187,6 +188,7 @@ class PresetManager {
   applyPreset(preset) {
     if (!preset || !preset.settings) return;
 
+    clearSidebarSectionAppearance();
     unifyPresetTypography(preset.settings);
 
     // 1. Reset ALL managed keys first, then apply the preset values.

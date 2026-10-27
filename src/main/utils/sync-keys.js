@@ -22,6 +22,7 @@ const SYNC_KEYS = [
   'ui_theme',
   'ui_layout',
   'nodeterm_tree_theme',
+  'sidebarSectionAppearance',
   'nodeterm_active_preset',
   'titlebar_color_mode',
   'custom_titlebar_color',

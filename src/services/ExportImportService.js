@@ -214,6 +214,7 @@ class ExportImportService {
           actionBarIconTheme: this.safeGetItem('actionBarIconTheme'),
           sessionActionIconTheme: this.safeGetItem('sessionActionIconTheme'),
           treeTheme: this.safeGetItem('treeTheme'),
+          sidebarSectionAppearance: this.safeGetItem('sidebarSectionAppearance'),
           
           // === TEMAS DE TERMINAL ===
           localLinuxTerminalTheme: this.safeGetItem('localLinuxTerminalTheme'),
@@ -664,6 +665,7 @@ class ExportImportService {
       'actionBarIconTheme',
       'sessionActionIconTheme',
       'treeTheme',
+      'sidebarSectionAppearance',
       'localLinuxTerminalTheme',
       'localPowerShellTheme',
       'localDockerTerminalTheme',

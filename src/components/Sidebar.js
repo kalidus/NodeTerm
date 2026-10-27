@@ -83,6 +83,11 @@ import {
 import { openAIClientById } from './sidebar/openAIClientTabs';
 import { useSidebarTrash } from './sidebar/useSidebarTrash';
 import SidebarTrashModal from './sidebar/SidebarTrashModal';
+import { useSidebarSectionAppearance } from '../hooks/useSidebarSectionAppearance';
+import {
+  SIDEBAR_APPEARANCE_SECTIONS,
+  SIDEBAR_SECTION_LABELS
+} from '../utils/sidebarSectionAppearance';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
@@ -182,25 +187,30 @@ const Sidebar = React.memo(({
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
+  const sectionAppearance = useSidebarSectionAppearance({ treeTheme, iconTheme });
 
   // Limpiar caché de iconos cuando cambian temas o tamaños de iconos para evitar fugas de memoria o iconos obsoletos
   useEffect(() => {
     clearSidebarIconCaches();
-  }, [iconTheme, folderIconSize, connectionIconSize]);
+  }, [sectionAppearance.resolve, folderIconSize, connectionIconSize]);
 
-  // Lazy icon packs: ensure active theme chunk, then re-render tree when it arrives
+  // Lazy icon packs: ensure each section's theme chunk, then re-render trees when it arrives
   const [iconThemePackVersion, setIconThemePackVersion] = useState(0);
   useEffect(() => {
-    ensureIconTheme(iconTheme);
-  }, [iconTheme]);
+    SIDEBAR_APPEARANCE_SECTIONS.forEach((sectionId) => {
+      ensureIconTheme(sectionAppearance.resolve(sectionId).iconTheme);
+    });
+  }, [sectionAppearance.resolve]);
   useEffect(() => {
     return onIconThemeLoaded((id) => {
-      const cur = (iconTheme || 'nord').toLowerCase();
-      if (id.toLowerCase() !== cur) return;
+      const wanted = SIDEBAR_APPEARANCE_SECTIONS.map((sectionId) => (
+        (sectionAppearance.resolve(sectionId).iconTheme || 'nord').toLowerCase()
+      ));
+      if (!wanted.includes(id.toLowerCase())) return;
       clearSidebarIconCaches();
       setIconThemePackVersion((v) => v + 1);
     });
-  }, [iconTheme]);
+  }, [sectionAppearance.resolve]);
   void iconThemePackVersion;
 
   const [sessionActionPackVersion, setSessionActionPackVersion] = useState(0);
@@ -239,6 +249,14 @@ const Sidebar = React.memo(({
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
+  const connectionsAppearance = sectionAppearance.resolve('connections');
+  const favoritesAppearance = sectionAppearance.resolve('favorites');
+  const passwordsAppearance = sectionAppearance.resolve('passwords');
+  const documentsAppearance = sectionAppearance.resolve('documents');
+  const toolsAppearance = sectionAppearance.resolve('tools');
+  const settingsAppearance = sectionAppearance.resolve('settings');
+  const viewingFavoritesTree = showFavoritesView && viewMode === 'connections';
+  const activeTreeAppearance = viewingFavoritesTree ? favoritesAppearance : connectionsAppearance;
   const [favoritesRevision, setFavoritesRevision] = useState(0);
   // Keep-alive: once visited (or idle-warmed), keep mounted with display:none — instant like connections
   const [mountedSidebarViews, setMountedSidebarViews] = useState(() => new Set());
@@ -594,14 +612,14 @@ const Sidebar = React.memo(({
 
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
-  const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+  const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor((connectionsAppearance.iconTheme || 'nord').toLowerCase()));
   const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
 
   // Actualizar color por defecto cuando cambie el tema
   useEffect(() => {
-    const newDefaultColor = getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord');
+    const newDefaultColor = getThemeDefaultColor((connectionsAppearance.iconTheme || 'nord').toLowerCase());
     setFolderColor(newDefaultColor);
 
     // Actualizar colores de carpetas existentes SOLO si no tienen color personalizado
@@ -653,7 +671,7 @@ const Sidebar = React.memo(({
       }
     }, 100);
 
-  }, [iconTheme, setNodes]);
+  }, [connectionsAppearance.iconTheme, setNodes]);
 
   // Actualizar variable CSS cuando cambie el color de fuente
   // Usar useRef para evitar loops infinitos
@@ -1376,7 +1394,7 @@ const Sidebar = React.memo(({
 
       setShowFolderDialog(false);
       setFolderName('');
-      setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+      setFolderColor(getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
       setFolderIcon(null);
       setParentNodeKey(null);
       setEditingNode(null);
@@ -1438,7 +1456,7 @@ const Sidebar = React.memo(({
     // Limpiar formulario
     setShowFolderDialog(false);
     setFolderName('');
-    setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+    setFolderColor(getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
     setParentNodeKey(null);
     setEditingNode(null);
 
@@ -1894,7 +1912,7 @@ const Sidebar = React.memo(({
             setParentNodeKey(FAVORITES_ROOT_KEY);
             setEditingNode(node);
             setFolderName(node.label);
-            setFolderColor(node.color || getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+            setFolderColor(node.color || getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
             setFolderIcon(node.folderIcon || null);
             setShowFolderDialog(true);
             return;
@@ -1920,7 +1938,7 @@ const Sidebar = React.memo(({
           setParentNodeKey(parentKey);
           setEditingNode(node); // Estado para saber que estamos editando
           setFolderName(node.label);
-          setFolderColor(node.color || getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+          setFolderColor(node.color || getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
           setFolderIcon(node.folderIcon || null);
           setShowFolderDialog(true);
         },
@@ -2136,7 +2154,7 @@ const Sidebar = React.memo(({
     const isSSHTunnel = actionNode.data && actionNode.data.type === 'ssh-tunnel';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
-    const themeKey = (iconTheme || 'nord').toLowerCase();
+    const themeKey = (activeTreeAppearance.iconTheme || 'nord').toLowerCase();
     const themeIcons = iconThemes[themeKey]?.icons || iconThemes['nord'].icons;
 
     // Helper para unificar el tamaño óptico de los iconos según el tema
@@ -2975,10 +2993,13 @@ const Sidebar = React.memo(({
           )}
           {activeTab !== null && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
             <SidebarAppearanceMenu
-              treeTheme={treeTheme}
-              setTreeTheme={setTreeTheme}
-              iconTheme={iconTheme}
-              setIconTheme={setIconTheme}
+              treeTheme={sectionAppearance.resolve(activeTab).treeTheme}
+              setTreeTheme={(value) => sectionAppearance.setSectionTreeTheme(activeTab, value)}
+              iconTheme={sectionAppearance.resolve(activeTab).iconTheme}
+              setIconTheme={(value) => sectionAppearance.setSectionIconTheme(activeTab, value)}
+              sectionLabel={SIDEBAR_SECTION_LABELS[activeTab]}
+              hasSectionOverride={sectionAppearance.hasOverride(activeTab)}
+              onResetSection={() => sectionAppearance.resetSection(activeTab)}
               sessionActionIconTheme={sessionActionIconTheme}
               setSessionActionIconTheme={setSessionActionIconTheme}
               explorerFont={explorerFont}
@@ -2989,7 +3010,7 @@ const Sidebar = React.memo(({
               setExplorerFontColor={setExplorerFontColor}
               iconSize={iconSize}
               setIconSize={setIconSize}
-              tooltip="Apariencia del árbol"
+              tooltip={`Apariencia de ${SIDEBAR_SECTION_LABELS[activeTab] || 'la sección'}`}
             />
           )}
         </div>
@@ -3041,7 +3062,7 @@ const Sidebar = React.memo(({
               searching={Boolean(sidebarFilter && String(sidebarFilter).trim())}
               searchTerm={sidebarFilter}
               selectedKey={typeof selectedNodeKey === 'string' ? selectedNodeKey : (selectedNodeKey ? Object.keys(selectedNodeKey)[0] : null)}
-              iconTheme={iconTheme}
+              iconTheme={activeTreeAppearance.iconTheme}
               explorerFont={explorerFont}
               explorerFontSize={explorerFontSize}
               favoritesView={showFavoritesView && viewMode === 'connections'}
@@ -3067,7 +3088,7 @@ const Sidebar = React.memo(({
             </div>
           ) : (
             <Tree
-              key={`tree-${iconTheme}-${explorerFont}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`}
+              key={`tree-${activeTreeAppearance.iconTheme}-${explorerFont}-${explorerFontSize}-${activeTreeAppearance.treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`}
               value={processedNodes}
               selectionMode="single"
               selectionKeys={selectedNodeKey}
@@ -3138,9 +3159,9 @@ const Sidebar = React.memo(({
                   window.draggedSSHNodeRef.current = null;
                 }
               }}
-              className={`sidebar-tree tree-theme-${treeTheme}${showFavoritesView && viewMode === 'connections' ? ' sidebar-tree-favorites-view' : ''}`}
-              data-icon-theme={iconTheme}
-              data-tree-theme={treeTheme}
+              className={`sidebar-tree tree-theme-${activeTreeAppearance.treeTheme}${showFavoritesView && viewMode === 'connections' ? ' sidebar-tree-favorites-view' : ''}`}
+              data-icon-theme={activeTreeAppearance.iconTheme}
+              data-tree-theme={activeTreeAppearance.treeTheme}
               data-font-color={explorerFontColor || ''}
               style={{
                 height: '100%',
@@ -3183,7 +3204,7 @@ const Sidebar = React.memo(({
         <ConnectionDetailsPanel
           selectedNode={selectedNodeForDetails}
           uiTheme={uiTheme}
-          iconTheme={iconTheme}
+          iconTheme={activeTreeAppearance.iconTheme}
           sessionActionIconTheme={sessionActionIconTheme}
           onNodeUpdate={updateNodeInTree}
           onOpenSSHConnection={onOpenSSHConnection}
@@ -3209,7 +3230,7 @@ const Sidebar = React.memo(({
             onBackToConnections={() => setViewMode('connections')}
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={setSidebarCollapsed}
-            iconTheme={iconTheme}
+            iconTheme={passwordsAppearance.iconTheme}
             iconSize={iconSize}
             folderIconSize={folderIconSize}
             connectionIconSize={connectionIconSize}
@@ -3221,7 +3242,7 @@ const Sidebar = React.memo(({
             onShowImportDialog={setShowImportDialog}
             sessionActionIconTheme={sessionActionIconTheme}
             sidebarFilter={sidebarFilter}
-            treeTheme={treeTheme}
+            treeTheme={passwordsAppearance.treeTheme}
             showFavoritesView={showFavoritesView}
             onToggleFavoritesView={toggleFavoritesView}
             hideHeader={true}
@@ -3249,8 +3270,8 @@ const Sidebar = React.memo(({
             secureStorage={secureStorage}
             sessionActionIconTheme={sessionActionIconTheme}
             sidebarFilter={sidebarFilter}
-            treeTheme={treeTheme}
-            iconTheme={iconTheme}
+            treeTheme={documentsAppearance.treeTheme}
+            iconTheme={documentsAppearance.iconTheme}
             setShowSettingsDialog={setShowSettingsDialog}
             onShowImportDialog={onShowImportDialog || setShowImportDialog}
             onShowExportDialog={onShowExportDialog}
@@ -3297,13 +3318,13 @@ const Sidebar = React.memo(({
                 detail: { toolId, toolLabel, mode: mode || 'reuse' }
               }));
             }}
-            iconTheme={iconTheme}
+            iconTheme={toolsAppearance.iconTheme}
             iconSize={iconSize}
             folderIconSize={folderIconSize}
             connectionIconSize={connectionIconSize}
             explorerFont={explorerFont}
             explorerFontSize={explorerFontSize}
-            treeTheme={treeTheme}
+            treeTheme={toolsAppearance.treeTheme}
             explorerFontColor={explorerFontColor}
           />
         </Suspense>
@@ -3314,13 +3335,13 @@ const Sidebar = React.memo(({
         <div style={{ display: viewMode === 'settings' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Suspense fallback={<TabChunkFallback />}>
           <LazySettingsSidebar
-            iconTheme={iconTheme}
+            iconTheme={settingsAppearance.iconTheme}
             iconSize={iconSize}
             folderIconSize={folderIconSize}
             connectionIconSize={connectionIconSize}
             explorerFont={explorerFont}
             explorerFontSize={explorerFontSize}
-            treeTheme={treeTheme}
+            treeTheme={settingsAppearance.treeTheme}
             explorerFontColor={explorerFontColor}
           />
         </Suspense>
@@ -3512,7 +3533,7 @@ const Sidebar = React.memo(({
             onHide={() => {
               setShowFolderDialog(false);
               setFolderName('');
-              setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+              setFolderColor(getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
               setFolderIcon(null);
               setEditingNode(null);
             }}
@@ -3524,8 +3545,8 @@ const Sidebar = React.memo(({
             folderIcon={folderIcon}
             setFolderIcon={setFolderIcon}
             onConfirm={createNewFolder}
-            themeDefaultColor={getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord')}
-            themeName={iconThemes[iconTheme?.toLowerCase()]?.name || 'Material'}
+            themeDefaultColor={getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase())}
+            themeName={iconThemes[activeTreeAppearance.iconTheme?.toLowerCase()]?.name || 'Material'}
           />
         </Suspense>
       )}

@@ -31,6 +31,9 @@ const SidebarAppearanceMenu = ({
   setTreeTheme,
   iconTheme = 'nord',
   setIconTheme,
+  sectionLabel,
+  hasSectionOverride = false,
+  onResetSection,
   sessionActionIconTheme = 'modern',
   setSessionActionIconTheme,
   explorerFontColor,
@@ -90,12 +93,38 @@ const SidebarAppearanceMenu = ({
         <div style={{ padding: '8px' }}>
           {settingsView === 'choice' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '0 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', padding: '0 8px' }}>
                 <i className="pi pi-palette" style={{ color: 'var(--primary-color)', fontSize: '1rem' }} />
                 <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--ui-sidebar-text)', letterSpacing: '0.5px' }}>
-                  Apariencia Sidebar
+                  {sectionLabel ? `Apariencia · ${sectionLabel}` : 'Apariencia Sidebar'}
                 </span>
               </div>
+              {sectionLabel && (
+                <div style={{ fontSize: '0.7rem', opacity: 0.55, color: 'var(--ui-sidebar-text)', padding: '0 8px', marginBottom: '8px' }}>
+                  Tema del árbol e iconos de esta sección
+                </div>
+              )}
+              {hasSectionOverride && onResetSection && (
+                <button
+                  type="button"
+                  onClick={onResetSection}
+                  style={{
+                    width: '100%',
+                    margin: '0 0 8px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--ui-dialog-border)',
+                    background: 'transparent',
+                    color: 'var(--ui-sidebar-text)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  Usar tema general
+                </button>
+              )}
               <div
                 onClick={() => setSettingsView('tree')}
                 className="theme-item"

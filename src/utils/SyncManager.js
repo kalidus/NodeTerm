@@ -354,7 +354,7 @@ class SyncManager {
 
     // Agregar todas las configuraciones con sus nombres exactos de LocalStorage para sincronización completa
     const configKeys = [
-      'ui_theme', 'iconTheme', 'iconThemeSidebar', 'actionBarIconTheme', 'sessionActionIconTheme', 'treeTheme',
+      'ui_theme', 'iconTheme', 'iconThemeSidebar', 'actionBarIconTheme', 'sessionActionIconTheme', 'treeTheme', 'sidebarSectionAppearance',
       'localLinuxTerminalTheme', 'localPowerShellTheme', 'localDockerTerminalTheme',
       'basicapp_statusbar_theme', 'basicapp_terminal_theme', 'basicapp_statusbar_icon_theme',
       'basicapp_statusbar_layout', 'basicapp_statusbar_height', 'basicapp_local_powershell_theme',

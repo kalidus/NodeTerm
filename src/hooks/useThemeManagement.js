@@ -5,6 +5,7 @@ import { themeManager } from '../utils/themeManager';
 import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import { STORAGE_KEYS } from '../utils/constants';
 import { TREE_THEME_STORAGE_KEY } from '../themes/tree-themes';
+import { clearSidebarSectionAppearance } from '../utils/sidebarSectionAppearance';
 import { getAvailableFonts } from '../utils/fontsList';
 import { applyTabTheme } from '../utils/tabThemeLoader';
 import { presetManager } from '../utils/presetManager';
@@ -673,6 +674,7 @@ export const useThemeManagement = () => {
    * Apply a preset object and update all React states immediately.
    */
   const applyPreset = (preset) => {
+    clearSidebarSectionAppearance();
     presetManager.applyPreset(preset);
     setActivePresetId(preset.id);
     updateThemesFromSync();
