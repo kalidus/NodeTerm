@@ -154,6 +154,16 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('connection-search:toggle', listener);
     }
   },
+  onMinimalModeShortcut: (handler) => {
+    const listener = () => handler();
+    ipcRenderer.on('minimal-mode:toggle', listener);
+    return listener;
+  },
+  offMinimalModeShortcut: (listener) => {
+    if (listener) {
+      ipcRenderer.removeListener('minimal-mode:toggle', listener);
+    }
+  },
   system: {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats'),

@@ -36,7 +36,7 @@ export default function MinimalModeExitButton({ isMinimalMode }) {
           type="button"
           className="minimal-mode-toolbar-btn"
           onClick={exitMinimalMode}
-          title="Salir del modo minimalista (Ctrl+Alt+M)"
+          title="Salir del modo minimalista (Esc / Ctrl+Shift+M)"
           aria-label="Salir del modo minimalista"
         >
           <i className="pi pi-window-maximize" />

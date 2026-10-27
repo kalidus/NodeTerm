@@ -159,20 +159,66 @@ export function useAppChromeLayout() {
     };
   }, []);
 
+  const isMinimalModeRef = React.useRef(isMinimalMode);
+  isMinimalModeRef.current = isMinimalMode;
+
   // Escuchar evento de toggle desde cualquier componente
   React.useEffect(() => {
-    const handleToggle = () => setIsMinimalMode(prev => !prev);
+    const isShortcutCaptureActive = () => (
+      document.body.dataset.capturingShortcut === 'true'
+      || !!document.querySelector('[data-capturing-shortcut="true"]')
+    );
+
+    const hasBlockingOverlay = () => !!(
+      document.querySelector('.p-dialog-mask:not([style*="display: none"])')
+      || document.querySelector('.p-sidebar-mask')
+      || document.querySelector('.p-confirm-dialog')
+      || document.querySelector('.connection-search-palette')
+      || document.querySelector('[role="dialog"][aria-modal="true"]')
+    );
+
+    const handleToggle = () => {
+      if (isShortcutCaptureActive()) {
+        return;
+      }
+      setIsMinimalMode(prev => !prev);
+    };
+
     const handleKeyDown = (e) => {
-      // Ctrl + Alt + M para toggle rápido del modo minimalista
-      if (e.ctrlKey && e.altKey && e.code === 'KeyM') {
+      if (e.repeat || isShortcutCaptureActive()) {
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + M: toggle del modo minimalista (evita AltGr = Ctrl+Alt).
+      const isToggleChord = (e.ctrlKey || e.metaKey)
+        && e.shiftKey
+        && !e.altKey
+        && (e.code === 'KeyM' || String(e.key).toLowerCase() === 'm');
+
+      if (isToggleChord) {
+        e.preventDefault();
+        e.stopPropagation();
         handleToggle();
+        return;
+      }
+
+      // Escape sale del modo minimalista (no lo activa).
+      // Si hay un modal abierto, dejar que Escape lo cierre primero.
+      if (e.key === 'Escape' && isMinimalModeRef.current && !hasBlockingOverlay()) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsMinimalMode(false);
       }
     };
+
     window.addEventListener('toggle-minimal-mode', handleToggle);
-    window.addEventListener('keydown', handleKeyDown);
+    // capture:true — xterm y otros capturan el foco; en bubble a menudo no llega
+    window.addEventListener('keydown', handleKeyDown, true);
+    const shortcutFromMain = window.electron?.onMinimalModeShortcut?.(handleToggle);
     return () => {
       window.removeEventListener('toggle-minimal-mode', handleToggle);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.electron?.offMinimalModeShortcut?.(shortcutFromMain);
     };
   }, []);
 

@@ -1298,7 +1298,7 @@ const TitleBar = ({
             <IconPanelTop />
           </TitleBarIconButton>
           <TitleBarIconButton
-            title={isMinimalMode ? 'Salir del modo minimalista (Ctrl+Alt+M)' : 'Modo minimalista (Ctrl+Alt+M)'}
+            title={isMinimalMode ? 'Salir del modo minimalista (Esc / Ctrl+Shift+M)' : 'Modo minimalista (Ctrl+Shift+M)'}
             active={isMinimalMode}
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))}
           >

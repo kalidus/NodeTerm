@@ -645,6 +645,20 @@ function setupConnectionSearchShortcutBridge(windowInstance) {
       return;
     }
 
+    // Ctrl/Cmd+Shift+M → toggle modo minimalista (evita Ctrl+Alt/AltGr en teclados ES/EU)
+    if (
+      input.type === 'keyDown'
+      && input.code === 'KeyM'
+      && !!input.shift
+      && !input.alt
+      && ((process.platform === 'darwin' && !!input.meta && !input.control)
+        || (process.platform !== 'darwin' && !!input.control && !input.meta))
+    ) {
+      event.preventDefault();
+      windowInstance.webContents.send('minimal-mode:toggle');
+      return;
+    }
+
     if (!matchesConnectionSearchInput(input, connectionSearchShortcut)) {
       return;
     }
