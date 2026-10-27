@@ -383,6 +383,7 @@ const DockerTerminal = forwardRef(({
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     terminalType="docker"
+                    fontFamily={fontFamily}
                 />
             )}
         </div>

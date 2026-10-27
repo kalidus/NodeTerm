@@ -73,6 +73,7 @@ const ConnectionHistory = ({
 	onOpenHomeOptions = null,
 	onSwitchTerminal,
 	statusBarVisible = true,
+	localFontFamily,
 	homeCardVisible = true,
 	hideNonTerminalHeaders = false,
 	flushRightQuickBar = false,
@@ -725,6 +726,7 @@ const ConnectionHistory = ({
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
 			statusBarVisible={statusBarVisible}
+			fontFamily={localFontFamily}
 			terminalTheme={terminalTheme}
 		>
 			{children}

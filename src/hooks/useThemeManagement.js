@@ -353,6 +353,9 @@ export const useThemeManagement = () => {
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
     localStorage.setItem('basicapp_terminal_font_family', fontFamily);
+    try {
+      document.documentElement.style.setProperty('--terminal-font-family', fontFamily);
+    } catch { /* ignore */ }
     localStorageSyncService.debouncedSync({
       [FONT_FAMILY_STORAGE_KEY]: fontFamily,
       basicapp_terminal_font_family: fontFamily

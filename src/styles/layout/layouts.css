@@ -194,8 +194,8 @@ body.layout-unified-app-rounded .title-bar svg path {
 
 /* --- Global application of layout variables --- */
 
-/* Font Family Overrides for Cyberpunk (session explorer, previews, and font options excluded) */
-body.layout-cyberpunk *:not(.pi):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *) {
+/* Font Family Overrides for Cyberpunk (session explorer, previews, font options, and status bar excluded) */
+body.layout-cyberpunk *:not(.pi):not(.status-bar):not(.status-bar *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *) {
   font-family: var(--ui-font-family, var(--layout-font-family)) !important;
 }
 
@@ -369,10 +369,10 @@ body.layout-unified-app-rounded .app-container {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Font Family and Size Overrides for Unified layout (session explorer, previews, font options, and notes editor excluded) */
-body.layout-unified *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *),
-body.layout-unified-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *),
-body.layout-unified-app-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *) {
+/* Font Family and Size Overrides for Unified layout (session explorer, previews, font options, notes editor, and status bar excluded) */
+body.layout-unified *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.status-bar):not(.status-bar *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *),
+body.layout-unified-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.status-bar):not(.status-bar *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *),
+body.layout-unified-app-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.status-bar):not(.status-bar *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *):not(.document-editor-container):not(.document-editor-container *) {
   font-family: var(--ui-font-family, var(--layout-font-family)) !important;
   font-size: 12px !important;
 }

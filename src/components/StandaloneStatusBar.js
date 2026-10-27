@@ -3,6 +3,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 import { systemStatsService } from '../services/SystemStatsService';
+import { getDefaultLocalTerminalFontFamily } from '../utils/resolveTerminalFontFamily';
 
 function statsSignature(stats) {
   if (!stats) return '';
@@ -17,7 +18,8 @@ function statsSignature(stats) {
   ].join('|');
 }
 
-const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
+const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily }) => {
+    const resolvedFontFamily = fontFamily || getDefaultLocalTerminalFontFamily();
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [gpuStats, setGpuStats] = useState(null);
@@ -165,6 +167,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
                 statusBarIconTheme={statusBarIconTheme}
                 isLoading={isLoadingStats}
                 terminalType="linux"
+                fontFamily={resolvedFontFamily}
             />
         </div>
     );

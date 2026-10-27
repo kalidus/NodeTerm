@@ -2428,6 +2428,7 @@ const HomeTab = ({
                    onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
+                  localFontFamily={localFontFamily}
                   hideNonTerminalHeaders={hideNonTerminalHeaders}
                   localTerminalMaximized={localTerminalMaximized}
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
@@ -2536,7 +2537,7 @@ const HomeTab = ({
           </div>
       </div>
       <div className="home-shell-status" style={{ position: 'relative', zIndex: 1 }}>
-        <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
+        <StandaloneStatusBar visible={statusBarVisible && !terminalView} fontFamily={localFontFamily} />
       </div>
     </div>
   );

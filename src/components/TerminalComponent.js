@@ -137,11 +137,15 @@ const TerminalComponent = forwardRef(({
         return theme || {};
     }, [isSplit, splitThemeOverride, theme]);
 
-    // Fuente efectiva: en split con override local usa esa; si no, la prop global
+    // Fuente efectiva: override local (menú rápido / split) gana sobre la prop global
     const effectiveFontFamily = useMemo(() => {
-        if (isSplit && splitFontOverride) return splitFontOverride;
+        if (splitFontOverride) return splitFontOverride;
         return fontFamily;
-    }, [isSplit, splitFontOverride, fontFamily]);
+    }, [splitFontOverride, fontFamily]);
+
+    useEffect(() => {
+        setSplitFontOverride(null);
+    }, [fontFamily]);
 
     // Tamaño efectivo: en split con override local usa ese; si no, la prop global
     const effectiveFontSize = useMemo(() => {
@@ -1166,9 +1170,8 @@ const TerminalComponent = forwardRef(({
 
                             const applyFont = (fontValue) => {
                                 try {
-                                    if (isSplit) {
-                                        setSplitFontOverride(fontValue);
-                                    } else {
+                                    setSplitFontOverride(fontValue);
+                                    if (!isSplit) {
                                         localStorage.setItem(SSH_FONT_KEY, fontValue);
                                         localStorage.setItem(SSH_FONT_KEY_ALIAS, fontValue);
                                         window.dispatchEvent(new CustomEvent('terminal-font-changed', {
@@ -1528,6 +1531,7 @@ const TerminalComponent = forwardRef(({
                 active={active}
                 statusBarIconTheme={statusBarIconTheme}
                 terminalType={isLocalTerminal ? 'linux' : 'ssh'}
+                fontFamily={effectiveFontFamily}
                 isLoading={!isLocalTerminal && (!effectiveStats || (typeof effectiveStats?.cpu === 'undefined' && !effectiveStats?.hostname))}
             />}
         </div >

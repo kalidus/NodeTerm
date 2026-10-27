@@ -10,9 +10,15 @@
   margin: 0 !important;
   border: none !important;
   height: var(--statusbar-height, 32px) !important;
-  font-family: var(--ui-font-family, system-ui, -apple-system, sans-serif) !important;
+  font-family: var(--statusbar-font-family, var(--terminal-font-family, monospace)) !important;
   container-type: inline-size;
   overflow: hidden;
+}
+
+.status-bar .status-group,
+.status-bar .status-bar-section,
+.status-bar .loading-text {
+  font-family: inherit !important;
 }
 
 .status-group {
@@ -156,7 +162,7 @@
 .loading-text {
   color: var(--statusbar-text, #cccccc) !important;
   opacity: 0.7;
-  font-family: 'Courier New', monospace;
+  font-family: inherit;
 }
 
 .status-bar-icon.loading {

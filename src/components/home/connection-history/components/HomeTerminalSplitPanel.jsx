@@ -71,6 +71,7 @@ export const HomeTerminalSplitPanel = ({
 	onEdit,
 	handleToggleFavoriteWithGroup,
 	statusBarVisible = false,
+	fontFamily,
 	terminalTheme = {}
 }) => {
 	const splitContext = splitView === 'favorites' ? 'favorites' : 'recents';
@@ -322,6 +323,7 @@ export const HomeTerminalSplitPanel = ({
 			{statusBarVisible && (
 				<StandaloneStatusBar
 					visible={true}
+					fontFamily={fontFamily}
 					style={{
 						position: 'relative',
 						bottom: 'auto',

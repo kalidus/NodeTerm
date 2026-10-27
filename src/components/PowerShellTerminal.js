@@ -516,6 +516,7 @@ const PowerShellTerminal = forwardRef(({
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
                     terminalType="powershell"
+                    fontFamily={fontFamily}
                 />
             )}
         </div>

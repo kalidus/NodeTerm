@@ -508,6 +508,7 @@ const WSLTerminal = forwardRef(({
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
                     terminalType="linux"
+                    fontFamily={fontFamily}
                 />
             )}
         </div>

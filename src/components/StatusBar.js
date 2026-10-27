@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { OverlayPanel } from 'primereact/overlaypanel';
@@ -16,6 +16,37 @@ import {
   createStatusBarItemRenderers,
   renderStatusBarLoadingItems
 } from './statusbar/statusBarItemRenderers';
+import { resolveTerminalFontFamily } from '../utils/resolveTerminalFontFamily';
+
+function readTerminalFontFallback() {
+  try {
+    return document.documentElement.style.getPropertyValue('--terminal-font-family').trim()
+      || getComputedStyle(document.documentElement).getPropertyValue('--terminal-font-family').trim()
+      || 'monospace';
+  } catch {
+    return 'monospace';
+  }
+}
+
+function applyStatusBarFont(el, fontFamily) {
+  if (!el) return;
+  const resolved = resolveTerminalFontFamily(fontFamily || readTerminalFontFallback());
+  el.style.setProperty('--statusbar-font-family', resolved);
+  el.style.setProperty('font-family', resolved, 'important');
+  const nodes = el.querySelectorAll('*');
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i];
+    const tag = node.tagName;
+    if (
+      tag === 'SVG' || tag === 'PATH' || tag === 'CIRCLE' || tag === 'RECT'
+      || tag === 'LINE' || tag === 'POLYLINE' || tag === 'POLYGON' || tag === 'G'
+      || node.classList.contains('pi')
+    ) {
+      continue;
+    }
+    node.style.setProperty('font-family', 'inherit', 'important');
+  }
+}
 
 const StatusBar = ({
   stats,
@@ -24,8 +55,17 @@ const StatusBar = ({
   layout: layoutProp,
   isLoading = false,
   gpuStats = null,
-  terminalType = 'ssh'
+  terminalType = 'ssh',
+  fontFamily
 }) => {
+  const resolvedFontFamily = useMemo(
+    () => resolveTerminalFontFamily(fontFamily || readTerminalFontFallback()),
+    [fontFamily]
+  );
+  const statusBarFontStyle = useMemo(() => ({
+    '--statusbar-font-family': resolvedFontFamily,
+    fontFamily: resolvedFontFamily
+  }), [resolvedFontFamily]);
   const op = useRef(null);
   const { open: popOpen, openPopover, closePopover, cancelClose } = useMetricPopover();
   const { appVersion } = getVersionInfo();
@@ -68,6 +108,12 @@ const StatusBar = ({
   const metricsRef = useRef(null);
   const [fitScale, setFitScale] = useState(1);
   const fitContentKey = `${isLoading ? 'loading' : 'live'}:${visibleOrder.join(',')}:${stats?.hostname || ''}:${stats?.ip || ''}`;
+
+  // Los layouts (unified/cyberpunk/mux) fuerzan --ui-font-family con !important de alta
+  // especificidad; setProperty(..., 'important') en el DOM es lo único que los pisa.
+  useLayoutEffect(() => {
+    applyStatusBarFont(barRef.current, fontFamily);
+  }, [fontFamily, fitContentKey, resolvedFontFamily]);
 
   useEffect(() => {
     const metrics = metricsRef.current;
@@ -152,7 +198,7 @@ const StatusBar = ({
 
   if (!stats || isLoading) {
     return (
-      <div className="status-bar" ref={barRef}>
+      <div className="status-bar" ref={barRef} style={statusBarFontStyle}>
         <div className="status-group status-bar-metrics" ref={metricsRef}>
           <div className="status-bar-metrics-fit" style={metricsStyle}>
             {renderStatusBarLoadingItems(layout, currentIconTheme)}
@@ -208,7 +254,7 @@ const StatusBar = ({
   });
 
   return (
-    <div className="status-bar" ref={barRef}>
+    <div className="status-bar" ref={barRef} style={statusBarFontStyle}>
       <div className="status-group status-bar-metrics" ref={metricsRef}>
         <div className="status-bar-metrics-fit" style={metricsStyle}>
           {visibleOrder.map((id) => renderers[id]?.()).filter(Boolean)}

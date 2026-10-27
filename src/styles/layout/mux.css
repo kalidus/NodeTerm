@@ -73,7 +73,7 @@ body.layout-mux .status-bar {
   margin: 0 6px 6px 6px !important;
   border-radius: var(--layout-border-radius-main) !important;
   border: 1px solid var(--mux-pane-border) !important;
-  font-family: var(--mux-mono) !important;
+  font-family: var(--statusbar-font-family, var(--terminal-font-family, var(--mux-mono))) !important;
   letter-spacing: 0.02em;
 }
 

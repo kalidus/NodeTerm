@@ -444,6 +444,7 @@ const CygwinTerminal = forwardRef(({
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
                     terminalType="cygwin"
+                    fontFamily={fontFamily}
                 />
             )}
         </div>
