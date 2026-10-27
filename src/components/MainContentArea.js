@@ -309,9 +309,13 @@ const MainContentArea = ({
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
+  const handleShowSystemMonitor = useCallback((tabKey) => setSshSystemMonitorTabId(tabKey), []);
+  const handleCloseSystemMonitor = useCallback(() => setSshSystemMonitorTabId(null), []);
 
   // Estado para el panel SSH File Explorer
   const [sshFileExplorerTabId, setSshFileExplorerTabId] = useState(null);
+  const handleShowFileExplorer = useCallback((tabKey) => setSshFileExplorerTabId(tabKey), []);
+  const handleCloseFileExplorer = useCallback(() => setSshFileExplorerTabId(null), []);
 
   // MRU de pestañas montadas (activa + N): hibernación SSH sin matar sesión
   const [mruTabKeys, setMruTabKeys] = useState([]);
@@ -3099,8 +3103,8 @@ const MainContentArea = ({
                     handleToggleBroadcast={handleToggleBroadcast}
                     handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                     getAllTabs={getAllTabs}
-                    onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
-                    onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                    onShowSystemMonitor={handleShowSystemMonitor}
+                    onShowFileExplorer={handleShowFileExplorer}
                     openInSplit={openInSplit}
                     isSSHSession={terminalContextMenu ? (() => {
                       const allT = getAllTabs ? getAllTabs() : [];
@@ -3191,8 +3195,8 @@ const MainContentArea = ({
                             onStartRecording={handleStartRecording}
                             onStopRecording={handleStopRecording}
                             isRecordingTab={isRecordingTab}
-                            onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
-                            onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                            onShowSystemMonitor={handleShowSystemMonitor}
+                            onShowFileExplorer={handleShowFileExplorer}
                             onToggleBroadcast={handleToggleBroadcast}
                           />
                           {/* SSH System Monitor: right-side panel inside per-tab absolute div */}
@@ -3201,7 +3205,7 @@ const MainContentArea = ({
                               <LazySSHSystemMonitorPanel
                                 tabId={tab.key}
                                 tab={tab}
-                                onClose={() => setSshSystemMonitorTabId(null)}
+                                onClose={handleCloseSystemMonitor}
                               />
                             </React.Suspense>
                           )}
@@ -3213,7 +3217,7 @@ const MainContentArea = ({
                                 tabId={tab.key}
                                 tab={tab}
                                 sshConfig={tab.sshConfig}
-                                onClose={() => setSshFileExplorerTabId(null)}
+                                onClose={handleCloseFileExplorer}
                                 isStandaloneTab={false}
                                 iconTheme={memoizedContentRendererProps?.iconTheme}
                                 explorerFont={memoizedContentRendererProps?.explorerFont}
@@ -3241,8 +3245,8 @@ const MainContentArea = ({
                     onStartRecording={handleStartRecording}
                     onStopRecording={handleStopRecording}
                     isRecordingTab={isRecordingTab}
-                    onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
-                    onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                    onShowSystemMonitor={handleShowSystemMonitor}
+                    onShowFileExplorer={handleShowFileExplorer}
                     onToggleBroadcast={handleToggleBroadcast}
                   />
                 </div>

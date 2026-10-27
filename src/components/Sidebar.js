@@ -2506,30 +2506,30 @@ const Sidebar = React.memo(({
           // Función para ejecutar la eliminación (mueve a papelera)
           const executeDeletion = () => {
 
-            const removeNodeFromTree = (nodes, targetKey) => {
-              if (!Array.isArray(nodes)) {
-                console.error('❌ removeNodeFromTree: nodes no es un array:', typeof nodes, nodes);
+            const removeNodeFromTree = (list, targetKey) => {
+              if (!Array.isArray(list)) {
                 return [];
               }
 
-              return nodes.filter(node => {
-                if (node.key === targetKey) {
-                  return false;
-                }
-                if (node.children && Array.isArray(node.children)) {
-                  node.children = removeNodeFromTree(node.children, targetKey);
-                }
-                return true;
-              });
+              return list
+                .filter(node => node.key !== targetKey)
+                .map(node => {
+                  if (node.children && Array.isArray(node.children)) {
+                    const nextChildren = removeNodeFromTree(node.children, targetKey);
+                    if (nextChildren !== node.children) {
+                      return { ...node, children: nextChildren };
+                    }
+                  }
+                  return node;
+                });
             };
 
             try {
-              const nodesCopy = JSON.parse(JSON.stringify(nodes));
               // Guardar el nodo completo en la papelera antes de eliminarlo
               const deletedNode = targetNode ? JSON.parse(JSON.stringify(targetNode)) : null;
               moveToTrash(nodeKey, nodeLabel, deletedNode);
 
-              const newNodes = removeNodeFromTree(nodesCopy, nodeKey);
+              const newNodes = removeNodeFromTree(nodes, nodeKey);
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
 
               showToast && showToast({

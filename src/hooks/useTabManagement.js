@@ -134,7 +134,7 @@ export const useTabManagement = (toast, {
       // Retornar en el orden respetando openTabOrder (las pestañas de inicio pueden estar en cualquier posición)
       return [...ordered, ...rest];
     }
-  }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, openTabOrder, updateOpenTabOrderForHomeButton]);
+  }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, openTabOrder]);
 
   const getFilteredTabs = useCallback(() => {
     return getTabsInGroup(activeGroupId);
