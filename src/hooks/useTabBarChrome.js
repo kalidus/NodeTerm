@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   FaWindows,
@@ -64,6 +64,7 @@ export function useTabBarChrome({
   createLocalTerminalTabRef,
   terminalMenuItemsRef,
   getDefaultTerminalFromConfig,
+  setLastLocalTerminalType,
   setMainFrameHeaderCollapsed,
 }) {
   // Efecto para añadir botones fijos a la derecha del nav container (fuera del área scrollable)

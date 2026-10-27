@@ -1209,6 +1209,7 @@ const MainContentArea = ({
     createLocalTerminalTabRef,
     terminalMenuItemsRef,
     getDefaultTerminalFromConfig,
+    setLastLocalTerminalType,
     setMainFrameHeaderCollapsed,
   });
 
