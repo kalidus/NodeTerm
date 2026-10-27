@@ -1,5 +1,24 @@
 /** Lightweight session-action icon catalog (no SVG). */
-export const sessionActionIconThemeMeta = [
+import { futuristCatalog } from '../icon-themes/futurist-catalog';
+
+const ACTION_COPY = {
+  holo: 'Cristal iridiscente con prisma y brillo especular',
+  synth: 'Sol de neón, horizonte y rejilla en perspectiva',
+  cyber: 'Chaflán hexagonal, visor HUD y tarjeta de acceso',
+  tron: 'Nodos y pistas de circuito',
+  terminal: 'Marco CRT, prompt y cursor de bloque',
+  stealthOps: 'Synthwave mate, con el glow contenido'
+};
+
+const futuristActionMeta = futuristCatalog.map((spec) => ({
+  id: spec.id,
+  name: spec.name,
+  group: spec.group,
+  description: ACTION_COPY[spec.id] || ACTION_COPY[spec.style] || '',
+  premium: false
+}));
+
+const baseSessionActionIconThemeMeta = [
   {
     "id": "modern",
     "name": "Moderno",
@@ -175,6 +194,8 @@ export const sessionActionIconThemeMeta = [
     "premium": true
   }
 ];
+
+export const sessionActionIconThemeMeta = [...baseSessionActionIconThemeMeta, ...futuristActionMeta];
 
 export const sessionActionIconThemeIds = sessionActionIconThemeMeta.map((t) => t.id);
 

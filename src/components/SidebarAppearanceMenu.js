@@ -308,12 +308,29 @@ const SidebarAppearanceMenu = ({
                 <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Iconos de Acción</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {sessionActionIconThemeMeta.map(({ id, name, description }) => {
+                {sessionActionIconThemeMeta.map(({ id, name, description, group }, index) => {
                   const theme = sessionActionIconThemes[id];
                   const isActive = sessionActionIconTheme === id;
+                  const prevGroup = sessionActionIconThemeMeta[index - 1]?.group;
+                  const showHeader = Boolean(group) && group !== prevGroup;
                   return (
+                    <React.Fragment key={id}>
+                    {showHeader && (
+                      <div style={{
+                        margin: '10px 4px 2px',
+                        padding: '6px 8px 0',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--ui-sidebar-text)',
+                        opacity: 0.45
+                      }}
+                      >
+                        {group}
+                      </div>
+                    )}
                     <div
-                      key={id}
                       onClick={() => {
                         ensureSessionActionIconTheme(id);
                         setSessionActionIconTheme?.(id);
@@ -345,6 +362,7 @@ const SidebarAppearanceMenu = ({
                       </div>
                       {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
                     </div>
+                    </React.Fragment>
                   );
                 })}
               </div>

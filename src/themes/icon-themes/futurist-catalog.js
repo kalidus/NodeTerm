@@ -195,7 +195,7 @@ export const futuristCatalog = [
     id: 'cyberpunkPro',
     name: 'Cyberpunk Pro',
     group: 'Futuristas',
-    style: 'synth',
+    style: 'cyber',
     bg: '#0b0c10',
     stroke: '#fcee0a',
     accent: '#00f0ff',
@@ -220,13 +220,100 @@ export const futuristCatalog = [
     id: 'tronBlue',
     name: 'Tron Blue',
     group: 'Futuristas',
-    style: 'synth',
+    style: 'tron',
     bg: '#031018',
     stroke: '#00bfff',
     accent: '#9ee1ff',
     secondary: '#0070c8',
-    glow: '#00bfff',
-    grid: true
+    glow: '#00bfff'
+  },
+  {
+    id: 'terminalHud',
+    name: 'Terminal Verde',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#04140c',
+    stroke: '#39ff9c',
+    accent: '#d6ffe8',
+    secondary: '#0d3b24',
+    glow: '#39ff9c'
+  },
+  {
+    id: 'terminalAmber',
+    name: 'Terminal Ámbar',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#140e04',
+    stroke: '#ffb000',
+    accent: '#ffe7a3',
+    secondary: '#3d2a04',
+    glow: '#ffb000'
+  },
+  {
+    id: 'terminalCyan',
+    name: 'Terminal Cyan',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#041016',
+    stroke: '#00e5ff',
+    accent: '#c9f8ff',
+    secondary: '#04303a',
+    glow: '#00e5ff'
+  },
+  {
+    id: 'terminalMagenta',
+    name: 'Terminal Magenta',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#140410',
+    stroke: '#ff4ecd',
+    accent: '#ffd0f2',
+    secondary: '#3a0430',
+    glow: '#ff4ecd'
+  },
+  {
+    id: 'terminalRed',
+    name: 'Terminal Rojo',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#140408',
+    stroke: '#ff3355',
+    accent: '#ffc2cc',
+    secondary: '#3a0410',
+    glow: '#ff3355'
+  },
+  {
+    id: 'terminalOrange',
+    name: 'Terminal Naranja',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#140a04',
+    stroke: '#ff6a00',
+    accent: '#ffd0a8',
+    secondary: '#3a1804',
+    glow: '#ff6a00'
+  },
+  {
+    id: 'terminalViolet',
+    name: 'Terminal Violeta',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#100818',
+    stroke: '#c084fc',
+    accent: '#f3e8ff',
+    secondary: '#2a1040',
+    glow: '#a855f7'
+  },
+  {
+    id: 'terminalIce',
+    name: 'Terminal Hielo',
+    group: 'Terminal',
+    style: 'terminal',
+    bg: '#071018',
+    stroke: '#e0f2fe',
+    accent: '#ffffff',
+    secondary: '#1e3a4c',
+    glow: '#7dd3fc'
   }
 ];
 

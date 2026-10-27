@@ -9,6 +9,7 @@ import {
   sessionActionIconThemeOptions,
   PREMIUM_SESSION_ACTION_IDS
 } from './meta';
+import { futuristCatalog } from '../icon-themes/futurist-catalog';
 
 export {
   sessionActionIconThemeMeta,
@@ -179,6 +180,33 @@ export const setSessionActionIconTheme = (theme) => {
     console.error('Error guardando tema de iconos de acción:', error);
   }
 };
+
+let futuristActionPromise = null;
+
+function loadFuturistActionPack() {
+  if (!futuristActionPromise) {
+    futuristActionPromise = import(/* webpackChunkName: "session-action-futurist" */ './futurist-pack')
+      .then((mod) => {
+        const themes = mod.futuristActionIconThemes;
+        Object.keys(themes).forEach((themeId) => putTheme(themeId, themes[themeId]));
+        return themes;
+      })
+      .catch((err) => {
+        futuristActionPromise = null;
+        console.warn('[session-action-icons] failed to load futurist pack', err);
+        throw err;
+      });
+  }
+  return futuristActionPromise;
+}
+
+futuristCatalog.forEach(({ id }) => {
+  baseLoaders[id] = () => loadFuturistActionPack().then((themes) => {
+    const theme = themes[id];
+    if (!theme) throw new Error(`missing action icon theme ${id}`);
+    return { default: theme };
+  });
+});
 
 export function warmSessionActionIconThemesFromStorage() {
   try {
