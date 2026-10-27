@@ -26,6 +26,10 @@
       <img src="https://img.shields.io/badge/📥_Download_NodeTerm-238636?style=flat-square" height="28" alt="Download"/>
     </a>
     &nbsp;
+    <a href="https://kalidus.github.io/NodeTerm/">
+      <img src="https://img.shields.io/badge/🌐_Website-kalidus.github.io%2FNodeTerm-0d47a1?style=flat-square" height="28" alt="NodeTerm website"/>
+    </a>
+    &nbsp;
     <a href="#-quick-installation">
       <img src="https://img.shields.io/badge/⚡_Installation_Guide-1f6feb?style=flat-square" height="28" alt="Installation"/>
     </a>

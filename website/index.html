@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NodeTerm — cliente de acceso remoto</title>
+  <meta name="description" content="Cliente de acceso remoto all-in-one para Windows, Linux y macOS. SSH, RDP, VNC, SFTP, bóveda cifrada y agentes MCP.">
+  <link rel="canonical" href="https://kalidus.github.io/NodeTerm/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://kalidus.github.io/NodeTerm/">
+  <meta property="og:title" content="NodeTerm — cliente de acceso remoto">
+  <meta property="og:description" content="SSH, RDP, VNC, SFTP, bóveda cifrada y agentes MCP en una aplicación de escritorio.">
+  <meta property="og:image" content="https://kalidus.github.io/NodeTerm/assets/screenshot-main.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#07111c">
+  <link rel="icon" href="assets/app-icon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <noscript>
+    <p class="noscript">Activa JavaScript para elegir el instalador. Las descargas también están en <a href="https://github.com/kalidus/NodeTerm/releases/latest">GitHub Releases</a>.</p>
+  </noscript>
+
+  <header class="site-header">
+    <div class="wrap nav">
+      <a class="brand" href="#inicio">
+        <img src="assets/app-icon.png" alt="" width="32" height="32">
+        NodeTerm
+      </a>
+      <nav class="nav-links" aria-label="Secciones" data-i18n-label="nav.sections">
+        <a href="#funciones" data-i18n="nav.features">Funciones</a>
+        <a href="#descarga" data-i18n="nav.download">Descarga</a>
+        <a href="#apoyar" data-i18n="nav.support">Apoyar</a>
+      </nav>
+      <div class="nav-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <button type="button" data-lang="es" aria-pressed="true">ES</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a class="btn btn-primary nav-download" id="nav-download" data-asset="windows" data-i18n="hero.download" href="https://github.com/kalidus/NodeTerm/releases/latest">Descargar</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <div class="wrap hero">
+      <div>
+        <p class="kicker" data-i18n="hero.kicker">Escritorio · Windows, Linux y macOS</p>
+        <h1 data-i18n="hero.title">Cliente de acceso remoto all-in-one</h1>
+        <p class="lead" data-i18n="hero.lead">Moderno y multiprotocolo, con bóveda de contraseñas e IA en un espacio multipestaña ultrarrápido.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" id="primary-download" data-asset="windows" href="https://github.com/kalidus/NodeTerm/releases/latest">Descargar para Windows</a>
+          <a class="btn btn-ghost" href="https://github.com/kalidus/NodeTerm" data-i18n="hero.github">Ver en GitHub</a>
+        </div>
+        <p class="meta" id="release-version" data-i18n="hero.free">Gratis · GPL-3.0</p>
+        <ul class="protocols" aria-label="Protocolos" data-i18n-label="nav.protocols">
+          <li>SSH</li>
+          <li>RDP</li>
+          <li>VNC</li>
+          <li>SFTP</li>
+          <li>MCP</li>
+          <li>AES-256</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <img src="assets/screenshot-main.png" width="1280" height="800" data-i18n-alt="shot.alt" alt="NodeTerm con sesiones SSH, SFTP y VNC en pestañas">
+      </figure>
+    </div>
+
+    <section class="section" id="funciones">
+      <div class="wrap">
+        <h2 data-i18n="features.title">Hecho para el trabajo diario</h2>
+        <p class="section-lead" data-i18n="features.lead">Un solo sitio para entrar a los servidores, guardar las credenciales y dejar que un agente ayude sin ver las contraseñas.</p>
+        <ol class="features">
+          <li>
+            <div>
+              <h3 data-i18n="f1.title">SSH, RDP, VNC y SFTP</h3>
+              <p data-i18n="f1.body">IronRDP por defecto, VNC con noVNC, explorador SFTP y bastiones Wallix. Sesiones en carpetas y pestañas por proyecto.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3 data-i18n="f2.title">Bóveda AES-256</h3>
+              <p data-i18n="f2.body">Clave maestra, bloqueo automático y cifrado local de credenciales.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3 data-i18n="f3.title">Agentes MCP</h3>
+              <p data-i18n="f3.body">Cursor, Claude y otros agentes consultan conexiones, notas y terminales. Los secretos se inyectan sin mostrarse.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3 data-i18n="f4.title">Splits de terminal</h3>
+              <p data-i18n="f4.body">Divide la pantalla en horizontal y vertical con xterm.js, a 60 FPS.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3 data-i18n="f5.title">Auditoría de sesiones</h3>
+              <p data-i18n="f5.body">Graba la sesión SSH en asciicast v2 y reprodúcela dentro de la aplicación.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3 data-i18n="f6.title">Temas y tipografía</h3>
+              <p data-i18n="f6.body">Interfaz oscura o clara, fuentes con ligaduras y paquetes de iconos.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="descarga">
+      <div class="wrap">
+        <h2 data-i18n="download.title">Descarga NodeTerm</h2>
+        <p class="section-lead" data-i18n="download.lead">El botón abre la última release publicada en GitHub. Elige el paquete de tu sistema.</p>
+        <div class="os-grid">
+          <article class="os" data-family="windows">
+            <span class="recommend" data-i18n="os.recommended" hidden>Para tu sistema</span>
+            <h3>Windows</h3>
+            <p data-i18n="os.windowsText">Instalador para Windows (.exe).</p>
+            <a class="btn btn-ghost" data-asset="windows" href="https://github.com/kalidus/NodeTerm/releases/latest" data-i18n="os.windowsBtn">Descargar .exe</a>
+          </article>
+          <article class="os" data-family="linux">
+            <span class="recommend" data-i18n="os.recommended" hidden>Para tu sistema</span>
+            <h3>Linux</h3>
+            <p data-i18n="os.linuxText">AppImage, deb, pacman o rpm.</p>
+            <div class="os-actions">
+              <a class="btn btn-ghost" data-asset="appimage" href="https://github.com/kalidus/NodeTerm/releases/latest">AppImage</a>
+              <a class="btn btn-ghost" data-asset="deb" href="https://github.com/kalidus/NodeTerm/releases/latest">deb</a>
+              <a class="btn btn-ghost" data-asset="pacman" href="https://github.com/kalidus/NodeTerm/releases/latest">pacman</a>
+              <a class="btn btn-ghost" data-asset="rpm" href="https://github.com/kalidus/NodeTerm/releases/latest">rpm</a>
+            </div>
+          </article>
+          <article class="os" data-family="mac">
+            <span class="recommend" data-i18n="os.recommended" hidden>Para tu sistema</span>
+            <h3>macOS</h3>
+            <p data-i18n="os.macText">Imagen de disco para Apple silicon (arm64).</p>
+            <a class="btn btn-ghost" data-asset="mac" href="https://github.com/kalidus/NodeTerm/releases/latest" data-i18n="os.macBtn">Descargar .dmg</a>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="apoyar">
+    <div class="wrap">
+      <div class="footer-row">
+        <nav class="footer-links" aria-label="Proyecto" data-i18n-label="footer.project">
+          <a href="https://github.com/kalidus/NodeTerm/blob/main/LICENSE" data-i18n="footer.license">Licencia GPL-3.0</a>
+          <a href="https://github.com/kalidus/NodeTerm" data-i18n="footer.code">Código</a>
+          <a href="https://github.com/sponsors/kalidus" data-i18n="footer.sponsors">GitHub Sponsors</a>
+        </nav>
+      </div>
+      <p class="section-lead" data-i18n="footer.support">Si te ahorra tiempo, puedes apoyar el proyecto:</p>
+      <nav class="support-links" aria-label="Donaciones" data-i18n-label="footer.donations">
+        <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=kalidus%40gmail.com&amp;item_name=NodeTerm&amp;currency_code=EUR">PayPal</a>
+        <a href="https://ko-fi.com/kalidus">Ko-fi</a>
+        <a href="https://buymeacoffee.com/kalidus">Buy Me a Coffee</a>
+        <a href="https://github.com/sponsors/kalidus">GitHub Sponsors</a>
+      </nav>
+    </div>
+  </footer>
+
+  <div class="modal" id="donate-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="dialog" id="donate-dialog" role="dialog" aria-modal="true" aria-labelledby="donate-title">
+      <button type="button" class="modal-close" id="modal-close" data-i18n="modal.close">Cerrar</button>
+      <h2 id="donate-title" data-i18n="modal.title">NodeTerm es gratis</h2>
+      <p class="section-lead" data-i18n="modal.lead">Si te resulta útil en el trabajo diario, puedes apoyar el mantenimiento. La descarga no depende de la donación.</p>
+      <div class="pay-list">
+        <a class="btn btn-ok" href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=kalidus%40gmail.com&amp;item_name=NodeTerm&amp;currency_code=EUR" target="_blank" rel="noopener" data-i18n="modal.paypal">Donar con PayPal</a>
+        <a class="btn btn-ghost" href="https://ko-fi.com/kalidus" target="_blank" rel="noopener">Ko-fi</a>
+        <a class="btn btn-ghost" href="https://buymeacoffee.com/kalidus" target="_blank" rel="noopener">Buy Me a Coffee</a>
+        <a class="btn btn-ghost" href="https://github.com/sponsors/kalidus" target="_blank" rel="noopener">GitHub Sponsors</a>
+      </div>
+      <div class="crypto">
+        <h3 data-i18n="modal.crypto">Criptomonedas</h3>
+        <div class="coin">
+          <div>
+            <span>Ethereum / EVM</span>
+            <code>0x7D18e60b2717edA94e6a48d05e6d09038dCf9342</code>
+          </div>
+          <button type="button" class="btn btn-ghost" data-copy="eth" data-i18n="modal.copy">Copiar</button>
+          <div class="coin-links">
+            <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342" target="_blank" rel="noopener" data-i18n="modal.explorer">Ver en el explorador</a>
+          </div>
+        </div>
+        <div class="coin">
+          <div>
+            <span>Solana</span>
+            <code>DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh</code>
+          </div>
+          <button type="button" class="btn btn-ghost" data-copy="sol" data-i18n="modal.copy">Copiar</button>
+          <div class="coin-links">
+            <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh" target="_blank" rel="noopener" data-i18n="modal.explorer">Ver en el explorador</a>
+          </div>
+        </div>
+      </div>
+      <p class="file-line" id="download-file"></p>
+      <p class="file-line" id="copy-status" role="status"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="download-only" data-i18n="modal.skip">Solo descargar</button>
+        <button type="button" class="btn btn-primary" id="support-download" data-i18n="modal.support">Apoyar y descargar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="site.js"></script>
+</body>
+</html>
