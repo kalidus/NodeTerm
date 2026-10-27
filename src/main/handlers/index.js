@@ -318,6 +318,8 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('window chrome IPC', () => getWindowHandlers().registerWindowHandlers(dependencies));
   runHandlerStep('platform terminal IPC', () => getPlatformTerminalHandlers().registerPlatformTerminalHandlers(dependencies));
+  // UI llama updater:get-info al montar; debe estar antes de cargar el renderer
+  runHandlerStep('updater IPC', () => getUpdaterHandlers().registerUpdaterHandlers(dependencies));
 }
 
 /**
@@ -348,9 +350,6 @@ function registerSecondaryHandlers(dependencies) {
 
   // Handlers de MCP API (servidor HTTP local)
   getMcpApiHandlers().registerMcpApiHandlers();
-
-  // Handlers de actualizaciones (servicio lazy; no críticos para pintar UI)
-  getUpdaterHandlers().registerUpdaterHandlers(dependencies);
 
   // NOTA: Handlers de clientes IA en registerAIClientHandlers() (fase crítica)
   // NOTA: Theme handlers ahora se registran en registerCriticalHandlers()

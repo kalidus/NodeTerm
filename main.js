@@ -1693,7 +1693,8 @@ function createWindow() {
       isGuacamoleInitialized: () => guacamoleInitialized,
       getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
       initializeGuacamoleServices,
-      stopGuacamoleServices
+      stopGuacamoleServices,
+      getUpdateService: getUpdateServiceLazy
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err?.message || err);
@@ -3576,7 +3577,7 @@ ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
 // window:minimize|maximize|unmaximize|isMaximized|close|set-corners
 // y applyWindowCorners* viven en src/main/handlers/window-handlers.js
 
-// updater:* vive en src/main/handlers/updater-handlers.js (registerSecondaryHandlers)
+// updater:* vive en src/main/handlers/updater-handlers.js (registerCriticalHandlers)
 
 // === RDP Support ===
 // ✅ OPTIMIZACIÓN: Handlers de RDP movidos a src/main/handlers/rdp-handlers.js
