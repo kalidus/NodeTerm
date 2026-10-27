@@ -201,13 +201,21 @@ function createWebdavClient(account) {
       }
       throw Object.assign(new Error(`MKCOL HTTP ${res.status}`), { code: 'HTTP_ERROR' });
     },
+    /**
+     * GET con cabeceras extra (Range). Devuelve 200, 206 o 416 sin lanzar.
+     * @returns {Promise<{ status: number, headers: object, body: Buffer }>}
+     */
+    async getRaw(relativePath, extraHeaders) {
+      const res = await call('GET', relativePath, { headers: extraHeaders || {} });
+      if (res.status === 404 || res.status === 416 || (res.status >= 200 && res.status < 300)) {
+        return res;
+      }
+      throw Object.assign(new Error(`GET HTTP ${res.status}`), { code: 'HTTP_ERROR', status: res.status });
+    },
     /** @returns {Promise<Buffer|null>} null si no existe */
     async get(relativePath) {
-      const res = await call('GET', relativePath);
+      const res = await this.getRaw(relativePath);
       if (res.status === 404) return null;
-      if (res.status >= 400) {
-        throw Object.assign(new Error(`GET HTTP ${res.status}`), { code: 'HTTP_ERROR', status: res.status });
-      }
       return res.body;
     },
     async put(relativePath, buffer, mime) {

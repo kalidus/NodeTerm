@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { viewerKindFor, formatFileSize } from '../../shared/library-mime';
 import { useLibraryFile } from './useLibraryFile';
 import ImageViewer from './viewers/ImageViewer';
@@ -35,19 +35,34 @@ function ViewerState({ icon, title, text, children }) {
  */
 const LibraryFileViewer = ({ fileData }) => {
   const [extraControls, setExtraControls] = useState([]);
+  const [contentError, setContentError] = useState(false);
+
+  const storage = fileData?.storage === 'linked'
+    ? 'linked'
+    : fileData?.storage === 'webdav'
+      ? 'webdav'
+      : 'managed';
 
   const kind = useMemo(
-    () => viewerKindFor(fileData?.mime, fileData?.label || fileData?.relPath || fileData?.absPath),
-    [fileData?.mime, fileData?.label, fileData?.relPath, fileData?.absPath]
+    () => viewerKindFor(
+      fileData?.mime,
+      fileData?.label || fileData?.remotePath || fileData?.relPath || fileData?.absPath
+    ),
+    [fileData?.mime, fileData?.label, fileData?.remotePath, fileData?.relPath, fileData?.absPath]
   );
 
   const { status, url, text, error, code, reload } = useLibraryFile(fileData, kind);
 
+  useEffect(() => {
+    setContentError(false);
+  }, [url, kind]);
+
   const descriptor = useMemo(() => ({
-    storage: fileData?.storage === 'linked' ? 'linked' : 'managed',
+    storage,
     relPath: fileData?.relPath || null,
-    absPath: fileData?.absPath || null
-  }), [fileData?.storage, fileData?.relPath, fileData?.absPath]);
+    absPath: fileData?.absPath || null,
+    remotePath: fileData?.remotePath || null
+  }), [storage, fileData?.relPath, fileData?.absPath, fileData?.remotePath]);
 
   const handleOpenExternal = useCallback(async () => {
     const result = await window.electron?.library?.openExternal(descriptor);
@@ -70,6 +85,7 @@ const LibraryFileViewer = ({ fileData }) => {
     const size = formatFileSize(fileData?.size);
     if (size) parts.push(size);
     if (descriptor.storage === 'linked') parts.push('enlazado');
+    if (descriptor.storage === 'webdav') parts.push('Nextcloud');
     return parts.join(' · ');
   }, [fileData?.ext, fileData?.size, descriptor.storage]);
 
@@ -77,10 +93,21 @@ const LibraryFileViewer = ({ fileData }) => {
     if (status === 'loading') {
       return <ViewerState icon="pi pi-spin pi-spinner" title="Abriendo archivo…" />;
     }
-    if (status === 'error') {
+    if (status === 'error' || contentError) {
       return (
-        <ViewerState icon={code === 'LIBRARY_LOCKED' ? 'pi pi-lock' : 'pi pi-exclamation-triangle'} title="No se puede mostrar" text={error}>
-          <button type="button" className="library-viewer__btn" onClick={reload}>
+        <ViewerState
+          icon={code === 'LIBRARY_LOCKED' ? 'pi pi-lock' : 'pi pi-exclamation-triangle'}
+          title="No se puede mostrar"
+          text={contentError ? 'El archivo no se ha podido cargar.' : error}
+        >
+          <button
+            type="button"
+            className="library-viewer__btn"
+            onClick={() => {
+              setContentError(false);
+              reload();
+            }}
+          >
             <i className="pi pi-refresh" />
             Reintentar
           </button>
@@ -97,14 +124,27 @@ const LibraryFileViewer = ({ fileData }) => {
           <iframe className="library-viewer__frame" title={fileData?.label || 'PDF'} src={url} />
         );
       case 'image':
-        return <ImageViewer url={url} label={fileData?.label} onControlsChange={setExtraControls} />;
+        return (
+          <ImageViewer
+            url={url}
+            label={fileData?.label}
+            onControlsChange={setExtraControls}
+            onLoadError={() => setContentError(true)}
+          />
+        );
       case 'markdown':
         return <MarkdownViewer text={text} onControlsChange={setExtraControls} />;
       case 'text':
         return <TextViewer text={text} onControlsChange={setExtraControls} />;
       case 'video':
       case 'audio':
-        return <MediaViewer url={url} mime={fileData?.mime} kind={kind} />;
+        return (
+          <MediaViewer
+            url={url}
+            kind={kind}
+            onLoadError={() => setContentError(true)}
+          />
+        );
       default:
         return (
           <ViewerState
@@ -142,20 +182,24 @@ const LibraryFileViewer = ({ fileData }) => {
               {control.label ? <span>{control.label}</span> : null}
             </button>
           ))}
-          <button type="button" className="library-viewer__btn" title="Guardar una copia" onClick={handleExport}>
-            <i className="pi pi-download" />
-          </button>
-          <button type="button" className="library-viewer__btn" title="Mostrar en el explorador" onClick={handleReveal}>
-            <i className="pi pi-folder-open" />
-          </button>
-          <button
-            type="button"
-            className="library-viewer__btn"
-            title="Abrir con aplicación externa"
-            onClick={handleOpenExternal}
-          >
-            <i className="pi pi-external-link" />
-          </button>
+          {descriptor.storage !== 'webdav' && (
+            <>
+              <button type="button" className="library-viewer__btn" title="Guardar una copia" onClick={handleExport}>
+                <i className="pi pi-download" />
+              </button>
+              <button type="button" className="library-viewer__btn" title="Mostrar en el explorador" onClick={handleReveal}>
+                <i className="pi pi-folder-open" />
+              </button>
+              <button
+                type="button"
+                className="library-viewer__btn"
+                title="Abrir con aplicación externa"
+                onClick={handleOpenExternal}
+              >
+                <i className="pi pi-external-link" />
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="library-viewer__body">{renderBody()}</div>

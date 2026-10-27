@@ -6,7 +6,8 @@ import {
   createLinkedFolderNode,
   createCloudFolderNode,
   resolveFolderPolicy,
-  findNodeInTree
+  findNodeInTree,
+  updateNodeInTree
 } from '../../utils/documentStore';
 import { sanitizeFileName, mimeForName } from '../../shared/library-mime';
 import { readText as readClipboardText } from '../../utils/clipboard';
@@ -45,6 +46,15 @@ async function loadNextcloudAccount() {
 }
 
 const api = () => (typeof window !== 'undefined' ? window.electron?.library : null);
+
+const IMPORT_BATCH = 50;
+
+function cloneLibraryNode(node) {
+  const copy = { ...node };
+  if (node.data) copy.data = { ...node.data };
+  if (node.children) copy.children = node.children.map(cloneLibraryNode);
+  return copy;
+}
 
 /** Nombre libre dentro de una carpeta: evita dos "informe.pdf" hermanos. */
 function uniqueLabelIn(siblings, label) {
@@ -203,45 +213,65 @@ export function useLibraryIngest({ documentNodes, setDocumentNodes, setExpandedK
 
     const rootName = picked.path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'Carpeta';
     const rootFolder = createFolderNode(rootName);
-    setDocumentNodes((prev) => addNodeToTree(prev, parentKey, rootFolder));
-    if (parentKey) setExpandedKeys((prev) => ({ ...prev, [parentKey]: true }));
+    const folders = new Map([['', rootFolder]]);
 
-    // relativo del directorio → key de la carpeta ya creada
-    const folderKeys = new Map([['', rootFolder.key]]);
     const ensureSubfolder = (relativeDir) => {
-      if (folderKeys.has(relativeDir)) return folderKeys.get(relativeDir);
+      if (folders.has(relativeDir)) return folders.get(relativeDir);
       const segments = relativeDir.split('/');
       const name = segments.pop();
-      const parentRel = segments.join('/');
-      const parentFolderKey = ensureSubfolder(parentRel);
+      const parent = ensureSubfolder(segments.join('/'));
       const folder = createFolderNode(name);
-      setDocumentNodes((prev) => addNodeToTree(prev, parentFolderKey, folder));
-      folderKeys.set(relativeDir, folder.key);
-      return folder.key;
+      parent.children.push(folder);
+      folders.set(relativeDir, folder);
+      return folder;
     };
 
-    setBusy({ total: scan.entries.length, done: 0 });
+    const publish = () => {
+      const snapshot = cloneLibraryNode(rootFolder);
+      setDocumentNodes((prev) => {
+        if (findNodeInTree(prev, rootFolder.key)) {
+          return updateNodeInTree(prev, rootFolder.key, { children: snapshot.children });
+        }
+        return addNodeToTree(prev, parentKey, snapshot);
+      });
+      setExpandedKeys((prev) => ({
+        ...prev,
+        ...(parentKey ? { [parentKey]: true } : {}),
+        [rootFolder.key]: true
+      }));
+    };
+
+    const total = scan.entries.length;
+    setBusy({ total, done: 0, label: `Importando 1 de ${total}…` });
     let imported = 0;
-    for (let i = 0; i < scan.entries.length; i += 1) {
+    for (let i = 0; i < total; i += 1) {
       const entry = scan.entries[i];
-      setBusy({ total: scan.entries.length, done: i });
       const relativeDir = entry.relative.includes('/')
         ? entry.relative.slice(0, entry.relative.lastIndexOf('/'))
         : '';
-      const targetKey = ensureSubfolder(relativeDir);
+      const folder = ensureSubfolder(relativeDir);
       try {
         const result = await ctx.library.importPath({
-          folderKey: targetKey,
+          folderKey: folder.key,
           sourcePath: entry.path,
           encrypt: ctx.encrypt,
           origin: { kind: 'local', ref: entry.path, fetchedAt: Date.now() }
         });
         if (result?.success) {
-          insertFileNode(targetKey, result.file);
+          const label = uniqueLabelIn(folder.children, result.file.label);
+          folder.children.push(createLibraryFileNode({ ...result.file, label }));
           imported += 1;
         }
       } catch (_) {
         /* se informa en el resumen */
+      }
+      const done = i + 1;
+      if (done % IMPORT_BATCH === 0 || done === total) {
+        setBusy({ total, done: i, label: `Importando ${done} de ${total}…` });
+        publish();
+        if (done !== total) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
       }
     }
     setBusy(null);
@@ -249,10 +279,10 @@ export function useLibraryIngest({ documentNodes, setDocumentNodes, setExpandedK
     notify(
       imported ? 'success' : 'error',
       imported ? 'Carpeta importada' : 'No se pudo importar la carpeta',
-      `${imported} de ${scan.entries.length} archivos añadidos`
+      `${imported} de ${total} archivos añadidos`
     );
     return imported;
-  }, [ensureWritable, insertFileNode, notify, setDocumentNodes, setExpandedKeys]);
+  }, [ensureWritable, notify, setDocumentNodes, setExpandedKeys]);
 
   /** Monta una carpeta local sin copiar nada: el árbol solo guarda la ruta. */
   const linkFolderAt = useCallback((parentKey, absPath) => {

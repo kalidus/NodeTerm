@@ -123,7 +123,14 @@ function mimeForName(name) {
  */
 function viewerKindFor(mime, name) {
   const ext = extensionOf(name);
-  const type = String(mime || EXT_MIME[ext] || '').toLowerCase();
+  const fromExt = EXT_MIME[ext] || '';
+  const given = String(mime || '').toLowerCase().split(';')[0].trim();
+  // Nextcloud a veces responde application/octet-stream. La extensión manda.
+  const generic = !given
+    || given === 'application/octet-stream'
+    || given === 'binary/octet-stream'
+    || given === 'application/x-download';
+  const type = generic ? (fromExt || given) : given;
 
   if (type === 'application/pdf' || ext === 'pdf') return 'pdf';
   if (type === 'text/markdown' || ext === 'md' || ext === 'markdown') return 'markdown';

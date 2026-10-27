@@ -1561,6 +1561,14 @@ body.theme-transitioning .content-main {
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85));
 }
 
+.sidebar-panel-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 28%, transparent);
+}
+
 .sidebar-panel-toolbar-btn--appearance {
   opacity: 1 !important;
 }

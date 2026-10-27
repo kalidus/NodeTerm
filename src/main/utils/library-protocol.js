@@ -15,6 +15,7 @@ const { protocol } = require('electron');
 const libraryStore = require('./library-store');
 const libraryAccess = require('./library-access');
 const { createWebdavClient } = require('./webdav-client');
+const { mimeForName } = require('../../shared/library-mime');
 
 const SCHEME = 'nodeterm-library';
 
@@ -49,14 +50,74 @@ function parseRange(header, size) {
   return { start, end: Math.min(end, size - 1) };
 }
 
+/** Nextcloud suele anunciar octet-stream. El visor PDF necesita el tipo real. */
+function resolveMime(entry) {
+  const given = String(entry?.mime || '').toLowerCase().split(';')[0].trim();
+  const generic = !given
+    || given === 'application/octet-stream'
+    || given === 'binary/octet-stream'
+    || given === 'application/x-download';
+  if (!generic) return given;
+  return mimeForName(entry?.label || '') || given || 'application/octet-stream';
+}
+
 function commonHeaders(entry, size) {
   return {
-    'content-type': entry.mime || 'application/octet-stream',
+    'content-type': resolveMime(entry),
     'content-length': String(size),
     // Evita que un HTML/SVG servido inline se interprete como otra cosa
     'x-content-type-options': 'nosniff',
     'cache-control': 'no-store'
   };
+}
+
+function bytesResponse(entry, status, body, extraHeaders) {
+  return new Response(new Uint8Array(body), {
+    status,
+    headers: {
+      ...commonHeaders(entry, body.length),
+      'accept-ranges': 'bytes',
+      ...extraHeaders
+    }
+  });
+}
+
+/**
+ * Reenvía Range al GET de WebDAV. Si el servidor lo ignora y devuelve el
+ * archivo entero, se recorta aquí para contestar 206 igual.
+ */
+async function serveWebdav(entry, request) {
+  const client = createWebdavClient(entry.descriptor);
+  const rangeHeader = request.headers.get('range');
+  const res = await client.getRaw(
+    entry.descriptor.remotePath,
+    rangeHeader ? { Range: rangeHeader } : undefined
+  );
+  if (res.status === 404) return errorResponse(404, 'Not found');
+  if (res.status === 416) return errorResponse(416, 'Range not satisfiable');
+
+  const body = res.body || Buffer.alloc(0);
+  if (res.status === 206) {
+    const upstreamRange = res.headers?.['content-range'];
+    const contentRange = Array.isArray(upstreamRange) ? upstreamRange[0] : upstreamRange;
+    return bytesResponse(entry, 206, body, contentRange ? { 'content-range': contentRange } : {});
+  }
+
+  if (rangeHeader && body.length) {
+    const range = parseRange(rangeHeader, body.length);
+    if (!range) {
+      return new Response(null, {
+        status: 416,
+        headers: { 'content-range': `bytes */${body.length}` }
+      });
+    }
+    const slice = body.subarray(range.start, range.end + 1);
+    return bytesResponse(entry, 206, slice, {
+      'content-range': `bytes ${range.start}-${range.end}/${body.length}`
+    });
+  }
+
+  return bytesResponse(entry, 200, body);
 }
 
 async function handleRequest(request) {
@@ -73,15 +134,10 @@ async function handleRequest(request) {
   if (!entry) return errorResponse(403, 'Forbidden');
 
   // Nextcloud se lee al vuelo: el GET no se escribe en el almacén de la app.
+  // PDF, audio y vídeo piden Range y se quedan en blanco si la respuesta no es 206.
   if (entry.descriptor?.storage === 'webdav') {
     try {
-      const client = createWebdavClient(entry.descriptor);
-      const body = await client.get(entry.descriptor.remotePath);
-      if (!body) return errorResponse(404, 'Not found');
-      return new Response(new Uint8Array(body), {
-        status: 200,
-        headers: commonHeaders(entry, body.length)
-      });
+      return await serveWebdav(entry, request);
     } catch (err) {
       const status = err?.code === 'UNAUTHORIZED' ? 401 : err?.code === 'FILE_TOO_LARGE' ? 413 : 502;
       return errorResponse(status, err?.message || 'WebDAV error');

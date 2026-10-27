@@ -14,7 +14,7 @@ function nextZoom(current, direction) {
  * Visor de imágenes con zoom, arrastre y rotación.
  * Expone sus controles al contenedor mediante `onControlsChange`.
  */
-const ImageViewer = ({ url, label, onControlsChange }) => {
+const ImageViewer = ({ url, label, onControlsChange, onLoadError }) => {
   const [zoom, setZoom] = useState(0); // 0 = ajustar a ventana
   const [rotation, setRotation] = useState(0);
   const [grabbing, setGrabbing] = useState(false);
@@ -107,6 +107,7 @@ const ImageViewer = ({ url, label, onControlsChange }) => {
           alt={label}
           draggable={false}
           style={transform ? { transform } : undefined}
+          onError={() => onLoadError?.()}
         />
       </div>
     </div>

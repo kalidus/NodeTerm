@@ -199,11 +199,13 @@ const TabContentRendererInner = React.memo(({
   // Library file viewer tab (PDF, imagen, texto, media)
   if (tab.type === TAB_TYPES.LIBRARY_FILE && tab.fileData) {
     return (
-      <LazyLibraryFileViewer
-        key={tab.fileData.key}
-        fileData={tab.fileData}
-        isActiveTab={isActiveTab}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, height: '100%', width: '100%' }}>
+        <LazyLibraryFileViewer
+          key={tab.fileData.key}
+          fileData={tab.fileData}
+          isActiveTab={isActiveTab}
+        />
+      </div>
     );
   }
 

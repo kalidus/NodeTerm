@@ -6,6 +6,7 @@ import { Tree } from 'primereact/tree';
 import AppDialog from './ui/AppDialog';
 import { appConfirm } from './ui/AppConfirm';
 import { ContextMenu } from 'primereact/contextmenu';
+import LibraryAddMenu from './library/LibraryAddMenu';
 import {
   sessionActionIconThemes,
   ensureSessionActionIconTheme,
@@ -524,6 +525,7 @@ const DocumentsSidebar = ({
   const [iconTargetNode, setIconTargetNode] = useState(null);
 
   const contextMenuRef = useRef(null);
+  const [libraryAddAnchor, setLibraryAddAnchor] = useState(null);
   const inlineRenameInputRef = useRef(null);
   const sidebarRootRef = useRef(null);
   const documentClickTimerRef = useRef(null);
@@ -951,6 +953,7 @@ const DocumentsSidebar = ({
     unlocked: libraryUnlocked,
     policyFor,
     pickAndAddFiles,
+    pickAndImportFolder,
     linkLocalFolder,
     mountCloudFolder,
     saveCopyOfNode,
@@ -962,7 +965,6 @@ const DocumentsSidebar = ({
 
   const [urlImportTarget, setUrlImportTarget] = useState(null);
   const [cloudMountTarget, setCloudMountTarget] = useState(null);
-  const [saveCopyInApp, setSaveCopyInApp] = useState(false);
   const [folderPropsNode, setFolderPropsNode] = useState(null);
   const [dropTargetKey, setDropTargetKey] = useState(null);
   const dropDepthRef = useRef(0);
@@ -974,10 +976,27 @@ const DocumentsSidebar = ({
     return getParentKeyForNewNote();
   }, [notesLayout, browseStack, getParentKeyForNewNote]);
 
-  /** Entradas de menú: leer en el sitio, y copiar solo si la casilla está marcada. */
+  /** El portapapeles pregunta si se guarda copia: no hay carpeta de origen. */
+  const pasteIntoLibrary = useCallback(async (folderKey) => {
+    const saveCopy = await appConfirm({
+      header: 'Pegar en la biblioteca',
+      message: '¿Guardar una copia dentro de NodeTerm? Si eliges solo abrir, el contenido se muestra y no se copia.',
+      severity: 'info',
+      acceptLabel: 'Guardar copia',
+      rejectLabel: 'Solo abrir'
+    });
+    await importFromClipboard(folderKey, { saveCopy });
+  }, [importFromClipboard]);
+
+  /** Cada acción dice si copia o solo lee en el sitio. */
   const buildIngestMenuItems = useCallback((folderKey, folderLabel) => ([
     {
-      label: 'Enlazar carpeta de Windows…',
+      label: 'Importar carpeta a NodeTerm…',
+      icon: 'pi pi-folder-open',
+      command: () => pickAndImportFolder(folderKey)
+    },
+    {
+      label: 'Conectar carpeta de Windows…',
       icon: 'pi pi-desktop',
       command: () => linkLocalFolder(folderKey)
     },
@@ -988,9 +1007,9 @@ const DocumentsSidebar = ({
     },
     { separator: true },
     {
-      label: saveCopyInApp ? 'Añadir archivos y guardar copia…' : 'Enlazar archivos…',
-      icon: saveCopyInApp ? 'pi pi-save' : 'pi pi-file',
-      command: () => pickAndAddFiles(folderKey, { saveCopy: saveCopyInApp })
+      label: 'Enlazar archivos sueltos…',
+      icon: 'pi pi-file',
+      command: () => pickAndAddFiles(folderKey, { saveCopy: false })
     },
     {
       label: 'Añadir desde URL…',
@@ -1000,9 +1019,14 @@ const DocumentsSidebar = ({
     {
       label: 'Pegar del portapapeles',
       icon: 'pi pi-clipboard',
-      command: () => importFromClipboard(folderKey, { saveCopy: saveCopyInApp })
+      command: () => pasteIntoLibrary(folderKey)
     }
-  ]), [linkLocalFolder, pickAndAddFiles, importFromClipboard, saveCopyInApp]);
+  ]), [pickAndImportFolder, linkLocalFolder, pickAndAddFiles, pasteIntoLibrary]);
+
+  const libraryAddMenuModel = useMemo(
+    () => buildIngestMenuItems(resolveIngestFolderKey(null), null),
+    [buildIngestMenuItems, resolveIngestFolderKey]
+  );
 
   const folderPropsPolicy = useMemo(
     () => (folderPropsNode ? policyFor(folderPropsNode.key) : { vaultMode: 'plain', syncMode: 'none', inheritedFrom: null }),
@@ -1213,8 +1237,8 @@ const DocumentsSidebar = ({
     dropDepthRef.current = 0;
     setDropTargetKey(null);
     const folderKey = resolveIngestFolderKey(null);
-    await importFromDataTransfer(folderKey, e.dataTransfer, { saveCopy: saveCopyInApp });
-  }, [resolveIngestFolderKey, importFromDataTransfer, saveCopyInApp]);
+    await importFromDataTransfer(folderKey, e.dataTransfer, { saveCopy: false });
+  }, [resolveIngestFolderKey, importFromDataTransfer]);
 
   // Ctrl+V sobre el árbol pega una captura o texto como archivo
   useEffect(() => {
@@ -1227,11 +1251,11 @@ const DocumentsSidebar = ({
       }
       if (!root.contains(target)) return;
       e.preventDefault();
-      importFromClipboard(resolveIngestFolderKey(null), { saveCopy: saveCopyInApp });
+      pasteIntoLibrary(resolveIngestFolderKey(null));
     };
     document.addEventListener('paste', onPaste);
     return () => document.removeEventListener('paste', onPaste);
-  }, [importFromClipboard, resolveIngestFolderKey, saveCopyInApp]);
+  }, [pasteIntoLibrary, resolveIngestFolderKey]);
 
   const handleDelete = (node) => {
     // Guardar copia del nodo antes de eliminar
@@ -1789,21 +1813,43 @@ const DocumentsSidebar = ({
     const onNewDoc = () => handleCreateNewNote();
     const onNewFolder = () => openNewFolderDialog();
     const onToggleExpandAll = () => toggleExpandAllDocuments();
-    const onLinkFolder = () => linkLocalFolder(resolveIngestFolderKey(null));
-    const onMountCloud = () => setCloudMountTarget({ key: resolveIngestFolderKey(null) });
+    const folderKey = () => resolveIngestFolderKey(null);
+    const onImportFolder = () => pickAndImportFolder(folderKey());
+    const onLinkFolder = () => linkLocalFolder(folderKey());
+    const onMountCloud = () => setCloudMountTarget({ key: folderKey() });
+    const onLinkFiles = () => pickAndAddFiles(folderKey(), { saveCopy: false });
+    const onAddUrl = () => setUrlImportTarget({ key: folderKey(), label: null });
+    const onPaste = () => pasteIntoLibrary(folderKey());
     window.addEventListener('documents-sidebar:new-doc', onNewDoc);
     window.addEventListener('documents-sidebar:new-folder', onNewFolder);
     window.addEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
+    window.addEventListener('documents-sidebar:import-folder', onImportFolder);
     window.addEventListener('documents-sidebar:link-folder', onLinkFolder);
     window.addEventListener('documents-sidebar:mount-cloud', onMountCloud);
+    window.addEventListener('documents-sidebar:link-files', onLinkFiles);
+    window.addEventListener('documents-sidebar:add-url', onAddUrl);
+    window.addEventListener('documents-sidebar:paste', onPaste);
     return () => {
       window.removeEventListener('documents-sidebar:new-doc', onNewDoc);
       window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
       window.removeEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
+      window.removeEventListener('documents-sidebar:import-folder', onImportFolder);
       window.removeEventListener('documents-sidebar:link-folder', onLinkFolder);
       window.removeEventListener('documents-sidebar:mount-cloud', onMountCloud);
+      window.removeEventListener('documents-sidebar:link-files', onLinkFiles);
+      window.removeEventListener('documents-sidebar:add-url', onAddUrl);
+      window.removeEventListener('documents-sidebar:paste', onPaste);
     };
-  }, [hideHeader, toggleExpandAllDocuments, handleCreateNewNote, linkLocalFolder, resolveIngestFolderKey]);
+  }, [
+    hideHeader,
+    toggleExpandAllDocuments,
+    handleCreateNewNote,
+    resolveIngestFolderKey,
+    pickAndImportFolder,
+    linkLocalFolder,
+    pickAndAddFiles,
+    pasteIntoLibrary
+  ]);
 
   useEffect(() => {
     if (!hideHeader) return;
@@ -2129,27 +2175,30 @@ const DocumentsSidebar = ({
               </span>
             </Button>
 
-            <Button
-              className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={() => linkLocalFolder(resolveIngestFolderKey(null))}
-              tooltip="Enlazar carpeta de Windows"
-              tooltipOptions={{ position: 'bottom' }}
-              style={DOC_HEADER_GLASS_BTN}
-            >
-              <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-                <i className="pi pi-desktop" style={{ fontSize: '1.05rem' }} />
-              </span>
-            </Button>
+            <div style={{
+              width: '1px',
+              height: '18px',
+              background: 'color-mix(in srgb, var(--ui-sidebar-text, #fff) 28%, transparent)',
+              margin: '0 4px',
+              flexShrink: 0
+            }} />
 
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={() => setCloudMountTarget({ key: resolveIngestFolderKey(null) })}
-              tooltip="Montar carpeta de Nextcloud"
+              onClick={(event) => {
+                const anchor = event.currentTarget;
+                setLibraryAddAnchor((current) => (current === anchor ? null : anchor));
+              }}
+              tooltip="Añadir a la biblioteca"
               tooltipOptions={{ position: 'bottom' }}
               style={DOC_HEADER_GLASS_BTN}
             >
               <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-                <i className="pi pi-cloud" style={{ fontSize: '1.05rem' }} />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M8.5 8.5 12 12l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 14.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </span>
             </Button>
 
@@ -2208,7 +2257,7 @@ const DocumentsSidebar = ({
 
       {/* Tree — mismo contenedor que conexiones/passwords para alinear márgenes */}
       <div
-        className={`tree-container${dropTargetKey ? ' documents-drop-active' : ''}`}
+        className={`tree-container library-tree${dropTargetKey ? ' documents-drop-active' : ''}`}
         onContextMenu={handleEmptySpaceContextMenu}
         onDragEnter={handleNativeDragEnter}
         onDragOver={handleNativeDragOver}
@@ -2223,27 +2272,9 @@ const DocumentsSidebar = ({
           fontSize: `${explorerFontSize}px`
         }}
       >
-        <div className="library-source-bar">
-          <button type="button" onClick={() => linkLocalFolder(resolveIngestFolderKey(null))}>
-            <i className="pi pi-desktop" /> Enlazar Windows
-          </button>
-          <button type="button" onClick={() => setCloudMountTarget({ key: resolveIngestFolderKey(null) })}>
-            <i className="pi pi-cloud" /> Montar Nextcloud
-          </button>
-          <label>
-            <input
-              type="checkbox"
-              checked={saveCopyInApp}
-              onChange={(e) => setSaveCopyInApp(e.target.checked)}
-            />
-            Guardar copia en NodeTerm
-          </label>
-        </div>
         {dropTargetKey && (
           <div className="library-drop-hint">
-            {saveCopyInApp
-              ? 'Soltar y guardar una copia en NodeTerm'
-              : 'Soltar para enlazar, sin copiar'}
+            Soltar para enlazar, sin copiar
           </div>
         )}
         {ingestBusy && (
@@ -2409,6 +2440,12 @@ const DocumentsSidebar = ({
         selectedNoteKey={selectedNodeKey}
       />
 
+      <LibraryAddMenu
+        open={Boolean(libraryAddAnchor)}
+        anchorEl={libraryAddAnchor}
+        items={libraryAddMenuModel}
+        onClose={() => setLibraryAddAnchor(null)}
+      />
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
       <TreeContextMenu
         treeContextMenu={quickNotesCtxMenu}
@@ -2480,7 +2517,7 @@ const DocumentsSidebar = ({
       <LibraryUrlImportDialog
         visible={Boolean(urlImportTarget)}
         folderLabel={urlImportTarget?.label}
-        defaultSaveCopy={saveCopyInApp}
+        defaultSaveCopy={false}
         onHide={() => setUrlImportTarget(null)}
         onConfirm={(url, options) => {
           const target = urlImportTarget;

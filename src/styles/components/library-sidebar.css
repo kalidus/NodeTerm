@@ -159,51 +159,56 @@
   transition: width 0.2s ease;
 }
 
-.tree-container:has(.library-source-bar) {
+.library-tree {
   display: flex;
   flex-direction: column;
 }
 
-.library-source-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.library-source-bar button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.library-source-bar button:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.library-source-bar label {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  opacity: 0.8;
-  cursor: pointer;
-}
-
-.tree-container:has(.library-source-bar) > .documents-empty-state,
-.tree-container:has(.library-source-bar) > .notes-browser {
+.library-tree > .documents-empty-state,
+.library-tree > .notes-browser {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.library-add-menu {
+  position: fixed;
+  z-index: 1200;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--ui-dialog-bg, var(--ui-sidebar-bg, #1e1e2e));
+  color: var(--ui-sidebar-text, #e6e6e6);
+  border: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 16%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.library-add-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.library-add-menu button:hover {
+  background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 10%, transparent);
+}
+
+.library-add-menu i {
+  width: 16px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.library-add-menu hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 14%, transparent);
+  margin: 4px 6px;
 }

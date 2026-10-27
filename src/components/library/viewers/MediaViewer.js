@@ -1,19 +1,22 @@
 import React from 'react';
 
 /** Reproductor nativo para vídeo y audio; el seek usa Range del protocolo. */
-const MediaViewer = ({ url, mime, kind }) => {
+const MediaViewer = ({ url, kind, onLoadError }) => {
+  const fail = () => onLoadError?.();
   if (kind === 'audio') {
     return (
-      <audio className="library-viewer__media library-viewer__media--audio" controls preload="metadata" src={url}>
-        <source src={url} type={mime || undefined} />
-      </audio>
+      <audio
+        className="library-viewer__media library-viewer__media--audio"
+        controls
+        preload="metadata"
+        src={url}
+        onError={fail}
+      />
     );
   }
 
   return (
-    <video className="library-viewer__media" controls preload="metadata" src={url}>
-      <source src={url} type={mime || undefined} />
-    </video>
+    <video className="library-viewer__media" controls preload="metadata" src={url} onError={fail} />
   );
 };
 

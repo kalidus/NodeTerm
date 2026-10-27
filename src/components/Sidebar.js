@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { Tree } from 'primereact/tree';
+import LibraryAddMenu from './library/LibraryAddMenu';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import VaultLayoutMenu from './vault/VaultLayoutMenu';
@@ -2571,6 +2572,40 @@ const Sidebar = React.memo(({
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: '16px', height: '16px'
   };
+  const [libraryAddAnchor, setLibraryAddAnchor] = useState(null);
+  const libraryAddMenuModel = useMemo(() => ([
+    {
+      label: 'Importar carpeta a NodeTerm…',
+      icon: 'pi pi-folder-open',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:import-folder'))
+    },
+    {
+      label: 'Conectar carpeta de Windows…',
+      icon: 'pi pi-desktop',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:link-folder'))
+    },
+    {
+      label: 'Montar carpeta de Nextcloud…',
+      icon: 'pi pi-cloud',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:mount-cloud'))
+    },
+    { separator: true },
+    {
+      label: 'Enlazar archivos sueltos…',
+      icon: 'pi pi-file',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:link-files'))
+    },
+    {
+      label: 'Añadir desde URL…',
+      icon: 'pi pi-cloud-download',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:add-url'))
+    },
+    {
+      label: 'Pegar del portapapeles',
+      icon: 'pi pi-clipboard',
+      command: () => window.dispatchEvent(new CustomEvent('documents-sidebar:paste'))
+    }
+  ]), []);
   const sessionIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
 
   const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
@@ -2846,23 +2881,25 @@ const Sidebar = React.memo(({
           >
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
-          <button
-            type="button"
-            className="sidebar-panel-toolbar-btn"
-            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:link-folder'))}
-            title="Enlazar carpeta de Windows"
-          >
-            <span style={TB_ICON}><i className="pi pi-desktop" /></span>
-          </button>
-          <button
-            type="button"
-            className="sidebar-panel-toolbar-btn"
-            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:mount-cloud'))}
-            title="Montar carpeta de Nextcloud"
-          >
-            <span style={TB_ICON}><i className="pi pi-cloud" /></span>
-          </button>
           {createTabGroupBtn}
+          <span className="sidebar-panel-toolbar-sep" aria-hidden="true" />
+          <button
+            type="button"
+            className="sidebar-panel-toolbar-btn"
+            onClick={(event) => {
+              const anchor = event.currentTarget;
+              setLibraryAddAnchor((current) => (current === anchor ? null : anchor));
+            }}
+            title="Añadir a la biblioteca"
+          >
+            <span style={TB_ICON}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <path d="M8.5 8.5 12 12l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 14.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </span>
+          </button>
         </>)}
 
         {/* ── SECRETOS ── */}
@@ -2965,6 +3002,12 @@ const Sidebar = React.memo(({
     <>
       {/* Panel toolbar header with contextual actions */}
       {panelToolbarHeader}
+      <LibraryAddMenu
+        open={Boolean(libraryAddAnchor)}
+        anchorEl={libraryAddAnchor}
+        items={libraryAddMenuModel}
+        onClose={() => setLibraryAddAnchor(null)}
+      />
 
       {/* Vista de Conexiones (Mantenida montada para evitar flashes) */}
       <div style={{ display: viewMode === 'connections' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
