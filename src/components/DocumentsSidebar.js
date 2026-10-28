@@ -31,6 +31,7 @@ import {
   isShowMoreTreeNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
+import { useTreeDragHoverExpand } from '../hooks/useTreeDragHoverExpand';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
@@ -1210,6 +1211,24 @@ const DocumentsSidebar = ({
     setDocumentNodes((prev) => updateNodeInTree(prev, node.key, { children, leaf: children.length === 0 }));
   }, [setDocumentNodes, showToast]);
 
+  const handleFolderExpandForDrag = useCallback((key) => {
+    const node = findNodeInTree(documentNodesRef.current, key);
+    if (!node) return;
+    if (isLinkedFolder(node)) loadLinkedFolderChildren(node);
+    if (isCloudFolder(node)) loadCloudFolderChildren(node);
+  }, [loadLinkedFolderChildren, loadCloudFolderChildren]);
+
+  const {
+    noteDragStartKey,
+    handleDragHoverExpandOver,
+    handleDragHoverExpandLeave,
+    clearDragHoverExpand
+  } = useTreeDragHoverExpand({
+    expandedKeys,
+    setExpandedKeys,
+    onFolderExpand: handleFolderExpandForDrag
+  });
+
   // Soltar archivos del explorador del sistema sobre el árbol
   const handleNativeDragOver = useCallback((e) => {
     if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
@@ -1628,6 +1647,8 @@ const DocumentsSidebar = ({
     return (
       <span
         className="document-tree-node"
+        data-node-key={node.key}
+        data-node-type={isFolder ? 'folder' : 'document'}
         onClick={(e) => {
           if (isInlineRenaming) {
             e.stopPropagation();
@@ -2363,7 +2384,15 @@ const DocumentsSidebar = ({
                 </p>
               </div>
             ) : (
-              <div className="documents-tree-scroll-area" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+              <div
+                className="documents-tree-scroll-area"
+                style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
+                onDragStartCapture={noteDragStartKey}
+                onDragOverCapture={handleDragHoverExpandOver}
+                onDragLeave={handleDragHoverExpandLeave}
+                onDrop={clearDragHoverExpand}
+                onDragEnd={clearDragHoverExpand}
+              >
                 <Tree
                   value={treeValue}
                   expandedKeys={expandedKeys}

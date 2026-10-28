@@ -37,6 +37,7 @@ import {
   isTreeFolderNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
+import { useTreeDragHoverExpand } from '../hooks/useTreeDragHoverExpand';
 import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
@@ -171,6 +172,13 @@ const PasswordManagerSidebar = ({
   useEffect(() => {
     try { localStorage.setItem('passwords_all_expanded', JSON.stringify(allExpanded)); } catch {}
   }, [allExpanded]);
+
+  const {
+    noteDragStartKey,
+    handleDragHoverExpandOver,
+    handleDragHoverExpandLeave,
+    clearDragHoverExpand
+  } = useTreeDragHoverExpand({ expandedKeys, setExpandedKeys });
   
   // Referencias y estados para el menú contextual
   const contextMenuRef = useRef(null);
@@ -1262,6 +1270,7 @@ const PasswordManagerSidebar = ({
           gap: '6px'
         }}
         data-connection-type={isSecret ? secretType : null}
+        data-node-key={node.key}
         data-node-type={isFolder ? 'folder' : 'connection'}
         draggable={!node.data?.isShowMoreBtn}
       >
@@ -2124,6 +2133,11 @@ const PasswordManagerSidebar = ({
           fontSize: `${explorerFontSize}px`
         }}
         onContextMenu={onTreeAreaContextMenu}
+        onDragStartCapture={noteDragStartKey}
+        onDragOverCapture={handleDragHoverExpandOver}
+        onDragLeave={handleDragHoverExpandLeave}
+        onDrop={clearDragHoverExpand}
+        onDragEnd={clearDragHoverExpand}
       >
         {isLoading ? (
           <PasswordSkeleton />

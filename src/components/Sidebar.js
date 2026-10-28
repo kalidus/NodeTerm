@@ -84,6 +84,7 @@ import { openAIClientById } from './sidebar/openAIClientTabs';
 import { useSidebarTrash } from './sidebar/useSidebarTrash';
 import SidebarTrashModal from './sidebar/SidebarTrashModal';
 import { useSidebarSectionAppearance } from '../hooks/useSidebarSectionAppearance';
+import { useTreeDragHoverExpand } from '../hooks/useTreeDragHoverExpand';
 import {
   SIDEBAR_APPEARANCE_SECTIONS,
   SIDEBAR_SECTION_LABELS
@@ -386,6 +387,13 @@ const Sidebar = React.memo(({
   const dragAutoScrollRafRef = useRef(null);
   const dragAutoScrollSpeedRef = useRef(0);
   const dragAutoScrollActiveRef = useRef(false);
+
+  const {
+    noteDragStartKey,
+    handleDragHoverExpandOver,
+    handleDragHoverExpandLeave,
+    clearDragHoverExpand
+  } = useTreeDragHoverExpand({ expandedKeys, setExpandedKeys });
 
   const hasWarmedUpRef = useRef(false);
   const hasEverExpandedRef = useRef(!sidebarCollapsed);
@@ -1535,6 +1543,11 @@ const Sidebar = React.memo(({
     dragAutoScrollActiveRef.current = false;
   }, []);
 
+  const stopTreeDragInteraction = useCallback(() => {
+    stopTreeDragAutoScroll();
+    clearDragHoverExpand();
+  }, [clearDragHoverExpand, stopTreeDragAutoScroll]);
+
   const runTreeDragAutoScroll = useCallback(() => {
     const container = treeContainerRef.current;
     if (!container) {
@@ -1570,6 +1583,7 @@ const Sidebar = React.memo(({
     if (!container) return;
 
     e.preventDefault();
+    handleDragHoverExpandOver(e);
 
     const rect = container.getBoundingClientRect();
     const threshold = 72;
@@ -1598,20 +1612,21 @@ const Sidebar = React.memo(({
     } else {
       stopTreeDragAutoScroll();
     }
-  }, [runTreeDragAutoScroll, stopTreeDragAutoScroll]);
+  }, [handleDragHoverExpandOver, runTreeDragAutoScroll, stopTreeDragAutoScroll]);
 
   const handleTreeContainerDragLeave = useCallback((e) => {
     const container = treeContainerRef.current;
     if (!container) return;
     if (e.currentTarget.contains(e.relatedTarget)) return;
-    stopTreeDragAutoScroll();
-  }, [stopTreeDragAutoScroll]);
+    handleDragHoverExpandLeave(e);
+    stopTreeDragInteraction();
+  }, [handleDragHoverExpandLeave, stopTreeDragInteraction]);
 
   useEffect(() => {
     return () => {
-      stopTreeDragAutoScroll();
+      stopTreeDragInteraction();
     };
-  }, [stopTreeDragAutoScroll]);
+  }, [stopTreeDragInteraction]);
 
 
   // Eventos globales para acciones de acceso rápido desde Home
@@ -2507,6 +2522,7 @@ const Sidebar = React.memo(({
   // Esto permite que PrimeReact maneje el drag & drop interno (ordenación, líneas visuales)
   // mientras nosotros inyectamos los datos necesarios para drops externos (terminales)
   const handleExternalDragStart = (e) => {
+    noteDragStartKey(e);
     // Intentar encontrar el nodo arrastrado buscando la marca data-node-key
     // El e.target suele ser el elemento arrastraable de PrimeReact (fila) o un hijo
     let target = e.target;
@@ -3047,10 +3063,13 @@ const Sidebar = React.memo(({
           }}
           onContextMenu={onTreeAreaContextMenu}
           className="tree-container"
+          onDragStartCapture={noteDragStartKey}
           onDragStart={handleExternalDragStart}
+          onDragOverCapture={handleTreeContainerDragOver}
           onDragOver={handleTreeContainerDragOver}
           onDragLeave={handleTreeContainerDragLeave}
-          onDrop={stopTreeDragAutoScroll}
+          onDrop={stopTreeDragInteraction}
+          onDragEnd={stopTreeDragInteraction}
         >
           {isLoading ? (
             <SidebarSkeleton />
