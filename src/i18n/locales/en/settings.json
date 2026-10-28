@@ -104,6 +104,22 @@
       "aurora": {
         "name": "Aurora",
         "desc": "Soft cool gradients without aggressive neon."
+      },
+      "matrix": {
+        "name": "Matrix",
+        "desc": "Green digital rain and hacker-console access."
+      },
+      "ember": {
+        "name": "Ember",
+        "desc": "Charcoal and warm copper, vault-by-fire mood."
+      },
+      "nord": {
+        "name": "Nord",
+        "desc": "Nordic slate and polar blue, minimal look."
+      },
+      "midnight": {
+        "name": "Midnight",
+        "desc": "Deep indigo with a quiet, elegant finish."
       }
     }
   },

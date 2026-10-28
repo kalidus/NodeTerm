@@ -7,6 +7,12 @@ import PremiumCardLayout from './layouts/PremiumCardLayout';
 import GlassHudLayout from './layouts/GlassHudLayout';
 import SynthwaveLayout from './layouts/SynthwaveLayout';
 import AuroraLayout from './layouts/AuroraLayout';
+import {
+  MatrixLayout,
+  EmberLayout,
+  NordLayout,
+  MidnightLayout
+} from './layouts/ThemedFullscreenLayout';
 
 const LAYOUTS = {
   classic: ClassicLayout,
@@ -15,7 +21,11 @@ const LAYOUTS = {
   'premium-card': PremiumCardLayout,
   'glass-hud': GlassHudLayout,
   synthwave: SynthwaveLayout,
-  aurora: AuroraLayout
+  aurora: AuroraLayout,
+  matrix: MatrixLayout,
+  ember: EmberLayout,
+  nord: NordLayout,
+  midnight: MidnightLayout
 };
 
 /**

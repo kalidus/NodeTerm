@@ -13,7 +13,11 @@ export const UNLOCK_STYLE_IDS = [
   'premium-card',
   'glass-hud',
   'synthwave',
-  'aurora'
+  'aurora',
+  'matrix',
+  'ember',
+  'nord',
+  'midnight'
 ];
 
 /** Estilos fullscreen (overlay propio). classic y premium-card usan shell modal. */
@@ -22,9 +26,14 @@ export const UNLOCK_FULLSCREEN_STYLES = new Set([
   'terminal',
   'glass-hud',
   'synthwave',
-  'aurora'
+  'aurora',
+  'matrix',
+  'ember',
+  'nord',
+  'midnight'
 ]);
 
+/** Estilos en Apariencia (con preview fotorealista). */
 export const UNLOCK_STYLE_META = [
   {
     id: 'classic',
@@ -32,9 +41,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.classic.desc',
     name: 'Classic',
     desc: 'El diálogo compacto actual de NodeTerm.',
-    bgColor: 'linear-gradient(180deg, #2d2d30 0%, #1e1e1e 100%)',
-    accentColor: '#0e639c',
-    borderColor: 'rgba(14, 99, 156, 0.35)'
+    accentColor: '#0e639c'
   },
   {
     id: 'vault-gate',
@@ -42,9 +49,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.vaultGate.desc',
     name: 'Vault Gate',
     desc: 'Pantalla completa con card centrada y wordmark NodeTerm.',
-    bgColor: 'linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%)',
-    accentColor: '#3b82f6',
-    borderColor: 'rgba(59, 130, 246, 0.35)'
+    accentColor: '#3b82f6'
   },
   {
     id: 'terminal',
@@ -52,9 +57,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.terminal.desc',
     name: 'Terminal',
     desc: 'Consola unlock>_ con tipografía mono y estética CLI.',
-    bgColor: '#050505',
-    accentColor: '#00ff66',
-    borderColor: 'rgba(0, 255, 102, 0.4)'
+    accentColor: '#00ff66'
   },
   {
     id: 'premium-card',
@@ -62,9 +65,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.premiumCard.desc',
     name: 'Premium Card',
     desc: 'Modal pulido sobre máscara, sin banners de relleno.',
-    bgColor: 'linear-gradient(160deg, #252526 0%, #1e1e1e 100%)',
-    accentColor: '#0e639c',
-    borderColor: 'rgba(14, 99, 156, 0.45)'
+    accentColor: '#0e639c'
   },
   {
     id: 'glass-hud',
@@ -72,9 +73,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.glassHud.desc',
     name: 'Glass HUD',
     desc: 'Cristal translúcido con glow cian tipo hologram.',
-    bgColor: '#06040d',
-    accentColor: '#00f2fe',
-    borderColor: 'rgba(0, 242, 254, 0.45)'
+    accentColor: '#00f2fe'
   },
   {
     id: 'synthwave',
@@ -82,9 +81,7 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.synthwave.desc',
     name: 'Synthwave',
     desc: 'Retro 80s con fucsia y ámbar, eco del splash Outrun.',
-    bgColor: 'linear-gradient(180deg, #0f021a 0%, #1a0530 60%, #2a0840 100%)',
-    accentColor: '#ff007f',
-    borderColor: 'rgba(255, 0, 127, 0.45)'
+    accentColor: '#ff007f'
   },
   {
     id: 'aurora',
@@ -92,9 +89,39 @@ export const UNLOCK_STYLE_META = [
     descKey: 'unlockScreen.styles.aurora.desc',
     name: 'Aurora',
     desc: 'Gradientes fríos suaves, sin neón agresivo.',
-    bgColor: 'linear-gradient(135deg, #0b1a2a 0%, #12304a 45%, #0e2838 100%)',
-    accentColor: '#7dd3fc',
-    borderColor: 'rgba(125, 211, 252, 0.4)'
+    accentColor: '#7dd3fc'
+  },
+  {
+    id: 'matrix',
+    nameKey: 'unlockScreen.styles.matrix.name',
+    descKey: 'unlockScreen.styles.matrix.desc',
+    name: 'Matrix',
+    desc: 'Lluvia digital verde y acceso tipo consola hacker.',
+    accentColor: '#22c55e'
+  },
+  {
+    id: 'ember',
+    nameKey: 'unlockScreen.styles.ember.name',
+    descKey: 'unlockScreen.styles.ember.desc',
+    name: 'Ember',
+    desc: 'Carbón y cobre cálido, ambiente de bóveda al fuego.',
+    accentColor: '#f97316'
+  },
+  {
+    id: 'nord',
+    nameKey: 'unlockScreen.styles.nord.name',
+    descKey: 'unlockScreen.styles.nord.desc',
+    name: 'Nord',
+    desc: 'Paleta nórdica slate y azul polar, minimalista.',
+    accentColor: '#88c0d0'
+  },
+  {
+    id: 'midnight',
+    nameKey: 'unlockScreen.styles.midnight.name',
+    descKey: 'unlockScreen.styles.midnight.desc',
+    name: 'Midnight',
+    desc: 'Índigo profundo con toque elegante y discreto.',
+    accentColor: '#818cf8'
   }
 ];
 

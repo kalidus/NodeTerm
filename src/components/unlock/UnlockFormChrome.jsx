@@ -62,10 +62,19 @@ export function UnlockPasswordField({
   }
 
   const showLeadingLock = variant !== 'classic';
+  const hideLabel = [
+    'glass-hud',
+    'synthwave',
+    'aurora',
+    'matrix',
+    'ember',
+    'nord',
+    'midnight'
+  ].includes(variant);
 
   return (
     <div className={`unlock-field unlock-field--${variant}`}>
-      {variant !== 'glass-hud' && variant !== 'synthwave' && variant !== 'aurora' ? (
+      {!hideLabel ? (
         <label htmlFor={passwordId} className="unlock-field-label">
           {t('dialogs.unlock.masterPassword', 'Contraseña Maestra')}
         </label>
@@ -87,7 +96,11 @@ export function UnlockPasswordField({
           feedback={false}
           toggleMask
           autoFocus
-          placeholder={variant === 'glass-hud' || variant === 'aurora' ? ph : undefined}
+          placeholder={
+            ['glass-hud', 'aurora', 'matrix', 'ember', 'nord', 'midnight'].includes(variant)
+              ? ph
+              : undefined
+          }
           inputClassName="unlock-field-input"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && canSubmit) onSubmit?.();
@@ -113,11 +126,11 @@ export function UnlockRemember({
   const shortLabel = t('dialogs.unlock.rememberShort', 'Recordar');
   const id = `${passwordId}-remember`;
 
-  if (variant === 'terminal') {
+  if (variant === 'terminal' || variant === 'matrix') {
     return (
       <button
         type="button"
-        className={`unlock-remember unlock-remember--terminal${rememberPassword ? ' is-checked' : ''}`}
+        className={`unlock-remember unlock-remember--terminal unlock-remember--${variant}${rememberPassword ? ' is-checked' : ''}`}
         onClick={() => preferenceReady && onRememberChange?.({ checked: !rememberPassword })}
         disabled={!preferenceReady}
         aria-pressed={rememberPassword}

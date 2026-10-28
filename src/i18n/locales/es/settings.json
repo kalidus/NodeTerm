@@ -104,6 +104,22 @@
       "aurora": {
         "name": "Aurora",
         "desc": "Gradientes fríos suaves, sin neón agresivo."
+      },
+      "matrix": {
+        "name": "Matrix",
+        "desc": "Lluvia digital verde y acceso tipo consola hacker."
+      },
+      "ember": {
+        "name": "Ember",
+        "desc": "Carbón y cobre cálido, ambiente de bóveda al fuego."
+      },
+      "nord": {
+        "name": "Nord",
+        "desc": "Paleta nórdica slate y azul polar, minimalista."
+      },
+      "midnight": {
+        "name": "Midnight",
+        "desc": "Índigo profundo con toque elegante y discreto."
       }
     }
   },

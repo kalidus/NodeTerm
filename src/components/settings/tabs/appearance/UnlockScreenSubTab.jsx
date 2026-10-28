@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
 import UnlockDialog from '../../../UnlockDialog';
+import UnlockStyleThumb from '../../../unlock/UnlockStyleThumb';
 import {
   UNLOCK_STYLE_META,
   loadUnlockStyle,
@@ -77,9 +78,9 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '1.25rem',
-              marginBottom: '1.5rem'
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: '1rem',
+              marginBottom: '1.25rem'
             }}
           >
             {UNLOCK_STYLE_META.map((opt) => {
@@ -89,7 +90,7 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
               return (
                 <div
                   key={opt.id}
-                  className={`general-setting-card ${isSelected ? 'active' : ''}`}
+                  className={`general-setting-card unlock-style-option ${isSelected ? 'active' : ''}`}
                   onClick={() => handleStyleChange(opt.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -104,83 +105,53 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
                       ? `2px solid ${opt.accentColor}`
                       : '1px solid rgba(255, 255, 255, 0.08)',
                     borderRadius: '12px',
-                    padding: '1.25rem',
+                    padding: '0.9rem',
                     cursor: 'pointer',
                     background: 'rgba(255, 255, 255, 0.02)',
                     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: isSelected ? `0 0 16px ${opt.accentColor}30` : 'none',
                     position: 'relative',
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '140px'
+                    flexDirection: 'column'
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '0.5rem'
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: '1rem',
-                          color: isSelected ? opt.accentColor : 'var(--ui-dialog-text)'
-                        }}
-                      >
-                        {name}
-                      </span>
-                      {isSelected ? (
-                        <i
-                          className="pi pi-check-circle"
-                          style={{ color: opt.accentColor, fontSize: '1.2rem' }}
-                        />
-                      ) : null}
-                    </div>
-                    <p
-                      style={{
-                        fontSize: '0.8rem',
-                        color: 'var(--text-color-secondary)',
-                        margin: 0,
-                        opacity: 0.85,
-                        lineHeight: 1.4
-                      }}
-                    >
-                      {desc}
-                    </p>
-                  </div>
+                  <UnlockStyleThumb styleId={opt.id} alt={name} />
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      marginTop: '0.75rem'
+                      justifyContent: 'space-between',
+                      marginBottom: '0.25rem',
+                      gap: '0.5rem'
                     }}
                   >
-                    <div
-                      style={{
-                        width: 48,
-                        height: 28,
-                        borderRadius: 6,
-                        background: opt.bgColor,
-                        border: `1px solid ${opt.borderColor || opt.accentColor}`,
-                        boxShadow: `inset 0 0 12px ${opt.accentColor}22`
-                      }}
-                    />
                     <span
                       style={{
-                        fontSize: '0.7rem',
-                        color: 'var(--text-color-secondary)',
-                        opacity: 0.7
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        color: isSelected ? opt.accentColor : 'var(--ui-dialog-text)'
                       }}
                     >
-                      {opt.accentColor}
+                      {name}
                     </span>
+                    {isSelected ? (
+                      <i
+                        className="pi pi-check-circle"
+                        style={{ color: opt.accentColor, fontSize: '1rem' }}
+                      />
+                    ) : null}
                   </div>
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-color-secondary)',
+                      margin: 0,
+                      opacity: 0.85,
+                      lineHeight: 1.35
+                    }}
+                  >
+                    {desc}
+                  </p>
                 </div>
               );
             })}
