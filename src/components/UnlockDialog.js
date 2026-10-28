@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Password } from 'primereact/password';
 import { Message } from 'primereact/message';
 import { Checkbox } from 'primereact/checkbox';
@@ -10,10 +10,38 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // Por defecto TRUE: desbloquear = recordar en este dispositivo
+  // Por defecto TRUE si no hay elección previa: desbloquear = recordar en este dispositivo.
+  // Un false explícito en security.json deja la casilla desmarcada.
   const [rememberPassword, setRememberPassword] = useState(true);
+  const [preferenceReady, setPreferenceReady] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return undefined;
+
+    let cancelled = false;
+    setPreferenceReady(false);
+
+    (async () => {
+      let pref = null;
+      try {
+        if (window.electron?.security?.getRememberPassword) {
+          pref = await window.electron.security.getRememberPassword();
+        }
+      } catch (e) {
+        pref = null;
+      }
+      if (cancelled) return;
+      setRememberPassword(pref !== false);
+      setPreferenceReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   const handleUnlock = async () => {
+    if (!preferenceReady) return;
     setLoading(true);
     setError('');
 
@@ -69,7 +97,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       confirmIcon="pi pi-unlock"
       onConfirm={handleUnlock}
       loading={loading}
-      confirmDisabled={!password}
+      confirmDisabled={!password || !preferenceReady}
     >
       <div className="p-fluid">
         {error ? <Message severity="error" text={error} className="mb-3" /> : null}
@@ -89,7 +117,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
             toggleMask
             feedback={false}
             autoFocus
-            onKeyPress={(e) => e.key === 'Enter' && password && handleUnlock()}
+            onKeyPress={(e) => e.key === 'Enter' && password && preferenceReady && handleUnlock()}
           />
         </div>
 
@@ -97,6 +125,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
           <Checkbox
             inputId="remember-password"
             checked={rememberPassword}
+            disabled={!preferenceReady}
             onChange={(e) => setRememberPassword(e.checked)}
           />
           <label htmlFor="remember-password" className="ml-2">

@@ -42,7 +42,8 @@ function registerSecurityHandlers(dependencies) {
     try {
       const config = readSecurityConfig();
 
-      if (config.rememberPassword === false && !config.masterKeyEncrypted && !config.masterKey) {
+      // Un "no recordar" explícito gana sobre una clave residual en disco.
+      if (config.rememberPassword === false) {
         return null;
       }
 
@@ -174,9 +175,15 @@ function registerSecurityHandlers(dependencies) {
   safeHandle('security:get-remember-password', async () => {
     try {
       const config = readSecurityConfig();
-      return config.rememberPassword === true || !!config.masterKeyEncrypted;
+      // false explícito: no recordar, aunque quede una clave cifrada residual.
+      if (config.rememberPassword === false) return false;
+      if (config.rememberPassword === true || config.masterKeyEncrypted || config.masterKey) {
+        return true;
+      }
+      // Sin elección guardada. El diálogo de desbloqueo usa true como default.
+      return null;
     } catch (error) {
-      return false;
+      return null;
     }
   });
 

@@ -184,4 +184,32 @@ describe('security-handlers: no persistir masterKey en claro', () => {
     const key = await getHandler({});
     assert.strictEqual(key, 'legacy-still-needed');
   });
+
+  it('get-remember-password distingue false explícito, true y ausencia', async () => {
+    const rememberHandler = ipcHandlers.get('security:get-remember-password');
+    const getKeyHandler = ipcHandlers.get('security:get-master-key');
+
+    fs.writeFileSync(securityPath, JSON.stringify({
+      rememberPassword: false,
+      masterKeyEncrypted: Buffer.from('enc:residual').toString('base64'),
+      masterKey: 'residual-plain'
+    }), 'utf8');
+    assert.strictEqual(await rememberHandler({}), false);
+    assert.strictEqual(await getKeyHandler({}), null);
+
+    fs.writeFileSync(securityPath, JSON.stringify({
+      rememberPassword: true
+    }), 'utf8');
+    assert.strictEqual(await rememberHandler({}), true);
+
+    fs.writeFileSync(securityPath, JSON.stringify({
+      masterKeyEncrypted: Buffer.from('enc:stored').toString('base64')
+    }), 'utf8');
+    assert.strictEqual(await rememberHandler({}), true);
+
+    fs.writeFileSync(securityPath, JSON.stringify({
+      vaultVerifier: { salt: [1] }
+    }), 'utf8');
+    assert.strictEqual(await rememberHandler({}), null);
+  });
 });
