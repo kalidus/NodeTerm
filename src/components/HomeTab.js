@@ -14,12 +14,17 @@ import {
   persistHomeTabSetting,
   readBoolSetting,
   readFloatSetting,
-  readStringSetting,
   HOME_BACKDROP_BLUR_KEY,
   HOME_BACKDROP_BLUR_DEFAULT,
   clampHomeBackdropBlur,
   homeBackdropFilter
 } from '../utils/homeTabSync';
+import {
+  TERMINAL_FRAME_STYLE_OPTIONS,
+  getCurrentTerminalFrameStyle,
+  getTerminalFrameStyleLabel,
+  setTerminalFrameStyle as persistTerminalFrameStyle
+} from '../utils/terminalFrameStyle';
 import { adjustOpacity, homePanelSurface } from '../utils/homePanelOpacity';
 import {
   calculateDragSnap,
@@ -49,47 +54,8 @@ import {
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
 import { allocHomePanelZ } from '../utils/homePanelStack';
 import HomeOptionsOverlay from './home/HomeOptionsOverlay';
+import TerminalFrameStyleOption from './TerminalFrameStyleOption';
 import { useHomeWallpaper } from '../utils/homeWallpaper';
-
-/** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
-const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
-  // Clásicos & OS
-  { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
-  { id: 'gnome', label: 'GNOME (Adwaita)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  { id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  { id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  // Minimalistas
-  { id: 'frameless', label: 'Sin marco (Solo Terminal)', frameless: true, text: '∅' },
-  { id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
-  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  // Futuristas & Cyberpunk
-  { id: 'cyberpunk-pro', label: 'Cyberpunk Pro (Arasaka)', color: '#fcee0a', tag: 'SYS', cyberBorder: true, right: true },
-  { id: 'hologram', label: 'Holográfico (Sci-Fi Cyan)', color: '#00e5ff', hud: true, right: true },
-  { id: 'holo-amber', label: 'Holográfico Ámbar (Deus Ex)', color: '#ffb000', hud: true, right: true },
-  { id: 'holo-emerald', label: 'Holográfico Esmeralda (Radar)', color: '#00ff88', hud: true, right: true },
-  { id: 'holo-crimson', label: 'Holográfico Carmesí (Red Alert)', color: '#ff0055', hud: true, right: true },
-  { id: 'holo-violet', label: 'Holográfico Violeta (Quantum)', color: '#a855f7', hud: true, right: true },
-  { id: 'plasma-cyan', label: 'Plasma Fusión (Core HUD)', color: '#00f2ff', hud: true, plasma: true, right: true },
-  { id: 'matrix', label: 'Matrix (Digital Rain)', color: '#00ff66', matrix: true, right: true },
-  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', futuristic: true, right: true },
-  // Modernos & Efectos
-  { id: 'aurora-glass', label: 'Aurora Glass (Liquid)', rounded: true, color: '#93c5fd', aurora: true, right: true },
-  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, rounded: true, color: '#d946ef', glow: 'rgba(217,70,239,0.5)', dots: ['#06b6d4', '#8b5cf6', '#ec4899'], right: true },
-  { id: 'synthwave-sunset', label: 'Synthwave Atardecer (Outrun)', synthwave: true, rounded: true, color: '#fb923c', glow: 'rgba(251,146,60,0.55)', dots: ['#fbbf24', '#f97316', '#ec4899'], right: true },
-  { id: 'synthwave-ocean', label: 'Synthwave Océano (Neón Azul)', synthwave: true, rounded: true, color: '#38bdf8', glow: 'rgba(56,189,248,0.55)', dots: ['#22d3ee', '#3b82f6', '#818cf8'], right: true },
-  { id: 'synthwave-emerald', label: 'Synthwave Esmeralda (Neón Verde)', synthwave: true, rounded: true, color: '#34d399', glow: 'rgba(52,211,153,0.55)', dots: ['#a3e635', '#22c55e', '#2dd4bf'], right: true },
-  { id: 'synthwave-crimson', label: 'Synthwave Carmesí (Neón Rojo)', synthwave: true, rounded: true, color: '#f43f5e', glow: 'rgba(244,63,94,0.55)', dots: ['#fb7185', '#ef4444', '#e879f9'], right: true },
-  { id: 'synthwave-arctic', label: 'Synthwave Ártico (Hielo)', synthwave: true, rounded: true, color: '#7dd3fc', glow: 'rgba(125,211,252,0.55)', dots: ['#e0f2fe', '#38bdf8', '#a78bfa'], right: true },
-  { id: 'synthwave-violet', label: 'Synthwave Violeta (Ultravioleta)', synthwave: true, rounded: true, color: '#c084fc', glow: 'rgba(192,132,252,0.55)', dots: ['#e879f9', '#a855f7', '#6366f1'], right: true },
-  { id: 'synthwave-toxic', label: 'Synthwave Tóxico (Ácido)', synthwave: true, rounded: true, color: '#bef264', glow: 'rgba(190,242,100,0.55)', dots: ['#facc15', '#84cc16', '#e879f9'], right: true },
-  { id: 'synthwave-copper', label: 'Synthwave Cobre (Bronce)', synthwave: true, rounded: true, color: '#d97706', glow: 'rgba(217,119,6,0.55)', dots: ['#fdba74', '#ea580c', '#9a3412'], right: true },
-  { id: 'synthwave-sakura', label: 'Synthwave Sakura (Cerezo)', synthwave: true, rounded: true, color: '#f9a8d4', glow: 'rgba(249,168,212,0.55)', dots: ['#fbcfe8', '#f472b6', '#c084fc'], right: true },
-  { id: 'synthwave-lemon', label: 'Synthwave Limón (Neón)', synthwave: true, rounded: true, color: '#facc15', glow: 'rgba(250,204,21,0.55)', dots: ['#fef08a', '#eab308', '#a3e635'], right: true },
-  { id: 'synthwave-lagoon', label: 'Synthwave Laguna (Turquesa)', synthwave: true, rounded: true, color: '#2dd4bf', glow: 'rgba(45,212,191,0.55)', dots: ['#99f6e4', '#14b8a6', '#0284c7'], right: true },
-  { id: 'stealth', label: 'Stealth Ops (Matte)', color: '#ff6b00', stealth: true, right: true },
-  { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true, right: true }
-];
 
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
   const w = cWidth > 100 ? cWidth : 1200;
@@ -341,20 +307,16 @@ const HomeTab = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal');
-  const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'macos';
-  });
+  const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
 
   useEffect(() => {
-    persistHomeTabSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
-    try {
-      window.dispatchEvent(new CustomEvent('terminal-frame-style-changed', {
-        detail: { style: terminalFrameStyle }
-      }));
-    } catch {
-      // Ignorar errores al despachar el evento
-    }
-  }, [terminalFrameStyle]);
+    const syncFrame = (e) => {
+      const style = e?.detail?.style || getCurrentTerminalFrameStyle();
+      setTerminalFrameStyle(style);
+    };
+    window.addEventListener('terminal-frame-style-changed', syncFrame);
+    return () => window.removeEventListener('terminal-frame-style-changed', syncFrame);
+  }, []);
 
   const [favType, setFavType] = useState('all');
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
@@ -460,7 +422,7 @@ const HomeTab = ({
   const syncHomeOptionsFromStorage = React.useCallback(() => {
     setTerminalOpacity(readFloatSetting('nodeterm_terminal_opacity', 1.0));
     setHomeBackdropBlur(clampHomeBackdropBlur(readFloatSetting(HOME_BACKDROP_BLUR_KEY, HOME_BACKDROP_BLUR_DEFAULT)));
-    setTerminalFrameStyle(readStringSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, 'macos'));
+    setTerminalFrameStyle(getCurrentTerminalFrameStyle());
     setShowLocalTerminalTabs(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE, false));
     setStatusBarVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, true));
     setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, false));
@@ -2104,37 +2066,6 @@ const HomeTab = ({
             border: 2px solid transparent;
             background-clip: padding-box;
           }
-          .frame-style-option {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-radius: 8px;
-            color: #fff;
-          }
-          .frame-style-option:hover {
-            background: rgba(255, 255, 255, 0.05);
-          }
-          .frame-style-option.active {
-            background: ${themeColors.hoverBackground || 'rgba(255, 255, 255, 0.1)'};
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
-          .frame-preview {
-            display: flex;
-            align-items: center;
-            width: 60px;
-            height: 24px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 0 4px;
-            overflow: hidden;
-            background: rgba(0,0,0,0.2);
-          }
-          .frame-preview-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-          .frame-preview-bar { flex: 1; height: 2px; background: rgba(255,255,255,0.1); margin: 0 4px; border-radius: 1px; }
-
           /* Glassmorphism for OverlayPanel */
           .premium-overlay {
             backdrop-filter: ${homeBackdropFilterGlass} !important;
@@ -2176,7 +2107,7 @@ const HomeTab = ({
           themeColors={themeColors}
           themes={themes}
           localLinuxTerminalTheme={localLinuxTerminalTheme}
-          terminalFrameStyleLabel={(HOME_TERMINAL_FRAME_STYLE_OPTIONS.find((o) => o.id === terminalFrameStyle) || {}).label || terminalFrameStyle}
+          terminalFrameStyleLabel={getTerminalFrameStyleLabel(terminalFrameStyle)}
           terminalOpacity={terminalOpacity}
           onTerminalOpacityChange={setTerminalOpacity}
           homeBackdropBlur={homeBackdropBlur}
@@ -2292,102 +2223,19 @@ const HomeTab = ({
           style={{ background: themeColors.cardBackground || '#1e1e1e', width: '240px' }}
           appendTo={document.body}
         >
-          <div style={{ padding: '8px', maxHeight: 'min(70vh, 420px)', overflowY: 'auto' }}>
+          <div style={{ padding: '8px', maxHeight: 'min(70vh, 420px)', overflowY: 'auto', color: themeColors.textPrimary || '#fff' }}>
             <h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
-            {HOME_TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
-              <div
+            {TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
+              <TerminalFrameStyleOption
                 key={style.id}
-                className={`frame-style-option ${terminalFrameStyle === style.id ? 'active' : ''}`}
-                onClick={() => {
-                  setTerminalFrameStyle(style.id);
+                style={style}
+                selected={terminalFrameStyle === style.id}
+                as="div"
+                onSelect={(id) => {
+                  persistTerminalFrameStyle(id);
                   frameStyleOverlayRef.current?.hide();
                 }}
-              >
-                <div
-                  className="frame-preview"
-                  style={{
-                    borderColor: style.frameless ? 'rgba(255,255,255,0.25)' : (style.color || 'rgba(255,255,255,0.1)'),
-                    borderStyle: style.frameless ? 'dashed' : 'solid',
-                    borderTop: style.line ? `2px solid ${style.line}` : (style.cyberBorder ? '2px solid #fcee0a' : undefined),
-                    borderRadius: style.rounded ? '8px' : (style.frameless ? '2px' : '4px'),
-                    background: style.aurora ? 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.25))' : undefined,
-                    boxShadow: style.hud ? `0 0 6px ${style.color || 'rgba(0,229,255,0.4)'}` : (style.synthwave ? `0 0 6px ${style.glow || 'rgba(217,70,239,0.5)'}` : undefined)
-                  }}
-                >
-                  {style.id === 'macos' ? (
-                    <>
-                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                        {style.dots.map((c, i) => (
-                          <div key={i} className="frame-preview-dot" style={{ background: c }} />
-                        ))}
-                      </div>
-                      <div className="frame-preview-bar" />
-                    </>
-                  ) : style.noButtons ? (
-                    <div className="frame-preview-bar" />
-                  ) : style.frameless ? (
-                    <>
-                      <div className="frame-preview-bar" style={{ borderTopStyle: 'dashed' }} />
-                      <span style={{ fontSize: '7px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>∅</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="frame-preview-bar" />
-                      {style.dots ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          {style.dots.map((c, i) => (
-                            <div key={i} className="frame-preview-dot" style={{ background: c, boxShadow: style.synthwave ? `0 0 3px ${c}` : undefined }} />
-                          ))}
-                        </div>
-                      ) : style.switch ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          <div className="frame-preview-dot" style={{ background: '#0f0', opacity: 0.4 }} />
-                          <div className="frame-preview-dot" style={{ background: '#0f0', opacity: 0.7 }} />
-                          <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
-                        </div>
-                      ) : style.hud ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>—</span>
-                          <span style={{ fontSize: '7px', color: style.color || '#00e5ff', lineHeight: 1 }}>◈</span>
-                          <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>✕</span>
-                        </div>
-                      ) : style.tag ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '5px', color: '#000', background: style.color, padding: '0 1px', borderRadius: '1px', fontWeight: 'bold' }}>{style.tag}</span>
-                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>_</span>
-                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>⬡</span>
-                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>✕</span>
-                        </div>
-                      ) : style.matrix ? (
-                        <div style={{ display: 'flex', gap: '1px', alignItems: 'center', fontSize: '5px', color: style.color || '#00ff66', fontFamily: 'monospace' }}>
-                          <span>01</span>
-                          <span>10</span>
-                          <span>11</span>
-                        </div>
-                      ) : style.futuristic ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', fontSize: '5px', color: style.color || '#00f2ff' }}>
-                          <span>-</span>
-                          <span>□</span>
-                          <span>✕</span>
-                        </div>
-                      ) : style.stealth ? (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', fontSize: '6px', color: style.color || '#ff6b00' }}>
-                          <span>—</span>
-                          <span>□</span>
-                          <span>✕</span>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          {(style.icons || [style.icon || 'pi-times']).map((ico, i) => (
-                            <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.6 }} />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <span style={{ fontSize: '0.82rem' }}>{style.label}</span>
-              </div>
+              />
             ))}
           </div>
         </OverlayPanel>

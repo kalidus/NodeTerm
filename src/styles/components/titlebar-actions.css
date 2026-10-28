@@ -86,6 +86,57 @@
   color: var(--ui-dialog-text, #e0e0e0);
 }
 
+.title-bar-layout-popover.is-frames-tab {
+  min-width: 280px;
+  max-width: 320px;
+  padding: 6px;
+}
+
+.title-bar-layout-popover-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.title-bar-layout-popover-tab {
+  flex: 1;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  opacity: 0.72;
+}
+
+.title-bar-layout-popover-tab:hover {
+  opacity: 0.95;
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.06));
+}
+
+.title-bar-layout-popover-tab.is-active {
+  opacity: 1;
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.12));
+}
+
+.title-bar-layout-popover-frames {
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.title-bar-layout-popover-frames .frame-style-option {
+  padding: 8px 10px;
+  gap: 10px;
+}
+
 .title-bar-layout-popover-item {
   display: flex;
   align-items: center;
