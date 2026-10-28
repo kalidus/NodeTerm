@@ -78,6 +78,7 @@ const SYNC_KEYS = [
 
   // Auth y configuración de sesión (la clave maestra NUNCA se sincroniza en plano)
   'nodeterm_remember_password',
+  'nodeterm_unlock_style',
 
   // Configuración general y UI
   'lock_home_button',

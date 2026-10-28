@@ -676,8 +676,10 @@
     "title": "Unlock NodeTerm",
     "confirm": "Unlock",
     "infoMessage": "Enter your master password to unlock the application",
+    "subtitleShort": "Enter your master password",
     "masterPassword": "Master Password",
     "rememberOnDevice": "Remember password on this device",
+    "rememberShort": "Remember",
     "errors": {
       "loadKey": "Failed to load saved key",
       "incorrect": "Incorrect password",

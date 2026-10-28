@@ -37,6 +37,7 @@
     "sync": "Sincronización",
     "info": "Información",
     "splashScreen": "Pantalla de Inicio",
+    "unlockScreen": "Pantalla de Desbloqueo",
     "importExport": "Importar / Exportar",
     "integrations": "Integraciones",
     "mcp": "MCP"
@@ -60,9 +61,51 @@
     "sync": "Sincroniza ajustes en la nube",
     "info": "Versión y datos técnicos",
     "splashScreen": "Personaliza la pantalla de carga",
+    "unlockScreen": "Elige el estilo al pedir la contraseña maestra",
     "importExport": "Copia de seguridad y restauración",
     "integrations": "Integraciones con herramientas externas",
     "mcp": "Servidor MCP para IA y automatización"
+  },
+  "unlockScreen": {
+    "title": "Pantalla de Desbloqueo",
+    "description": "Elige el diseño visual que verás al desbloquear NodeTerm con la contraseña maestra",
+    "selectionTitle": "Selección de Estilo",
+    "savedTitle": "Guardado",
+    "savedDetail": "El estilo de desbloqueo se aplicará la próxima vez que se pida la contraseña.",
+    "previewTitle": "Probar estilo",
+    "previewDesc": "Abre una vista previa interactiva del estilo seleccionado (sin desbloquear el vault).",
+    "previewButton": "Probar ahora",
+    "previewHint": "Vista previa — Escape o Cerrar para salir",
+    "styles": {
+      "classic": {
+        "name": "Classic",
+        "desc": "El diálogo compacto actual de NodeTerm."
+      },
+      "vaultGate": {
+        "name": "Vault Gate",
+        "desc": "Pantalla completa con card centrada y wordmark NodeTerm."
+      },
+      "terminal": {
+        "name": "Terminal",
+        "desc": "Consola unlock>_ con tipografía mono y estética CLI."
+      },
+      "premiumCard": {
+        "name": "Premium Card",
+        "desc": "Modal pulido sobre máscara, sin banners de relleno."
+      },
+      "glassHud": {
+        "name": "Glass HUD",
+        "desc": "Cristal translúcido con glow cian tipo hologram."
+      },
+      "synthwave": {
+        "name": "Synthwave",
+        "desc": "Retro 80s con fucsia y ámbar, eco del splash Outrun."
+      },
+      "aurora": {
+        "name": "Aurora",
+        "desc": "Gradientes fríos suaves, sin neón agresivo."
+      }
+    }
   },
   "quickPanel": {
     "themes": "Temas",

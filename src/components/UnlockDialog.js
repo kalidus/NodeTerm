@@ -1,22 +1,42 @@
 import React, { useEffect, useState } from 'react';
-import { Password } from 'primereact/password';
-import { Message } from 'primereact/message';
-import { Checkbox } from 'primereact/checkbox';
-import AppDialog from './ui/AppDialog';
+import UnlockScreen from './unlock/UnlockScreen';
+import { loadUnlockStyle } from './unlock/unlockStyles';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
-const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
+/**
+ * Desbloqueo del vault. La presentación la resuelve UnlockScreen según
+ * `nodeterm_unlock_style` (Apariencia → Pantalla de desbloqueo).
+ *
+ * previewMode: muestra la UI sin validar vault (desde settings).
+ */
+const UnlockDialog = ({
+  visible,
+  onSuccess,
+  secureStorage,
+  previewMode = false,
+  previewStyle = null,
+  onHide
+}) => {
   const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // Por defecto TRUE si no hay elección previa: desbloquear = recordar en este dispositivo.
-  // Un false explícito en security.json deja la casilla desmarcada.
   const [rememberPassword, setRememberPassword] = useState(true);
-  const [preferenceReady, setPreferenceReady] = useState(false);
+  const [preferenceReady, setPreferenceReady] = useState(previewMode);
+  const [unlockStyle, setUnlockStyle] = useState(() => loadUnlockStyle());
 
   useEffect(() => {
     if (!visible) return undefined;
+
+    setPassword('');
+    setError('');
+    setUnlockStyle(previewStyle || loadUnlockStyle());
+
+    if (previewMode) {
+      setPreferenceReady(true);
+      setRememberPassword(true);
+      return undefined;
+    }
 
     let cancelled = false;
     setPreferenceReady(false);
@@ -27,7 +47,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
         if (window.electron?.security?.getRememberPassword) {
           pref = await window.electron.security.getRememberPassword();
         }
-      } catch (e) {
+      } catch (_) {
         pref = null;
       }
       if (cancelled) return;
@@ -38,10 +58,17 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
     return () => {
       cancelled = true;
     };
-  }, [visible]);
+  }, [visible, previewMode, previewStyle]);
 
   const handleUnlock = async () => {
     if (!preferenceReady) return;
+
+    if (previewMode) {
+      onSuccess?.(password);
+      onHide?.();
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -84,56 +111,21 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   };
 
   return (
-    <AppDialog
-      headerIcon="pi pi-lock"
-      headerTitle={t('dialogs.unlock.title', 'Desbloquear NodeTerm')}
+    <UnlockScreen
       visible={visible}
-      size="sm"
-      modal
-      closable={false}
-      onHide={() => {}}
-      cancelLabel={false}
-      confirmLabel={t('dialogs.unlock.confirm', 'Desbloquear')}
-      confirmIcon="pi pi-unlock"
-      onConfirm={handleUnlock}
+      style={unlockStyle}
+      password={password}
+      onPasswordChange={(e) => setPassword(e.target.value)}
+      rememberPassword={rememberPassword}
+      onRememberChange={(e) => setRememberPassword(e.checked)}
+      preferenceReady={preferenceReady}
+      error={error}
       loading={loading}
-      confirmDisabled={!password || !preferenceReady}
-    >
-      <div className="p-fluid">
-        {error ? <Message severity="error" text={error} className="mb-3" /> : null}
-
-        <Message
-          severity="info"
-          text={t('dialogs.unlock.infoMessage', 'Introduce tu contraseña maestra para desbloquear la aplicación')}
-          className="mb-3"
-        />
-
-        <div className="app-form-field">
-          <label htmlFor="unlock-password" className="app-form-label">{t('dialogs.unlock.masterPassword', 'Contraseña Maestra')}</label>
-          <Password
-            id="unlock-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            toggleMask
-            feedback={false}
-            autoFocus
-            onKeyPress={(e) => e.key === 'Enter' && password && preferenceReady && handleUnlock()}
-          />
-        </div>
-
-        <div className="field-checkbox app-form-field">
-          <Checkbox
-            inputId="remember-password"
-            checked={rememberPassword}
-            disabled={!preferenceReady}
-            onChange={(e) => setRememberPassword(e.checked)}
-          />
-          <label htmlFor="remember-password" className="ml-2">
-            {t('dialogs.unlock.rememberOnDevice', 'Recordar contraseña en este dispositivo')}
-          </label>
-        </div>
-      </div>
-    </AppDialog>
+      onConfirm={handleUnlock}
+      onHide={onHide}
+      previewMode={previewMode}
+      passwordId={previewMode ? 'unlock-password-preview' : 'unlock-password'}
+    />
   );
 };
 

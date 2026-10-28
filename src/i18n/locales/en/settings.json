@@ -37,6 +37,7 @@
     "sync": "Sync",
     "info": "Information",
     "splashScreen": "Splash Screen",
+    "unlockScreen": "Unlock Screen",
     "importExport": "Import / Export",
     "integrations": "Integrations",
     "mcp": "MCP"
@@ -60,9 +61,51 @@
     "sync": "Sync settings to cloud",
     "info": "Version and technical details",
     "splashScreen": "Customize the startup loading window",
+    "unlockScreen": "Choose the look when asking for the master password",
     "importExport": "Backup and restore data",
     "integrations": "Integrations with external tools",
     "mcp": "MCP server for AI and automation"
+  },
+  "unlockScreen": {
+    "title": "Unlock Screen",
+    "description": "Choose the visual design you see when unlocking NodeTerm with the master password",
+    "selectionTitle": "Style selection",
+    "savedTitle": "Saved",
+    "savedDetail": "The unlock style will apply the next time the password is requested.",
+    "previewTitle": "Try style",
+    "previewDesc": "Opens an interactive preview of the selected style (does not unlock the vault).",
+    "previewButton": "Try now",
+    "previewHint": "Preview — press Escape or Close to exit",
+    "styles": {
+      "classic": {
+        "name": "Classic",
+        "desc": "The current compact NodeTerm dialog."
+      },
+      "vaultGate": {
+        "name": "Vault Gate",
+        "desc": "Full-screen centered card with the NodeTerm wordmark."
+      },
+      "terminal": {
+        "name": "Terminal",
+        "desc": "unlock>_ console with mono type and CLI feel."
+      },
+      "premiumCard": {
+        "name": "Premium Card",
+        "desc": "Polished modal over a mask, without filler banners."
+      },
+      "glassHud": {
+        "name": "Glass HUD",
+        "desc": "Translucent glass with cyan hologram-style glow."
+      },
+      "synthwave": {
+        "name": "Synthwave",
+        "desc": "80s retro fuchsia and amber, matching the Outrun splash."
+      },
+      "aurora": {
+        "name": "Aurora",
+        "desc": "Soft cool gradients without aggressive neon."
+      }
+    }
   },
   "quickPanel": {
     "themes": "Themes",

@@ -178,6 +178,8 @@ const SettingsContent = ({
       'explorador-sesiones': { parent: 'apariencia', index: 6 },
       'explorador-archivos': { parent: 'apariencia', index: 7 },
       'presets': { parent: 'apariencia', index: 8 },
+      'splash-screen': { parent: 'apariencia', index: 9 },
+      'unlock-screen': { parent: 'apariencia', index: 10 },
       // Dentro de Actualizaciones (índice 5)
       'nodeterm': { parent: 'actualizaciones', index: 0 },
       'servidores-docker': { parent: 'actualizaciones', index: 1 },

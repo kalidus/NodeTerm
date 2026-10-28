@@ -8,6 +8,7 @@ import PresetSelector from '../../PresetSelector';
 import SessionExplorerSubTab from './appearance/SessionExplorerSubTab';
 import FileExplorerSubTab from './appearance/FileExplorerSubTab';
 import SplashScreenSubTab from './appearance/SplashScreenSubTab';
+import UnlockScreenSubTab from './appearance/UnlockScreenSubTab';
 import HomePageSubTab from './appearance/HomePageSubTab';
 
 export const AppearanceSettingsTab = ({
@@ -175,6 +176,10 @@ export const AppearanceSettingsTab = ({
 
       {activeSubTab === 'splash-screen' && (
         <SplashScreenSubTab toastRef={toastRef} />
+      )}
+
+      {activeSubTab === 'unlock-screen' && (
+        <UnlockScreenSubTab toastRef={toastRef} />
       )}
 
       {activeSubTab === 'pagina-inicio' && (
