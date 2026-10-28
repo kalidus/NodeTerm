@@ -11,7 +11,6 @@ export const AppHeader = ({
   sidebarFilter,
   setSidebarFilter,
   nodes,
-  findAllConnections,
   onOpenSSHConnection,
   onOpenRdpConnection,
   onOpenVncConnection,
@@ -25,6 +24,7 @@ export const AppHeader = ({
   openEditSSHDialog,
   openEditRdpDialog,
   openNewVncDialog,
+  sidebarCallbacksRef,
   handleImportComplete,
   handleToggleTitleBar,
   iconTheme,
@@ -117,7 +117,6 @@ export const AppHeader = ({
       sidebarFilter={sidebarFilter}
       setSidebarFilter={setSidebarFilter}
       allNodes={nodes}
-      findAllConnections={findAllConnections}
       onOpenSSHConnection={onOpenSSHConnection}
       onOpenRdpConnection={onOpenRdpConnection}
       onOpenVncConnection={onOpenVncConnection}
@@ -131,6 +130,7 @@ export const AppHeader = ({
       openEditSSHDialog={openEditSSHDialog}
       openEditRdpDialog={openEditRdpDialog}
       openNewVncDialog={openNewVncDialog}
+      sidebarCallbacksRef={sidebarCallbacksRef}
       onQuickImportFromSource={handleQuickImportFromSource}
       onToggleTitleBar={handleToggleTitleBar}
       iconTheme={iconTheme}

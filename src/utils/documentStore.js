@@ -44,6 +44,11 @@ export async function loadDocumentTree(secureStorage, masterKey) {
   }
 }
 
+function notifyDocumentsChanged() {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+  window.dispatchEvent(new CustomEvent('documents-vault-changed'));
+}
+
 export async function saveDocumentTree(tree, secureStorage, masterKey) {
   try {
     if (masterKey && secureStorage) {
@@ -59,11 +64,13 @@ export async function saveDocumentTree(tree, secureStorage, masterKey) {
       }
       localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
       localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
+      notifyDocumentsChanged();
       return true;
     }
     const plainStr = JSON.stringify(tree);
     localStorage.setItem(STORAGE_KEY_TREE_PLAIN, plainStr);
     localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
+    notifyDocumentsChanged();
     return true;
   } catch (error) {
     console.error('Error saving documents:', error);

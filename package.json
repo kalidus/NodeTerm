@@ -342,6 +342,7 @@
     "kdbxweb": "^2.1.1",
     "lowlight": "^3.3.0",
     "marked": "^17.0.6",
+    "minisearch": "^7.2.0",
     "node-forge": "^1.4.0",
     "node-pty": "^1.1.0-beta34",
     "primeflex": "^3.3.1",

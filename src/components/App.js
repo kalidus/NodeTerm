@@ -2841,7 +2841,6 @@ const App = () => {
           sidebarFilter={sidebarFilter}
           setSidebarFilter={setSidebarFilter}
           nodes={nodes}
-          findAllConnections={findAllConnections}
           onOpenSSHConnection={onOpenSSHConnection}
           onOpenRdpConnection={onOpenRdpConnection}
           onOpenVncConnection={onOpenVncConnection}
@@ -2855,6 +2854,7 @@ const App = () => {
           openEditSSHDialog={openEditSSHDialog}
           openEditRdpDialog={openEditRdpDialog}
           openNewVncDialog={openNewVncDialog}
+          sidebarCallbacksRef={sidebarCallbacksRef}
           handleImportComplete={handleImportComplete}
           handleToggleTitleBar={handleToggleTitleBar}
           iconTheme={iconTheme}
