@@ -103,22 +103,25 @@ export function useAppChromeLayout() {
       if (e.detail?.collapsed !== undefined) {
         setMainFrameHeaderCollapsed(e.detail.collapsed);
       } else if (e.detail?.source === 'preset') {
-        // Al aplicar un preset, leer el nuevo valor de localStorage
+        // Al aplicar un preset, leer el nuevo valor de localStorage (ausente = oculto)
         const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
-        setMainFrameHeaderCollapsed(saved === 'true');
+        setMainFrameHeaderCollapsed(saved !== null ? saved === 'true' : true);
       }
     };
 
     const handleStorage = (e) => {
       if (e.key === STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED) {
-        setMainFrameHeaderCollapsed(e.newValue === 'true');
+        setMainFrameHeaderCollapsed(e.newValue !== null ? e.newValue === 'true' : true);
       }
     };
 
+    // Settings → General dispara main-frame-header-collapsed-changed
+    window.addEventListener('main-frame-header-collapsed-changed', handleUpdate);
     window.addEventListener('main-frame-header-toggle', handleUpdate);
     window.addEventListener('settings-updated', handleUpdate);
     window.addEventListener('storage', handleStorage);
     return () => {
+      window.removeEventListener('main-frame-header-collapsed-changed', handleUpdate);
       window.removeEventListener('main-frame-header-toggle', handleUpdate);
       window.removeEventListener('settings-updated', handleUpdate);
       window.removeEventListener('storage', handleStorage);

@@ -199,8 +199,8 @@
           "description": "Start the application with the sidebar collapsed"
         },
         "mainFrameHeaderStartCollapsed": {
-          "label": "Top Frame Initially Collapsed",
-          "description": "Start the application with the terminal top frame collapsed"
+          "label": "Hide top frame",
+          "description": "Hides the main terminal top frame. The change applies immediately."
         },
         "connectionSearchShortcut": {
           "label": "Search shortcut",

@@ -11,6 +11,15 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import { applyAppTypography, deriveUiIconSize } from './sidebarFontStack';
 import { applyUILayoutFromStorage } from './appearanceLayout';
 import { clearSidebarSectionAppearance } from './sidebarSectionAppearance';
+import { STORAGE_KEYS } from './constants';
+
+const MAIN_FRAME_HEADER_KEY = STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED;
+
+/** Los presets siempre ocultan el marco superior; el toggle manual en General sigue existiendo. */
+function forceMainFrameHeaderCollapsed(settings) {
+  if (!settings || typeof settings !== 'object') return;
+  settings[MAIN_FRAME_HEADER_KEY] = 'true';
+}
 
 function unifyPresetTypography(settings) {
   if (!settings) return;
@@ -103,6 +112,7 @@ class PresetManager {
         settings[key] = value;
       }
     });
+    forceMainFrameHeaderCollapsed(settings);
 
     return {
       id: `user-${Date.now()}`,
@@ -190,6 +200,7 @@ class PresetManager {
 
     clearSidebarSectionAppearance();
     unifyPresetTypography(preset.settings);
+    forceMainFrameHeaderCollapsed(preset.settings);
 
     // 1. Reset ALL managed keys first, then apply the preset values.
     // Ensure uiFont and homeTabFont are synchronized if missing from preset

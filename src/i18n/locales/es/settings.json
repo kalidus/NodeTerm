@@ -199,8 +199,8 @@
           "description": "Inicia la aplicación con la barra lateral colapsada"
         },
         "mainFrameHeaderStartCollapsed": {
-          "label": "Marco Superior Inicialmente Colapsado",
-          "description": "Inicia la aplicación con el marco superior del terminal colapsado"
+          "label": "Ocultar marco superior",
+          "description": "Oculta el marco superior del terminal principal. El cambio se aplica al instante."
         },
         "connectionSearchShortcut": {
           "label": "Atajo del buscador",

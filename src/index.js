@@ -7,7 +7,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import { markStartup } from './utils/startup-renderer-profiler';
-import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
+import { applyFirstRunHomeTabDefaults, migrateMainFrameHeaderCollapsed } from './utils/homeTabDefaults';
 import { applyUILayoutFromStorage } from './utils/appearanceLayout';
 import { applySidebarTypographyCssVariables, migratePersistedFonts } from './utils/sidebarFontStack';
 import { applyLiteEffectsFromStorage } from './utils/uiLiteEffects';
@@ -135,6 +135,9 @@ const initializeGlobalThemes = () => {
 
     const isSecondaryInstance =
       typeof window !== 'undefined' && window.electron?.isSecondaryInstance === true;
+
+    // Antes de React: presets antiguos no deben reabrir el marco superior
+    migrateMainFrameHeaderCollapsed();
 
     if (!hasUITheme && !isSecondaryInstance) {
       applyFirstRunHomeTabDefaults();

@@ -53,3 +53,45 @@ export function applyFirstRunHomeTabDefaults() {
     console.warn('[HomeTab] Error aplicando defaults de primera instalación:', err);
   }
 }
+
+const MAIN_FRAME_HEADER_MIGRATION_FLAG = 'nodeterm_migrated_main_frame_header_v1';
+const USER_PRESETS_STORAGE_KEY = 'nodeterm_user_presets';
+
+/**
+ * One-shot: oculta el marco superior en la sesión actual y en presets de usuario
+ * antiguos que lo tenían visible. El toggle en Configuración → General sigue disponible.
+ */
+export function migrateMainFrameHeaderCollapsed() {
+  try {
+    if (localStorage.getItem(MAIN_FRAME_HEADER_MIGRATION_FLAG) === 'true') return;
+
+    localStorage.setItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, 'true');
+
+    const raw = localStorage.getItem(USER_PRESETS_STORAGE_KEY);
+    if (raw) {
+      const presets = JSON.parse(raw);
+      if (Array.isArray(presets)) {
+        let changed = false;
+        const next = presets.map((preset) => {
+          if (!preset || typeof preset !== 'object') return preset;
+          const settings = preset.settings && typeof preset.settings === 'object'
+            ? { ...preset.settings }
+            : {};
+          if (settings[STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED] === 'true') {
+            return preset;
+          }
+          changed = true;
+          settings[STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED] = 'true';
+          return { ...preset, settings };
+        });
+        if (changed) {
+          localStorage.setItem(USER_PRESETS_STORAGE_KEY, JSON.stringify(next));
+        }
+      }
+    }
+
+    localStorage.setItem(MAIN_FRAME_HEADER_MIGRATION_FLAG, 'true');
+  } catch (err) {
+    console.warn('[HomeTab] Error migrando marco superior en presets:', err);
+  }
+}
