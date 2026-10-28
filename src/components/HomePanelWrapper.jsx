@@ -71,7 +71,7 @@ const HomePanelWrapper = ({
   onToggleMinimize,
   onMinimize,
   closable = true,
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   onDragging = null,
@@ -312,6 +312,35 @@ const HomePanelWrapper = ({
     if (hideHeader) return null;
 
     switch (terminalFrameStyle) {
+      case 'default':
+        return (
+          <div className="terminal-frame-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <div
+              className="terminal-frame-window-btn minimize"
+              title={isMinimized ? "Restaurar" : "Minimizar"}
+              onClick={handleMin}
+            >
+              <span className="window-icon window-icon-min" />
+            </div>
+            <div
+              className="terminal-frame-window-btn maximize"
+              title={maximizeTitle}
+              onClick={handleMax}
+            >
+              <span className={`window-icon ${isMaximized ? 'window-icon-restore' : 'window-icon-max'}`} />
+            </div>
+            {closable && (
+              <div
+                className="terminal-frame-window-btn close"
+                title="Cerrar"
+                onClick={handleClose}
+              >
+                <span className="window-icon window-icon-close" />
+              </div>
+            )}
+          </div>
+        );
+
       case 'macos':
         return (
           <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()}>

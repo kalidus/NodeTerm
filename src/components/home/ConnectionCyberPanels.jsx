@@ -47,7 +47,7 @@ export default function ConnectionCyberPanels({
   sidebarNodes = [],
   onConnectToHistory,
   onEdit,
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null

@@ -2112,3 +2112,224 @@ body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents
 body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right .pi-star {
     display: none !important;
 }
+
+/* --- Title bar: mismo contorno que el marco, sin fondo ni clip-path ---
+   Unificado y unificado con app redondeada dejan la barra a ras, igual que
+   anulan el marco de la sidebar y del contenido. En el resto, este contorno
+   gana al border:none que algunos layouts aplican solo a .title-bar.
+   Default, macOS, GNOME, KDE, Windows, Minimal y Sin marco no entran: conservan el borde neutro. */
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-futuristic {
+    border: 1px solid #00f2ff !important;
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.3) !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-modern {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 16px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-retro {
+    border: 3px solid #333 !important;
+    border-radius: 12px !important;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-matcha {
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-top: 3px solid #2eb398 !important;
+    border-radius: 8px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-cyberpunk-pro {
+    border: 1px solid #fcee0a !important;
+    box-shadow: 0 0 16px rgba(252, 238, 10, 0.25), inset 0 0 12px rgba(0, 242, 255, 0.08) !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-hologram {
+    --titlebar-frame-corner: #00e5ff;
+    --titlebar-frame-corner-end: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 15px rgba(0, 229, 255, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-amber {
+    --titlebar-frame-corner: #ffb000;
+    --titlebar-frame-corner-end: #ffb000;
+    border: 1px solid rgba(255, 176, 0, 0.45) !important;
+    box-shadow: 0 0 20px rgba(255, 176, 0, 0.25), inset 0 0 15px rgba(255, 176, 0, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-emerald {
+    --titlebar-frame-corner: #00ff88;
+    --titlebar-frame-corner-end: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.22), inset 0 0 15px rgba(0, 255, 136, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-crimson {
+    --titlebar-frame-corner: #ff0055;
+    --titlebar-frame-corner-end: #ff0055;
+    border: 1px solid rgba(255, 0, 85, 0.45) !important;
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.25), inset 0 0 15px rgba(255, 0, 85, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-violet {
+    --titlebar-frame-corner: #a855f7;
+    --titlebar-frame-corner-end: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.45) !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25), inset 0 0 15px rgba(168, 85, 247, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-plasma-cyan {
+    --titlebar-frame-corner: #ffaa00;
+    --titlebar-frame-corner-end: #00f2ff;
+    border: 1px solid rgba(0, 242, 255, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.25), inset 0 0 15px rgba(255, 170, 0, 0.08) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-hologram::before,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-amber::before,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-emerald::before,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-crimson::before,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-violet::before,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-plasma-cyan::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    border-top: 2px solid var(--titlebar-frame-corner, #00e5ff);
+    border-left: 2px solid var(--titlebar-frame-corner, #00e5ff);
+    pointer-events: none;
+    z-index: 5;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-hologram::after,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-amber::after,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-emerald::after,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-crimson::after,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-holo-violet::after,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-plasma-cyan::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--titlebar-frame-corner-end, #00e5ff);
+    border-bottom: 2px solid var(--titlebar-frame-corner-end, #00e5ff);
+    pointer-events: none;
+    z-index: 5;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-sunset,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-ocean,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-emerald,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-crimson,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-arctic,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-violet,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-toxic,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-copper,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-sakura,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-lemon,
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-lagoon {
+    --synth-border: #d946ef;
+    --synth-glow: rgba(217, 70, 239, 0.3);
+    --synth-glow-2: rgba(236, 72, 153, 0.15);
+    border: 1px solid var(--synth-border) !important;
+    box-shadow: 0 0 20px var(--synth-glow), 0 0 40px var(--synth-glow-2) !important;
+    border-radius: 12px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-sunset {
+    --synth-border: #fb923c;
+    --synth-glow: rgba(251, 146, 60, 0.32);
+    --synth-glow-2: rgba(236, 72, 153, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-ocean {
+    --synth-border: #38bdf8;
+    --synth-glow: rgba(56, 189, 248, 0.32);
+    --synth-glow-2: rgba(99, 102, 241, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-emerald {
+    --synth-border: #34d399;
+    --synth-glow: rgba(52, 211, 153, 0.32);
+    --synth-glow-2: rgba(45, 212, 191, 0.15);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-crimson {
+    --synth-border: #f43f5e;
+    --synth-glow: rgba(244, 63, 94, 0.32);
+    --synth-glow-2: rgba(232, 121, 249, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-arctic {
+    --synth-border: #7dd3fc;
+    --synth-glow: rgba(125, 211, 252, 0.3);
+    --synth-glow-2: rgba(167, 139, 250, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-violet {
+    --synth-border: #c084fc;
+    --synth-glow: rgba(192, 132, 252, 0.34);
+    --synth-glow-2: rgba(168, 85, 247, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-toxic {
+    --synth-border: #bef264;
+    --synth-glow: rgba(190, 242, 100, 0.32);
+    --synth-glow-2: rgba(232, 121, 249, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-copper {
+    --synth-border: #d97706;
+    --synth-glow: rgba(217, 119, 6, 0.34);
+    --synth-glow-2: rgba(154, 52, 18, 0.18);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-sakura {
+    --synth-border: #f9a8d4;
+    --synth-glow: rgba(249, 168, 212, 0.34);
+    --synth-glow-2: rgba(192, 132, 252, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-lemon {
+    --synth-border: #facc15;
+    --synth-glow: rgba(250, 204, 21, 0.32);
+    --synth-glow-2: rgba(163, 230, 53, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-synthwave-lagoon {
+    --synth-border: #2dd4bf;
+    --synth-glow: rgba(45, 212, 191, 0.32);
+    --synth-glow-2: rgba(2, 132, 199, 0.16);
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-matrix {
+    border: 1px solid #00ff66 !important;
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.25), inset 0 0 10px rgba(0, 255, 102, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-aurora-glass {
+    border: 1px solid rgba(147, 197, 253, 0.25) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    border-radius: 18px !important;
+}
+
+body:not(.layout-unified):not(.layout-unified-app-rounded) .title-bar.title-bar-frame-stealth {
+    border: 1px solid #232733 !important;
+    border-left: 3px solid #ff6b00 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+    border-radius: 2px !important;
+}

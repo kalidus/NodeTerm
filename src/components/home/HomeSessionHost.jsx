@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { setHomeSessionHostElement, setHomeSessionHostOptions } from '../../utils/homeSessionHostBus';
 
 export default function HomeSessionHost({
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null

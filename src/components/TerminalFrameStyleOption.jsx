@@ -2,6 +2,19 @@ import React from 'react';
 import '../styles/components/terminal-frame-style-option.css';
 
 function FramePreviewChrome({ style }) {
+  if (style.id === 'default') {
+    return (
+      <>
+        <div className="frame-preview-bar" />
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          {(style.icons || ['pi-minus', 'pi-stop', 'pi-times']).map((ico, i) => (
+            <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.55 }} />
+          ))}
+        </div>
+      </>
+    );
+  }
+
   if (style.id === 'macos') {
     return (
       <>

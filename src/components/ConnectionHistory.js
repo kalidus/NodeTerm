@@ -65,7 +65,7 @@ const ConnectionHistory = ({
 	terminalTheme = {},
 	terminalTitle = '/local',
 	onOpenSettings = null,
-	terminalFrameStyle = 'macos',
+	terminalFrameStyle = 'default',
 	terminalOpacity = 1.0,
 	homeBackdropBlur = HOME_BACKDROP_BLUR_DEFAULT,
 	onTerminalOpacityChange = () => { },

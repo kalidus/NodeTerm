@@ -1,10 +1,12 @@
 import { STORAGE_KEYS } from './constants';
 import { persistHomeTabSetting } from './homeTabSync';
 
-export const TERMINAL_FRAME_STYLE_DEFAULT = 'macos';
+export const TERMINAL_FRAME_STYLE_DEFAULT = 'default';
 
 /** Catálogo de estilos de marco del terminal (Home + TitleBar). */
 export const TERMINAL_FRAME_STYLE_OPTIONS = [
+  // Neutro (title bar / marcos sin estilo decorativo)
+  { id: 'default', label: 'Default', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   // Clásicos & OS
   { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
   { id: 'gnome', label: 'GNOME (Adwaita)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },

@@ -18,6 +18,7 @@ import {
   setTerminalFrameStyle,
 } from '../utils/terminalFrameStyle';
 import TerminalFrameStyleOption from './TerminalFrameStyleOption';
+import '../styles/components/terminal-frame.css';
 
 const TitleBarIconButton = ({
   title,
@@ -391,9 +392,11 @@ const TitleBar = ({
     window.electronAPI?.close && window.electronAPI.close();
   };
 
+  const frameStyleClass = String(currentFrameStyle || 'default').replace(/[^a-z0-9-]/g, '') || 'default';
+
   return (
     <div
-      className="title-bar"
+      className={`title-bar title-bar-frame title-bar-frame-${frameStyleClass}`}
       style={{
         height: 36,
         minHeight: 36,

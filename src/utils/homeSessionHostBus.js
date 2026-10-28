@@ -1,6 +1,6 @@
 let hostEl = null;
 let hostOptions = {
-  terminalFrameStyle: 'macos',
+  terminalFrameStyle: 'default',
   snapToGrid: true,
   smartSnap: true,
   frameBackground: null

@@ -197,7 +197,7 @@ export default function HomeEmbeddedSessions({
           title={tab.label || 'sesión'}
           path={`session · ${sessionPath(tab)}`}
           panelState={box}
-          terminalFrameStyle={options.terminalFrameStyle || 'macos'}
+          terminalFrameStyle={options.terminalFrameStyle || 'default'}
           snapToGrid={options.snapToGrid !== false}
           smartSnap={options.smartSnap !== false}
           frameBackground={options.frameBackground || null}

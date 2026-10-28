@@ -24,7 +24,7 @@ function isNoteNode(node) {
 
 export default function NotesCyberPanels({
   documentNodes = [],
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null

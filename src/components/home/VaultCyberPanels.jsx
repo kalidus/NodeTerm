@@ -34,7 +34,7 @@ export default function VaultCyberPanels({
   passwordNodes = [],
   vaultLocked = false,
   autoShowList = false,
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null

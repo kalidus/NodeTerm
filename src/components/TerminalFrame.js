@@ -22,9 +22,9 @@ const TerminalFrame = ({
 }) => {
     const [frameStyle, setFrameStyle] = useState(() => {
         try {
-            return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'macos';
+            return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'default';
         } catch {
-            return 'macos';
+            return 'default';
         }
     });
 

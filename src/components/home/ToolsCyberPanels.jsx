@@ -19,7 +19,7 @@ const PANEL_BOX = {
 };
 
 export default function ToolsCyberPanels({
-  terminalFrameStyle = 'macos',
+  terminalFrameStyle = 'default',
   snapToGrid = true,
   smartSnap = true,
   frameBackground = null
