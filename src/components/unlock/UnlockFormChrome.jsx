@@ -1,5 +1,4 @@
-import React from 'react';
-import { Password } from 'primereact/password';
+import React, { useState } from 'react';
 import { Checkbox } from 'primereact/checkbox';
 import { InputSwitch } from 'primereact/inputswitch';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
@@ -41,10 +40,27 @@ export function UnlockPasswordField({
   placeholder
 }) {
   const { t } = useTranslation();
+  const [revealed, setRevealed] = useState(false);
   const canSubmit = !!password && preferenceReady;
   const ph =
     placeholder ||
     t('dialogs.unlock.masterPassword', 'Contraseña Maestra');
+  const toggleLabel = revealed
+    ? t('dialogs.unlock.hidePassword', 'Ocultar contraseña')
+    : t('dialogs.unlock.showPassword', 'Mostrar contraseña');
+
+  const revealToggle = (
+    <button
+      type="button"
+      className="unlock-field-toggle"
+      aria-label={toggleLabel}
+      aria-pressed={revealed}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => setRevealed((value) => !value)}
+    >
+      <i className={revealed ? 'pi pi-eye-slash' : 'pi pi-eye'} aria-hidden="true" />
+    </button>
+  );
 
   if (variant === 'terminal') {
     return (
@@ -54,20 +70,22 @@ export function UnlockPasswordField({
             unlock&gt;_
           </span>
           <div className="unlock-terminal-input-wrap">
-            <Password
+            <input
               id={passwordId}
+              className="unlock-terminal-input"
+              type={revealed ? 'text' : 'password'}
               value={password}
               onChange={onPasswordChange}
-              feedback={false}
-              toggleMask
               autoFocus
+              autoComplete="current-password"
+              spellCheck={false}
               placeholder=""
-              inputClassName="unlock-terminal-input"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && canSubmit) onSubmit?.();
               }}
             />
             {!password ? <span className="unlock-terminal-caret" aria-hidden="true" /> : null}
+            {revealToggle}
           </div>
         </div>
       </div>
@@ -100,23 +118,25 @@ export function UnlockPasswordField({
             <i className="pi pi-lock" />
           </span>
         ) : null}
-        <Password
+        <input
           id={passwordId}
+          className="unlock-field-input"
+          type={revealed ? 'text' : 'password'}
           value={password}
           onChange={onPasswordChange}
-          feedback={false}
-          toggleMask
           autoFocus
+          autoComplete="current-password"
+          spellCheck={false}
           placeholder={
             ['glass-hud', 'aurora', 'matrix', 'ember', 'nord', 'midnight'].includes(variant)
               ? ph
               : undefined
           }
-          inputClassName="unlock-field-input"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && canSubmit) onSubmit?.();
           }}
         />
+        {revealToggle}
       </div>
     </div>
   );

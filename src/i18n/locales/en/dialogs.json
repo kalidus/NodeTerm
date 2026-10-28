@@ -678,6 +678,8 @@
     "infoMessage": "Enter your master password to unlock the application",
     "subtitleShort": "Enter your master password",
     "masterPassword": "Master Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "rememberOnDevice": "Remember password on this device",
     "rememberShort": "Remember",
     "errors": {

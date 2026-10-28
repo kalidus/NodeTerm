@@ -114,33 +114,60 @@
   font-size: 0.95rem;
 }
 
-.unlock-field-shell .p-password {
+.unlock-field-shell .unlock-field-input,
+.unlock-terminal-input-wrap .unlock-terminal-input {
   flex: 1;
-  width: 100%;
-  min-width: 0;
-}
-
-.unlock-field-shell .p-password-input,
-.unlock-field-shell .p-inputtext,
-.unlock-field .unlock-field-input {
   width: 100% !important;
+  min-width: 0;
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
-  padding: 0.85rem 2.5rem 0.85rem 0.15rem !important;
+  padding: 0.85rem 2.75rem 0.85rem 0.15rem !important;
+  font-family: inherit;
   font-size: 0.95rem !important;
   color: var(--ui-dialog-text, #f3f4f6) !important;
 }
 
-.unlock-field-shell .p-password-input:focus,
-.unlock-field-shell .p-inputtext:focus {
+.unlock-field-shell .unlock-field-input:focus,
+.unlock-terminal-input-wrap .unlock-terminal-input:focus {
   box-shadow: none !important;
   outline: none !important;
 }
 
-.unlock-field-shell .p-password-toggle-icon,
-.unlock-field-shell .p-password .p-icon {
+.unlock-field-input::-ms-reveal,
+.unlock-field-input::-ms-clear,
+.unlock-terminal-input::-ms-reveal,
+.unlock-terminal-input::-ms-clear {
+  display: none;
+}
+
+.unlock-field-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-color-secondary, #9ca3af);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.unlock-field-toggle .pi {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.unlock-field-toggle:hover {
+  color: var(--ui-dialog-text, #f3f4f6);
 }
 
 .unlock-remember {
@@ -266,7 +293,6 @@ button.unlock-cta-ghost {
   padding-left: 0.65rem;
 }
 
-.app-dialog.unlock-dialog--classic .unlock-field-shell .p-password-input,
 .app-dialog.unlock-dialog--classic .unlock-field-input {
   padding-left: 0.35rem !important;
 }
@@ -445,21 +471,19 @@ button.unlock-cta-ghost {
   min-width: 0;
 }
 
-.unlock-field--terminal .p-password {
-  width: 100%;
-}
-
-.unlock-field--terminal .p-password-input,
-.unlock-field--terminal .unlock-terminal-input,
-.unlock-terminal-input-wrap .p-inputtext {
+.unlock-field--terminal .unlock-terminal-input {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   font-family: inherit !important;
   color: #7dd3fc !important;
   font-size: 0.95rem !important;
-  padding: 0.2rem 2rem 0.2rem 0.1rem !important;
+  padding: 0.2rem 2.4rem 0.2rem 0.1rem !important;
   letter-spacing: 0.12em;
+}
+
+.unlock-field--terminal .unlock-field-toggle {
+  color: #86efac;
 }
 
 .unlock-terminal-caret {
@@ -567,9 +591,8 @@ body .p-dialog-mask:has(.unlock-dialog--premium-card) {
   background: rgba(0, 0, 0, 0.22);
 }
 
-.unlock-field--premium-card .unlock-field-shell .p-password-input,
 .unlock-field--premium-card .unlock-field-input {
-  padding: 0.95rem 2.5rem 0.95rem 0.2rem !important;
+  padding: 0.95rem 2.75rem 0.95rem 0.2rem !important;
   font-size: 1rem !important;
 }
 
@@ -716,9 +739,12 @@ body .p-dialog-mask:has(.unlock-dialog--premium-card) {
   font-size: 1.1rem;
 }
 
-.unlock-field--glass-hud .unlock-field-shell .p-password-input,
 .unlock-field--glass-hud .unlock-field-input {
-  padding-left: 0.1rem !important;
+  padding-left: 0.85rem !important;
+}
+
+.unlock-field--glass-hud .unlock-field-toggle {
+  color: #67e8f9;
 }
 
 .unlock-remember--glass-hud {
@@ -903,18 +929,24 @@ body .p-dialog-mask:has(.unlock-dialog--premium-card) {
   color: #64748b;
 }
 
-.unlock-field--aurora .p-password-input,
-.unlock-field--aurora .p-inputtext {
+.unlock-field--aurora .unlock-field-input {
   color: #1e1b4b !important;
+}
+
+.unlock-field--aurora .unlock-field-toggle {
+  color: #64748b;
+}
+
+.unlock-field--aurora .unlock-field-toggle:hover {
+  color: #1e1b4b;
 }
 
 .unlock-remember--aurora {
   color: #334155;
 }
 
-.unlock-field--aurora .unlock-field-shell .p-password-input,
 .unlock-field--aurora .unlock-field-input {
-  padding: 0.9rem 2.6rem 0.9rem 0.2rem !important;
+  padding: 0.9rem 2.75rem 0.9rem 0.2rem !important;
 }
 
 .unlock-remember--aurora {
@@ -1022,6 +1054,14 @@ body .p-dialog-mask:has(.unlock-dialog--premium-card) {
   border-radius: 4px;
   border-color: rgba(34, 197, 94, 0.45);
   background: rgba(0, 0, 0, 0.55);
+}
+
+.unlock-field--matrix .unlock-field-input {
+  padding-left: 0.85rem !important;
+}
+
+.unlock-field--matrix .unlock-field-toggle {
+  color: #4ade80;
 }
 
 .unlock-field--matrix .unlock-field-leading {

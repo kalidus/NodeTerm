@@ -678,6 +678,8 @@
     "infoMessage": "Introduce tu contraseña maestra para desbloquear la aplicación",
     "subtitleShort": "Introduce tu contraseña maestra",
     "masterPassword": "Contraseña Maestra",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
     "rememberOnDevice": "Recordar contraseña en este dispositivo",
     "rememberShort": "Recordar",
     "errors": {
