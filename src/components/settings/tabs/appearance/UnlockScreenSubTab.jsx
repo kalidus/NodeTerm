@@ -13,6 +13,7 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
   const { t } = useTranslation('settings');
   const [unlockStyle, setUnlockStyle] = useState(() => loadUnlockStyle());
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewStyleId, setPreviewStyleId] = useState(() => loadUnlockStyle());
 
   useEffect(() => {
     setUnlockStyle(loadUnlockStyle());
@@ -33,6 +34,15 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
       });
     }
   };
+
+  const openPreview = (styleId, e) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
+    setPreviewStyleId(styleId);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => setPreviewOpen(false);
 
   return (
     <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>
@@ -80,7 +90,7 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
               display: 'grid',
               gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gap: '1rem',
-              marginBottom: '1.25rem'
+              marginBottom: '0.5rem'
             }}
           >
             {UNLOCK_STYLE_META.map((opt) => {
@@ -115,7 +125,17 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
                     flexDirection: 'column'
                   }}
                 >
-                  <UnlockStyleThumb styleId={opt.id} alt={name} />
+                  <div className="unlock-style-thumb-wrap">
+                    <UnlockStyleThumb styleId={opt.id} alt={name} />
+                    <Button
+                      type="button"
+                      label={t('unlockScreen.cardPreviewButton', 'Preview')}
+                      icon="pi pi-eye"
+                      className="p-button-sm p-button-outlined unlock-style-preview-btn"
+                      onClick={(e) => openPreview(opt.id, e)}
+                      aria-label={`${t('unlockScreen.cardPreviewButton', 'Preview')}: ${name}`}
+                    />
+                  </div>
                   <div
                     style={{
                       display: 'flex',
@@ -156,55 +176,15 @@ export const UnlockScreenSubTab = ({ toastRef }) => {
               );
             })}
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1rem',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: '10px',
-              gap: '1rem',
-              flexWrap: 'wrap'
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  display: 'block',
-                  marginBottom: '0.25rem',
-                  color: 'var(--ui-dialog-text)'
-                }}
-              >
-                {t('unlockScreen.previewTitle', 'Probar estilo')}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
-                {t(
-                  'unlockScreen.previewDesc',
-                  'Abre una vista previa interactiva del estilo seleccionado (sin desbloquear el vault).'
-                )}
-              </span>
-            </div>
-            <Button
-              label={t('unlockScreen.previewButton', 'Probar ahora')}
-              icon="pi pi-eye"
-              className="p-button-outlined"
-              onClick={() => setPreviewOpen(true)}
-            />
-          </div>
         </div>
       </div>
 
       <UnlockDialog
         visible={previewOpen}
         previewMode
-        previewStyle={unlockStyle}
-        onHide={() => setPreviewOpen(false)}
-        onSuccess={() => setPreviewOpen(false)}
+        previewStyle={previewStyleId}
+        onHide={closePreview}
+        onSuccess={closePreview}
       />
     </div>
   );

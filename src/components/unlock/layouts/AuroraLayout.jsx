@@ -1,11 +1,10 @@
 import React from 'react';
-import appIcon from '../../../assets/app-icon.png';
 import { UnlockFormBlock } from '../UnlockFormChrome';
 import { useTranslation } from '../../../i18n/hooks/useTranslation';
 
 export default function AuroraLayout(props) {
   const { t } = useTranslation();
-  const { passwordId, previewMode } = props;
+  const { passwordId, previewMode, ...formProps } = props;
 
   return (
     <div
@@ -15,16 +14,16 @@ export default function AuroraLayout(props) {
       aria-labelledby={`${passwordId}-title`}
     >
       <div className="unlock-screen-panel unlock-panel--aurora">
-        <div className="unlock-brand unlock-brand--aurora">
-          <img src={appIcon} alt="" className="unlock-brand-icon unlock-brand-icon--soft" />
+        <header className="unlock-brand unlock-brand--aurora">
+          <div className="unlock-aurora-mark" aria-hidden="true">&gt;_</div>
           <h2 id={`${passwordId}-title`} className="unlock-wordmark unlock-wordmark--aurora">
-            NodeTerm
+            NodeTerm Aurora
           </h2>
-          <p className="unlock-subtitle">
+          <p className="unlock-aurora-tag">
             {t('dialogs.unlock.subtitleShort', 'Introduce tu contraseña maestra')}
           </p>
-        </div>
-        <UnlockFormBlock {...props} variant="aurora" />
+        </header>
+        <UnlockFormBlock {...formProps} passwordId={passwordId} previewMode={previewMode} variant="aurora" />
         {previewMode ? (
           <p className="unlock-screen-preview-hint">
             {t('settings.unlockScreen.previewHint', 'Vista previa — Escape o Cerrar para salir')}

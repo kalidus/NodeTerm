@@ -75,6 +75,7 @@
     "previewTitle": "Try style",
     "previewDesc": "Opens an interactive preview of the selected style (does not unlock the vault).",
     "previewButton": "Try now",
+    "cardPreviewButton": "Preview",
     "previewHint": "Preview — press Escape or Close to exit",
     "styles": {
       "classic": {

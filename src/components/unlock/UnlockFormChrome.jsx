@@ -2,8 +2,21 @@ import React from 'react';
 import { Password } from 'primereact/password';
 import { Checkbox } from 'primereact/checkbox';
 import { InputSwitch } from 'primereact/inputswitch';
-import { Button } from 'primereact/button';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
+
+const CTA_COPY = {
+  classic: { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  'vault-gate': { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  terminal: { fallback: 'Enter to unlock' },
+  'premium-card': { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  'glass-hud': { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  synthwave: { fallback: 'DESBLOQUEAR' },
+  aurora: { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  matrix: { fallback: 'UNLOCK' },
+  ember: { fallback: 'Desbloquear  ›' },
+  nord: { key: 'dialogs.unlock.confirm', fallback: 'Desbloquear' },
+  midnight: { fallback: 'DESBLOQUEAR' }
+};
 
 /**
  * Chrome de formulario temático para pantallas de unlock.
@@ -61,32 +74,30 @@ export function UnlockPasswordField({
     );
   }
 
-  const showLeadingLock = variant !== 'classic';
+  const showLeadingLock = !['classic', 'matrix', 'glass-hud'].includes(variant);
   const hideLabel = [
     'glass-hud',
     'synthwave',
     'aurora',
-    'matrix',
     'ember',
     'nord',
     'midnight'
   ].includes(variant);
+  const fieldLabel = variant === 'matrix'
+    ? 'PASSWORD:'
+    : t('dialogs.unlock.masterPassword', 'Contraseña Maestra');
 
   return (
     <div className={`unlock-field unlock-field--${variant}`}>
       {!hideLabel ? (
         <label htmlFor={passwordId} className="unlock-field-label">
-          {t('dialogs.unlock.masterPassword', 'Contraseña Maestra')}
+          {fieldLabel}
         </label>
       ) : null}
       <div className="unlock-field-shell">
         {showLeadingLock ? (
           <span className="unlock-field-leading" aria-hidden="true">
-            {variant === 'glass-hud' ? (
-              <i className="pi pi-chevron-left" />
-            ) : (
-              <i className="pi pi-lock" />
-            )}
+            <i className="pi pi-lock" />
           </span>
         ) : null}
         <Password
@@ -123,14 +134,13 @@ export function UnlockRemember({
     'dialogs.unlock.rememberOnDevice',
     'Recordar contraseña en este dispositivo'
   );
-  const shortLabel = t('dialogs.unlock.rememberShort', 'Recordar');
   const id = `${passwordId}-remember`;
 
-  if (variant === 'terminal' || variant === 'matrix') {
+  if (variant === 'terminal') {
     return (
       <button
         type="button"
-        className={`unlock-remember unlock-remember--terminal unlock-remember--${variant}${rememberPassword ? ' is-checked' : ''}`}
+        className={`unlock-remember unlock-remember--terminal${rememberPassword ? ' is-checked' : ''}`}
         onClick={() => preferenceReady && onRememberChange?.({ checked: !rememberPassword })}
         disabled={!preferenceReady}
         aria-pressed={rememberPassword}
@@ -143,30 +153,87 @@ export function UnlockRemember({
     );
   }
 
+  if (variant === 'matrix') {
+    return (
+      <button
+        type="button"
+        className={`unlock-remember unlock-remember--matrix${rememberPassword ? ' is-checked' : ''}`}
+        onClick={() => preferenceReady && onRememberChange?.({ checked: !rememberPassword })}
+        disabled={!preferenceReady}
+        aria-pressed={rememberPassword}
+      >
+        <span>REMEMBER AS:</span>
+        <span className="unlock-matrix-box" aria-hidden="true">{rememberPassword ? '×' : ''}</span>
+      </button>
+    );
+  }
+
   if (variant === 'aurora') {
     return (
       <div className="unlock-remember unlock-remember--aurora">
+        <label htmlFor={id}>Recordar</label>
         <InputSwitch
           inputId={id}
           checked={rememberPassword}
           disabled={!preferenceReady}
           onChange={(e) => onRememberChange?.({ checked: e.value })}
         />
-        <label htmlFor={id}>{label}</label>
       </div>
     );
   }
 
-  if (variant === 'glass-hud' || variant === 'synthwave') {
+  if (variant === 'glass-hud') {
     return (
-      <div className={`unlock-remember unlock-remember--${variant}`}>
+      <div className="unlock-remember unlock-remember--glass-hud">
         <Checkbox
           inputId={id}
           checked={rememberPassword}
           disabled={!preferenceReady}
           onChange={onRememberChange}
         />
-        <label htmlFor={id}>{shortLabel}</label>
+        <label htmlFor={id}>Remember</label>
+      </div>
+    );
+  }
+
+  if (variant === 'synthwave') {
+    return (
+      <div className="unlock-remember unlock-remember--synthwave">
+        <Checkbox
+          inputId={id}
+          checked={rememberPassword}
+          disabled={!preferenceReady}
+          onChange={onRememberChange}
+        />
+        <label htmlFor={id}>REMEMBER</label>
+      </div>
+    );
+  }
+
+  if (variant === 'nord') {
+    return (
+      <div className="unlock-remember unlock-remember--nord">
+        <Checkbox
+          inputId={id}
+          checked={rememberPassword}
+          disabled={!preferenceReady}
+          onChange={onRememberChange}
+        />
+        <label htmlFor={id}>Remember me</label>
+      </div>
+    );
+  }
+
+  if (variant === 'midnight') {
+    return (
+      <div className="unlock-remember unlock-remember--midnight">
+        <Checkbox
+          inputId={id}
+          checked={rememberPassword}
+          disabled={!preferenceReady}
+          onChange={onRememberChange}
+        />
+        <label htmlFor={id}>Remember this device</label>
       </div>
     );
   }
@@ -193,76 +260,30 @@ export function UnlockActions({
   onHide
 }) {
   const { t } = useTranslation();
-  const confirmLabel = t('dialogs.unlock.confirm', 'Desbloquear');
+  const spec = CTA_COPY[variant] || CTA_COPY.classic;
+  const confirmLabel = spec.key ? t(spec.key, spec.fallback) : spec.fallback;
   const closeLabel = t('common.buttons.close', 'Cerrar');
-
-  if (variant === 'terminal') {
-    return (
-      <div className="unlock-actions unlock-actions--terminal">
-        <Button
-          type="button"
-          label={loading ? '…' : '↵  Enter to unlock'}
-          className="unlock-cta unlock-cta--terminal"
-          onClick={onConfirm}
-          loading={loading}
-          disabled={!canSubmit}
-        />
-        {previewMode ? (
-          <Button
-            type="button"
-            label={closeLabel}
-            className="p-button-text unlock-cta-secondary"
-            onClick={onHide}
-          />
-        ) : null}
-      </div>
-    );
-  }
-
-  if (variant === 'premium-card') {
-    return (
-      <div className="unlock-actions unlock-actions--premium-card">
-        {previewMode ? (
-          <Button
-            type="button"
-            label={closeLabel}
-            className="p-button-text"
-            onClick={onHide}
-          />
-        ) : (
-          <span />
-        )}
-        <Button
-          type="button"
-          label={confirmLabel}
-          icon="pi pi-unlock"
-          className="unlock-cta unlock-cta--premium-card"
-          onClick={onConfirm}
-          loading={loading}
-          disabled={!canSubmit}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className={`unlock-actions unlock-actions--${variant}`}>
-      <Button
+      {variant === 'premium-card' && previewMode ? (
+        <button type="button" className="unlock-cta-ghost" onClick={onHide}>
+          {closeLabel}
+        </button>
+      ) : null}
+      {variant === 'premium-card' && !previewMode ? <span /> : null}
+      <button
         type="button"
-        label={confirmLabel}
-        icon={variant === 'glass-hud' ? undefined : 'pi pi-unlock'}
         className={`unlock-cta unlock-cta--${variant}`}
         onClick={onConfirm}
-        loading={loading}
-        disabled={!canSubmit}
-      />
-      {previewMode ? (
-        <Button
-          type="button"
-          label={closeLabel}
-          className="p-button-text unlock-cta-secondary"
-          onClick={onHide}
-        />
+        disabled={!canSubmit || loading}
+      >
+        {loading ? '…' : confirmLabel}
+      </button>
+      {previewMode && variant !== 'premium-card' ? (
+        <button type="button" className="unlock-cta-ghost" onClick={onHide}>
+          {closeLabel}
+        </button>
       ) : null}
     </div>
   );

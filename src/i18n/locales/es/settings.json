@@ -75,6 +75,7 @@
     "previewTitle": "Probar estilo",
     "previewDesc": "Abre una vista previa interactiva del estilo seleccionado (sin desbloquear el vault).",
     "previewButton": "Probar ahora",
+    "cardPreviewButton": "Preview",
     "previewHint": "Vista previa — Escape o Cerrar para salir",
     "styles": {
       "classic": {
