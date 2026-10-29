@@ -2415,6 +2415,22 @@ ipcMain.handle('terminal:drain-stdout-ring', async (event, tabId) => {
   return terminalStdoutRingBuffer.drain(tabId) || '';
 });
 
+// Backpressure SSH: el renderer pide pause/resume del shellStream (también bastion/Wallix).
+// No toca SSHWriteBufferService (batching de teclado).
+ipcMain.on('terminal:flow', (event, { tabId, paused } = {}) => {
+  if (!tabId) return;
+  const conn = sshConnections[tabId];
+  const stream = conn && conn.stream;
+  if (!stream || stream.destroyed) return;
+  try {
+    if (paused) {
+      if (typeof stream.pause === 'function') stream.pause();
+    } else if (typeof stream.resume === 'function') {
+      stream.resume();
+    }
+  } catch (_) { /* noop */ }
+});
+
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   // Mostrar mensaje de conexión al inicio
@@ -2468,14 +2484,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     const { conn } = createBastionShell(
       bastionConfig,
       (data) => {
-        const dataStr = data.toString('utf-8');
-
-        // Grabar output si hay grabación activa
+        // Bastión suele llegar como string (setEncoding); batcher decodifica si es Buffer.
         if (getSessionRecorder().isRecording(tabId)) {
+          const dataStr = typeof data === 'string' ? data : data.toString('utf-8');
           getSessionRecorder().recordOutput(tabId, dataStr);
         }
-
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+        terminalIpcBatcher.send(event.sender, `ssh:data:${tabId}`, data);
       },
       // ✅ REFACTORIZADO: Handler de cierre usando SSHConnectionCleanupService
       sshCleanupService.createCloseHandler(
@@ -2800,19 +2814,22 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Para capturar el MOTD en la primera conexión directa sin bloquear
     let motdBuffer = '';
     let motdCaptured = isReusedConnection;
+    // Decoder aparte del batcher: MOTD/recorder no deben usar toString por chunk (rompe €).
+    const { StringDecoder } = require('string_decoder');
+    const motdDecoder = new StringDecoder('utf8');
 
     const motdTimer = !isReusedConnection ? setTimeout(() => {
       motdCaptured = true;
       motdBuffer = '';
     }, 4000) : null;
 
-    // Escuchar datos del stream y enviarlos directamente sin supresión de paquetes
+    // Batcher + StringDecoder: nunca data.toString('utf-8') por chunk (ssh2 parte UTF-8).
     stream.on('data', (data) => {
       try {
-        const dataStr = data.toString('utf-8');
+        const dataStr = typeof data === 'string' ? data : motdDecoder.write(data);
 
         // Captura no-bloqueante del banner inicial (MOTD) en la primera conexión
-        if (!motdCaptured) {
+        if (dataStr && !motdCaptured) {
           motdBuffer += dataStr;
           const motdResult = extractMotdBanner(motdBuffer);
           if (motdResult.matched) {
@@ -2830,13 +2847,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           }
         }
 
-        // Grabar output si hay grabación activa
-        if (getSessionRecorder().isRecording(tabId)) {
+        // Grabar output si hay grabación activa (texto ya decodificado en stream)
+        if (dataStr && getSessionRecorder().isRecording(tabId)) {
           getSessionRecorder().recordOutput(tabId, dataStr);
         }
 
-        // For all subsequent packets, just send them (sin descartar ningún paquete)
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+        terminalIpcBatcher.send(event.sender, `ssh:data:${tabId}`, data);
       } catch (e) {
         // log o ignora
       }
@@ -2844,6 +2860,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     stream.on('close', async () => {
       if (motdTimer) clearTimeout(motdTimer);
+      try { motdDecoder.end(); } catch (_) { /* noop */ }
+      terminalIpcBatcher.flush(`ssh:data:${tabId}`, { final: true });
       sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
       const conn = sshConnections[tabId];
       if (conn && conn.statsTimeout) {
@@ -3112,11 +3130,11 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
         const { conn: newBastionConn } = createBastionShell(
           bastionConfig,
           (data) => {
-            const dataStr = data.toString('utf-8');
             if (getSessionRecorder().isRecording(tabId)) {
+              const dataStr = typeof data === 'string' ? data : data.toString('utf-8');
               getSessionRecorder().recordOutput(tabId, dataStr);
             }
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+            terminalIpcBatcher.send(event.sender, `ssh:data:${tabId}`, data);
           },
           // ✅ REFACTORIZADO: Handler de cierre usando SSHConnectionCleanupService
           sshCleanupService.createCloseHandler(

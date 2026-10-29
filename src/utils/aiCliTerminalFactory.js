@@ -152,7 +152,8 @@ export function createAiCliTerminalComponent(config) {
       };
       writeBufferRef.current = createXtermWriteBuffer(term, {
         active: !!activeRef.current,
-        onPainted: scheduleHeal
+        onPainted: scheduleHeal,
+        dropWithMark: true
       });
       rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
       const timers = createTimerBag();

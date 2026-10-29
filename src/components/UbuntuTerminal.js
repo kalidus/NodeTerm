@@ -253,7 +253,7 @@ const UbuntuTerminal = forwardRef(({
         });
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
-        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active, dropWithMark: true });
 
         // Add addons
         fitAddon.current = new FitAddon();

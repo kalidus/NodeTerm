@@ -11,6 +11,7 @@
 
 const { sendToRenderer } = require('../utils');
 const sshWriteBufferService = require('./SSHWriteBufferService');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 class SSHConnectionCleanupService {
   constructor() {
@@ -229,6 +230,9 @@ class SSHConnectionCleanupService {
    */
   createCloseHandler(tabId, conn, sshConnections, bastionStatsState, sender, additionalCleanup = null) {
     return () => {
+      try {
+        terminalIpcBatcher.flush(`ssh:data:${tabId}`, { final: true });
+      } catch (_) { /* noop */ }
       sendToRenderer(sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
 
       // Limpiar timeout de stats

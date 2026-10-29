@@ -346,19 +346,23 @@ class SSHAuthService {
         conn.finalDistroId = finalDistroId;
         this.disableManualPasswordMode(conn); // Desactivar modo manual
 
-        // Configurar listeners del stream
+        // Configurar listeners del stream.
+        // El batcher decodifica UTF-8 al instante (StringDecoder) y solo encola strings:
+        // ssh2 reutiliza el pool entre 'data'; no se puede retener el Buffer.
+        // Buffer.from aquí es solo para el recorder. No tocar SSHWriteBufferService.
         shellStream.on('data', (data) => {
-          const dataStr = data.toString('utf-8');
-
           if (getSessionRecorder && getSessionRecorder().isRecording(tabId)) {
-            getSessionRecorder().recordOutput(tabId, dataStr);
+            getSessionRecorder().recordOutput(tabId, Buffer.from(data));
           }
 
-          terminalIpcBatcher.send(sender, `ssh:data:${tabId}`, dataStr);
+          terminalIpcBatcher.send(sender, `ssh:data:${tabId}`, data);
         });
 
         shellStream.on('close', () => {
-          terminalIpcBatcher.flush(`ssh:data:${tabId}`);
+          try {
+            if (typeof shellStream.resume === 'function') shellStream.resume();
+          } catch (_) { /* noop */ }
+          terminalIpcBatcher.flush(`ssh:data:${tabId}`, { final: true });
           sendToRenderer(sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
 
           if (conn && conn.statsTimeout) {
@@ -380,7 +384,7 @@ class SSHAuthService {
         });
 
         shellStream.stderr?.on('data', (data) => {
-          sendToRenderer(sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+          terminalIpcBatcher.send(sender, `ssh:data:${tabId}`, data);
         });
 
         // Guardar password en el objeto de conexión para uso interno (ej: SFTP / claim one-shot)

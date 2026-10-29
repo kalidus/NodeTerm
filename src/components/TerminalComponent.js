@@ -378,7 +378,16 @@ const TerminalComponent = forwardRef(({
         });
 
         // Inicializar buffer de escrituras por fotograma (60 FPS write batching)
-        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!activeRef.current });
+        writeBufferRef.current = createXtermWriteBuffer(term, {
+            active: !!activeRef.current,
+            flowControl: {
+                onChange: (paused) => {
+                    try {
+                        window.electron?.ipcRenderer?.send('terminal:flow', { tabId, paused: !!paused });
+                    } catch (_) { /* noop */ }
+                }
+            }
+        });
 
         // Disable bracketed paste mode to prevent weird characters on Ctrl+V
         term.current.options.bracketedPasteMode = false;
@@ -729,6 +738,10 @@ const TerminalComponent = forwardRef(({
                 resizeObserver.disconnect();
                 cleanupContextMenu();
                 try { detachSearch?.(); } catch (_) { /* noop */ }
+                try {
+                    writeBufferRef.current?.clear?.();
+                    window.electron?.ipcRenderer?.send('terminal:flow', { tabId, paused: false });
+                } catch (_) { /* noop */ }
                 if (resizeTimeout) clearTimeout(resizeTimeout);
                 if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
 

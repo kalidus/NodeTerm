@@ -221,7 +221,7 @@ const PowerShellTerminal = forwardRef(({
             bracketedPasteMode: false, // Disable to prevent weird characters
         });
 
-        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active, dropWithMark: true });
 
         // Add addons
         fitAddon.current = new FitAddon();

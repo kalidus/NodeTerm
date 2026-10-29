@@ -124,7 +124,7 @@ const DockerTerminal = forwardRef(({
         const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
-        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active, dropWithMark: true });
 
         // Cargar renderizador acelerado por hardware con fallback a Canvas 2D
         rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);

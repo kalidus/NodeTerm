@@ -5,11 +5,19 @@
  *
  * When inactive (hidden tab): keep a ring buffer only — no term.write / rAF paint.
  * On activate: flush pending chunks to the terminal.
+ *
+ * SSH (flowControl): no descartar — avisar al main para pause()/resume() del shellStream.
+ * PTY local (dropWithMark): techo más alto; si se corta, marca visible en pantalla.
  */
 
 const DEFAULT_MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60/120 FPS
-const ACTIVE_MAX_BUFFER_BACKLOG_BYTES = 2 * 1024 * 1024; // 2 MB en pestana visible
+const ACTIVE_MAX_BUFFER_BACKLOG_BYTES = 2 * 1024 * 1024; // 2 MB en pestana visible (default)
 const INACTIVE_MAX_BUFFER_BACKLOG_BYTES = 256 * 1024; // 256 KB ring en pestana oculta
+const LOCAL_ACTIVE_MAX_BACKLOG_BYTES = 8 * 1024 * 1024; // PTY local: techo blando
+const LOCAL_HARD_MAX_BACKLOG_BYTES = 16 * 1024 * 1024; // PTY local: techo duro con marca
+const FLOW_HIGH_WATER_BYTES = 1.5 * 1024 * 1024;
+const FLOW_LOW_WATER_BYTES = 256 * 1024;
+const DROP_MARK = '\r\n\x1b[33m… [salida omitida por carga]\x1b[0m\r\n';
 const ESC = '\x1b';
 const SYNC_BEGIN = `${ESC}[?2026h`;
 const SYNC_END = `${ESC}[?2026l`;
@@ -99,25 +107,70 @@ function resolveTerm(termOrRef) {
   return current && typeof current.write === 'function' ? current : null;
 }
 
+/**
+ * @param {import('@xterm/xterm').Terminal|{current:?}} termRef
+ * @param {{
+ *   maxChunkPerFrame?: number,
+ *   active?: boolean,
+ *   onPainted?: Function,
+ *   flowControl?: { onChange: (paused: boolean) => void },
+ *   dropWithMark?: boolean,
+ * }} [options]
+ */
 export function createXtermWriteBuffer(termRef, options = {}) {
   const maxChunkPerFrame = options.maxChunkPerFrame || DEFAULT_MAX_CHUNK_PER_FRAME;
   const onPainted = typeof options.onPainted === 'function' ? options.onPainted : null;
+  const flowControl = options.flowControl && typeof options.flowControl.onChange === 'function'
+    ? options.flowControl
+    : null;
+  const dropWithMark = !!options.dropWithMark;
   let isActive = options.active !== false;
   let hold = false;
-  let maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
+  let maxBacklogBytes = isActive
+    ? (dropWithMark ? LOCAL_ACTIVE_MAX_BACKLOG_BYTES : ACTIVE_MAX_BUFFER_BACKLOG_BYTES)
+    : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
   let chunks = [];
   let pendingBytes = 0;
   let rafId = null;
+  let flowPaused = false;
 
   const notifyPainted = () => {
     if (!onPainted) return;
     try { onPainted(); } catch (_) {}
   };
 
+  const setFlowPaused = (paused) => {
+    if (!flowControl) return;
+    const next = !!paused;
+    if (next === flowPaused) return;
+    flowPaused = next;
+    try { flowControl.onChange(flowPaused); } catch (_) {}
+  };
+
+  const updateFlowControl = () => {
+    if (!flowControl) return;
+    if (!flowPaused && pendingBytes >= FLOW_HIGH_WATER_BYTES) {
+      setFlowPaused(true);
+    } else if (flowPaused && pendingBytes <= FLOW_LOW_WATER_BYTES) {
+      setFlowPaused(false);
+    }
+  };
+
   const trimBacklog = () => {
-    if (pendingBytes <= maxBacklogBytes || chunks.length === 0) return;
+    // SSH / flowControl: no descartar; solo pausar el stream remoto.
+    if (flowControl) {
+      updateFlowControl();
+      return;
+    }
+
+    const dropLimit = dropWithMark ? LOCAL_HARD_MAX_BACKLOG_BYTES : maxBacklogBytes;
+    if (pendingBytes <= dropLimit || chunks.length === 0) return;
+
     const half = Math.floor(chunks.length / 2) || 1;
     chunks.splice(0, half);
+    if (dropWithMark) {
+      chunks.unshift(DROP_MARK);
+    }
     pendingBytes = chunks.reduce((acc, c) => acc + c.length, 0);
   };
 
@@ -131,6 +184,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     if (!term || chunks.length === 0) {
       chunks = [];
       pendingBytes = 0;
+      updateFlowControl();
       return;
     }
 
@@ -191,6 +245,8 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       pendingBytes = 0;
     }
 
+    updateFlowControl();
+
     if (chunks.length > 0 && isActive && !hold && resolveTerm(termRef)) {
       rafId = requestAnimationFrame(flush);
     }
@@ -206,16 +262,19 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     const dataStr = typeof data === 'string' ? data : String(data);
     const dataLen = dataStr.length;
 
-    if (pendingBytes + dataLen > maxBacklogBytes) {
-      trimBacklog();
-    }
-
     chunks.push(dataStr);
     pendingBytes += dataLen;
 
+    if (flowControl) {
+      updateFlowControl();
+    } else if (pendingBytes > (dropWithMark ? LOCAL_HARD_MAX_BACKLOG_BYTES : maxBacklogBytes)) {
+      trimBacklog();
+    }
+
     // Pestana oculta: solo ring buffer, sin pintar xterm
     if (!isActive) {
-      trimBacklog();
+      if (!flowControl) trimBacklog();
+      else updateFlowControl();
       return;
     }
 
@@ -229,6 +288,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    setFlowPaused(false);
   };
 
   const flushSync = () => {
@@ -245,6 +305,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     try {
       term.write(payload);
     } catch (_) {}
+    updateFlowControl();
   };
 
   /** Un solo write al soltar la retención, con el frame DEC 2026 entero. */
@@ -257,6 +318,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     const term = resolveTerm(termRef);
     if (!term || chunks.length === 0) {
       notifyPainted();
+      updateFlowControl();
       return;
     }
     const payload = chunks.join('');
@@ -265,6 +327,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     try {
       term.write(payload, notifyPainted);
     } catch (_) {}
+    updateFlowControl();
   };
 
   const setHold = (nextHold) => {
@@ -284,8 +347,15 @@ export function createXtermWriteBuffer(termRef, options = {}) {
   const setActive = (nextActive) => {
     const wasActive = isActive;
     isActive = !!nextActive;
-    maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
-    trimBacklog();
+    maxBacklogBytes = isActive
+      ? (dropWithMark ? LOCAL_ACTIVE_MAX_BACKLOG_BYTES : ACTIVE_MAX_BUFFER_BACKLOG_BYTES)
+      : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
+
+    if (!flowControl) {
+      trimBacklog();
+    } else {
+      updateFlowControl();
+    }
 
     if (!isActive) {
       if (rafId) {
@@ -306,6 +376,9 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     flushSync,
     setActive,
     setHold,
-    isHeld: () => hold
+    isHeld: () => hold,
+    /** @internal tests */
+    getPendingBytes: () => pendingBytes,
+    isFlowPaused: () => flowPaused
   };
 }
