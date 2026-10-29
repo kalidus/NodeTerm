@@ -1030,7 +1030,8 @@ const TerminalComponent = forwardRef(({
                     <div className="terminal-quick-actions" style={{
                         position: 'absolute',
                         top: '8px',
-                        right: isSplit ? '26px' : '8px',
+                        // Hueco para el scrollbar de xterm (~14–16px) para poder arrastrarlo arriba
+                        right: isSplit ? '42px' : '24px',
                         zIndex: 100,
                         display: 'flex',
                         gap: isSplit ? '0' : '4px',
