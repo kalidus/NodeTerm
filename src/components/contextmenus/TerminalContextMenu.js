@@ -1,6 +1,7 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
 import { getAgentSession, setHumanInputLocked } from '../../services/terminalAgentState';
 import { openTerminalSearch } from '../../utils/terminalSearch';
+import { isSplittableLocal } from '../../utils/localPtyChannel';
 
 const TerminalContextMenu = ({
   terminalContextMenu,
@@ -18,7 +19,8 @@ const TerminalContextMenu = ({
   onShowSystemMonitor,
   onShowFileExplorer,
   isSSHSession = false,
-  openInSplit
+  openInSplit,
+  openLocalInSplit
 }) => {
   const menuRef = useRef(null);
   const [position, setPosition] = useState({ left: -9999, top: -9999 });
@@ -136,10 +138,17 @@ const TerminalContextMenu = ({
       const found = findTerminalInTab(tab, terminalContextMenu.tabKey);
       if (found) return found;
     }
-    return null;
+    // Fallback: la propia pestaña (local-terminal / legacy powershell)
+    return allTabs.find((tab) => tab.key === terminalContextMenu.tabKey) || null;
   })();
 
-  const hasSSHConfig = activeTerminal && activeTerminal.sshConfig;
+  const hasSSHConfig = !!(activeTerminal?.sshConfig?.host || activeTerminal?.sshConfig?.username);
+  const localSplitSource = (() => {
+    if (hasSSHConfig) return null;
+    if (activeTerminal && isSplittableLocal(activeTerminal)) return activeTerminal;
+    if (parentTab && isSplittableLocal(parentTab)) return parentTab;
+    return null;
+  })();
 
   const handleOpenInSplit = (orientation) => {
     if (!activeTerminal || !activeTerminal.sshConfig) {
@@ -176,6 +185,15 @@ const TerminalContextMenu = ({
     if (openInSplit) {
       openInSplit(sshNode, { key: terminalContextMenu.tabKey }, orientation);
     }
+    setTerminalContextMenu(null);
+  };
+
+  const handleOpenLocalSplit = (orientation) => {
+    if (!localSplitSource || !openLocalInSplit) {
+      setTerminalContextMenu(null);
+      return;
+    }
+    openLocalInSplit(localSplitSource, { key: terminalContextMenu.tabKey }, orientation);
     setTerminalContextMenu(null);
   };
 
@@ -486,6 +504,42 @@ const TerminalContextMenu = ({
             >
               <i className="pi pi-arrows-h" style={{ width: '16px', color: '#38bdf8' }} />
               Abrir en Split (Horizontal)
+            </div>
+          </>
+        )}
+
+        {!!localSplitSource && openLocalInSplit && (
+          <>
+            <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }} />
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#38bdf8'
+              }}
+              onClick={() => handleOpenLocalSplit('vertical')}
+            >
+              <i className="pi pi-arrows-v" style={{ width: '16px', color: '#38bdf8' }} />
+              Dividir vertical
+            </div>
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#38bdf8'
+              }}
+              onClick={() => handleOpenLocalSplit('horizontal')}
+            >
+              <i className="pi pi-arrows-h" style={{ width: '16px', color: '#38bdf8' }} />
+              Dividir horizontal
             </div>
           </>
         )}

@@ -17,6 +17,8 @@ import {
     resolveTerminalFontFamily,
     ensureTerminalFontsLoaded
 } from '../utils/resolveTerminalFontFamily';
+import { useResumeTerminalFit } from '../hooks/useResumeTerminalFit';
+import { publishBroadcastInput } from '../utils/localPtyChannel';
 
 const WSLTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -26,7 +28,12 @@ const WSLTerminal = forwardRef(({
     hideStatusBar = false,
     isIntegrated = false,
     active = true,
-    onContextMenu
+    onContextMenu,
+    layoutSuspended = false,
+    onBroadcastData,
+    isBroadcastActive = false,
+    broadcastExcludedTargets,
+    onTerminalFocus
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -37,6 +44,13 @@ const WSLTerminal = forwardRef(({
     const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
         createStableFitBinding(term, fitAddon, terminalRef)
     ).current;
+    const layoutSuspendedRef = useRef(!!layoutSuspended);
+    layoutSuspendedRef.current = !!layoutSuspended;
+    const onTerminalFocusRef = useRef(onTerminalFocus);
+    onTerminalFocusRef.current = onTerminalFocus;
+    const broadcastPropsRef = useRef({});
+    broadcastPropsRef.current = { isBroadcastActive, onBroadcastData, broadcastExcludedTargets };
+    useResumeTerminalFit(layoutSuspended, fitStable);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [isConnected, setIsConnected] = useState(false);
@@ -205,6 +219,7 @@ const WSLTerminal = forwardRef(({
         paste: (text) => {
             pasteToTerminal(term, text, (data) => {
                 window.electron?.ipcRenderer.send(`wsl:data:${tabId}`, data);
+                publishBroadcastInput(broadcastPropsRef, tabId, data);
             });
         }
     }));
@@ -283,10 +298,18 @@ const WSLTerminal = forwardRef(({
         term.current.open(terminalRef.current);
         fitStable();
         term.current.focus();
+        let focusDisposable = null;
+        try {
+            if (typeof term.current.onFocus === 'function') {
+                focusDisposable = term.current.onFocus(() => {
+                    onTerminalFocusRef.current?.();
+                });
+            }
+        } catch (_) { /* noop */ }
 
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver(() => {
-            if (isFitting()) return;
+            if (layoutSuspendedRef.current || isFitting()) return;
             fitStable();
         });
         if (terminalRef.current) {
@@ -301,6 +324,7 @@ const WSLTerminal = forwardRef(({
             // Limpiar el terminal antes de iniciar
             term.current.clear();
 
+            window.electron.ipcRenderer.send('register-tab-events', tabId);
             window.electron.ipcRenderer.send(`wsl:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
@@ -314,6 +338,7 @@ const WSLTerminal = forwardRef(({
                 onContextMenu,
                 onSendData: (data) => {
                     window.electron.ipcRenderer.send(`wsl:data:${tabId}`, data);
+                    publishBroadcastInput(broadcastPropsRef, tabId, data);
                 }
             });
 
@@ -325,10 +350,12 @@ const WSLTerminal = forwardRef(({
                     `wsl:data:${tabId}`,
                     data
                 );
+                publishBroadcastInput(broadcastPropsRef, tabId, data);
             });
 
             // Handle terminal resize
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
+                if (layoutSuspendedRef.current || !cols || !rows) return;
                 window.electron.ipcRenderer.send(`wsl:resize:${tabId}`, { cols, rows });
             });
 
@@ -357,6 +384,7 @@ const WSLTerminal = forwardRef(({
                 if (writeBufferRef.current) {
                     writeBufferRef.current.clear();
                 }
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
                 if (onDataUnsubscribe) onDataUnsubscribe();
@@ -375,6 +403,7 @@ const WSLTerminal = forwardRef(({
             // Fallback when Electron API is not available
             term.current.writeln('\x1b[31mError: Electron API not available. WSL integration will not work.\x1b[0m');
             return () => {
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 try { detachSearch?.(); } catch (_) { /* noop */ }
                 endMount(stableFit);
@@ -421,7 +450,7 @@ const WSLTerminal = forwardRef(({
 
     // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (!fitAddon.current) return undefined;
+        if (!fitAddon.current || layoutSuspendedRef.current) return undefined;
         const id = setTimeout(() => {
             if (!isFitting()) fitStable();
         }, 0);
@@ -430,6 +459,7 @@ const WSLTerminal = forwardRef(({
 
     // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
     useEffect(() => {
+        if (layoutSuspendedRef.current) return undefined;
         fitStable();
         const t1 = setTimeout(fitStable, 50);
         const t2 = setTimeout(fitStable, 150);
@@ -459,7 +489,9 @@ const WSLTerminal = forwardRef(({
 
 
     return (
-        <div style={{
+        <div
+            onMouseDown={() => onTerminalFocus?.()}
+            style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',

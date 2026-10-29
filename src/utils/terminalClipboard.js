@@ -1,6 +1,7 @@
 import { writeText as clipboardWriteText, readText as clipboardReadText } from './clipboard.js';
 import { shouldBlockHumanInput } from '../services/terminalAgentState.js';
 import { isTerminalSearchShortcut, openTerminalSearch } from './terminalSearch.js';
+import { parseSplitShortcut } from './splitGridActions.js';
 
 /**
  * Standard helper to paste text into a terminal instance and ensure focus.
@@ -110,6 +111,11 @@ export function setupTerminalClipboard({
       if (tabId) {
         openTerminalSearch(tabId);
       }
+      return false;
+    }
+
+    // Atajos de split (Alt+flechas, etc.): no dejar que xterm los use de scroll rápido
+    if (parseSplitShortcut(domEvent)) {
       return false;
     }
 

@@ -1,8 +1,10 @@
 ﻿import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import TerminalComponent from './TerminalComponent';
+import SplitRectLayout from './SplitRectLayout';
 import { setUiDragging } from '../utils/uiDragPerformance';
 import { cycleIndex, neighborIndex, parseSplitShortcut, resizeGrid } from '../utils/splitGridActions';
+import { neighborByRect, resizeFocusedPane } from '../utils/splitTreeLayout';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -160,6 +162,10 @@ const SplitLayout = ({
 
   path = [], // Path en el árbol para identificar este nodo
   openInSplit = null,
+  localFontFamily,
+  localFontSize,
+  localPowerShellTheme,
+  localLinuxTerminalTheme,
   style = {}, // Prop style para pasar estilos entre componentes recursivos
   /** false cuando la pestaña split está oculta → libera WebGL */
   active = true,
@@ -172,11 +178,29 @@ const SplitLayout = ({
   const latestVerticalLeftSizeRef = useRef(30);
   const splitRootRef = useRef(null);
   const gridApiRef = useRef(null);
+  const focusedKeyRef = useRef(null);
+  const splitNavRef = useRef({ panes: [], terminals: [], gutters: [], sizes: {}, orientation: null });
   const activePropRef = useRef(active);
   activePropRef.current = active;
-  const [focusedKey, setFocusedKey] = useState(null);
+  const [focusedKey, setFocusedKeyState] = useState(null);
   const [zoomedKey, setZoomedKey] = useState(null);
-  gridApiRef.current = null;
+
+  const setFocusedKey = React.useCallback((next) => {
+    if (typeof next === 'function') {
+      setFocusedKeyState((prev) => {
+        const value = next(prev);
+        focusedKeyRef.current = value;
+        if (gridApiRef.current) gridApiRef.current.focusedKey = value;
+        splitNavRef.current.focusedKey = value;
+        return value;
+      });
+      return;
+    }
+    focusedKeyRef.current = next;
+    if (gridApiRef.current) gridApiRef.current.focusedKey = next;
+    splitNavRef.current.focusedKey = next;
+    setFocusedKeyState(next);
+  }, []);
 
   // Determinar qué sistema usar
   const isNestedSystem = first || second;
@@ -487,37 +511,132 @@ const SplitLayout = ({
     const keys = terminalsArray.map((terminal) => terminal?.key).filter(Boolean);
     setFocusedKey((prev) => (prev && keys.includes(prev) ? prev : (keys[0] || null)));
     setZoomedKey((prev) => (prev && keys.includes(prev) ? prev : null));
-  }, [terminalsArray]);
+  }, [terminalsArray, setFocusedKey]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if (!activePropRef.current) return;
       const root = splitRootRef.current;
-      if (!root || !(event.target instanceof Node) || !root.contains(event.target)) return;
+      if (!root) return;
+
+      const api = gridApiRef.current;
+      const nav = splitNavRef.current;
+      const panes = api?.panes?.length ? api.panes : (nav.panes || []);
+      const terminals = api?.terminals?.length
+        ? api.terminals
+        : (nav.terminals?.length ? nav.terminals : terminalsArray);
+      const hasSplitNav = panes.length > 0 || terminals.length > 0;
+      if (!hasSplitNav) return;
+
+      const currentFocused = focusedKeyRef.current
+        || api?.focusedKey
+        || nav.focusedKey
+        || panes[0]?.key
+        || terminals[0]?.key
+        || null;
+
+      const target = event.target instanceof Node ? event.target : null;
+      const activeEl = document.activeElement instanceof Node ? document.activeElement : null;
+      const focusInside = (target && root.contains(target)) || (activeEl && root.contains(activeEl));
+      // Alt a menudo quita el foco del textarea de xterm antes del keydown (menú Windows).
+      if (!focusInside && !(event.altKey && (currentFocused || hasSplitNav))) {
+        return;
+      }
       if (document.querySelector('[data-capturing-shortcut="true"]')) return;
       const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
       if (modal && modal.offsetWidth > 0 && modal.offsetHeight > 0) return;
 
       const action = parseSplitShortcut(event);
       if (!action) return;
-      const api = gridApiRef.current;
-      if (!api?.terminals?.length || typeof api.setVerticalSplit !== 'function') return;
-
-      const keys = api.terminals.map((terminal) => terminal?.key).filter(Boolean);
-      const count = keys.length;
-      const index = keys.indexOf(api.focusedKey);
 
       const focusKey = (key) => {
         if (!key) return;
-        api.focusedKey = key;
-        api.zoomedKey = null;
+        focusedKeyRef.current = key;
+        splitNavRef.current.focusedKey = key;
+        if (api) {
+          api.focusedKey = key;
+          api.zoomedKey = null;
+        }
         setFocusedKey(key);
         setZoomedKey(null);
-        terminalRefs?.current?.[key]?.focus?.();
+        const applyFocus = () => {
+          try { terminalRefs?.current?.[key]?.focus?.(); } catch (_) { /* noop */ }
+        };
+        applyFocus();
+        requestAnimationFrame(() => {
+          applyFocus();
+          requestAnimationFrame(applyFocus);
+        });
       };
 
+      if (panes.length) {
+        const keys = panes.map((pane) => pane.key);
+        const index = keys.indexOf(currentFocused);
+        if (action.type === 'focus') {
+          const nextKey = neighborByRect(panes, currentFocused, action.direction);
+          if (!nextKey) return;
+          event.preventDefault();
+          event.stopPropagation();
+          focusKey(nextKey);
+          return;
+        }
+        if (action.type === 'cycle') {
+          const next = cycleIndex(index < 0 ? 0 : index, keys.length, action.delta);
+          if (next == null || keys[next] === currentFocused) return;
+          event.preventDefault();
+          event.stopPropagation();
+          focusKey(keys[next]);
+          return;
+        }
+        if (action.type === 'zoom') {
+          if (keys.length < 2 || index < 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          setZoomedKey((prev) => {
+            const next = prev === keys[index] ? null : keys[index];
+            if (api) api.zoomedKey = next;
+            return next;
+          });
+          return;
+        }
+        if (action.type === 'equalize') {
+          const equalize = api?.equalize;
+          if (keys.length < 2 || typeof equalize !== 'function') return;
+          event.preventDefault();
+          event.stopPropagation();
+          equalize();
+          return;
+        }
+        if (action.type === 'resize') {
+          const sizes = api?.sizes ?? nav.sizes ?? {};
+          const gutters = api?.gutters ?? nav.gutters ?? [];
+          const patch = resizeFocusedPane({
+            panes,
+            gutters,
+            focusedKey: currentFocused,
+            direction: action.direction,
+            sizes,
+          });
+          if (!patch || typeof api?.setSize !== 'function') return;
+          event.preventDefault();
+          event.stopPropagation();
+          const nextSizes = { ...sizes, [patch.key]: patch.value };
+          if (api) api.sizes = nextSizes;
+          splitNavRef.current.sizes = nextSizes;
+          api.setSize(patch.key, patch.value);
+        }
+        return;
+      }
+
+      if (!terminals?.length || typeof api?.setVerticalSplit !== 'function') return;
+
+      const keys = terminals.map((terminal) => terminal?.key).filter(Boolean);
+      const count = keys.length;
+      const index = keys.indexOf(currentFocused);
+      const orientation = api.orientation ?? nav.orientation;
+
       if (action.type === 'focus') {
-        const next = neighborIndex(index, action.direction, count, api.orientation);
+        const next = neighborIndex(index, action.direction, count, orientation);
         if (next == null) return;
         event.preventDefault();
         event.stopPropagation();
@@ -527,7 +646,7 @@ const SplitLayout = ({
 
       if (action.type === 'cycle') {
         const next = cycleIndex(index, count, action.delta);
-        if (next == null || keys[next] === api.focusedKey) return;
+        if (next == null || keys[next] === currentFocused) return;
         event.preventDefault();
         event.stopPropagation();
         focusKey(keys[next]);
@@ -540,7 +659,7 @@ const SplitLayout = ({
         event.stopPropagation();
         setZoomedKey((prev) => {
           const next = prev === keys[index] ? null : keys[index];
-          api.zoomedKey = next;
+          if (api) api.zoomedKey = next;
           return next;
         });
         return;
@@ -560,7 +679,7 @@ const SplitLayout = ({
       if (action.type === 'resize') {
         const patch = resizeGrid({
           count,
-          orientation: api.orientation,
+          orientation,
           index,
           direction: action.direction,
           ...api.sizes,
@@ -577,10 +696,44 @@ const SplitLayout = ({
 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [terminalRefs]);
+  }, [terminalRefs, terminalsArray, setFocusedKey]);
 
-  // NUEVO SISTEMA: Grid 2x2 inteligente con splitters redimensionables
-  // NO ejecutar si estamos usando el sistema legacy (leftTerminal/rightTerminal)
+  if (isNestedSystem && !isLegacySystem && terminalsArray.length > 0) {
+    return (
+      <SplitRectLayout
+        root={{ type: 'split', orientation: orientation || 'vertical', first, second }}
+        gridApiRef={gridApiRef}
+        splitNavRef={splitNavRef}
+        focusedKeyRef={focusedKeyRef}
+        splitRootRef={splitRootRef}
+        focusedKey={focusedKey}
+        setFocusedKey={setFocusedKey}
+        zoomedKey={zoomedKey}
+        setZoomedKey={setZoomedKey}
+        panePreferWebgl={panePreferWebgl}
+        terminalRefs={terminalRefs}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
+        theme={theme}
+        localFontFamily={localFontFamily}
+        localFontSize={localFontSize}
+        localPowerShellTheme={localPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
+        onContextMenu={onContextMenu}
+        active={active}
+        statusBarIconTheme={statusBarIconTheme}
+        isBroadcastActive={isBroadcastActive}
+        onBroadcastData={onBroadcastData}
+        onToggleBroadcast={onToggleBroadcast}
+        onToggleBroadcastTarget={onToggleBroadcastTarget}
+        broadcastExcludedTargets={broadcastExcludedTargets}
+        onClosePanel={onClosePanel}
+        effectiveSplitterColor={effectiveSplitterColor}
+      />
+    );
+  }
+
+  // Cuadrícula fija solo para formatos que no son el árbol anidado (array legacy)
   if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
     const terminalCount = terminalsArray.length;
     // Usar el color calculado del tema
@@ -593,12 +746,21 @@ const SplitLayout = ({
     gridApiRef.current = {
       terminals: terminalsArray,
       orientation,
-      focusedKey,
+      focusedKey: focusedKeyRef.current ?? focusedKey,
       zoomedKey,
       sizes: { verticalSplit, horizontalSplit, verticalSplitBottom },
       setVerticalSplit,
       setHorizontalSplit,
       setVerticalSplitBottom,
+    };
+    splitNavRef.current = {
+      ...splitNavRef.current,
+      panes: [],
+      gutters: [],
+      terminals: terminalsArray,
+      orientation,
+      focusedKey: focusedKeyRef.current ?? focusedKey,
+      sizes: { verticalSplit, horizontalSplit, verticalSplitBottom },
     };
     const gridDragRafRef = useRef(0);
     const latestGridDragRef = useRef({ type: null, value: 50 });

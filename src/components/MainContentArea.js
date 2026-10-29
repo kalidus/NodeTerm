@@ -84,6 +84,7 @@ const MainContentArea = ({
   memoizedContentRendererProps,
   settingsTabProps,
   openInSplit,
+  openLocalInSplit,
 
   // Context menu props
   tabContextMenu,
@@ -2150,6 +2151,7 @@ const MainContentArea = ({
                     onShowSystemMonitor={handleShowSystemMonitor}
                     onShowFileExplorer={handleShowFileExplorer}
                     openInSplit={openInSplit}
+                    openLocalInSplit={openLocalInSplit}
                     isSSHSession={terminalContextMenu ? (() => {
                       const allT = getAllTabs ? getAllTabs() : [];
                       const tab = allT.find(t => t.key === terminalContextMenu.tabKey);

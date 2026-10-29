@@ -11,7 +11,8 @@ import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
 import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
 import { isSecretEntry } from '../services/terminalAgentState';
-import { broadcastDestinationIds, findTabOwningTerminal } from '../utils/broadcastMembership';
+import { broadcastDestinationIds, findTabOwningTerminal, findTerminalNode } from '../utils/broadcastMembership';
+import { resolvePtyChannel } from '../utils/localPtyChannel';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -1478,6 +1479,7 @@ const App = () => {
   // Split management hook - debe estar antes de useDragAndDrop
   const {
     openInSplit,
+    openLocalInSplit,
     handleCloseSplitPanel
   } = useSplitManagement({
     activeGroupId,
@@ -2488,7 +2490,13 @@ const App = () => {
     if (termIds.length === 0) return;
 
     for (const termId of termIds) {
-      window.electron.ipcRenderer.send('ssh:data', { tabId: termId, data });
+      const node = findTerminalNode(broadcastTab, termId);
+      const channel = resolvePtyChannel(node);
+      if (channel) {
+        window.electron.ipcRenderer.send(`${channel}:data:${termId}`, data);
+      } else {
+        window.electron.ipcRenderer.send('ssh:data', { tabId: termId, data });
+      }
     }
   }, [getAllTabs]);
 
@@ -3127,6 +3135,7 @@ const App = () => {
         <MainContentArea
           settingsTabProps={settingsTabProps}
           openInSplit={openInSplit}
+          openLocalInSplit={openLocalInSplit}
           // Sidebar props
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}

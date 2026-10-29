@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+import { MAX_SPLIT_PANES } from '../utils/splitTreeLayout';
+import { resolvePtyChannel } from '../utils/localPtyChannel';
 
 export const useSplitManagement = ({
   activeGroupId,
@@ -125,14 +127,30 @@ export const useSplitManagement = ({
       return;
     }
 
-    // Verificar límite de 4 terminales en la pestaña raíz encontrada
+    const treeHasLocal = (node) => {
+      if (!node) return false;
+      if (node.local || node.ptyChannel || (node.terminalType && !node.sshConfig)) return true;
+      if (node.first || node.second) return treeHasLocal(node.first) || treeHasLocal(node.second);
+      return false;
+    };
+    if (treeHasLocal(targetRootTab)) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Split no disponible',
+        detail: 'No se pueden mezclar terminales locales y SSH en la misma pestaña',
+        life: 3000
+      });
+      return;
+    }
+
+    // Verificar el tope de paneles en la pestaña raíz encontrada
     const currentTerminalCount = targetRootTab.type === 'split' ? countTerminals(targetRootTab) : 1;
 
-    if (currentTerminalCount >= 4) {
+    if (currentTerminalCount >= MAX_SPLIT_PANES) {
       toast.current.show({
         severity: 'warn',
         summary: 'Límite alcanzado',
-        detail: 'Ya tienes 4 terminales en esta pestaña (máximo permitido)',
+        detail: `Ya tienes ${MAX_SPLIT_PANES} terminales en esta pestaña (máximo permitido)`,
         life: 3000
       });
       return;
@@ -194,7 +212,7 @@ export const useSplitManagement = ({
             return {
               ...tab,
               ...newSplitTree,
-              label: `Split (${termCount}/4): ${allTerms.map(t => t.label).slice(0, 2).join(' | ')}${termCount > 2 ? '...' : ''}`
+              label: `Split (${termCount}/${MAX_SPLIT_PANES}): ${allTerms.map(t => t.label).slice(0, 2).join(' | ')}${termCount > 2 ? '...' : ''}`
             };
           }
 
@@ -213,7 +231,7 @@ export const useSplitManagement = ({
             orientation: orientation,
             first: existingTerminal,
             second: newTerminal,
-            label: `Split (2/4): ${tab.label} | ${sshNode.label}`
+            label: `Split (2/${MAX_SPLIT_PANES}): ${tab.label} | ${sshNode.label}`
           };
         }
         return tab;
@@ -237,7 +255,171 @@ export const useSplitManagement = ({
     toast.current.show({
       severity: 'success',
       summary: 'Split creado',
-      detail: `Terminal ${sshNode.label} agregado (${newTerminalCount}/4 terminales)`,
+      detail: `Terminal ${sshNode.label} agregado (${newTerminalCount}/${MAX_SPLIT_PANES} terminales)`,
+      life: 3000
+    });
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast, countTerminals, getAllTerminals, getFilteredTabs]);
+
+  const openLocalInSplit = useCallback((source, existingTab, orientation = 'vertical', targetPath = null) => {
+    const channel = resolvePtyChannel(source);
+    if (!channel || !existingTab?.key) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'No se puede dividir',
+        detail: 'Este terminal local no admite splits',
+        life: 3000
+      });
+      return;
+    }
+
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    const findPathToNode = (node, targetKey, currentPath = []) => {
+      if (!node) return null;
+      if (node.key === targetKey) return currentPath;
+      if (node.type === 'split') {
+        const firstPath = findPathToNode(node.first, targetKey, [...currentPath, 'first']);
+        if (firstPath) return firstPath;
+        const secondPath = findPathToNode(node.second, targetKey, [...currentPath, 'second']);
+        if (secondPath) return secondPath;
+      }
+      return null;
+    };
+
+    const treeHasSsh = (node) => {
+      if (!node) return false;
+      if (node.sshConfig) return true;
+      if (node.first || node.second) return treeHasSsh(node.first) || treeHasSsh(node.second);
+      return false;
+    };
+
+    let targetRootTab = sshTabs.find(t => t.key === existingTab.key) || null;
+    let calculatedPath = targetPath;
+    if (!targetRootTab) {
+      for (const tab of sshTabs) {
+        if (tab.type === 'split') {
+          const path = findPathToNode(tab, existingTab.key);
+          if (path) {
+            targetRootTab = tab;
+            calculatedPath = path;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!targetRootTab) return;
+    if (treeHasSsh(targetRootTab) || source.sshConfig) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Split no disponible',
+        detail: 'No se pueden mezclar terminales locales y SSH en la misma pestaña',
+        life: 3000
+      });
+      return;
+    }
+
+    const currentTerminalCount = targetRootTab.type === 'split' ? countTerminals(targetRootTab) : 1;
+    if (currentTerminalCount >= MAX_SPLIT_PANES) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Límite alcanzado',
+        detail: `Ya tienes ${MAX_SPLIT_PANES} terminales en esta pestaña (máximo permitido)`,
+        life: 3000
+      });
+      return;
+    }
+
+    const newTabId = `local_${Date.now()}`;
+    if (window.electron) {
+      window.electron.ipcRenderer.send('register-tab-events', newTabId);
+    }
+
+    const sourceTerminalType = source.terminalType
+      || (source.type === 'local-terminal' ? 'powershell' : null)
+      || (['powershell', 'linux-terminal', 'wsl', 'cygwin', 'ubuntu', 'debian', 'wsl-distro'].includes(source.type) ? source.type : null)
+      || 'powershell';
+
+    const newTerminal = {
+      type: 'terminal',
+      key: newTabId,
+      label: source.label || 'Terminal',
+      terminalType: sourceTerminalType,
+      distroInfo: source.distroInfo,
+      ptyChannel: channel,
+      local: true
+    };
+
+    const splitNode = (node, path, newTerm, orient) => {
+      if (!path || path.length === 0) {
+        return { type: 'split', orientation: orient, first: node, second: newTerm };
+      }
+      const [next, ...rest] = path;
+      if (node.type === 'split') {
+        if (next === 'first') return { ...node, first: splitNode(node.first, rest, newTerm, orient) };
+        if (next === 'second') return { ...node, second: splitNode(node.second, rest, newTerm, orient) };
+      }
+      return node;
+    };
+
+    const splitTabKey = targetRootTab.key;
+    let splitTabIndex = -1;
+    if (getFilteredTabs) {
+      splitTabIndex = getFilteredTabs().findIndex(tab => tab.key === splitTabKey);
+    } else {
+      splitTabIndex = [...homeTabs, ...sshTabs, ...fileExplorerTabs].findIndex(tab => tab.key === splitTabKey);
+    }
+
+    setSshTabs(prevTabs => prevTabs.map(tab => {
+      if (tab.key !== targetRootTab.key) return tab;
+      if (tab.type === 'split') {
+        const newSplitTree = splitNode(tab, targetPath || calculatedPath, newTerminal, orientation);
+        const termCount = countTerminals(newSplitTree);
+        const allTerms = getAllTerminals(newSplitTree);
+        return {
+          ...tab,
+          ...newSplitTree,
+          label: `Split (${termCount}/${MAX_SPLIT_PANES}): ${allTerms.map(t => t.label).slice(0, 2).join(' | ')}${termCount > 2 ? '...' : ''}`
+        };
+      }
+
+      const existingTerminal = {
+        type: 'terminal',
+        key: tab.key,
+        label: tab.label,
+        terminalType: tab.terminalType || sourceTerminalType,
+        distroInfo: tab.distroInfo,
+        ptyChannel: resolvePtyChannel(tab) || channel,
+        local: true
+      };
+
+      return {
+        ...tab,
+        type: 'split',
+        orientation,
+        first: existingTerminal,
+        second: newTerminal,
+        label: `Split (2/${MAX_SPLIT_PANES}): ${tab.label} | ${newTerminal.label}`
+      };
+    }));
+
+    if (splitTabIndex !== -1) {
+      setActiveTabIndex(splitTabIndex);
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({ ...prev, [currentGroupKey]: splitTabIndex }));
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: 'Split creado',
+      detail: `Terminal ${newTerminal.label} agregado (${currentTerminalCount + 1}/${MAX_SPLIT_PANES} terminales)`,
       life: 3000
     });
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast, countTerminals, getAllTerminals, getFilteredTabs]);
@@ -284,8 +466,7 @@ export const useSplitManagement = ({
     if (tab && disconnectSSHSession) {
       const terminalToClose = findTerminalToClose(tab, path);
 
-      if (terminalToClose && terminalToClose.key) {
-        // Desconectar solo el terminal que se está cerrando
+      if (terminalToClose && terminalToClose.key && terminalToClose.sshConfig) {
         disconnectSSHSession(terminalToClose.key);
       }
     }
@@ -346,14 +527,10 @@ export const useSplitManagement = ({
 
           // Si el resultado es un solo terminal, convertir a pestaña normal
           if (newTree && newTree.type === 'terminal') {
-            // Cuando queda un solo terminal, el tab debe convertirse en ese terminal
-            // IMPORTANTE: Usar el key del terminal que queda para preservar la sesión SSH
-            // La sesión SSH está asociada con el key del terminal, no con el key del tab
+            const localPane = !!(newTree.local || newTree.ptyChannel || newTree.terminalType);
             return {
               ...newTree,
-              // El key del terminal se mantiene (newTree.key) para preservar la sesión SSH
-              type: 'terminal',
-              // Preservar propiedades importantes del tab original
+              type: localPane ? 'local-terminal' : 'terminal',
               createdAt: tab.createdAt,
               groupId: tab.groupId,
             };
@@ -367,7 +544,7 @@ export const useSplitManagement = ({
             return {
               ...tab,
               ...newTree,
-              label: `Split (${termCount}): ${allTerms.map(t => t.label).slice(0, 3).join(' | ')}${termCount > 3 ? '...' : ''}`
+              label: `Split (${termCount}/${MAX_SPLIT_PANES}): ${allTerms.map(t => t.label).slice(0, 3).join(' | ')}${termCount > 3 ? '...' : ''}`
             };
           }
 
@@ -399,6 +576,7 @@ export const useSplitManagement = ({
 
   return {
     openInSplit,
+    openLocalInSplit,
     handleCloseSplitPanel
   };
 };

@@ -52,6 +52,30 @@ export function collectTerminalIds(tab) {
   return ids;
 }
 
+export function findTerminalNode(tab, terminalId) {
+  if (!tab || !terminalId) return null;
+  const visit = (node) => {
+    if (!node) return null;
+    if (node.type === 'terminal' && node.key === terminalId) return node;
+    if (node.key === terminalId && !node.first && !node.second) return node;
+    if (node.first || node.second) {
+      return visit(node.first) || visit(node.second);
+    }
+    if (Array.isArray(node.terminals)) {
+      for (const child of node.terminals) {
+        const found = visit(child);
+        if (found) return found;
+      }
+    }
+    if (node.leftTerminal?.key === terminalId) return node.leftTerminal;
+    if (node.rightTerminal?.key === terminalId) return node.rightTerminal;
+    return null;
+  };
+  if (tab.type === 'split' || tab.first || tab.second) return visit(tab);
+  if (tab.key === terminalId) return tab;
+  return null;
+}
+
 export function findTabOwningTerminal(tabs, originTabId) {
   if (!originTabId || !Array.isArray(tabs)) return null;
   return tabs.find((tab) => collectTerminalIds(tab).includes(originTabId)) || null;

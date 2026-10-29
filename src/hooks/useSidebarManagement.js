@@ -3,6 +3,7 @@ import connectionStore, { helpers as connectionHelpers } from '../utils/connecti
 import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
+import { MAX_SPLIT_PANES } from '../utils/splitTreeLayout';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
 import { setVaultEncryptedItem } from '../shared/vault-write';
@@ -765,13 +766,21 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         return 0;
       };
 
-      // Submenu simplificado para abrir en split - filtrar pestañas con menos de 4 terminales
+      const splitIsLocal = (node) => {
+        if (!node) return false;
+        if (node.local || node.ptyChannel || (node.terminalType && !node.sshConfig)) return true;
+        if (node.first || node.second) return splitIsLocal(node.first) || splitIsLocal(node.second);
+        return false;
+      };
+
+      // Submenu para abrir en split: solo pestañas SSH por debajo del tope
       const filteredTabsList = typeof getFilteredTabs === 'function' ? getFilteredTabs() : [];
       const sshTabsFiltered = (Array.isArray(filteredTabsList) ? filteredTabsList : []).filter(tab => {
         if (tab.type === 'terminal') return true;
         if (tab.type === 'split') {
+          if (splitIsLocal(tab)) return false;
           const count = countTerminalsInTab(tab);
-          return count < 4;
+          return count < MAX_SPLIT_PANES;
         }
         return false;
       });
@@ -789,7 +798,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             // Si es el 3er split (ya hay 2 terminales) o 4to split (ya hay 3 terminales), abrir automáticamente sin preguntar
             if (isThirdSplit || isFourthSplit) {
               return {
-                label: `${tab.label} (${termCount}/4)`,
+                label: `${tab.label} (${termCount}/${MAX_SPLIT_PANES})`,
                 icon: 'pi pi-window-maximize',
                 command: () => openInSplit(node, tab, 'vertical')
               };
@@ -817,7 +826,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
             // Para otros casos (split existente con 1 terminal), mostrar opciones
             return {
-              label: `${tab.label} (${termCount}/4)`,
+              label: `${tab.label} (${termCount}/${MAX_SPLIT_PANES})`,
               icon: 'pi pi-window-maximize',
               items: [
                 {

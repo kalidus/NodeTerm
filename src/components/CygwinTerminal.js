@@ -17,6 +17,8 @@ import {
     resolveTerminalFontFamily,
     ensureTerminalFontsLoaded
 } from '../utils/resolveTerminalFontFamily';
+import { useResumeTerminalFit } from '../hooks/useResumeTerminalFit';
+import { publishBroadcastInput } from '../utils/localPtyChannel';
 
 const CygwinTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -26,7 +28,12 @@ const CygwinTerminal = forwardRef(({
     hideStatusBar = false,
     isIntegrated = false,
     active = true,
-    onContextMenu
+    onContextMenu,
+    layoutSuspended = false,
+    onBroadcastData,
+    isBroadcastActive = false,
+    broadcastExcludedTargets,
+    onTerminalFocus
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -37,6 +44,13 @@ const CygwinTerminal = forwardRef(({
     const { fitStable, beginMount, endMount, isFitting, invalidate } = useRef(
         createStableFitBinding(term, fitAddon, terminalRef)
     ).current;
+    const layoutSuspendedRef = useRef(!!layoutSuspended);
+    layoutSuspendedRef.current = !!layoutSuspended;
+    const onTerminalFocusRef = useRef(onTerminalFocus);
+    onTerminalFocusRef.current = onTerminalFocus;
+    const broadcastPropsRef = useRef({});
+    broadcastPropsRef.current = { isBroadcastActive, onBroadcastData, broadcastExcludedTargets };
+    useResumeTerminalFit(layoutSuspended, fitStable);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
@@ -134,6 +148,7 @@ const CygwinTerminal = forwardRef(({
         paste: (text) => {
             pasteToTerminal(term, text, (data) => {
                 window.electron?.ipcRenderer.send(`cygwin:data:${tabId}`, data);
+                publishBroadcastInput(broadcastPropsRef, tabId, data);
             });
         }
     }));
@@ -214,9 +229,17 @@ const CygwinTerminal = forwardRef(({
         term.current.open(terminalRef.current);
         fitStable();
         term.current.focus();
+        let focusDisposable = null;
+        try {
+            if (typeof term.current.onFocus === 'function') {
+                focusDisposable = term.current.onFocus(() => {
+                    onTerminalFocusRef.current?.();
+                });
+            }
+        } catch (_) { /* noop */ }
 
         const resizeObserver = new ResizeObserver(() => {
-            if (isFitting()) return;
+            if (layoutSuspendedRef.current || isFitting()) return;
             fitStable();
         });
 
@@ -225,7 +248,7 @@ const CygwinTerminal = forwardRef(({
         }
 
         const handleVisibilityChange = () => {
-            if (!document.hidden && active) {
+            if (!document.hidden && active && !layoutSuspendedRef.current) {
                 setTimeout(() => {
                     if (!isFitting()) fitStable();
                 }, 100);
@@ -238,6 +261,7 @@ const CygwinTerminal = forwardRef(({
             // Terminal creado silenciosamente
 
             const delay = tabId === 'tab-1' ? 300 : 0;
+            window.electron.ipcRenderer.send('register-tab-events', tabId);
             setTimeout(() => {
                 // console.log(`???? CygwinTerminal [${tabId}] enviando cygwin:start`, {
                 //     cols: term.current?.cols,
@@ -259,6 +283,7 @@ const CygwinTerminal = forwardRef(({
                 onContextMenu,
                 onSendData: (data) => {
                     window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, data);
+                    publishBroadcastInput(broadcastPropsRef, tabId, data);
                 }
             });
 
@@ -269,9 +294,11 @@ const CygwinTerminal = forwardRef(({
                     `cygwin:data:${tabId}`,
                     data
                 );
+                publishBroadcastInput(broadcastPropsRef, tabId, data);
             });
 
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
+                if (layoutSuspendedRef.current || !cols || !rows) return;
                 window.electron.ipcRenderer.send(`cygwin:resize:${tabId}`, { cols, rows });
             });
 
@@ -290,6 +317,7 @@ const CygwinTerminal = forwardRef(({
                 if (writeBufferRef.current) {
                     writeBufferRef.current.clear();
                 }
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
 
@@ -312,6 +340,7 @@ const CygwinTerminal = forwardRef(({
         } else {
             term.current.writeln('\x1b[31mError: Electron API not available. Cygwin integration will not work.\x1b[0m');
             return () => {
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
                 try { detachSearch?.(); } catch (_) { /* noop */ }
@@ -357,7 +386,7 @@ const CygwinTerminal = forwardRef(({
 
     // Auto-fit after render (stable fit no-ops si el tamaño no cambió)
     useEffect(() => {
-        if (!fitAddon.current) return undefined;
+        if (!fitAddon.current || layoutSuspendedRef.current) return undefined;
         const id = setTimeout(() => {
             if (!isFitting()) fitStable();
         }, 0);
@@ -366,6 +395,7 @@ const CygwinTerminal = forwardRef(({
 
     // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
     useEffect(() => {
+        if (layoutSuspendedRef.current) return undefined;
         fitStable();
         const t1 = setTimeout(fitStable, 50);
         const t2 = setTimeout(fitStable, 150);
@@ -394,7 +424,9 @@ const CygwinTerminal = forwardRef(({
     }, [active, tabId]);
 
     return (
-        <div style={{
+        <div
+            onMouseDown={() => onTerminalFocus?.()}
+            style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',

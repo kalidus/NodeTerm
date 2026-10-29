@@ -1262,6 +1262,10 @@ const TabContentRendererInner = React.memo(({
         onToggleBroadcast={() => onToggleBroadcast && onToggleBroadcast(tab.key)}
         onToggleBroadcastTarget={(targetId) => handleToggleBroadcastTarget && handleToggleBroadcastTarget(tab.key, targetId)}
         broadcastExcludedTargets={tab.broadcastExcludedTargets || []}
+        localFontFamily={localFontFamily}
+        localFontSize={localFontSize}
+        localPowerShellTheme={localPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
       />
     );
   }
