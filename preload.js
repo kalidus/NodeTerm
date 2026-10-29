@@ -333,6 +333,7 @@ contextBridge.exposeInMainWorld('electron', {
         'ssh:send-command',
         'terminal:set-hibernated',
         'terminal:flow',
+        'terminal:secret-entry',
         'statusbar:set-polling-interval',
         'docker:resize',
         /^powershell:(start|data|resize|stop):.+$/,

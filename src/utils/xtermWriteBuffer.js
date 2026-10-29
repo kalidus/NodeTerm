@@ -238,7 +238,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
 
       pendingBytes = Math.max(0, pendingBytes - bytesThisFrame);
       if (batch) {
-        term.write(batch);
+        term.write(batch, notifyPainted);
       }
     } catch (_) {
       chunks = [];
@@ -303,7 +303,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     chunks = [];
     pendingBytes = 0;
     try {
-      term.write(payload);
+      term.write(payload, notifyPainted);
     } catch (_) {}
     updateFlowControl();
   };

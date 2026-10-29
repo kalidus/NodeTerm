@@ -4,7 +4,8 @@ import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
-import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { shouldBlockHumanInput, isSecretEntry, setSecretEntry } from '../services/terminalAgentState';
+import { isPasswordPromptLine } from '../services/passwordPromptGate';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch, isTerminalSearchShortcut, openTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
@@ -377,9 +378,24 @@ const TerminalComponent = forwardRef(({
             lineHeight: 1.0,
         });
 
+        const syncSecretEntryFromCursor = () => {
+            try {
+                const t = term.current;
+                if (!t || !t.buffer) return;
+                const buf = t.buffer.active;
+                const line = buf.getLine(buf.baseY + buf.cursorY);
+                const text = line ? line.translateToString(true) : '';
+                const wantsSecret = isPasswordPromptLine(text);
+                if (wantsSecret !== isSecretEntry(tabId)) {
+                    setSecretEntry(tabId, wantsSecret);
+                }
+            } catch (_) { /* noop */ }
+        };
+
         // Inicializar buffer de escrituras por fotograma (60 FPS write batching)
         writeBufferRef.current = createXtermWriteBuffer(term, {
             active: !!activeRef.current,
+            onPainted: syncSecretEntryFromCursor,
             flowControl: {
                 onChange: (paused) => {
                     try {
@@ -695,11 +711,12 @@ const TerminalComponent = forwardRef(({
                 if (shouldBlockHumanInput(tabId)) {
                     return;
                 }
+                const secretOn = isSecretEntry(tabId);
                 const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
 
-                // Local echo SSH: solo caracteres imprimibles de 1 byte
+                // Local echo SSH: solo caracteres imprimibles de 1 byte (nunca en modo contraseña)
                 const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
-                if (isSSH && sshLocalEchoRef.current) {
+                if (isSSH && sshLocalEchoRef.current && !secretOn) {
                     const code = data.charCodeAt(0);
                     const isPrintable =
                         data.length === 1 &&
@@ -717,6 +734,7 @@ const TerminalComponent = forwardRef(({
                     data
                 );
 
+                // Broadcast: App filtra destinos; en modo secreto solo llega a peers con prompt
                 if (currentBroadcast && currentBroadcastFn) {
                     deferNonCritical(() => currentBroadcastFn(tabId, data));
                 }
@@ -735,6 +753,7 @@ const TerminalComponent = forwardRef(({
             return () => {
                 flushPending();
                 writeBufferRef.current?.flushSync();
+                try { setSecretEntry(tabId, false); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 cleanupContextMenu();
                 try { detachSearch?.(); } catch (_) { /* noop */ }

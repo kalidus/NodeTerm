@@ -10,6 +10,7 @@ import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
 import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
+import { isSecretEntry } from '../services/terminalAgentState';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -2524,6 +2525,11 @@ const App = () => {
 
     // ✅ FIX: Filtramos el originTabId para no enviar doble al terminal donde escribimos
     termIds = termIds.filter(id => id !== originTabId);
+
+    // Modo contraseña: solo reenviar a paneles que también tienen prompt de secreto
+    if (isSecretEntry(originTabId)) {
+      termIds = termIds.filter((id) => isSecretEntry(id));
+    }
 
     // Si se excluyeron todos, termIds estará vacío
     if (termIds.length === 0) return;

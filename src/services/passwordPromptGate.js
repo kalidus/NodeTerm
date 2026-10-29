@@ -35,6 +35,25 @@ function lastNonEmptyLines(text, maxLines = 5) {
   return lines.slice(-maxLines);
 }
 
+const MAX_SECRET_PROMPT_LINE_LEN = 120;
+
+/**
+ * True si una sola línea del cursor parece un prompt de secreto (modo contraseña UI).
+ * Más estricta que assertPasswordPrompt: solo la línea actual, corta, termina en prompt.
+ */
+function isPasswordPromptLine(line) {
+  const plain = stripAnsi(line).replace(/\r/g, '').trimEnd();
+  if (!plain || plain.length > MAX_SECRET_PROMPT_LINE_LEN) return false;
+  // Evitar falsos positivos tipo: echo "password: foo" / logs largos
+  if (/\n/.test(plain)) return false;
+  for (const p of PROMPT_PATTERNS) {
+    if (p.re.test(plain) || p.re.test(`\n${plain}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * @param {string} bufferText - texto reciente del ring buffer
  * @param {number} bufferOffset - offset absoluto actual del buffer
@@ -90,8 +109,10 @@ function clearAllConsumedPrompts() {
 
 export {
   PROMPT_PATTERNS,
+  MAX_SECRET_PROMPT_LINE_LEN,
   stripAnsi,
   lastNonEmptyLines,
+  isPasswordPromptLine,
   assertPasswordPrompt,
   markPromptConsumed,
   clearConsumedPrompt,

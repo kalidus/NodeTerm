@@ -11,6 +11,30 @@ import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import { getUiFontSizePx } from '../utils/sidebarFontStack';
+import { isSecretEntry } from '../services/terminalAgentState';
+
+/** tabIds SSH de una pestaña terminal o de las hojas de un split */
+function collectTabTerminalIds(tab) {
+  if (!tab) return [];
+  if (tab.type === 'terminal') return tab.key ? [tab.key] : [];
+  if (tab.type !== 'split') return [];
+
+  const walk = (node) => {
+    if (!node) return [];
+    if (node.key && !node.first && !node.second) return [node.key];
+    const ids = [];
+    if (node.first) ids.push(...walk(node.first));
+    if (node.second) ids.push(...walk(node.second));
+    if (Array.isArray(node.terminals)) {
+      ids.push(...node.terminals.map((t) => t && t.key).filter(Boolean));
+    }
+    if (node.leftTerminal && node.leftTerminal.key) ids.push(node.leftTerminal.key);
+    if (node.rightTerminal && node.rightTerminal.key) ids.push(node.rightTerminal.key);
+    return ids;
+  };
+  return walk(tab);
+}
+
 const TabHeader = React.memo(({
   // Props básicas de PrimeReact
   className,
@@ -52,6 +76,7 @@ const TabHeader = React.memo(({
   const [sidebarIconThemeVersion, setSidebarIconThemeVersion] = useState(0);
   // Verificar si el botón de inicio está bloqueado
   const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(readHomeButtonLocked);
+  const [secretEntryActive, setSecretEntryActive] = useState(false);
 
   // Escuchar cambios en el icono de inicio y bloqueo
   useEffect(() => {
@@ -74,6 +99,35 @@ const TabHeader = React.memo(({
       window.removeEventListener('storage', handleSettingsUpdate);
     };
   }, []);
+
+  // Candado: modo contraseña en terminal simple o en cualquier hoja de un split
+  useEffect(() => {
+    if (!tab || (tab.type !== 'terminal' && tab.type !== 'split')) {
+      setSecretEntryActive(false);
+      return undefined;
+    }
+    const ids = new Set(collectTabTerminalIds(tab));
+    if (ids.size === 0) {
+      setSecretEntryActive(false);
+      return undefined;
+    }
+
+    const activeSecrets = new Set();
+    ids.forEach((id) => {
+      if (isSecretEntry(id)) activeSecrets.add(id);
+    });
+    setSecretEntryActive(activeSecrets.size > 0);
+
+    const onAgentState = (e) => {
+      const { terminalId, state } = e.detail || {};
+      if (!ids.has(terminalId)) return;
+      if (state && state.secretEntry) activeSecrets.add(terminalId);
+      else activeSecrets.delete(terminalId);
+      setSecretEntryActive(activeSecrets.size > 0);
+    };
+    window.addEventListener('nodeterm-agent-terminal-state', onAgentState);
+    return () => window.removeEventListener('nodeterm-agent-terminal-state', onAgentState);
+  }, [tab]);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -443,6 +497,20 @@ const TabHeader = React.memo(({
         <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <DistroIcon distro={tabDistros[tab.key]} size={14} />
         </span>
+      )}
+
+      {/* Modo contraseña: prompt de secreto activo (terminal o cualquier panel del split) */}
+      {(tab.type === 'terminal' || tab.type === 'split') && secretEntryActive && (
+        <i
+          className="pi pi-lock"
+          title="Modo contraseña: la entrada no se reenvía ni se graba"
+          style={{
+            fontSize: 'var(--ui-font-size, 12px)',
+            marginRight: '4px',
+            color: '#f59e0b',
+            flexShrink: 0
+          }}
+        />
       )}
 
       {/* Icono específico para pestaña de inicio */}

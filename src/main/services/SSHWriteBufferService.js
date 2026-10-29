@@ -60,8 +60,13 @@ class SSHWriteBufferService {
     conn._writeBuffer = '';
     conn._writeBufferTimeout = null;
 
-    // Grabar input de forma asíncrona (no bloqueante)
-    if (getSessionRecorder && getSessionRecorder().isRecording(tabId)) {
+    // Grabar input de forma asíncrona (no bloqueante). Omitir en modo contraseña.
+    const { isSecretEntry } = require('./SecretEntryState');
+    if (
+      getSessionRecorder &&
+      getSessionRecorder().isRecording(tabId) &&
+      !isSecretEntry(tabId)
+    ) {
       setImmediate(() => {
         getSessionRecorder().recordInput(tabId, bufferedData);
       });

@@ -2415,6 +2415,14 @@ ipcMain.handle('terminal:drain-stdout-ring', async (event, tabId) => {
   return terminalStdoutRingBuffer.drain(tabId) || '';
 });
 
+// Modo contraseña: el renderer avisa para omitir recordInput (la escritura al PTY sigue).
+ipcMain.on('terminal:secret-entry', (event, { tabId, active } = {}) => {
+  try {
+    const { setSecretEntry } = require('./src/main/services/SecretEntryState');
+    setSecretEntry(tabId, !!active);
+  } catch (_) { /* noop */ }
+});
+
 // Backpressure SSH: el renderer pide pause/resume del shellStream (también bastion/Wallix).
 // No toca SSHWriteBufferService (batching de teclado).
 ipcMain.on('terminal:flow', (event, { tabId, paused } = {}) => {
@@ -3250,8 +3258,9 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 
     // Si no se usó buffering, usar comportamiento directo
     if (!buffered) {
-      // SSH directo: sin buffering
-      if (getSessionRecorder().isRecording(tabId)) {
+      // SSH directo: sin buffering. Omitir recordInput en modo contraseña.
+      const { isSecretEntry } = require('./src/main/services/SecretEntryState');
+      if (getSessionRecorder().isRecording(tabId) && !isSecretEntry(tabId)) {
         getSessionRecorder().recordInput(tabId, data);
       }
 
@@ -3289,6 +3298,8 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
   try {
     terminalIpcBatcher.clear(`ssh:data:${tabId}`);
     terminalStdoutRingBuffer.clear(tabId);
+    const { clearSecretEntry } = require('./src/main/services/SecretEntryState');
+    clearSecretEntry(tabId);
   } catch (_) { /* noop */ }
   const conn = sshConnections[tabId];
   if (conn) {

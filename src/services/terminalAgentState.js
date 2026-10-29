@@ -17,7 +17,9 @@ function ensure(terminalId) {
       agentBusy: false,
       agentOwner: null,
       typingSpeedMs: 25,
-      shellFamily: 'unix'
+      shellFamily: 'unix',
+      /** Prompt de secreto activo: tipar OK, sin broadcast/eco/recordInput */
+      secretEntry: false
     };
     sessions.set(terminalId, s);
   }
@@ -88,6 +90,32 @@ export function setShellFamily(terminalId, shellFamily) {
 export function setTypingSpeedMs(terminalId, ms) {
   const s = ensure(terminalId);
   if (Number.isFinite(ms) && ms >= 0) s.typingSpeedMs = ms;
+  return { ...s };
+}
+
+export function isSecretEntry(terminalId) {
+  const s = sessions.get(terminalId);
+  return !!(s && s.secretEntry);
+}
+
+/**
+ * Activa/desactiva modo contraseña (no bloquea onData).
+ * Notifica al main para omitir recordInput.
+ */
+export function setSecretEntry(terminalId, active) {
+  const s = ensure(terminalId);
+  const next = !!active;
+  if (s.secretEntry === next) return { ...s };
+  s.secretEntry = next;
+  try {
+    window.electron?.ipcRenderer?.send('terminal:secret-entry', {
+      tabId: terminalId,
+      active: next
+    });
+  } catch (_) {
+    /* ignore */
+  }
+  emit(terminalId);
   return { ...s };
 }
 
