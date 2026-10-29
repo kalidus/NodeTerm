@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } f
 import { loadXtermModules, getCachedXtermModules } from './xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from './xtermWriteBuffer';
+import { attachTerminalSearch } from './terminalSearch';
 import {
   attachUnicode11,
   attachVisibleTerminalRenderer,
@@ -15,6 +16,7 @@ import {
   useTerminalMemoryGuards
 } from './xtermRenderer';
 import { setupTerminalClipboard, pasteToTerminal } from './terminalClipboard';
+import TerminalSearchBar from '../components/TerminalSearchBar';
 import {
   resolveTerminalFontFamily,
   ensureTerminalFontsLoaded
@@ -107,7 +109,7 @@ export function createAiCliTerminalComponent(config) {
 
     useEffect(() => {
       if (!xtermLib) return undefined;
-      const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
+      const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SearchAddon } = xtermLib;
       hasStartedRef.current = false;
       ensureTerminalFontsLoaded();
 
@@ -129,6 +131,7 @@ export function createAiCliTerminalComponent(config) {
       term.current.loadAddon(fitAddon.current);
       term.current.loadAddon(new WebLinksAddon());
       attachUnicode11(term.current, Unicode11Addon);
+      const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
       term.current.open(terminalRef.current);
       fitAndSyncSize();
       let healRaf = null;
@@ -242,6 +245,7 @@ export function createAiCliTerminalComponent(config) {
 
       return () => {
         if (cleanupClipboard) cleanupClipboard();
+        try { detachSearch?.(); } catch (_) { /* noop */ }
         if (healRaf != null) cancelAnimationFrame(healRaf);
         scrollDisposable.dispose();
         writeBufferRef.current?.clear();
@@ -287,6 +291,7 @@ export function createAiCliTerminalComponent(config) {
         minWidth: 0,
         minHeight: 0,
         overflow: 'hidden',
+        position: 'relative',
         background: terminalBg,
         padding: '8px 10px 2px 10px',
         marginBottom: '-1px'
@@ -316,6 +321,7 @@ export function createAiCliTerminalComponent(config) {
             background: terminalBg
           }}
         />
+        <TerminalSearchBar tabId={tabId} />
       </div>
     );
   });

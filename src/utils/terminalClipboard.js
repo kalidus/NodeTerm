@@ -1,5 +1,6 @@
 import { writeText as clipboardWriteText, readText as clipboardReadText } from './clipboard.js';
 import { shouldBlockHumanInput } from '../services/terminalAgentState.js';
+import { isTerminalSearchShortcut, openTerminalSearch } from './terminalSearch.js';
 
 /**
  * Standard helper to paste text into a terminal instance and ensure focus.
@@ -101,6 +102,14 @@ export function setupTerminalClipboard({
           pasteToTerminal(term, text, onSendData);
         }
       }).catch(() => {});
+      return false;
+    }
+
+    // Ctrl/Cmd+F (o +Shift) → búsqueda en scrollback (no enviar al PTY)
+    if (isTerminalSearchShortcut(domEvent)) {
+      if (tabId) {
+        openTerminalSearch(tabId);
+      }
       return false;
     }
 

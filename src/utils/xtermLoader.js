@@ -7,7 +7,7 @@ let cached = null;
 
 /** Módulos xterm ya cargados (p. ej. tras precalentado). */
 export function getCachedXtermModules() {
-  if (cached && typeof cached.SerializeAddon !== 'function') {
+  if (cached && (typeof cached.SerializeAddon !== 'function' || typeof cached.SearchAddon !== 'function')) {
     cached = null;
   }
   return cached;
@@ -46,8 +46,8 @@ function handleTerminalLink(event, uri) {
 }
 
 export function loadXtermModules() {
-  // Invalidar cache incompleto (p. ej. HMR anterior sin SerializeAddon)
-  if (cached && typeof cached.SerializeAddon !== 'function') {
+  // Invalidar cache incompleto (p. ej. HMR anterior sin SerializeAddon/SearchAddon)
+  if (cached && (typeof cached.SerializeAddon !== 'function' || typeof cached.SearchAddon !== 'function')) {
     cached = null;
   }
   if (cached) return Promise.resolve(cached);
@@ -59,8 +59,9 @@ export function loadXtermModules() {
     import('@xterm/addon-webgl'),
     import('@xterm/addon-canvas'),
     import('@xterm/addon-serialize'),
+    import('@xterm/addon-search'),
     import('@xterm/xterm/css/xterm.css')
-  ]).then(([xterm, fit, webLinks, unicode11, webgl, canvas, serialize]) => {
+  ]).then(([xterm, fit, webLinks, unicode11, webgl, canvas, serialize, search]) => {
     // 🛡️ Wrapper para WebLinksAddon que usa el manejador seguro de NodeTerm
     // evitando el intento de window.open() vacío que Electron bloquea
     class SafeWebLinksAddon extends webLinks.WebLinksAddon {
@@ -77,7 +78,8 @@ export function loadXtermModules() {
       Unicode11Addon: unicode11.Unicode11Addon,
       WebglAddon: webgl.WebglAddon,
       CanvasAddon: canvas.CanvasAddon,
-      SerializeAddon: serialize.SerializeAddon
+      SerializeAddon: serialize.SerializeAddon,
+      SearchAddon: search.SearchAddon
     };
     return cached;
   });

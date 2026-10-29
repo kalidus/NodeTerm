@@ -5,6 +5,8 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalSearch } from '../utils/terminalSearch';
+import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
@@ -138,7 +140,7 @@ const CygwinTerminal = forwardRef(({
 
     useEffect(() => {
         if (!xtermLib) return;
-        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SearchAddon } = xtermLib;
 
         ensureTerminalFontsLoaded();
 
@@ -204,6 +206,7 @@ const CygwinTerminal = forwardRef(({
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         attachUnicode11(term.current, Unicode11Addon);
+        const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
 
         // Load hardware-accelerated renderer with Canvas 2D fallback
         rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
@@ -298,6 +301,7 @@ const CygwinTerminal = forwardRef(({
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 cleanupClipboard();
+                try { detachSearch?.(); } catch (_) { /* noop */ }
                 dataHandler.dispose();
                 resizeHandler.dispose();
                 endMount(stableFit);
@@ -310,6 +314,7 @@ const CygwinTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
+                try { detachSearch?.(); } catch (_) { /* noop */ }
                 endMount(stableFit);
                 if (term.current) {
                     term.current.dispose();
@@ -436,6 +441,7 @@ const CygwinTerminal = forwardRef(({
                         background: isIntegrated ? 'transparent' : (theme?.background || '#0c0c0c')
                     }}
                 />
+                <TerminalSearchBar tabId={tabId} />
             </div>
             {!hideStatusBar && (
                 <StatusBar

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
 import { getAgentSession, setHumanInputLocked } from '../../services/terminalAgentState';
+import { openTerminalSearch } from '../../utils/terminalSearch';
 
 const TerminalContextMenu = ({
   terminalContextMenu,
@@ -93,6 +94,12 @@ const TerminalContextMenu = ({
 
   const handleClear = () => {
     onClear(terminalContextMenu.tabKey);
+  };
+
+  const handleSearch = () => {
+    const key = terminalContextMenu.tabKey;
+    setTerminalContextMenu(null);
+    if (key) openTerminalSearch(key);
   };
 
   const handleToggleRecording = () => {
@@ -256,6 +263,21 @@ const TerminalContextMenu = ({
           Seleccionar todo
         </div>
         <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+        <div
+          className="menu-item"
+          style={{
+            padding: '8px 12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+          onClick={handleSearch}
+        >
+          <i className="pi pi-search" style={{ width: '16px' }}></i>
+          Buscar
+          <span style={{ marginLeft: 'auto', opacity: 0.55, fontSize: '0.75rem' }}>Ctrl+F</span>
+        </div>
         <div
           className="menu-item"
           style={{

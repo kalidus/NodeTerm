@@ -6,6 +6,8 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalSearch, isTerminalSearchShortcut, openTerminalSearch } from '../utils/terminalSearch';
+import TerminalSearchBar from './TerminalSearchBar';
 import {
     attachTerminalRenderer,
     attachUnicode11,
@@ -313,7 +315,7 @@ const TerminalComponent = forwardRef(({
 
     useEffect(() => {
         if (!tabId || !xtermLib) return;
-        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SerializeAddon } = xtermLib;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SerializeAddon, SearchAddon } = xtermLib;
 
         // Cancelar timer de desconexi??n pendiente si existe
         // Esto evita desconectar la sesi??n SSH cuando el componente se remonta r??pidamente
@@ -387,6 +389,7 @@ const TerminalComponent = forwardRef(({
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         attachUnicode11(term.current, Unicode11Addon);
+        const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
 
         // SerializeAddon: snapshot con ANSI/SGR (imprescindible para htop al hibernar pestañas)
         let serializeAddon = null;
@@ -492,6 +495,17 @@ const TerminalComponent = forwardRef(({
         // --- Clipboard and Event Handling ---
         // We wrap this in a check to ensure the electron API is ready.
         if (window.electron) {
+            // Ctrl/Cmd+F (o +Shift): abrir búsqueda sin enviar al PTY (SSH no usa setupTerminalClipboard)
+            if (typeof term.current.attachCustomKeyEventHandler === 'function') {
+                term.current.attachCustomKeyEventHandler((domEvent) => {
+                    if (isTerminalSearchShortcut(domEvent)) {
+                        openTerminalSearch(tabId);
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
             // Custom keyboard handling for copy/paste
             term.current.onKey(({ key, domEvent }) => {
                 const isMac = window.electron.platform === 'darwin';
@@ -714,6 +728,7 @@ const TerminalComponent = forwardRef(({
                 writeBufferRef.current?.flushSync();
                 resizeObserver.disconnect();
                 cleanupContextMenu();
+                try { detachSearch?.(); } catch (_) { /* noop */ }
                 if (resizeTimeout) clearTimeout(resizeTimeout);
                 if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
 
@@ -821,6 +836,7 @@ const TerminalComponent = forwardRef(({
             // Cleanup only the terminal if API is not ready
             return () => {
                 resizeObserver.disconnect();
+                try { detachSearch?.(); } catch (_) { /* noop */ }
                 stableFit.reset();
                 if (stableFitRef.current === stableFit) {
                     stableFitRef.current = null;
@@ -994,6 +1010,7 @@ const TerminalComponent = forwardRef(({
                         backgroundColor: isIntegrated ? 'transparent' : (effectiveTheme?.background || 'var(--terminal-bg)')
                     }}
                 />
+                <TerminalSearchBar tabId={tabId} />
 
                 {/* Quick Actions Menu (only for SSH connections) */}
                 {sshConfig && (sshConfig.host || sshConfig.hostname) && !isIntegrated && (

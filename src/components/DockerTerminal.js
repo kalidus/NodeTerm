@@ -5,6 +5,8 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalSearch } from '../utils/terminalSearch';
+import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
@@ -94,7 +96,7 @@ const DockerTerminal = forwardRef(({
     // Inicializar terminal
     useEffect(() => {
         if (!terminalRef.current || !xtermLib) return;
-        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SearchAddon } = xtermLib;
 
         ensureTerminalFontsLoaded();
 
@@ -119,6 +121,7 @@ const DockerTerminal = forwardRef(({
         term.current.loadAddon(fitAddon.current);
         term.current.loadAddon(new WebLinksAddon());
         attachUnicode11(term.current, Unicode11Addon);
+        const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
         writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
@@ -206,6 +209,7 @@ const DockerTerminal = forwardRef(({
         // Cleanup
         return () => {
             if (cleanupClipboard) cleanupClipboard();
+            try { detachSearch?.(); } catch (_) { /* noop */ }
             flushPending();
             if (writeBufferRef.current) {
                 writeBufferRef.current.clear();
@@ -373,6 +377,7 @@ const DockerTerminal = forwardRef(({
                         background: isIntegrated ? 'transparent' : (theme?.background || '#0c1a25')
                     }}
                 />
+                <TerminalSearchBar tabId={tabId} />
             </div>
 
             {/* Status Bar */}
