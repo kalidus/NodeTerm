@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import connectionStore from '../utils/connectionStore';
 import { findConnectionInTree } from '../utils/findConnectionInTree';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
+import { toggleBroadcastGroup, toggleBroadcastTarget } from '../utils/broadcastMembership';
 import {
   themeManager,
   getThemeGroupColorPalette,
@@ -838,7 +839,7 @@ export const useTabManagement = (toast, {
       const newArr = arr.map(tab => {
         if (tab.key === tabKey) {
           found = true;
-          return { ...tab, isBroadcastActive: !tab.isBroadcastActive };
+          return toggleBroadcastGroup(tab);
         }
         return tab;
       });
@@ -853,59 +854,13 @@ export const useTabManagement = (toast, {
     toggleInArray(homeTabs, setHomeTabs);
   }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
 
-  // Helper para obtener todos los IDs de terminales dentro de un split
-  const getSplitTerminalIds = useCallback((node) => {
-    if (!node) return [];
-    // Si es un nodo terminal (no tiene first/second)
-    if (node.key && !node.first && !node.second) return [node.key];
-
-    const ids = [];
-    if (node.first) ids.push(...getSplitTerminalIds(node.first));
-    if (node.second) ids.push(...getSplitTerminalIds(node.second));
-    // Compatibilidad legacy
-    if (node.terminals) ids.push(...node.terminals.map(t => t.key));
-    if (node.leftTerminal) ids.push(node.leftTerminal.key);
-    if (node.rightTerminal) ids.push(node.rightTerminal.key);
-    return ids;
-  }, []);
-
   const handleToggleBroadcastTarget = useCallback((tabKey, targetId) => {
     const toggleInArray = (arr, setArr) => {
       let found = false;
       const newArr = arr.map(tab => {
         if (tab.key === tabKey) {
           found = true;
-          let newIsBroadcastActive = tab.isBroadcastActive;
-          let newExcluded = tab.broadcastExcludedTargets || [];
-
-          // Si el broadcast global está apagado, lo encendemos
-          if (!tab.isBroadcastActive) {
-            newIsBroadcastActive = true;
-            // Si es un split, excluimos a todos los DEMÁS terminales inicialmente
-            if (tab.type === 'split') {
-              const allIds = getSplitTerminalIds(tab);
-              newExcluded = allIds.filter(id => id !== targetId);
-            } else {
-              // Si no es split, aseguramos que la lista de exclusión esté vacía para este terminal
-              newExcluded = [];
-            }
-          } else {
-            // Si ya está encendido, conmutamos la exclusión del target
-            if (newExcluded.includes(targetId)) {
-              newExcluded = newExcluded.filter(id => id !== targetId);
-            } else {
-              newExcluded = [...newExcluded, targetId];
-            }
-
-            // Si acabamos excluyendo a TODOS los terminales del split, tal vez queramos apagar el broadcast global?
-            // Por ahora lo dejamos encendido para que el usuario pueda seguir seleccionando.
-          }
-
-          return {
-            ...tab,
-            isBroadcastActive: newIsBroadcastActive,
-            broadcastExcludedTargets: newExcluded
-          };
+          return toggleBroadcastTarget(tab, targetId);
         }
         return tab;
       });
@@ -918,7 +873,7 @@ export const useTabManagement = (toast, {
     if (toggleInArray(guacamoleTabs, setGuacamoleTabs)) return;
     if (toggleInArray(fileExplorerTabs, setFileExplorerTabs)) return;
     toggleInArray(homeTabs, setHomeTabs);
-  }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs, getSplitTerminalIds]);
+  }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
 
   // === RETORNO DEL HOOK ===
   return {

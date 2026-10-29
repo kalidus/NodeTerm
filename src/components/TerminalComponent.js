@@ -28,6 +28,7 @@ import {
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
 import { sendSshUserInput, deferNonCritical } from '../utils/terminalInputSend';
+import { isBroadcastMember } from '../utils/broadcastMembership';
 import {
     resolveTerminalFontFamily,
     getDefaultLocalTerminalFontFamily,
@@ -53,6 +54,9 @@ const TerminalComponent = forwardRef(({
     isBroadcastActive,
     onBroadcastData,
     broadcastExcludedTargets = [],
+    /** true mientras el panel está oculto por el zoom de otro split: no mandar ssh:resize a 0 */
+    layoutSuspended = false,
+    onTerminalFocus,
     isIntegrated = false,
     // Quick Actions Props
     onStartRecording,
@@ -109,11 +113,9 @@ const TerminalComponent = forwardRef(({
         const storageKey = isSSH ? 'basicapp_statusbar_theme' : 'localLinuxStatusBarTheme';
         try { return localStorage.getItem(storageKey) || 'Default Dark'; } catch { return 'Default Dark'; }
     });
-    // Ref para evitar regenerar el terminal si cambian los props de broadcast
-    const broadcastPropsRef = useRef({ isBroadcastActive, onBroadcastData });
-    useEffect(() => {
-        broadcastPropsRef.current = { isBroadcastActive, onBroadcastData };
-    }, [isBroadcastActive, onBroadcastData]);
+    // Ref leído en onData: se actualiza en el render para no reenviar un panel recién excluido
+    const broadcastPropsRef = useRef({ isBroadcastActive, onBroadcastData, broadcastExcludedTargets });
+    broadcastPropsRef.current = { isBroadcastActive, onBroadcastData, broadcastExcludedTargets };
 
 
     // Escuchar cambios de settings de terminal (echo local SSH, scrollback, etc.)
@@ -172,6 +174,10 @@ const TerminalComponent = forwardRef(({
     const fitAddon = useRef(null);
     const stableFitRef = useRef(null);
     const activeRef = useRef(active);
+    const layoutSuspendedRef = useRef(!!layoutSuspended);
+    const onTerminalFocusRef = useRef(onTerminalFocus);
+    layoutSuspendedRef.current = !!layoutSuspended;
+    onTerminalFocusRef.current = onTerminalFocus;
 
     const fitStable = () => {
         const stable = stableFitRef.current;
@@ -499,10 +505,19 @@ const TerminalComponent = forwardRef(({
         } catch (_) { /* noop */ }
 
         term.current.focus();
+        let focusDisposable = null;
+        try {
+            if (typeof term.current.onFocus === 'function') {
+                focusDisposable = term.current.onFocus(() => {
+                    onTerminalFocusRef.current?.();
+                });
+            }
+        } catch (_) { /* noop */ }
 
         // ResizeObserver con throttling (30ms); fit estable ignora eco del propio canvas
         let resizeTimeout = null;
         const resizeObserver = new ResizeObserver(() => {
+            if (layoutSuspendedRef.current) return;
             if (!fitAddon.current || !term.current) return;
             if (stableFit.isFitting()) return;
             if (resizeTimeout) return;
@@ -712,7 +727,11 @@ const TerminalComponent = forwardRef(({
                     return;
                 }
                 const secretOn = isSecretEntry(tabId);
-                const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
+                const { onBroadcastData: currentBroadcastFn, broadcastExcludedTargets: excluded } = broadcastPropsRef.current;
+                const originIsMember = isBroadcastMember(
+                    { isBroadcastActive: broadcastPropsRef.current.isBroadcastActive, broadcastExcludedTargets: excluded },
+                    tabId
+                );
 
                 // Local echo SSH: solo caracteres imprimibles de 1 byte (nunca en modo contraseña)
                 const isSSH = sshConfig && (sshConfig.host || sshConfig.bastionHost);
@@ -734,8 +753,8 @@ const TerminalComponent = forwardRef(({
                     data
                 );
 
-                // Broadcast: App filtra destinos; en modo secreto solo llega a peers con prompt
-                if (currentBroadcast && currentBroadcastFn) {
+                // Broadcast: solo si este panel es miembro. App filtra destinos y el modo secreto.
+                if (originIsMember && currentBroadcastFn) {
                     deferNonCritical(() => currentBroadcastFn(tabId, data));
                 }
             });
@@ -743,6 +762,8 @@ const TerminalComponent = forwardRef(({
             // Handle resize with 80ms debounce to prevent flooding the backend PTY process
             let resizeIpcTimeout = null;
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
+                if (layoutSuspendedRef.current) return;
+                if (!cols || !rows) return;
                 if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
                 resizeIpcTimeout = setTimeout(() => {
                     window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
@@ -753,6 +774,7 @@ const TerminalComponent = forwardRef(({
             return () => {
                 flushPending();
                 writeBufferRef.current?.flushSync();
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 try { setSecretEntry(tabId, false); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 cleanupContextMenu();
@@ -867,6 +889,7 @@ const TerminalComponent = forwardRef(({
             term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicaci??n no funcionar??n.\x1b[0m');
             // Cleanup only the terminal if API is not ready
             return () => {
+                try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 try { detachSearch?.(); } catch (_) { /* noop */ }
                 stableFit.reset();
@@ -879,6 +902,26 @@ const TerminalComponent = forwardRef(({
             };
         }
     }, [tabId, sshConfig, xtermLib]);
+
+    const sawLayoutSuspendRef = useRef(false);
+    useEffect(() => {
+        if (layoutSuspended) {
+            sawLayoutSuspendRef.current = true;
+            return undefined;
+        }
+        if (!sawLayoutSuspendRef.current) return undefined;
+        sawLayoutSuspendRef.current = false;
+        let inner = 0;
+        const outer = requestAnimationFrame(() => {
+            inner = requestAnimationFrame(() => {
+                fitStable();
+            });
+        });
+        return () => {
+            cancelAnimationFrame(outer);
+            if (inner) cancelAnimationFrame(inner);
+        };
+    }, [layoutSuspended]);
 
     // Effect to update font family dynamically
     useEffect(() => {
@@ -994,6 +1037,7 @@ const TerminalComponent = forwardRef(({
     return (
         <div
             className="terminal-component-wrapper"
+            onMouseDown={() => onTerminalFocus?.()}
             style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1145,13 +1189,16 @@ const TerminalComponent = forwardRef(({
                         {isSplit && (() => {
                             const isExcluded = broadcastExcludedTargets && broadcastExcludedTargets.includes(tabId);
                             const isActiveForThisTerminal = isBroadcastActive && !isExcluded;
+                            const broadcastTitle = !isBroadcastActive
+                                ? 'Activar broadcast en todos los paneles'
+                                : (isActiveForThisTerminal ? 'Quitar este panel del broadcast' : 'Añadir este panel al broadcast');
                             return (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onToggleBroadcastTarget && onToggleBroadcastTarget(tabId);
                                     }}
-                                    title={isActiveForThisTerminal ? "Desactivar Broadcast" : "Activar Broadcast"}
+                                    title={broadcastTitle}
                                     className="quick-action-btn"
                                     style={{
                                         background: 'transparent',

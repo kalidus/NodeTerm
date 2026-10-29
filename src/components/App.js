@@ -11,6 +11,7 @@ import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
 import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
 import { isSecretEntry } from '../services/terminalAgentState';
+import { broadcastDestinationIds, findTabOwningTerminal } from '../utils/broadcastMembership';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -2470,77 +2471,26 @@ const App = () => {
     return themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
   }, [localLinuxTerminalTheme]);
 
-  // Implementación de Broadcast
+  // Implementación de Broadcast: solo entre miembros del split que contiene el origen
   const handleBroadcastData = useCallback((originTabId, data) => {
     if (!originTabId || !data) return;
 
-    // Obtener la pestaña activa (la que tiene el broadcast encendido)
-    const allTabs = getAllTabs();
-    const activeBroadcastTab = allTabs.find(t => t.linkId === originTabId || t.key === originTabId || (t.isBroadcastActive && t.key === activeTab?.key));
-
-    // Si no encontramos la pestaña por ID, usamos la activa si tiene broadcast
-    const broadcastTab = activeBroadcastTab || (activeTab?.isBroadcastActive ? activeTab : null);
-
+    const broadcastTab = findTabOwningTerminal(getAllTabs(), originTabId);
     if (!broadcastTab || !broadcastTab.isBroadcastActive) return;
 
-    // Función auxiliar para buscar termIds en la estructura de splits
-    const extractTerminalIds = (tab) => {
-      const ids = [];
-      if (tab.type === 'split') {
-        const traverseNode = (node) => {
-          if (!node) return;
-          if (node.type === 'terminal' && node.key) {
-            ids.push(node.key);
-          } else if (node.type === 'split') {
-            traverseNode(node.first);
-            traverseNode(node.second);
-          }
-        };
-        // Nuevo sistema
-        if (tab.first || tab.second) {
-          traverseNode(tab.first);
-          traverseNode(tab.second);
-        }
-        // Array de terminales (grid mode)
-        else if (Array.isArray(tab.terminals)) {
-          tab.terminals.forEach(t => ids.push(t.key));
-        }
-        // Sistema legacy
-        else if (tab.leftTerminal && tab.rightTerminal) {
-          ids.push(tab.leftTerminal.key);
-          ids.push(tab.rightTerminal.key);
-        }
-      } else if (tab.type === 'terminal' || tab.type === 'local-terminal') {
-        ids.push(tab.key);
-      }
-      return ids;
-    };
-
-    let termIds = extractTerminalIds(broadcastTab);
-
-    // Filtramos los terminales excluidos (configuración manual del usuario)
-    if (broadcastTab.broadcastExcludedTargets && broadcastTab.broadcastExcludedTargets.length > 0) {
-      termIds = termIds.filter(id => !broadcastTab.broadcastExcludedTargets.includes(id));
-    }
-
-    // ✅ FIX: Filtramos el originTabId para no enviar doble al terminal donde escribimos
-    termIds = termIds.filter(id => id !== originTabId);
+    let termIds = broadcastDestinationIds(broadcastTab, originTabId);
 
     // Modo contraseña: solo reenviar a paneles que también tienen prompt de secreto
     if (isSecretEntry(originTabId)) {
       termIds = termIds.filter((id) => isSecretEntry(id));
     }
 
-    // Si se excluyeron todos, termIds estará vacío
     if (termIds.length === 0) return;
 
-    // Enviar datos a todos los terminales de esta pestaña a través del IPC
     for (const termId of termIds) {
-      // Usar el IPC 'ssh:data' directo. El backend lo dirigirá al stream correcto
-      // o lo ignorará si no hay conexión SSH activa para ese tabId.
       window.electron.ipcRenderer.send('ssh:data', { tabId: termId, data });
     }
-  }, [getAllTabs, activeTab]);
+  }, [getAllTabs]);
 
   // Claves de nodos del sidebar con al menos una pestaña abierta
   const openSessionNodeKeys = useMemo(() => {

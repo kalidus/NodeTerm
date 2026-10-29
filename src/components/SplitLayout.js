@@ -2,6 +2,7 @@
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import TerminalComponent from './TerminalComponent';
 import { setUiDragging } from '../utils/uiDragPerformance';
+import { cycleIndex, neighborIndex, parseSplitShortcut, resizeGrid } from '../utils/splitGridActions';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -169,6 +170,13 @@ const SplitLayout = ({
   const rightTerminalRef = useRef(null);
   const verticalDragRafRef = useRef(0);
   const latestVerticalLeftSizeRef = useRef(30);
+  const splitRootRef = useRef(null);
+  const gridApiRef = useRef(null);
+  const activePropRef = useRef(active);
+  activePropRef.current = active;
+  const [focusedKey, setFocusedKey] = useState(null);
+  const [zoomedKey, setZoomedKey] = useState(null);
+  gridApiRef.current = null;
 
   // Determinar qué sistema usar
   const isNestedSystem = first || second;
@@ -475,6 +483,102 @@ const SplitLayout = ({
     return [];
   }, [isNestedSystem, first, second, isArraySystem, terminals, isLegacySystem, leftTerminal, rightTerminal]);
 
+  useEffect(() => {
+    const keys = terminalsArray.map((terminal) => terminal?.key).filter(Boolean);
+    setFocusedKey((prev) => (prev && keys.includes(prev) ? prev : (keys[0] || null)));
+    setZoomedKey((prev) => (prev && keys.includes(prev) ? prev : null));
+  }, [terminalsArray]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (!activePropRef.current) return;
+      const root = splitRootRef.current;
+      if (!root || !(event.target instanceof Node) || !root.contains(event.target)) return;
+      if (document.querySelector('[data-capturing-shortcut="true"]')) return;
+      const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+      if (modal && modal.offsetWidth > 0 && modal.offsetHeight > 0) return;
+
+      const action = parseSplitShortcut(event);
+      if (!action) return;
+      const api = gridApiRef.current;
+      if (!api?.terminals?.length || typeof api.setVerticalSplit !== 'function') return;
+
+      const keys = api.terminals.map((terminal) => terminal?.key).filter(Boolean);
+      const count = keys.length;
+      const index = keys.indexOf(api.focusedKey);
+
+      const focusKey = (key) => {
+        if (!key) return;
+        api.focusedKey = key;
+        api.zoomedKey = null;
+        setFocusedKey(key);
+        setZoomedKey(null);
+        terminalRefs?.current?.[key]?.focus?.();
+      };
+
+      if (action.type === 'focus') {
+        const next = neighborIndex(index, action.direction, count, api.orientation);
+        if (next == null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        focusKey(keys[next]);
+        return;
+      }
+
+      if (action.type === 'cycle') {
+        const next = cycleIndex(index, count, action.delta);
+        if (next == null || keys[next] === api.focusedKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        focusKey(keys[next]);
+        return;
+      }
+
+      if (action.type === 'zoom') {
+        if (count < 2 || index < 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setZoomedKey((prev) => {
+          const next = prev === keys[index] ? null : keys[index];
+          api.zoomedKey = next;
+          return next;
+        });
+        return;
+      }
+
+      if (action.type === 'equalize') {
+        if (count < 2) return;
+        event.preventDefault();
+        event.stopPropagation();
+        api.sizes = { verticalSplit: 50, horizontalSplit: 50, verticalSplitBottom: 50 };
+        api.setVerticalSplit(50);
+        api.setHorizontalSplit(50);
+        api.setVerticalSplitBottom(50);
+        return;
+      }
+
+      if (action.type === 'resize') {
+        const patch = resizeGrid({
+          count,
+          orientation: api.orientation,
+          index,
+          direction: action.direction,
+          ...api.sizes,
+        });
+        if (!patch) return;
+        event.preventDefault();
+        event.stopPropagation();
+        api.sizes = { ...api.sizes, ...patch };
+        if (patch.verticalSplit != null) api.setVerticalSplit(patch.verticalSplit);
+        if (patch.horizontalSplit != null) api.setHorizontalSplit(patch.horizontalSplit);
+        if (patch.verticalSplitBottom != null) api.setVerticalSplitBottom(patch.verticalSplitBottom);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [terminalRefs]);
+
   // NUEVO SISTEMA: Grid 2x2 inteligente con splitters redimensionables
   // NO ejecutar si estamos usando el sistema legacy (leftTerminal/rightTerminal)
   if (terminalsArray.length > 0 && terminalsArray.length <= 4 && !isLegacySystem) {
@@ -486,6 +590,16 @@ const SplitLayout = ({
     const [horizontalSplit, setHorizontalSplit] = useState(50); // % para división horizontal (arriba/abajo)
     const [verticalSplitBottom, setVerticalSplitBottom] = useState(50); // % para división vertical inferior (T3/T4)
     const [isDragging, setIsDragging] = useState(null); // 'v-top', 'h', 'v-bottom'
+    gridApiRef.current = {
+      terminals: terminalsArray,
+      orientation,
+      focusedKey,
+      zoomedKey,
+      sizes: { verticalSplit, horizontalSplit, verticalSplitBottom },
+      setVerticalSplit,
+      setHorizontalSplit,
+      setVerticalSplitBottom,
+    };
     const gridDragRafRef = useRef(0);
     const latestGridDragRef = useRef({ type: null, value: 50 });
 
@@ -574,8 +688,93 @@ const SplitLayout = ({
         return terminal.content;
       }
 
+      const paneFocused = terminal.key === focusedKey;
+      const paneSuspended = !!(zoomedKey && zoomedKey !== terminal.key);
+      const splitActionButtonStyle = {
+        height: '18px',
+        borderRadius: '4px',
+        border: 'none',
+        background: 'rgba(15, 15, 15, 0.8)',
+        color: '#d0d0d0',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '11px',
+        zIndex: 1001,
+        padding: '0 4px'
+      };
+
       return (
         <>
+          {terminalCount > 1 && !paneSuspended && (
+            <>
+              {paneFocused && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    outline: '2px solid #4da6ff',
+                    outlineOffset: '-2px',
+                    pointerEvents: 'none',
+                    zIndex: 6
+                  }}
+                />
+              )}
+              {!paneFocused && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0, 0, 0, 0.28)',
+                    pointerEvents: 'none',
+                    zIndex: 4
+                  }}
+                />
+              )}
+              {paneFocused && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    left: '4px',
+                    display: 'flex',
+                    gap: '4px',
+                    zIndex: 1001
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={splitActionButtonStyle}
+                    title={zoomedKey === terminal.key ? 'Restaurar (Alt+Mayús+Intro)' : 'Ampliar panel (Alt+Mayús+Intro)'}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomedKey((prev) => (prev === terminal.key ? null : terminal.key));
+                    }}
+                  >
+                    <i className={zoomedKey === terminal.key ? 'pi pi-window-minimize' : 'pi pi-window-maximize'} />
+                  </button>
+                  {!zoomedKey && (
+                    <button
+                      type="button"
+                      style={splitActionButtonStyle}
+                      title="Igualar paneles (Alt+Mayús+=)"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVerticalSplit(50);
+                        setHorizontalSplit(50);
+                        setVerticalSplitBottom(50);
+                      }}
+                    >
+                      <i className="pi pi-th-large" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
           {/* Botón para cerrar este terminal (solo si hay más de 1) */}
           {terminalCount > 1 && onClosePanel && (
             <button
@@ -654,6 +853,8 @@ const SplitLayout = ({
               broadcastExcludedTargets={broadcastExcludedTargets}
             isSplit={true}
             preserveSessionOnUnmount
+            layoutSuspended={paneSuspended}
+            onTerminalFocus={() => setFocusedKey(terminal.key)}
             onDrop={(e) => {
               // Manejador de Drop para split
               const draggedNode = (window.draggedConnectionNodeRef && window.draggedConnectionNodeRef.current) ||
@@ -735,11 +936,48 @@ const SplitLayout = ({
       );
     };
 
+    // Zoom: los demás paneles siguen montados para no hibernar la sesión SSH
+    const zoomedTerminal = zoomedKey
+      ? terminalsArray.find((terminal) => terminal?.key === zoomedKey)
+      : null;
+    if (zoomedTerminal && terminalCount > 1) {
+      return (
+        <div
+          ref={splitRootRef}
+          data-split-root
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            display: 'flex',
+            background: theme?.background || '#000000'
+          }}
+        >
+          {terminalsArray.map((terminal, index) => {
+            const visible = terminal?.key === zoomedKey;
+            return (
+              <div
+                key={terminal.key}
+                style={visible
+                  ? { width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }
+                  : { position: 'absolute', width: 0, height: 0, overflow: 'hidden', visibility: 'hidden', pointerEvents: 'none' }}
+              >
+                {renderTerminal(terminal, index)}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     // Renderizado con splitters redimensionables
     if (terminalCount === 1) {
       // 1 terminal: ocupa todo
       return (
-        <div style={{
+        <div
+          ref={splitRootRef}
+          data-split-root
+          style={{
           width: '100%',
           height: '100%',
           position: 'relative',
@@ -768,7 +1006,7 @@ const SplitLayout = ({
             overflow: 'hidden',
             background: theme?.background || '#000000',
             '--terminal-theme-splitter': effectiveSplitterColor
-          }} data-grid-container>
+          }} ref={splitRootRef} data-split-root data-grid-container>
             <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
@@ -815,7 +1053,7 @@ const SplitLayout = ({
             display: 'flex',
             background: theme?.background || '#000000',
             '--terminal-theme-splitter': effectiveSplitterColor
-          }} data-grid-container>
+          }} ref={splitRootRef} data-split-root data-grid-container>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: theme?.background || '#000000' }}>
               {renderTerminal(terminalsArray[0], 0)}
             </div>
@@ -849,7 +1087,7 @@ const SplitLayout = ({
           overflow: 'hidden',
           background: theme?.background || '#000000',
           '--terminal-theme-splitter': effectiveSplitterColor
-        }} data-grid-container>
+        }} ref={splitRootRef} data-split-root data-grid-container>
           {/* Fila superior: T1 y T2 */}
           <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
@@ -918,7 +1156,7 @@ const SplitLayout = ({
           overflow: 'hidden',
           background: theme?.background || '#000000',
           '--terminal-theme-splitter': effectiveSplitterColor
-        }} data-grid-container>
+        }} ref={splitRootRef} data-split-root data-grid-container>
           {/* Fila superior: T1 y T2 */}
           <div style={{ width: '100%', height: `calc(${horizontalSplit}% - 4px)`, position: 'relative', display: 'flex', background: theme?.background || '#000000' }}>
             <div style={{ width: `${verticalSplit}%`, height: '100%', position: 'relative', overflow: 'hidden', background: theme?.background || '#000000', display: 'flex', flexDirection: 'column' }}>
