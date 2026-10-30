@@ -224,7 +224,7 @@ const KECCAK_RC = (() => {
         if (bit < 32) lo ^= (1 << bit) >>> 0;
         else hi ^= (1 << (bit - 32)) >>> 0;
       }
-      r = (r << 1) ^ ((r >> 7) * 0x71);
+      r = ((r << 1) ^ ((r >> 7) * 0x71)) & 0xff;
     }
     rc[2 * round] = lo >>> 0;
     rc[2 * round + 1] = hi >>> 0;

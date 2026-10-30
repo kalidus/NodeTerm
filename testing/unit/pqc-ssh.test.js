@@ -22,6 +22,11 @@ describe('Post-Quantum Cryptography (PQC) - ML-KEM-768 & sntrup761', () => {
     const { publicKey, secretKey } = mlkem768.keygen(seed);
     assert.strictEqual(publicKey.length, mlkem768.PUBLIC_KEY_BYTES);
     assert.strictEqual(secretKey.length, mlkem768.SECRET_KEY_BYTES);
+    // Verify NIST FIPS 203 Keccak/ML-KEM-768 bit-exactness against known vector
+    assert.strictEqual(
+      crypto.createHash('sha256').update(publicKey).digest('hex'),
+      '40682cd6076c0547ac0de83bbd032a8d0ecfc4e304f4d7ba5a415b5fb01cb027'
+    );
 
     const { cipherText, sharedSecret: ssEnc } = mlkem768.encapsulate(publicKey, m);
     assert.strictEqual(cipherText.length, mlkem768.CIPHERTEXT_BYTES);
