@@ -75,7 +75,8 @@ export const useSplitManagement = ({
       jumpAuthMethod: sshNode.data.jumpAuthMethod || 'password',
       jumpPassword: sshNode.data.jumpPassword || '',
       jumpPrivateKey: sshNode.data.jumpPrivateKey || '',
-      hostKeyPolicy: sshNode.data.hostKeyPolicy || 'warn_new'
+      hostKeyPolicy: sshNode.data.hostKeyPolicy || 'warn_new',
+      legacyCompatibility: !!sshNode.data.legacyCompatibility
     };
 
     const newTerminal = {

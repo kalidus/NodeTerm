@@ -166,6 +166,7 @@ export default function EditConnectionTabContent({
   const [sshJumpPassword, setSSHJumpPassword] = useState('');
   const [sshJumpPrivateKey, setSSHJumpPrivateKey] = useState('');
   const [sshHostKeyPolicy, setSSHHostKeyPolicy] = useState('warn_new');
+  const [sshLegacyCompatibility, setSSHLegacyCompatibility] = useState(false);
   const [sshDescription, setSSHDescription] = useState('');
   const [sshIcon, setSSHIcon] = useState(null);
   const [sshUseBastionWallix, setSSHUseBastionWallix] = useState(false);
@@ -251,6 +252,7 @@ export default function EditConnectionTabContent({
       setSSHJumpPassword(data.jumpPassword || '');
       setSSHJumpPrivateKey(data.jumpPrivateKey || '');
       setSSHHostKeyPolicy(data.hostKeyPolicy || 'warn_new');
+      setSSHLegacyCompatibility(!!data.legacyCompatibility);
       setSSHDescription(data.description || '');
       setSSHIcon(data.customIcon || null);
       setSSHUseBastionWallix(!!(data.useBastionWallix || data.isBastion));
@@ -324,6 +326,7 @@ export default function EditConnectionTabContent({
           jumpPassword: sshJumpPassword,
           jumpPrivateKey: sshJumpPrivateKey,
           hostKeyPolicy: sshHostKeyPolicy,
+          legacyCompatibility: sshLegacyCompatibility,
           description: sshDescription,
           customIcon: sshIcon,
           targetFolder: sshTargetFolder,
@@ -377,7 +380,7 @@ export default function EditConnectionTabContent({
 
     return () => clearTimeout(saveTimeout);
   }, [
-    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, sshUseBastionWallix,
+    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshUseBastionWallix,
     rdpFormData,
     vncFormData,
     fileName, fileHost, fileUser, filePassword, filePort, fileProtocol, fileRemoteFolder, fileTargetFolder,
@@ -762,6 +765,7 @@ export default function EditConnectionTabContent({
         jumpPassword: sshJumpPassword,
         jumpPrivateKey: sshJumpPrivateKey,
         hostKeyPolicy: sshHostKeyPolicy,
+        legacyCompatibility: sshLegacyCompatibility,
         description: sshDescription,
         customIcon: sshIcon,
         targetFolder: sshTargetFolder
@@ -859,6 +863,7 @@ export default function EditConnectionTabContent({
         jumpPassword: sshJumpPassword,
         jumpPrivateKey: sshJumpPrivateKey,
         hostKeyPolicy: sshHostKeyPolicy,
+        legacyCompatibility: sshLegacyCompatibility,
         description: sshDescription,
         customIcon: sshIcon,
         targetFolder: sshTargetFolder
@@ -1015,6 +1020,7 @@ export default function EditConnectionTabContent({
         jumpPassword: sshJumpPassword,
         jumpPrivateKey: sshJumpPrivateKey,
         hostKeyPolicy: sshHostKeyPolicy,
+        legacyCompatibility: sshLegacyCompatibility,
         description: sshDescription,
         customIcon: sshIcon,
         targetFolder: sshTargetFolder
@@ -1124,6 +1130,8 @@ export default function EditConnectionTabContent({
             setSSHJumpPrivateKey={setSSHJumpPrivateKey}
             sshHostKeyPolicy={sshHostKeyPolicy}
             setSSHHostKeyPolicy={setSSHHostKeyPolicy}
+            sshLegacyCompatibility={sshLegacyCompatibility}
+            setSSHLegacyCompatibility={setSSHLegacyCompatibility}
             sshDescription={sshDescription}
             setSSHDescription={setSSHDescription}
             foldersOptions={folderOptionsList}

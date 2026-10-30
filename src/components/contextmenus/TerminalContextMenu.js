@@ -178,7 +178,8 @@ const TerminalContextMenu = ({
         jumpAuthMethod: activeTerminal.sshConfig.jumpAuthMethod || 'password',
         jumpPassword: activeTerminal.sshConfig.jumpPassword || '',
         jumpPrivateKey: activeTerminal.sshConfig.jumpPrivateKey || '',
-        hostKeyPolicy: activeTerminal.sshConfig.hostKeyPolicy || 'warn_new'
+        hostKeyPolicy: activeTerminal.sshConfig.hostKeyPolicy || 'warn_new',
+        legacyCompatibility: !!activeTerminal.sshConfig.legacyCompatibility
       }
     };
 

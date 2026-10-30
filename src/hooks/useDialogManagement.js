@@ -59,6 +59,7 @@ export const useDialogManagement = () => {
   const [sshJumpPassword, setSSHJumpPassword] = useState('');
   const [sshJumpPrivateKey, setSSHJumpPrivateKey] = useState('');
   const [sshHostKeyPolicy, setSSHHostKeyPolicy] = useState('warn_new');
+  const [sshLegacyCompatibility, setSSHLegacyCompatibility] = useState(false);
   const [sshDescription, setSSHDescription] = useState('');
   const [sshIcon, setSSHIcon] = useState(null);
   const [sshAuthMethod, setSSHAuthMethod] = useState('password');
@@ -84,6 +85,7 @@ export const useDialogManagement = () => {
   const [editSSHJumpPassword, setEditSSHJumpPassword] = useState('');
   const [editSSHJumpPrivateKey, setEditSSHJumpPrivateKey] = useState('');
   const [editSSHHostKeyPolicy, setEditSSHHostKeyPolicy] = useState('warn_new');
+  const [editSSHLegacyCompatibility, setEditSSHLegacyCompatibility] = useState(false);
   const [editSSHDescription, setEditSSHDescription] = useState('');
   const [editSSHIcon, setEditSSHIcon] = useState(null);
   const [editSSHAuthMethod, setEditSSHAuthMethod] = useState('password');
@@ -158,6 +160,7 @@ export const useDialogManagement = () => {
     setSSHJumpPassword('');
     setSSHJumpPrivateKey('');
     setSSHHostKeyPolicy('warn_new');
+    setSSHLegacyCompatibility(false);
     setSSHDescription('');
     setSSHIcon(null);
     setSSHAuthMethod('password');
@@ -221,6 +224,7 @@ export const useDialogManagement = () => {
     setEditSSHJumpPassword('');
     setEditSSHJumpPrivateKey('');
     setEditSSHHostKeyPolicy('warn_new');
+    setEditSSHLegacyCompatibility(false);
     setEditSSHDescription('');
     setEditSSHIcon(null);
     setEditSSHAuthMethod('password');
@@ -373,6 +377,7 @@ export const useDialogManagement = () => {
     sshJumpPassword, setSSHJumpPassword,
     sshJumpPrivateKey, setSSHJumpPrivateKey,
     sshHostKeyPolicy, setSSHHostKeyPolicy,
+    sshLegacyCompatibility, setSSHLegacyCompatibility,
     sshDescription, setSSHDescription,
     sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
@@ -398,6 +403,7 @@ export const useDialogManagement = () => {
     editSSHJumpPassword, setEditSSHJumpPassword,
     editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
     editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
+    editSSHLegacyCompatibility, setEditSSHLegacyCompatibility,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,

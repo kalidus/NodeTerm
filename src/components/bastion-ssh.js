@@ -1,3 +1,4 @@
+const { buildSshAlgorithms } = require('../utils/sshConnectOptions');
 const { Client } = require('ssh2');
 
 /**
@@ -65,13 +66,7 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       port: config.port || 22,
       username: config.bastionUser,
       readyTimeout: 10000,
-      algorithms: {
-        kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-        // Priorizar cifrados GCM (AEAD más rápido) primero para reducir latencia de cifrado
-        cipher: ['aes128-gcm@openssh.com', 'aes256-gcm@openssh.com', 'aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
-        serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-        hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-      },
+      algorithms: buildSshAlgorithms({ ...config, useBastionWallix: true }),
       hostVerifier: () => true, // Aceptar cualquier host key para Wallix
       compress: false // Sin compresión para mejor rendimiento
     };
@@ -174,13 +169,7 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     readyTimeout: 30000,
     keepaliveInterval: 60000,
     keepaliveCountMax: 3,
-    algorithms: {
-      kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-      // Priorizar cifrados más rápidos primero para reducir latencia
-      cipher: ['aes128-ctr', 'aes128-gcm', 'aes192-ctr', 'aes256-ctr', 'aes256-gcm'],
-      serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-      hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-    },
+    algorithms: buildSshAlgorithms({ ...config, useBastionWallix: true }),
     hostVerifier: () => true, // Aceptar cualquier host key para Wallix
     compress: false, // Sin compresión para reducir latencia
     debug: false

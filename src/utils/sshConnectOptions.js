@@ -1,7 +1,132 @@
 const net = require('net');
+const { registerSsh2PqcKex, PQC_KEX_ALGORITHMS } = require('./pqc/registerSsh2PqcKex');
+
+// Registrar soporte de intercambio de claves (KEX) híbrido Post-Cuántico en ssh2
+registerSsh2PqcKex();
+
+const ssh2Constants = (() => {
+  try {
+    return require('ssh2/lib/protocol/constants.js');
+  } catch (_) {
+    return null;
+  }
+})();
+
+function filterSupported(list, supportedList) {
+  if (!Array.isArray(supportedList) || supportedList.length === 0) {
+    return list;
+  }
+  const filtered = list.filter((alg) => supportedList.includes(alg));
+  return filtered.length > 0 ? filtered : list;
+}
 
 function isWallixBastion(config) {
   return !!(config && config.useBastionWallix);
+}
+
+function isLegacyCompatibility(config) {
+  return !!(config && config.legacyCompatibility);
+}
+
+function buildSshAlgorithms(config = {}) {
+  const isBastion = isWallixBastion(config);
+
+  const raw = isLegacyCompatibility(config)
+    ? {
+        kex: [
+          'curve25519-sha256',
+          'curve25519-sha256@libssh.org',
+          'ecdh-sha2-nistp256',
+          'ecdh-sha2-nistp384',
+          'ecdh-sha2-nistp521',
+          'diffie-hellman-group-exchange-sha256',
+          'diffie-hellman-group14-sha256',
+          'diffie-hellman-group-exchange-sha1',
+          'diffie-hellman-group14-sha1',
+          'diffie-hellman-group1-sha1'
+        ],
+        cipher: [
+          'aes128-ctr',
+          'aes192-ctr',
+          'aes256-ctr',
+          'aes128-gcm@openssh.com',
+          'aes256-gcm@openssh.com',
+          'aes128-gcm',
+          'aes256-gcm',
+          'aes256-cbc',
+          'aes192-cbc',
+          'aes128-cbc',
+          '3des-cbc'
+        ],
+        serverHostKey: [
+          'ssh-ed25519',
+          'ecdsa-sha2-nistp256',
+          'ecdsa-sha2-nistp384',
+          'ecdsa-sha2-nistp521',
+          'rsa-sha2-512',
+          'rsa-sha2-256',
+          'ssh-rsa',
+          'ssh-dss'
+        ],
+        hmac: [
+          'hmac-sha2-256',
+          'hmac-sha2-512',
+          'hmac-sha1'
+        ],
+        compress: ['none']
+      }
+    : {
+        kex: [
+          ...PQC_KEX_ALGORITHMS,
+          'curve25519-sha256',
+          'curve25519-sha256@libssh.org',
+          'ecdh-sha2-nistp256',
+          'ecdh-sha2-nistp384',
+          'ecdh-sha2-nistp521',
+          'diffie-hellman-group-exchange-sha256',
+          'diffie-hellman-group14-sha256',
+          'diffie-hellman-group16-sha512',
+          'diffie-hellman-group18-sha512',
+          ...(isBastion ? ['diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'] : [])
+        ],
+        cipher: [
+          'aes256-gcm@openssh.com',
+          'chacha20-poly1305@openssh.com',
+          'aes256-ctr',
+          'aes192-ctr',
+          'aes128-gcm@openssh.com',
+          'aes128-ctr',
+          ...(isBastion ? ['aes256-gcm', 'aes128-gcm'] : [])
+        ],
+        serverHostKey: [
+          'ssh-ed25519',
+          'ecdsa-sha2-nistp256',
+          'ecdsa-sha2-nistp384',
+          'ecdsa-sha2-nistp521',
+          'rsa-sha2-512',
+          'rsa-sha2-256',
+          'ssh-rsa',
+          ...(isBastion ? ['ssh-dss'] : [])
+        ],
+        hmac: [
+          'hmac-sha2-512-etm@openssh.com',
+          'hmac-sha2-256-etm@openssh.com',
+          'hmac-sha2-512',
+          'hmac-sha2-256',
+          'hmac-sha1-etm@openssh.com',
+          'hmac-sha1'
+        ],
+        compress: ['none']
+      };
+
+  // Filtrar contra los algoritmos soportados por el runtime actual (OpenSSL vs Electron BoringSSL)
+  return {
+    kex: filterSupported(raw.kex, ssh2Constants?.SUPPORTED_KEX),
+    cipher: filterSupported(raw.cipher, ssh2Constants?.SUPPORTED_CIPHER),
+    serverHostKey: filterSupported(raw.serverHostKey, ssh2Constants?.SUPPORTED_SERVER_HOST_KEY),
+    hmac: filterSupported(raw.hmac, ssh2Constants?.SUPPORTED_MAC),
+    compress: raw.compress
+  };
 }
 
 function getRequestedForwarding(config) {
@@ -135,17 +260,9 @@ function buildSshConnectOptions(config, options = {}) {
     connectConfig.readyTimeout = 30000;
     connectConfig.keepaliveInterval = 30000;
     connectConfig.keepaliveCountMax = 3;
-    connectConfig.algorithms = {
-      cipher: [
-        'aes128-gcm@openssh.com',
-        'aes256-gcm@openssh.com',
-        'aes128-ctr',
-        'aes192-ctr',
-        'aes256-ctr'
-      ],
-      compress: ['none']
-    };
   }
+
+  connectConfig.algorithms = buildSshAlgorithms(config);
 
   if (config.privateKey && String(config.privateKey).trim()) {
     connectConfig.privateKey = config.privateKey;
@@ -210,6 +327,10 @@ function appendForwardingFlagsToCacheKey(cacheKey, config) {
     nextKey = `${nextKey}|hostkey:${policy}`;
   }
 
+  if (isLegacyCompatibility(config)) {
+    nextKey = `${nextKey}|legacy:1`;
+  }
+
   return nextKey;
 }
 
@@ -232,6 +353,9 @@ function getBastionForwardingWarning(config) {
 
 module.exports = {
   isWallixBastion,
+  isLegacyCompatibility,
+  buildSshAlgorithms,
+  PQC_KEX_ALGORITHMS,
   normalizeHostKeyPolicy,
   isProxyJumpEnabled,
   applyHostKeyPolicy,

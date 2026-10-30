@@ -534,7 +534,8 @@ export const useConnectionManagement = ({
         jumpAuthMethod: isSidebarNode ? (nodeOrConn.data.jumpAuthMethod || 'password') : (vault.jumpAuthMethod || 'password'),
         jumpPassword,
         jumpPrivateKey,
-        hostKeyPolicy: isSidebarNode ? (nodeOrConn.data.hostKeyPolicy || 'warn_new') : (vault.hostKeyPolicy || nodeOrConn.hostKeyPolicy || 'warn_new')
+        hostKeyPolicy: isSidebarNode ? (nodeOrConn.data.hostKeyPolicy || 'warn_new') : (vault.hostKeyPolicy || nodeOrConn.hostKeyPolicy || 'warn_new'),
+        legacyCompatibility: !!(isSidebarNode ? nodeOrConn.data.legacyCompatibility : (vault.legacyCompatibility || nodeOrConn.legacyCompatibility))
       };
       const newTab = {
         key: tabId,

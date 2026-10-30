@@ -655,7 +655,8 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               jumpAuthMethod: node.data?.jumpAuthMethod || 'password',
               jumpPassword: node.data?.jumpPassword || '',
               jumpPrivateKey: node.data?.jumpPrivateKey || '',
-              hostKeyPolicy: node.data?.hostKeyPolicy || 'warn_new'
+              hostKeyPolicy: node.data?.hostKeyPolicy || 'warn_new',
+              legacyCompatibility: !!node.data?.legacyCompatibility
             };
             const newTab = {
               key: tabId,

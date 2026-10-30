@@ -1,6 +1,7 @@
 /**
  * Encoding de campos binarios del vault AES-GCM (salt/iv/data).
- * v2: base64 strings. Legacy: number[] (Array.from).
+ * v2: base64 strings (soporta kdf/iterations opcionales para PBKDF2-SHA512 post-cuántico).
+ * Legacy: number[] (Array.from).
  *
  * Sin Buffer/require: este módulo se embebe en el bundle del renderer (webpack).
  */
@@ -36,16 +37,19 @@ function fieldToBytes(field) {
 
 /**
  * Empaqueta un objeto cifrado en formato v2 (base64).
- * @param {{ salt: Uint8Array|number[]|string, iv: Uint8Array|number[]|string, data: Uint8Array|number[]|string, timestamp?: number }} parts
+ * @param {{ salt: Uint8Array|number[]|string, iv: Uint8Array|number[]|string, data: Uint8Array|number[]|string, timestamp?: number, kdf?: string, iterations?: number }} parts
  */
 function toEncryptedV2(parts) {
-  return {
+  const out = {
     v: 2,
     salt: typeof parts.salt === 'string' ? parts.salt : bytesToBase64(parts.salt),
     iv: typeof parts.iv === 'string' ? parts.iv : bytesToBase64(parts.iv),
     data: typeof parts.data === 'string' ? parts.data : bytesToBase64(parts.data),
     timestamp: parts.timestamp != null ? parts.timestamp : Date.now()
   };
+  if (parts.kdf) out.kdf = parts.kdf;
+  if (typeof parts.iterations === 'number' && parts.iterations > 0) out.iterations = parts.iterations;
+  return out;
 }
 
 /**
@@ -91,8 +95,8 @@ function vaultPayloadsEquivalent(a, b) {
 function createDerivedKeyCache() {
   const map = new Map();
   return {
-    async getOrDerive(password, saltBytes, iterations, deriveFn) {
-      const cacheKey = `${iterations}:${bytesToBase64(saltBytes)}:${password}`;
+    async getOrDerive(password, saltBytes, iterations, deriveFn, hash = 'SHA-256') {
+      const cacheKey = `${hash}:${iterations}:${bytesToBase64(saltBytes)}:${password}`;
       if (map.has(cacheKey)) {
         return map.get(cacheKey);
       }

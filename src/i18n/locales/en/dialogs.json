@@ -47,6 +47,8 @@
       "agentForwardingDescription": "Lets the remote server use your local SSH keys",
       "autoRecording": "Automatic recording",
       "autoRecordingDescription": "Automatically records this SSH session when connecting",
+      "legacyCompatibility": "Legacy compatibility mode",
+      "legacyCompatibilityDescription": "Disables Post-Quantum (PQC) algorithms and enables legacy ciphers (SHA-1, CBC, 3DES) for old routers, switches or legacy servers",
       "proxyJump": "ProxyJump",
       "proxyJumpDescription": "Connect to the destination through a standard SSH jump host",
       "hostKeyPolicy": "Host key policy",

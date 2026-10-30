@@ -39,6 +39,7 @@ export function NewSSHConnectionDialog({
   sshJumpPassword = '', setSSHJumpPassword = () => {},
   sshJumpPrivateKey = '', setSSHJumpPrivateKey = () => {},
   sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
+  sshLegacyCompatibility = false, setSSHLegacyCompatibility = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
@@ -71,6 +72,7 @@ export function NewSSHConnectionDialog({
       if (setSSHJumpPassword) setSSHJumpPassword('');
       if (setSSHJumpPrivateKey) setSSHJumpPrivateKey('');
       if (setSSHHostKeyPolicy) setSSHHostKeyPolicy('warn_new');
+      if (setSSHLegacyCompatibility) setSSHLegacyCompatibility(false);
       if (setSSHDescription) setSSHDescription('');
       if (setSSHIcon) setSSHIcon(null);
       if (setSSHAuthMethod) setSSHAuthMethod('password');
@@ -82,7 +84,7 @@ export function NewSSHConnectionDialog({
     setSSHTargetFolder, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding,
     setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser,
     setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy,
-    setSSHDescription, setSSHIcon, setSSHAuthMethod, setSSHPrivateKey
+    setSSHLegacyCompatibility, setSSHDescription, setSSHIcon, setSSHAuthMethod, setSSHPrivateKey
   ]);
 
   const currentIconPreset = useMemo(() => resolveSSHIconPreset(sshIcon), [sshIcon]);
@@ -171,6 +173,8 @@ export function NewSSHConnectionDialog({
           setSSHJumpPrivateKey={setSSHJumpPrivateKey}
           sshHostKeyPolicy={sshHostKeyPolicy}
           setSSHHostKeyPolicy={setSSHHostKeyPolicy}
+          sshLegacyCompatibility={sshLegacyCompatibility}
+          setSSHLegacyCompatibility={setSSHLegacyCompatibility}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
           foldersOptions={foldersOptions}

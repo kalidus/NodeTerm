@@ -95,6 +95,8 @@ const DialogsManager = ({
   setSSHJumpPrivateKey,
   sshHostKeyPolicy,
   setSSHHostKeyPolicy,
+  sshLegacyCompatibility,
+  setSSHLegacyCompatibility,
   sshDescription,
   setSSHDescription,
   sshIcon,
@@ -141,6 +143,8 @@ const DialogsManager = ({
   setEditSSHJumpPrivateKey,
   editSSHHostKeyPolicy,
   setEditSSHHostKeyPolicy,
+  editSSHLegacyCompatibility,
+  setEditSSHLegacyCompatibility,
   editSSHDescription,
   setEditSSHDescription,
   editSSHIcon,
@@ -681,6 +685,8 @@ const DialogsManager = ({
         setSSHJumpPrivateKey={setSSHJumpPrivateKey}
         sshHostKeyPolicy={sshHostKeyPolicy}
         setSSHHostKeyPolicy={setSSHHostKeyPolicy}
+        sshLegacyCompatibility={sshLegacyCompatibility}
+        setSSHLegacyCompatibility={setSSHLegacyCompatibility}
         sshDescription={sshDescription}
         setSSHDescription={setSSHDescription}
         sshIcon={sshIcon}
@@ -751,6 +757,8 @@ const DialogsManager = ({
         setSSHJumpPrivateKey={editSSHNode ? setEditSSHJumpPrivateKey : setSSHJumpPrivateKey}
         sshHostKeyPolicy={editSSHNode ? editSSHHostKeyPolicy : sshHostKeyPolicy}
         setSSHHostKeyPolicy={editSSHNode ? setEditSSHHostKeyPolicy : setSSHHostKeyPolicy}
+        sshLegacyCompatibility={editSSHNode ? editSSHLegacyCompatibility : sshLegacyCompatibility}
+        setSSHLegacyCompatibility={editSSHNode ? setEditSSHLegacyCompatibility : setSSHLegacyCompatibility}
         sshDescription={editSSHNode ? editSSHDescription : sshDescription}
         setSSHDescription={editSSHNode ? setEditSSHDescription : setSSHDescription}
         sshIcon={editSSHIcon}

@@ -42,6 +42,7 @@ export function EditSSHConnectionDialog({
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   sshUseBastionWallix = false, setSSHUseBastionWallix = () => {},
+  sshLegacyCompatibility = false, setSSHLegacyCompatibility = () => {},
   foldersOptions = [],
   onSSHConfirm,
   sshLoading = false,
@@ -117,8 +118,11 @@ export function EditSSHConnectionDialog({
       if (setSSHUseBastionWallix && typeof setSSHUseBastionWallix === 'function') {
         setSSHUseBastionWallix(!!(editNodeData.data?.useBastionWallix || editNodeData.data?.isBastion));
       }
+      if (setSSHLegacyCompatibility && typeof setSSHLegacyCompatibility === 'function') {
+        setSSHLegacyCompatibility(!!editNodeData.data?.legacyCompatibility);
+      }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon, setSSHUseBastionWallix]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon, setSSHUseBastionWallix, setSSHLegacyCompatibility]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -205,6 +209,8 @@ export function EditSSHConnectionDialog({
             setSSHDescription={setSSHDescription}
             sshUseBastionWallix={sshUseBastionWallix}
             setSSHUseBastionWallix={setSSHUseBastionWallix}
+            sshLegacyCompatibility={sshLegacyCompatibility}
+            setSSHLegacyCompatibility={setSSHLegacyCompatibility}
             foldersOptions={foldersOptions}
             onSSHConfirm={onSSHConfirm}
             onHide={onHide}

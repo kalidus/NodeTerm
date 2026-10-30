@@ -1,8 +1,10 @@
 function buildJumpConfig(config, buildSshConnectOptions, applyHostKeyPolicy) {
+  const built = typeof buildSshConnectOptions === 'function' ? buildSshConnectOptions(config) : null;
   const jumpConfig = {
     host: config.jumpHost,
     username: config.jumpUser,
-    port: config.jumpPort || 22
+    port: config.jumpPort || 22,
+    ...(built?.connectConfig?.algorithms ? { algorithms: built.connectConfig.algorithms } : {})
   };
 
   const jumpAuthMethod = config.jumpAuthMethod || 'password';

@@ -231,7 +231,8 @@ export const useTabManagement = (toast, {
           jumpAuthMethod: vault.jumpAuthMethod || 'password',
           jumpPassword: vault.jumpPassword || '',
           jumpPrivateKey: vault.jumpPrivateKey || '',
-          hostKeyPolicy: vault.hostKeyPolicy || 'warn_new'
+          hostKeyPolicy: vault.hostKeyPolicy || 'warn_new',
+          legacyCompatibility: !!vault.legacyCompatibility
         };
 
         const sshTab = {

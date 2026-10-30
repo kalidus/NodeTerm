@@ -3,6 +3,7 @@
  */
 
 const { ipcMain } = require('electron');
+const { buildSshAlgorithms } = require('../../utils/sshConnectOptions');
 const SSH2Promise = require('ssh2-promise');
 const SftpClient = require('ssh2-sftp-client');
 const fs = require('fs');
@@ -376,7 +377,8 @@ function registerSSHHandlers(dependencies = {}) {
         username: sshConfig.bastionUser || sshConfig.user || sshConfig.username || sshConfig.sshUser,
         password: sshConfig.password || sshConfig.sshPassword,
         privateKey: sshConfig.privateKey || sshConfig.sshPrivateKey || sshConfig.privateKeyPath,
-        readyTimeout: 10000
+        readyTimeout: 10000,
+        algorithms: buildSshAlgorithms(sshConfig)
       };
 
       if (config.privateKey && typeof config.privateKey === 'string' && (config.privateKey.startsWith('/') || config.privateKey.includes(':') || config.privateKey.includes('\\'))) {
@@ -447,12 +449,7 @@ function registerSSHHandlers(dependencies = {}) {
             username: secureConfig.bastionUser,
             password: secureConfig.password,
             readyTimeout: 20000,
-            algorithms: {
-              kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-              cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-              serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-              hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-            }
+            algorithms: buildSshAlgorithms(secureConfig)
           };
           await sftp.connect(connectConfig);
           // Obtener el home real del usuario conectado
@@ -461,7 +458,7 @@ function registerSSHHandlers(dependencies = {}) {
           return { success: true, home };
         }
       } else {
-        const ssh = new SSH2Promise(secureConfig);
+        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const home = await ssh.exec('echo $HOME');
         await ssh.close();
@@ -508,12 +505,7 @@ function registerSSHHandlers(dependencies = {}) {
             username: secureConfig.bastionUser,
             password: secureConfig.password,
             readyTimeout: 20000,
-            algorithms: {
-              kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-              cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-              serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-              hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-            }
+            algorithms: buildSshAlgorithms(secureConfig)
           };
           await sftp.connect(connectConfig);
           const sftpList = await sftp.list(safePath);
@@ -552,7 +544,7 @@ function registerSSHHandlers(dependencies = {}) {
         }
       } else {
         // SSH directo: si no había conexión activa previa, crear conexión efímera con SSH2Promise
-        const ssh = new SSH2Promise(secureConfig);
+        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const escapedPath = escapeShellPath(safePath);
         const lsOutput = await ssh.exec(`ls -la --color=never "${escapedPath}"`);
@@ -601,7 +593,7 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: true, exists: cleanOutput.includes('exists') };
       } else {
         // SSH directo
-        const ssh = new SSH2Promise(secureConfig);
+        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const result = await ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
         await ssh.close();
@@ -707,12 +699,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.bastionUser,
           password: secureConfig.password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(secureConfig)
         });
         return { success: true };
       } else {
@@ -723,7 +710,8 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.username,
           password: secureConfig.password,
           readyTimeout: 30000,
-          keepaliveInterval: 10000
+          keepaliveInterval: 10000,
+          algorithms: buildSshAlgorithms(secureConfig)
         });
         return { success: true };
       }
@@ -802,12 +790,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.bastionUser,
           password: secureConfig.password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       } else {
         connectConfig = {
@@ -816,7 +799,8 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.username,
           password: secureConfig.password,
           readyTimeout: 30000,
-          keepaliveInterval: 10000
+          keepaliveInterval: 10000,
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       }
       await sftp.connect(connectConfig);
@@ -855,12 +839,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.bastionUser,
           password: secureConfig.password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       } else {
         connectConfig = {
@@ -869,6 +848,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.username,
           password: secureConfig.password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       }
 
@@ -906,12 +886,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.bastionUser,
           password: secureConfig.password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       } else {
         connectConfig = {
@@ -920,6 +895,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.username,
           password: secureConfig.password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       }
       await sftp.connect(connectConfig);
@@ -944,12 +920,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.bastionUser,
           password: secureConfig.password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       } else {
         connectConfig = {
@@ -958,6 +929,7 @@ function registerSSHHandlers(dependencies = {}) {
           username: secureConfig.username,
           password: secureConfig.password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(secureConfig)
         };
       }
       await sftp.connect(connectConfig);

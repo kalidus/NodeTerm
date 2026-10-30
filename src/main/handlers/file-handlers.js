@@ -3,6 +3,7 @@
  */
 
 const { ipcMain } = require('electron');
+const { buildSshAlgorithms } = require('../../utils/sshConnectOptions');
 const SftpClient = require('ssh2-sftp-client');
 const { Client: FTPClient } = require('basic-ftp');
 const fs = require('fs');
@@ -106,12 +107,7 @@ async function getHomeDirectory(config) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -120,6 +116,7 @@ async function getHomeDirectory(config) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -171,12 +168,7 @@ async function listFiles(config, filePath) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -185,6 +177,7 @@ async function listFiles(config, filePath) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -237,12 +230,7 @@ async function checkDirectory(config, dirPath) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -251,6 +239,7 @@ async function checkDirectory(config, dirPath) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -316,12 +305,7 @@ async function downloadFile(config, remotePath, localPath, progressCtx = null) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -330,6 +314,7 @@ async function downloadFile(config, remotePath, localPath, progressCtx = null) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -426,12 +411,7 @@ async function uploadFile(config, localPath, remotePath, progressCtx = null) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -440,6 +420,7 @@ async function uploadFile(config, localPath, remotePath, progressCtx = null) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -519,12 +500,7 @@ async function deleteFile(config, remotePath, isDirectory) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -533,6 +509,7 @@ async function deleteFile(config, remotePath, isDirectory) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -595,12 +572,7 @@ async function createDirectory(config, remotePath) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -609,6 +581,7 @@ async function createDirectory(config, remotePath) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);
@@ -660,12 +633,7 @@ async function renameFile(config, oldPath, newPath) {
           username: bastionUser,
           password: password,
           readyTimeout: 20000,
-          algorithms: {
-            kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
-            cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-            serverHostKey: ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512'],
-            hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
-          }
+          algorithms: buildSshAlgorithms(config)
         };
       } else {
         connectConfig = {
@@ -674,6 +642,7 @@ async function renameFile(config, oldPath, newPath) {
           username: username,
           password: password,
           readyTimeout: 20000,
+          algorithms: buildSshAlgorithms(config)
         };
       }
       await sftp.connect(connectConfig);

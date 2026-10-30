@@ -19,7 +19,9 @@ import { setVaultEncryptedItem } from '../shared/vault-write';
 
 class SecureStorage {
   constructor() {
-    this.iterations = 100000; // PBKDF2 iterations
+    this.iterations = 210000; // PBKDF2-SHA512 iterations (PQC hardened)
+    this.legacyIterations = 100000; // Legacy PBKDF2-SHA256 iterations
+    this.kdfHash = 'SHA-512';
     this.deviceFingerprint = null;
     this.masterKeyCache = null;
     this.sessionTimeout = 30 * 60 * 1000; // 30 minutos
@@ -80,9 +82,9 @@ class SecureStorage {
   }
 
   /**
-   * Deriva una clave criptográfica usando PBKDF2
+   * Deriva una clave criptográfica usando PBKDF2 (soporta SHA-512 post-cuántico y SHA-256 legacy)
    */
-  async deriveKey(password, salt, iterations = this.iterations) {
+  async deriveKey(password, salt, iterations = this.iterations, hash = this.kdfHash) {
     return this._derivedKeyCache.getOrDerive(password, salt, iterations, async () => {
       const enc = new TextEncoder();
       const keyMaterial = await window.crypto.subtle.importKey(
@@ -98,25 +100,39 @@ class SecureStorage {
           name: 'PBKDF2',
           salt: salt,
           iterations: iterations,
-          hash: 'SHA-256'
+          hash: hash
         },
         keyMaterial,
         { name: 'AES-GCM', length: 256 },
         false,
         ['encrypt', 'decrypt']
       );
-    });
+    }, hash);
   }
 
   /**
-   * Cifra datos usando AES-GCM
+   * Resuelve los parámetros KDF de un blob cifrado (retrocompatible con blobs sin metadatos KDF)
+   */
+  resolveKdfParams(encryptedObj) {
+    const isSha512 = encryptedObj?.kdf === 'pbkdf2-sha512';
+    const hash = isSha512 ? 'SHA-512' : 'SHA-256';
+    const defaultIter = isSha512 ? this.iterations : this.legacyIterations;
+    const iterations =
+      typeof encryptedObj?.iterations === 'number' && encryptedObj.iterations > 0
+        ? encryptedObj.iterations
+        : defaultIter;
+    return { hash, iterations };
+  }
+
+  /**
+   * Cifra datos usando AES-GCM 256-bit y PBKDF2-HMAC-SHA512
    */
   async encryptData(data, password) {
     const enc = new TextEncoder();
-    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const salt = window.crypto.getRandomValues(new Uint8Array(32));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    const key = await this.deriveKey(password, salt);
+    const key = await this.deriveKey(password, salt, this.iterations, this.kdfHash);
     const jsonData = JSON.stringify(data);
 
     const encrypted = await window.crypto.subtle.encrypt(
@@ -129,18 +145,21 @@ class SecureStorage {
       salt,
       iv,
       data: new Uint8Array(encrypted),
+      kdf: 'pbkdf2-sha512',
+      iterations: this.iterations,
       timestamp: Date.now()
     });
   }
 
   /**
-   * Descifra datos usando AES-GCM (v2 base64 o legacy number[])
+   * Descifra datos usando AES-GCM (v2 base64 PQC SHA-512, v2 SHA-256 o legacy number[])
    */
   async decryptData(encryptedObj, password) {
     const dec = new TextDecoder();
     const { salt, iv, data } = decodeEncryptedFields(encryptedObj);
+    const { hash, iterations } = this.resolveKdfParams(encryptedObj);
 
-    const key = await this.deriveKey(password, salt);
+    const key = await this.deriveKey(password, salt, iterations, hash);
 
     const decrypted = await window.crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: iv },
@@ -166,14 +185,14 @@ class SecureStorage {
   }
 
   /**
-   * Crea un verificador criptográfico (PBKDF2 + AES-GCM) sin persistir la clave en texto plano
+   * Crea un verificador criptográfico (PBKDF2-SHA512 + AES-GCM) sin persistir la clave en texto plano
    */
   async createVaultVerifier(password) {
     const enc = new TextEncoder();
-    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const salt = window.crypto.getRandomValues(new Uint8Array(32));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    const key = await this.deriveKey(password, salt);
+    const key = await this.deriveKey(password, salt, this.iterations, this.kdfHash);
     const payload = JSON.stringify({ check: 'nodeterm-vault-ok', v: 2, timestamp: Date.now() });
 
     const encrypted = await window.crypto.subtle.encrypt(
@@ -186,6 +205,8 @@ class SecureStorage {
       salt,
       iv,
       data: new Uint8Array(encrypted),
+      kdf: 'pbkdf2-sha512',
+      iterations: this.iterations,
       timestamp: Date.now()
     });
   }
@@ -200,8 +221,9 @@ class SecureStorage {
     try {
       const dec = new TextDecoder();
       const { salt, iv, data } = decodeEncryptedFields(verifier);
+      const { hash, iterations } = this.resolveKdfParams(verifier);
 
-      const key = await this.deriveKey(password, salt);
+      const key = await this.deriveKey(password, salt, iterations, hash);
       const decrypted = await window.crypto.subtle.decrypt(
         { name: 'AES-GCM', iv: iv },
         key,

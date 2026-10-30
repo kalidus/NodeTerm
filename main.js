@@ -2480,8 +2480,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
     const bastionConfig = {
       bastionHost: config.bastionHost,
-      port: 22,
-      bastionUser: config.bastionUser
+      port: config.port || 22,
+      bastionUser: config.bastionUser,
+      useBastionWallix: true,
+      legacyCompatibility: !!config.legacyCompatibility
     };
 
     // Si hay password, usarlo. Si no, permitir autenticación interactiva
@@ -3130,9 +3132,11 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
       if (newConfig.useBastionWallix) {
         const bastionConfig = {
           bastionHost: newConfig.bastionHost,
-          port: 22,
+          port: newConfig.port || 22,
           bastionUser: newConfig.bastionUser,
-          password: password
+          password: password,
+          useBastionWallix: true,
+          legacyCompatibility: !!newConfig.legacyCompatibility
         };
 
         const { conn: newBastionConn } = createBastionShell(

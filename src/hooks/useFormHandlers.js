@@ -45,7 +45,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -56,7 +56,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHDescription, setEditSSHDescription,
+  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, setEditSSHLegacyCompatibility, editSSHDescription, setEditSSHDescription,
   editSSHIcon, setEditSSHIcon,
   editSSHAuthMethod, setEditSSHAuthMethod,
   editSSHPrivateKey, setEditSSHPrivateKey,
@@ -325,6 +325,7 @@ export const useFormHandlers = ({
         jumpPassword: proxyJumpState.active && sshJumpAuthMethod !== 'key' ? sshJumpPassword.trim() : '',
         jumpPrivateKey: proxyJumpState.active && sshJumpAuthMethod === 'key' ? sshJumpPrivateKey.trim() : '',
         hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (sshHostKeyPolicy || 'warn_new'),
+        legacyCompatibility: !!sshLegacyCompatibility,
         // Descripción de la conexión
         description: sshDescription || '',
         customIcon: sshIcon && sshIcon !== 'default' ? sshIcon : null
@@ -358,7 +359,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -792,6 +793,7 @@ export const useFormHandlers = ({
         jumpPassword: proxyJumpState.active && editSSHJumpAuthMethod !== 'key' ? editSSHJumpPassword.trim() : '',
         jumpPrivateKey: proxyJumpState.active && editSSHJumpAuthMethod === 'key' ? editSSHJumpPrivateKey.trim() : '',
         hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (editSSHHostKeyPolicy || 'warn_new'),
+        legacyCompatibility: !!editSSHLegacyCompatibility,
         // Descripción de la conexión
         description: editSSHDescription || '',
         // Icono personalizado (tratar 'default' como null para usar el icono del tema)
@@ -845,7 +847,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
    * Guardar SSH en sidebar desde tab
@@ -873,6 +875,7 @@ export const useFormHandlers = ({
     const jumpPassword = sshData.jumpPassword || '';
     const jumpPrivateKey = sshData.jumpPrivateKey || '';
     const hostKeyPolicy = sshData.hostKeyPolicy || 'warn_new';
+    const legacyCompatibility = !!sshData.legacyCompatibility;
     const description = sshData.description || '';
     const customIcon = sshData.customIcon || null;
     const targetFolder = sshData.targetFolder || null;
@@ -972,6 +975,7 @@ export const useFormHandlers = ({
           jumpPassword: proxyJumpState.active && jumpAuthMethod !== 'key' ? jumpPassword.trim() : '',
           jumpPrivateKey: proxyJumpState.active && jumpAuthMethod === 'key' ? jumpPrivateKey.trim() : '',
           hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (hostKeyPolicy || 'warn_new'),
+          legacyCompatibility,
           description,
           customIcon: customIcon && customIcon !== 'default' ? customIcon : null
         };
@@ -1034,6 +1038,7 @@ export const useFormHandlers = ({
           jumpPassword: proxyJumpState.active && jumpAuthMethod !== 'key' ? jumpPassword.trim() : '',
           jumpPrivateKey: proxyJumpState.active && jumpAuthMethod === 'key' ? jumpPrivateKey.trim() : '',
           hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (hostKeyPolicy || 'warn_new'),
+          legacyCompatibility,
           description: description || '',
           customIcon: customIcon && customIcon !== 'default' ? customIcon : null
         },
@@ -1252,6 +1257,7 @@ export const useFormHandlers = ({
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHPort(node.data?.port || 22);
     setEditSSHDescription(node.data?.description || '');
+    if (setEditSSHLegacyCompatibility) setEditSSHLegacyCompatibility(!!node.data?.legacyCompatibility);
     // Cargar icono personalizado si existe
     if (setEditSSHIcon) setEditSSHIcon(node.data?.customIcon || null);
     if (setSSHTargetFolder && findParentNodeAndIndex) {
@@ -1260,7 +1266,7 @@ export const useFormHandlers = ({
     }
     // Usar el diálogo unificado en modo edición SSH
     setShowUnifiedConnectionDialog(true);
-  }, [nodes, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHPrivateKey, setEditSSHAuthMethod, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, findParentNodeAndIndex, setShowUnifiedConnectionDialog]);
+  }, [nodes, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHPrivateKey, setEditSSHAuthMethod, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHLegacyCompatibility, setEditSSHIcon, setSSHTargetFolder, findParentNodeAndIndex, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)

@@ -45,6 +45,7 @@ export function EnhancedSSHForm({
   sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshUseBastionWallix = false, setSSHUseBastionWallix = () => {},
+  sshLegacyCompatibility = false, setSSHLegacyCompatibility = () => {},
   foldersOptions = [],
   onSSHConfirm,
   onHide,
@@ -486,6 +487,20 @@ export function EnhancedSSHForm({
               <InputSwitch
                 checked={!!sshUseBastionWallix}
                 onChange={(e) => setSSHUseBastionWallix(e.value)}
+                className="terminal-switch"
+              />
+            </div>
+
+            <div className="terminal-option-item">
+              <div className="flex align-items-center">
+                <i className="pi pi-history terminal-option-icon"></i>
+                <span className="terminal-option-text">{t('ssh.auth.legacyCompatibility')}</span>
+                <TerminalOptionHelp text={t('ssh.auth.legacyCompatibilityDescription')} />
+              </div>
+              <div className="terminal-dotted-spacer"></div>
+              <InputSwitch
+                checked={!!sshLegacyCompatibility}
+                onChange={(e) => setSSHLegacyCompatibility(e.value)}
                 className="terminal-switch"
               />
             </div>
@@ -934,6 +949,19 @@ export function EnhancedSSHForm({
                 <i className="pi pi-desktop hud-badge-icon"></i>
                 <span className="hud-badge-label">Gráficos X11:</span>
                 <span className="hud-badge-value">{sshX11Forwarding ? 'SÍ' : 'NO'}</span>
+              </div>
+
+              {/* Modo compatibilidad legacy */}
+              <div 
+                className={`hud-badge-pill ${sshLegacyCompatibility ? 'active' : ''}`}
+                onClick={() => {
+                  setSSHLegacyCompatibility(!sshLegacyCompatibility);
+                  setStatusMessage(`Modo compatibilidad legacy: ${!sshLegacyCompatibility ? 'Activado (algoritmos clásicos)' : 'Desactivado (PQC automático)'}`);
+                }}
+              >
+                <i className="pi pi-history hud-badge-icon"></i>
+                <span className="hud-badge-label">{t('ssh.auth.legacyCompatibility')}:</span>
+                <span className="hud-badge-value">{sshLegacyCompatibility ? 'SÍ' : 'NO'}</span>
               </div>
             </div>
           </div>
@@ -1404,6 +1432,20 @@ export function EnhancedSSHForm({
                     <InputSwitch
                       checked={!!sshUseBastionWallix}
                       onChange={(e) => setSSHUseBastionWallix(e.value)}
+                      className="terminal-switch"
+                    />
+                  </div>
+
+                  <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
+                    <div className="flex align-items-center">
+                      <i className="pi pi-history terminal-option-icon"></i>
+                      <span className="terminal-option-text">{t('ssh.auth.legacyCompatibility')}</span>
+                      <TerminalOptionHelp text={t('ssh.auth.legacyCompatibilityDescription')} />
+                    </div>
+                    <div className="terminal-dotted-spacer"></div>
+                    <InputSwitch
+                      checked={!!sshLegacyCompatibility}
+                      onChange={(e) => setSSHLegacyCompatibility(e.value)}
                       className="terminal-switch"
                     />
                   </div>
