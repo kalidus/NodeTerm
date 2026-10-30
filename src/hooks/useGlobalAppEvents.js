@@ -882,12 +882,28 @@ export const useGlobalAppEvents = ({
     const handleCreateOpenClawTab = (event) => insertPinnedTab(event.detail?.tab);
     const handleCreateOpenNotebookTab = (event) => insertPinnedTab(event.detail?.tab);
 
+    const handleCreateRecordingPlayerTab = (event) => {
+      const recording = event.detail?.recording;
+      if (!recording?.id) return;
+      const tabId = `player_${recording.id}_${Date.now()}`;
+      const label = recording.sessionName || recording.title || recording.metadata?.title || 'Reproducción';
+      insertPinnedTab({
+        key: tabId,
+        label: `▶️ ${label}`,
+        type: 'recording-player',
+        recording,
+        createdAt: Date.now(),
+        groupId: null
+      });
+    };
+
     window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
     window.addEventListener('create-librechat-tab', handleCreateLibreChatTab);
     window.addEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
     window.addEventListener('create-openclaw-tab', handleCreateOpenClawTab);
     window.addEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
+    window.addEventListener('create-recording-player-tab', handleCreateRecordingPlayerTab);
 
     return () => {
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
@@ -898,6 +914,7 @@ export const useGlobalAppEvents = ({
       window.removeEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
       window.removeEventListener('create-openclaw-tab', handleCreateOpenClawTab);
       window.removeEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
+      window.removeEventListener('create-recording-player-tab', handleCreateRecordingPlayerTab);
     };
   }, [
     nodes,

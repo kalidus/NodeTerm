@@ -170,6 +170,19 @@ export const HOME_WIDGETS = [
     minHeight: 280,
     defaultWidth: 720,
     defaultHeight: 480
+  },
+  {
+    id: 'recordings',
+    title: 'Grabaciones',
+    path: 'recordings',
+    icon: 'pi pi-video',
+    required: false,
+    group: 'extra',
+    defaultVisible: false,
+    minWidth: 280,
+    minHeight: 180,
+    defaultWidth: 380,
+    defaultHeight: 340
   }
 ];
 

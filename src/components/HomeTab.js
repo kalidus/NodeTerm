@@ -47,6 +47,7 @@ import {
   getCurrentDisplayKey,
   getLayoutForCurrentDisplay,
   getLayoutForDisplay,
+  getMonitorLayoutsMap,
   saveLayoutForCurrentDisplay,
   saveLayoutForDisplay,
   ensureRequiredHomeTerminal
@@ -56,6 +57,46 @@ import { allocHomePanelZ } from '../utils/homePanelStack';
 import HomeOptionsOverlay from './home/HomeOptionsOverlay';
 import TerminalFrameStyleOption from './TerminalFrameStyleOption';
 import { useHomeWallpaper } from '../utils/homeWallpaper';
+
+function layoutHasPanel(layout, panelId) {
+  return !!(layout && layout[panelId] && typeof layout[panelId] === 'object');
+}
+
+function monitorLayoutHasPanel(panelId) {
+  try {
+    const map = getMonitorLayoutsMap();
+    const key = getCurrentDisplayKey();
+    if (layoutHasPanel(map[key], panelId)) return true;
+    const legacy = String(key).split('@')[0];
+    return !!(legacy && layoutHasPanel(map[legacy], panelId));
+  } catch {
+    return false;
+  }
+}
+
+function placeIntroRecordingsPanel(layout, canvasW, canvasH) {
+  const w = canvasW > 100 ? canvasW : 1200;
+  const h = canvasH > 100 ? canvasH : 800;
+  const pad = 16;
+  const width = Math.min(380, Math.max(280, w - pad * 2));
+  const height = Math.min(340, Math.max(180, h - pad * 2));
+  return {
+    ...layout,
+    recordings: {
+      ...(layout.recordings || {}),
+      visible: true,
+      x: Math.max(pad, w - width - pad),
+      y: pad,
+      width,
+      height,
+      minWidth: 280,
+      minHeight: 180,
+      zIndex: 30,
+      isMaximized: false,
+      isMinimized: false
+    }
+  };
+}
 
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
   const w = cWidth > 100 ? cWidth : 1200;
@@ -176,6 +217,7 @@ const computeAutoOrganizeLayout = (currentLayout, width, height) => {
   if (next.vault && next.vault.visible) activeSecondary.push('vault');
   if (next.notes && next.notes.visible) activeSecondary.push('notes');
   if (next.groups && next.groups.visible) activeSecondary.push('groups');
+  if (next.recordings && next.recordings.visible) activeSecondary.push('recordings');
 
   const count = activeSecondary.length;
 
@@ -489,19 +531,21 @@ const HomeTab = ({
       const savedRaw = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
       const defaults = computeDefaultPanelsLayout();
       const saved = savedRaw ? JSON.parse(savedRaw) : null;
+      const introduceRecordings = !layoutHasPanel(saved, 'recordings') && !monitorLayoutHasPanel('recordings');
       const base = saved ? { ...defaults, ...saved } : defaults;
       const displayLayout = getLayoutForCurrentDisplay(base);
       const merged = preserveShowingPanels(base, { ...defaults, ...displayLayout });
       const canvas = getLayoutCanvasSize(merged)
         || getLayoutCanvasSize(saved)
         || getLayoutCanvasSize(displayLayout);
-      const loaded = ensureRequiredHomeTerminal(
-        ensureHomeWidgetLayout(
-          merged,
-          canvas?.width || defaults.canvasWidth,
-          canvas?.height || defaults.canvasHeight
-        )
+      const canvasW = canvas?.width || defaults.canvasWidth;
+      const canvasH = canvas?.height || defaults.canvasHeight;
+      let loaded = ensureRequiredHomeTerminal(
+        ensureHomeWidgetLayout(merged, canvasW, canvasH)
       );
+      if (introduceRecordings) {
+        loaded = placeIntroRecordingsPanel(loaded, loaded.canvasWidth || canvasW, loaded.canvasHeight || canvasH);
+      }
       authoredLayoutRef.current = loaded;
       return loaded;
     } catch (e) {

@@ -623,6 +623,7 @@ export const useTabManagement = (toast, {
             .then(result => {
               if (result?.success && result.recordingId) {
                 console.log(`📹 Grabación detenida al cerrar split izquierdo: ${result.recordingId}`);
+                window.dispatchEvent(new CustomEvent('refresh-audit-tab'));
               }
             })
             .catch(error => {
@@ -642,6 +643,7 @@ export const useTabManagement = (toast, {
             .then(result => {
               if (result?.success && result.recordingId) {
                 console.log(`📹 Grabación detenida al cerrar split derecho: ${result.recordingId}`);
+                window.dispatchEvent(new CustomEvent('refresh-audit-tab'));
               }
             })
             .catch(error => {
@@ -664,6 +666,7 @@ export const useTabManagement = (toast, {
             .then(result => {
               if (result?.success && result.recordingId) {
                 console.log(`📹 Grabación detenida al cerrar pestaña: ${result.recordingId}`);
+                window.dispatchEvent(new CustomEvent('refresh-audit-tab'));
               }
             })
             .catch(error => {

@@ -691,3 +691,91 @@
 .home-wallpaper-notice {
   font-size: 0.74rem;
 }
+
+.home-recordings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.home-recordings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 2px;
+  flex-shrink: 0;
+}
+
+.home-recordings-count {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Fira Code', Consolas, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.home-recordings-tool {
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  background: rgba(168, 85, 247, 0.08);
+  color: inherit;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.home-recordings-tool:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(192, 132, 252, 0.55);
+}
+
+.home-recordings-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.home-recordings-tool.is-primary {
+  color: #e9d5ff;
+}
+
+.home-recordings-row {
+  border-left: 2px solid var(--tile-color, #c084fc);
+}
+
+.home-recordings-play {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  background: color-mix(in srgb, var(--tile-color, #c084fc) 78%, #111);
+  opacity: 0.72;
+  padding: 0;
+}
+
+.home-recordings-play .pi {
+  font-size: 0.62rem;
+  margin-left: 1px;
+}
+
+.home-recordings-row:hover .home-recordings-play,
+.home-recordings-play:focus-visible {
+  opacity: 1;
+}
+
+.home-recordings-hint {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  opacity: 0.8;
+}

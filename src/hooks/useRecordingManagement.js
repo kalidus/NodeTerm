@@ -97,6 +97,10 @@ export const useRecordingManagement = (toast) => {
           life: 4000
         });
 
+        if (result.recordingId) {
+          window.dispatchEvent(new CustomEvent('refresh-audit-tab'));
+        }
+
         return { success: true, ...result };
       } else {
         throw new Error(result.error || 'Error desconocido');
