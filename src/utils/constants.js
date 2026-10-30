@@ -68,6 +68,7 @@ export const TAB_TYPES = {
   DOCUMENT_FOLDER: 'document-folder',
   LIBRARY_FILE: 'library-file',
   NETWORK_TOOL: 'network-tool',
+  FORENSICS: 'forensics',
   SETTINGS: 'settings',
   BROWSER: 'browser'
 };

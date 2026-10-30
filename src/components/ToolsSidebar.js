@@ -85,6 +85,7 @@ const ToolsSidebar = ({
       case 'web': return '#f59e0b';
       case 'vulnerabilities': return '#ef4444';
       case 'local': return '#8b5cf6';
+      case 'forensics': return '#ef4444';
       default: return '#5e81ac';
     }
   }, [themePalette]);

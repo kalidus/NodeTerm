@@ -47,6 +47,7 @@ const VALID_LISTENER_CHANNELS = [
   /^opennotebook:.*$/,
   /^updater-event$/,
   /^network-tools:.*$/,
+  /^forensics:.*$/,
   /^system:.*$/, // Eventos de suspensión/reanudación del sistema
   /^ssh-tunnel:.*$/, // Eventos de túneles SSH
   /^terminal:.*$/,
@@ -400,6 +401,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^hermescli:.*$/,
         /^recording:.*$/,
         /^network-tools:.*$/,
+        /^forensics:.*$/,
         /^ssh-tunnel:.*$/,
         /^theme:.*$/,
         /^security:.*$/,

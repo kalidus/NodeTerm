@@ -935,6 +935,12 @@ export const useGlobalAppEvents = ({
       const { toolId, toolLabel } = event.detail || {};
       if (!toolId) return;
       const mode = event.detail?.mode === 'new' ? 'new' : 'reuse';
+
+      // La herramienta forense tiene su propio tipo de pestaña
+      if (toolId === 'forensics-dfir') {
+        window.dispatchEvent(new CustomEvent('open-forensics-tab', { detail: { mode } }));
+        return;
+      }
       const label = toolLabel || toolId;
 
       const applyToolToTab = (tabKey) => {
@@ -999,6 +1005,55 @@ export const useGlobalAppEvents = ({
       window.removeEventListener('open-network-tool', handleOpenNetworkTool);
     };
   }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously, filteredTabs, activeTabIndex]);
+
+  // 15b. Abrir herramienta forense (DFIR) como pestaña propia
+  useEffect(() => {
+    const handleOpenForensicsTab = (event) => {
+      const detail = event?.detail || {};
+      const mode = detail.mode === 'new' ? 'new' : 'reuse';
+      const target = detail.target || null;
+      const label = target?.label ? `Forense: ${target.label}` : 'Análisis forense';
+
+      const createNewTab = () => {
+        const tabId = `forensics-${Date.now()}`;
+        const newTab = {
+          key: tabId,
+          label,
+          type: TAB_TYPES.FORENSICS,
+          initialTarget: target,
+          targetNonce: Date.now(),
+          groupId: null,
+          createdAt: Date.now()
+        };
+        promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
+      };
+
+      if (mode === 'new') {
+        createNewTab();
+        return;
+      }
+
+      const existing = getAllTabs().find(t => t.type === TAB_TYPES.FORENSICS);
+      if (existing) {
+        if (target) {
+          promoteAndActivateTab(existing.key, (prev) =>
+            prev.map(t => t.key === existing.key
+              ? { ...t, label, initialTarget: target, targetNonce: Date.now() }
+              : t)
+          );
+        } else {
+          activateTabSynchronously(existing.key);
+        }
+        return;
+      }
+      createNewTab();
+    };
+
+    window.addEventListener('open-forensics-tab', handleOpenForensicsTab);
+    return () => {
+      window.removeEventListener('open-forensics-tab', handleOpenForensicsTab);
+    };
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
 
   // 16. Abrir configuración como pestaña
   useEffect(() => {

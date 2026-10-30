@@ -2225,7 +2225,7 @@ const MainContentArea = ({
                             opacity: isActiveTab ? 1 : 0,
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
-                            background: ((tab.type === TAB_TYPES.HOME || tab.type === 'edit-connection' || tab.type === TAB_TYPES.NETWORK_TOOL || tab.type === 'network-tool' || tab.type === TAB_TYPES.SETTINGS || tab.type === 'settings') && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'
+                            background: ((tab.type === TAB_TYPES.HOME || tab.type === 'edit-connection' || tab.type === TAB_TYPES.NETWORK_TOOL || tab.type === 'network-tool' || tab.type === TAB_TYPES.FORENSICS || tab.type === 'forensics' || tab.type === TAB_TYPES.SETTINGS || tab.type === 'settings') && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'
                           }}
                         >
                           <TabContentRenderer

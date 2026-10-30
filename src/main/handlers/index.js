@@ -27,6 +27,7 @@ let _nextcloudHandlers = null;
 let _fileHandlers = null;
 let _networkToolsHandlers = null;
 let _sshTunnelHandlers = null;
+let _forensicsHandlers = null;
 let _themeHandlers = null;
 let _securityHandlers = null;
 let _appdataHandlers = null;
@@ -147,6 +148,11 @@ function getFileHandlers() {
 function getNetworkToolsHandlers() {
   if (!_networkToolsHandlers) _networkToolsHandlers = require('./network-tools-handlers');
   return _networkToolsHandlers;
+}
+
+function getForensicsHandlers() {
+  if (!_forensicsHandlers) _forensicsHandlers = require('./forensics-handlers');
+  return _forensicsHandlers;
 }
 
 function getSSHTunnelHandlers() {
@@ -328,6 +334,8 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('platform terminal IPC', () => getPlatformTerminalHandlers().registerPlatformTerminalHandlers(dependencies));
   // UI llama updater:get-info al montar; debe estar antes de cargar el renderer
   runHandlerStep('updater IPC', () => getUpdaterHandlers().registerUpdaterHandlers(dependencies));
+  // Forense (DFIR): accesible desde Home/Tools desde el primer frame; no esperar a secondary
+  runHandlerStep('forensics IPC', () => getForensicsHandlers().registerForensicsHandlers(dependencies));
 }
 
 /**
@@ -355,6 +363,8 @@ function registerSecondaryHandlers(dependencies) {
 
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
+
+  // NOTA: Handlers forenses (DFIR) en registerCriticalHandlers()
 
   // Handlers de MCP API (servidor HTTP local)
   getMcpApiHandlers().registerMcpApiHandlers();
@@ -448,6 +458,7 @@ module.exports = {
   getNextcloudHandlers,
   getFileHandlers,
   getNetworkToolsHandlers,
+  getForensicsHandlers,
   getSSHTunnelHandlers,
   getThemeHandlers,
   getSecurityHandlers,

@@ -44,6 +44,15 @@ export const DOCK_ACTIONS = [
     group: 'connect'
   },
   {
+    id: 'forensics',
+    label: 'Analisis forense',
+    icon: 'pi pi-search',
+    color: '#ef4444',
+    keywords: 'forense dfir incidente compromiso triage ioc mitre hacking vulnerado',
+    event: 'open-forensics-tab',
+    group: 'connect'
+  },
+  {
     id: 'local-terminal',
     label: 'Terminal local',
     icon: 'pi pi-desktop',

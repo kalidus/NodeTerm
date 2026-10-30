@@ -591,6 +591,10 @@ const TabHeader = React.memo(({
         <AIClientBrandIcon tabType="open-notebook" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
 
+      {tab.type === 'forensics' && (
+        <i className="pi pi-search" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ef4444', flexShrink: 0 }}></i>
+      )}
+
       {/* Icono específico para herramientas de red */}
       {tab.type === 'network-tool' && (() => {
         const toolsMap = {

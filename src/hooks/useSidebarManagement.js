@@ -888,6 +888,25 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
       items.push({
+        label: 'Análisis forense',
+        icon: 'pi pi-search',
+        command: () => {
+          const d = node.data || {};
+          // Se envía solo host/puerto/usuario: las credenciales se piden en la herramienta
+          window.dispatchEvent(new CustomEvent('open-forensics-tab', {
+            detail: {
+              mode: 'reuse',
+              target: {
+                label: node.label,
+                host: d.host || d.hostname,
+                port: d.port || 22,
+                username: d.user || d.username
+              }
+            }
+          }));
+        }
+      });
+      items.push({
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {

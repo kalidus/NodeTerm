@@ -47,6 +47,7 @@ export const LazyOpenClawTab = lazy(() => getChunk('OpenClawTab', () => import('
 export const LazyOpenNotebookTab = lazy(() => getChunk('OpenNotebookTab', () => import('./OpenNotebookTab')));
 export const LazySSHTunnelTab = lazy(() => getChunk('SSHTunnelTab', () => import('./SSHTunnelTab')));
 export const LazyNetworkToolTab = lazy(() => getChunk('NetworkToolTab', () => import('./NetworkToolTab')));
+export const LazyForensicsTab = lazy(() => getChunk('ForensicsTab', () => import('./forensics/ForensicsTab')));
 export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEditor', () => import('./TiptapDocumentEditor')));
 export const LazyLibraryFileViewer = lazy(() => getChunk('LibraryFileViewer', () => import('./library/LibraryFileViewer')));
 export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
@@ -85,6 +86,7 @@ const CHUNK_LOADERS = {
   OpenNotebookTab: () => import('./OpenNotebookTab'),
   SSHTunnelTab: () => import('./SSHTunnelTab'),
   NetworkToolTab: () => import('./NetworkToolTab'),
+  ForensicsTab: () => import('./forensics/ForensicsTab'),
   TiptapDocumentEditor: () => import('./TiptapDocumentEditor'),
   LibraryFileViewer: () => import('./library/LibraryFileViewer'),
   SettingsContent: () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent })),

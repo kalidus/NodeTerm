@@ -50,6 +50,15 @@ export const TOOL_CATEGORIES = [
     ]
   },
   {
+    id: 'forensics',
+    label: 'Forense / DFIR',
+    icon: 'pi pi-search',
+    color: '#ef4444',
+    tools: [
+      { id: 'forensics-dfir', label: 'Análisis forense', icon: 'pi pi-search', description: 'Triage y live response de hosts comprometidos (Linux, Windows, red)' }
+    ]
+  },
+  {
     id: 'local',
     label: 'Red local',
     icon: 'pi pi-server',
@@ -160,7 +169,8 @@ export const TOOL_COMPONENTS = {
   'wake-on-lan': React.lazy(() => import('./panels/WakeOnLanPanel')),
   'my-network': React.lazy(() => import('./panels/LocalHostPanel')),
   'neighbors': React.lazy(() => import('./panels/NeighborsAlias')),
-  'routes': React.lazy(() => import('./panels/RoutesAlias'))
+  'routes': React.lazy(() => import('./panels/RoutesAlias')),
+  'forensics-dfir': React.lazy(() => import('../forensics/ForensicsTab'))
 };
 
 export const DNS_RECORD_TYPES = [

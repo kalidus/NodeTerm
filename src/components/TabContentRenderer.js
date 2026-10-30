@@ -34,6 +34,7 @@ import {
   LazyOpenNotebookTab,
   LazySSHTunnelTab,
   LazyNetworkToolTab,
+  LazyForensicsTab,
   LazyTiptapDocumentEditor,
   LazyLibraryFileViewer,
   LazySettingsContent,
@@ -1794,6 +1795,11 @@ const TabContentRendererInner = React.memo(({
   // Herramienta de red (network-tool)
   if (tab.type === 'network-tool') {
     return <LazyNetworkToolTab tab={tab} />;
+  }
+
+  // Análisis forense (DFIR)
+  if (tab.type === 'forensics') {
+    return <LazyForensicsTab tab={tab} />;
   }
 
   // Editar conexión (edit-connection)
