@@ -1,5 +1,6 @@
 /** Lightweight session-action icon catalog (no SVG). */
 import { futuristCatalog } from '../icon-themes/futurist-catalog';
+import { vscodeActionCatalog } from '../icon-themes/vscode-catalog';
 
 const ACTION_COPY = {
   holo: 'Cristal iridiscente con prisma y brillo especular',
@@ -195,7 +196,19 @@ const baseSessionActionIconThemeMeta = [
   }
 ];
 
-export const sessionActionIconThemeMeta = [...baseSessionActionIconThemeMeta, ...futuristActionMeta];
+const vscodeActionMeta = vscodeActionCatalog.map((spec) => ({
+  id: spec.id,
+  name: spec.name,
+  group: spec.group,
+  description: spec.description || '',
+  premium: false
+}));
+
+export const sessionActionIconThemeMeta = [
+  ...baseSessionActionIconThemeMeta,
+  ...vscodeActionMeta,
+  ...futuristActionMeta
+];
 
 export const sessionActionIconThemeIds = sessionActionIconThemeMeta.map((t) => t.id);
 

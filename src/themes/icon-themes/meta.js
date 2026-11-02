@@ -1,6 +1,7 @@
 /** Lightweight icon-theme catalog (no SVG). */
 import { futuristIconMeta } from './futurist-catalog';
 import { ghostIconMeta } from './ghost-catalog';
+import { vscodeIconMeta } from './vscode-catalog';
 
 const baseIconThemeMeta = [
   {
@@ -201,6 +202,7 @@ export const iconThemeMeta = [
   ...iconThemesBeforeGhostVariants,
   ...ghostIconMeta,
   ...iconThemesAfterGhostVariants,
+  ...vscodeIconMeta,
   ...futuristIconMeta
 ];
 

@@ -6,6 +6,7 @@ import material from './material';
 import { iconThemeMeta, iconThemeIds, iconThemeOptions } from './meta';
 import { futuristCatalog } from './futurist-catalog';
 import { ghostCatalog } from './ghost-catalog';
+import { vscodeCatalog } from './vscode-catalog';
 
 export { iconThemeMeta, iconThemeIds, iconThemeOptions };
 
@@ -215,6 +216,33 @@ function loadGhostPack() {
 
 ghostCatalog.forEach(({ id }) => {
   loaders[id] = () => loadGhostPack().then((themes) => {
+    const theme = themes[id];
+    if (!theme) throw new Error(`missing icon theme ${id}`);
+    return { default: theme };
+  });
+});
+
+let vscodePackPromise = null;
+
+function loadVsCodePack() {
+  if (!vscodePackPromise) {
+    vscodePackPromise = import(/* webpackChunkName: "icon-theme-vscode-pack" */ './vscode-pack')
+      .then((mod) => {
+        const themes = mod.vscodeIconThemes;
+        Object.keys(themes).forEach((id) => putTheme(id, themes[id]));
+        return themes;
+      })
+      .catch((err) => {
+        vscodePackPromise = null;
+        console.warn('[icon-themes] failed to load vscode pack', err);
+        throw err;
+      });
+  }
+  return vscodePackPromise;
+}
+
+vscodeCatalog.forEach(({ id }) => {
+  loaders[id] = () => loadVsCodePack().then((themes) => {
     const theme = themes[id];
     if (!theme) throw new Error(`missing icon theme ${id}`);
     return { default: theme };

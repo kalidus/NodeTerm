@@ -10,6 +10,7 @@ import {
   PREMIUM_SESSION_ACTION_IDS
 } from './meta';
 import { futuristCatalog } from '../icon-themes/futurist-catalog';
+import { vscodeActionCatalog } from '../icon-themes/vscode-catalog';
 
 export {
   sessionActionIconThemeMeta,
@@ -202,6 +203,33 @@ function loadFuturistActionPack() {
 
 futuristCatalog.forEach(({ id }) => {
   baseLoaders[id] = () => loadFuturistActionPack().then((themes) => {
+    const theme = themes[id];
+    if (!theme) throw new Error(`missing action icon theme ${id}`);
+    return { default: theme };
+  });
+});
+
+let vscodeActionPromise = null;
+
+function loadVsCodeActionPack() {
+  if (!vscodeActionPromise) {
+    vscodeActionPromise = import(/* webpackChunkName: "session-action-vscode" */ './vscode-pack')
+      .then((mod) => {
+        const themes = mod.vscodeActionIconThemes;
+        Object.keys(themes).forEach((themeId) => putTheme(themeId, themes[themeId]));
+        return themes;
+      })
+      .catch((err) => {
+        vscodeActionPromise = null;
+        console.warn('[session-action-icons] failed to load vscode pack', err);
+        throw err;
+      });
+  }
+  return vscodeActionPromise;
+}
+
+vscodeActionCatalog.forEach(({ id }) => {
+  baseLoaders[id] = () => loadVsCodeActionPack().then((themes) => {
     const theme = themes[id];
     if (!theme) throw new Error(`missing action icon theme ${id}`);
     return { default: theme };

@@ -89,11 +89,16 @@ import {
   readSavedNotesLayout
 } from './notes/notesLayoutModes';
 import { ghostCatalog } from '../themes/icon-themes/ghost-catalog';
+import { vscodeCatalog } from '../themes/icon-themes/vscode-catalog';
 import '../styles/components/documents.css';
 import '../styles/components/library-sidebar.css';
 
 const GHOST_NOTEBOOK_COLORS = Object.fromEntries(
   ghostCatalog.map(({ id, color }) => [id.toLowerCase(), color])
+);
+
+const VSCODE_NOTEBOOK_PALETTES = Object.fromEntries(
+  vscodeCatalog.map((spec) => [spec.id.toLowerCase(), spec])
 );
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -362,6 +367,10 @@ export const NotebookIcon = ({ themeKey = 'nord', isOpen = false, size = 18 }) =
         <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.8" />
       </svg>
     );
+  } else if (VSCODE_NOTEBOOK_PALETTES[key]) {
+    const vsc = VSCODE_NOTEBOOK_PALETTES[key];
+    coverColor = vsc.stroke;
+    spiralColor = vsc.accent;
   }
 
   return (
