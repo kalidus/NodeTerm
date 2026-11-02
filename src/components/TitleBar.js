@@ -17,7 +17,10 @@ import {
   getCurrentTerminalFrameStyle,
   setTerminalFrameStyle,
 } from '../utils/terminalFrameStyle';
+import { presetManager } from '../utils/presetManager';
 import TerminalFrameStyleOption from './TerminalFrameStyleOption';
+import UiLayoutStyleOption from './UiLayoutStyleOption';
+import PresetStyleOption from './PresetStyleOption';
 import '../styles/components/terminal-frame.css';
 
 const TitleBarIconButton = ({
@@ -111,6 +114,8 @@ const TitleBar = ({
   const [layoutPopoverTab, setLayoutPopoverTab] = useState('layout');
   const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
   const [currentFrameStyle, setCurrentFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
+  const [activePresetId, setActivePresetId] = useState(() => presetManager.getActivePresetId());
+  const [layoutPresets, setLayoutPresets] = useState(() => presetManager.getAllPresets());
 
   useEffect(() => {
     const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
@@ -129,6 +134,14 @@ const TitleBar = ({
       window.removeEventListener('terminal-frame-style-changed', syncFrame);
       window.removeEventListener('settings-updated', syncFrame);
     };
+  }, []);
+
+  useEffect(() => {
+    const refreshPresets = () => {
+      setActivePresetId(presetManager.getActivePresetId());
+      setLayoutPresets(presetManager.getAllPresets());
+    };
+    return presetManager.subscribe(refreshPresets);
   }, []);
 
   useEffect(() => {
@@ -158,6 +171,12 @@ const TitleBar = ({
   const handleSelectFrameStyle = useCallback((styleId) => {
     const applied = setTerminalFrameStyle(styleId);
     setCurrentFrameStyle(applied);
+    setLayoutPopoverOpen(false);
+  }, []);
+
+  const handleSelectPreset = useCallback((preset) => {
+    presetManager.applyPreset(preset);
+    setActivePresetId(preset.id);
     setLayoutPopoverOpen(false);
   }, []);
 
@@ -545,7 +564,7 @@ const TitleBar = ({
 
         <div className="title-bar-action-group" ref={layoutBtnRef}>
           <TitleBarIconButton
-            title="Cambiar layout y estilo de marco"
+            title="Cambiar layout, marco y presets"
             active={layoutPopoverOpen}
             onClick={(e) => {
               e.preventDefault();
@@ -562,15 +581,14 @@ const TitleBar = ({
             (() => {
               const rect = layoutBtnRef.current.getBoundingClientRect();
               const isFramesTab = layoutPopoverTab === 'frames';
-              const estimated = isFramesTab
-                ? Math.min(440, 56 + Math.min(TERMINAL_FRAME_STYLE_OPTIONS.length, 10) * 44)
-                : Math.min(400, 44 + UI_LAYOUT_OPTIONS.length * 32 + 16);
-              const openUp = window.innerHeight - rect.bottom < estimated;
+              const isPresetsTab = layoutPopoverTab === 'presets';
+              const POPOVER_HEIGHT = Math.min(window.innerHeight * 0.7, 420) + 44;
+              const openUp = window.innerHeight - rect.bottom < POPOVER_HEIGHT;
               return (
                 <div
-                  className={`title-bar-layout-popover${isFramesTab ? ' is-frames-tab' : ''}`}
+                  className="title-bar-layout-popover is-wide-tab"
                   style={{
-                    top: openUp ? Math.max(8, rect.top - estimated - 4) : rect.bottom + 4,
+                    top: openUp ? Math.max(8, rect.top - POPOVER_HEIGHT - 4) : rect.bottom + 4,
                     right: Math.max(8, window.innerWidth - rect.right),
                   }}
                   role="menu"
@@ -579,15 +597,28 @@ const TitleBar = ({
                     <button
                       type="button"
                       role="tab"
-                      aria-selected={!isFramesTab}
-                      className={`title-bar-layout-popover-tab${!isFramesTab ? ' is-active' : ''}`}
+                      aria-selected={layoutPopoverTab === 'layout'}
+                      className={`title-bar-layout-popover-tab${layoutPopoverTab === 'layout' ? ' is-active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         setLayoutPopoverTab('layout');
                       }}
                     >
-                      Layout
+                      Estilos
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={isPresetsTab}
+                      className={`title-bar-layout-popover-tab${isPresetsTab ? ' is-active' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLayoutPopoverTab('presets');
+                      }}
+                    >
+                      Presets
                     </button>
                     <button
                       type="button"
@@ -603,32 +634,36 @@ const TitleBar = ({
                       Marcos
                     </button>
                   </div>
-                  {isFramesTab ? (
-                    <div className="title-bar-layout-popover-frames" role="none">
-                      {TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
+                  <div className="title-bar-layout-popover-list" role="none">
+                    {isPresetsTab ? (
+                      layoutPresets.map((preset) => (
+                        <PresetStyleOption
+                          key={preset.id}
+                          preset={preset}
+                          selected={activePresetId === preset.id}
+                          onSelect={handleSelectPreset}
+                        />
+                      ))
+                    ) : isFramesTab ? (
+                      TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
                         <TerminalFrameStyleOption
                           key={style.id}
                           style={style}
                           selected={currentFrameStyle === style.id}
                           onSelect={handleSelectFrameStyle}
                         />
-                      ))}
-                    </div>
-                  ) : (
-                    UI_LAYOUT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={currentUiLayout === opt.id}
-                        className={`title-bar-layout-popover-item${currentUiLayout === opt.id ? ' is-selected' : ''}`}
-                        onClick={() => handleSelectUiLayout(opt.id)}
-                      >
-                        <i className={`pi ${opt.icon}`} />
-                        <span>{opt.name}</span>
-                      </button>
-                    ))
-                  )}
+                      ))
+                    ) : (
+                      UI_LAYOUT_OPTIONS.map((opt) => (
+                        <UiLayoutStyleOption
+                          key={opt.id}
+                          option={opt}
+                          selected={currentUiLayout === opt.id}
+                          onSelect={handleSelectUiLayout}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
               );
             })(),

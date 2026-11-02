@@ -75,9 +75,11 @@
 .title-bar-layout-popover {
   position: fixed;
   z-index: 10050;
-  min-width: 168px;
-  max-width: 220px;
-  padding: 4px;
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
+  padding: 6px;
+  box-sizing: border-box;
   background: var(--ui-dialog-bg, var(--ui-card-bg, #2d2d30));
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.12));
   border-radius: 8px;
@@ -86,9 +88,12 @@
   color: var(--ui-dialog-text, #e0e0e0);
 }
 
-.title-bar-layout-popover.is-frames-tab {
-  min-width: 280px;
-  max-width: 320px;
+.title-bar-layout-popover.is-wide-tab,
+.title-bar-layout-popover.is-frames-tab,
+.title-bar-layout-popover.is-presets-tab {
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
   padding: 6px;
 }
 
@@ -125,13 +130,16 @@
   background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.12));
 }
 
+.title-bar-layout-popover-list,
 .title-bar-layout-popover-frames {
+  height: min(70vh, 420px);
   max-height: min(70vh, 420px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 2px;
 }
 
+.title-bar-layout-popover-list .frame-style-option,
 .title-bar-layout-popover-frames .frame-style-option {
   padding: 8px 10px;
   gap: 10px;
@@ -165,6 +173,61 @@
   opacity: 0.85;
   width: 14px;
   text-align: center;
+}
+
+.title-bar-layout-popover-preset {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.title-bar-layout-popover-preset:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.05));
+}
+
+.title-bar-layout-popover-preset.is-selected {
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.1));
+}
+
+.title-bar-layout-popover-preset-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.title-bar-layout-popover-preset-label {
+  font-size: 0.82rem;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.title-bar-layout-popover-preset-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  font-size: 0.9rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* Icono de actualización (solo visible cuando hay versión nueva) */
