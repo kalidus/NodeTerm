@@ -1,6 +1,9 @@
 /**
  * Vault sidecars: blobs AES-GCM fuera de app-data.json.
- * Formato: magic "NTV1" (4) + salt(16) + iv(12) + ciphertext
+ * NTV1: magic "NTV1" (4) + salt(16) + iv(12) + ciphertext
+ * NTV2: magic "NTV2" (4) + saltLen(u8) + salt + iv(12) + flags(u8) + iterations(u32 BE) + ciphertext
+ *   flags: 0 = PBKDF2-SHA256, 1 = pbkdf2-sha512
+ *   saltLen: 16 o 32
  */
 
 const fs = require('fs');
@@ -12,10 +15,17 @@ const {
   decodeEncryptedFields
 } = require('../../shared/vault-blob-encoding');
 
-const MAGIC = Buffer.from('NTV1');
-const SALT_LEN = 16;
+const MAGIC_V1 = Buffer.from('NTV1');
+const MAGIC_V2 = Buffer.from('NTV2');
+/** @deprecated use MAGIC_V1 — exported as MAGIC for compat */
+const MAGIC = MAGIC_V1;
+const SALT_LEN_V1 = 16;
+const SALT_LEN_ALLOWED = new Set([16, 32]);
 const IV_LEN = 12;
-const HEADER_LEN = MAGIC.length + SALT_LEN + IV_LEN;
+const FLAG_SHA256 = 0;
+const FLAG_SHA512 = 1;
+const HEADER_LEN_V1 = MAGIC_V1.length + SALT_LEN_V1 + IV_LEN;
+const NTV2_FIXED_OVERHEAD = MAGIC_V2.length + 1 + IV_LEN + 1 + 4; // magic+saltLen+iv+flags+iters
 
 /** localStorage key → filename under vault/ */
 const VAULT_SIDECAR_FILES = {
@@ -48,30 +58,93 @@ function sidecarPathForKey(storageKey) {
   return path.join(getVaultDir(), name);
 }
 
+function isSha512Kdf(obj) {
+  return obj && obj.kdf === 'pbkdf2-sha512';
+}
+
 function encryptedJsonStringToBinary(jsonStr) {
   const obj = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
   const { salt, iv, data } = decodeEncryptedFields(obj);
-  if (salt.length !== SALT_LEN || iv.length !== IV_LEN) {
+  if (!SALT_LEN_ALLOWED.has(salt.length) || iv.length !== IV_LEN) {
     throw new Error('Invalid vault salt/iv length');
   }
-  return Buffer.concat([MAGIC, Buffer.from(salt), Buffer.from(iv), Buffer.from(data)]);
+
+  const useV2 = salt.length === 32 || isSha512Kdf(obj);
+  if (!useV2) {
+    return Buffer.concat([MAGIC_V1, Buffer.from(salt), Buffer.from(iv), Buffer.from(data)]);
+  }
+
+  const flags = isSha512Kdf(obj) ? FLAG_SHA512 : FLAG_SHA256;
+  const iterations =
+    typeof obj.iterations === 'number' && obj.iterations > 0 ? obj.iterations >>> 0 : 0;
+  const iterBuf = Buffer.alloc(4);
+  iterBuf.writeUInt32BE(iterations, 0);
+
+  return Buffer.concat([
+    MAGIC_V2,
+    Buffer.from([salt.length]),
+    Buffer.from(salt),
+    Buffer.from(iv),
+    Buffer.from([flags]),
+    iterBuf,
+    Buffer.from(data)
+  ]);
 }
 
 function binaryToEncryptedJsonString(buf) {
   if (!Buffer.isBuffer(buf)) {
     buf = Buffer.from(buf);
   }
-  if (buf.length < HEADER_LEN) {
+  if (buf.length < 4) {
     throw new Error('Vault sidecar too short');
   }
-  if (!buf.subarray(0, MAGIC.length).equals(MAGIC)) {
-    throw new Error('Invalid vault sidecar magic');
+
+  const magic = buf.subarray(0, 4);
+  if (magic.equals(MAGIC_V1)) {
+    if (buf.length < HEADER_LEN_V1) {
+      throw new Error('Vault sidecar too short');
+    }
+    const salt = buf.subarray(MAGIC_V1.length, MAGIC_V1.length + SALT_LEN_V1);
+    const iv = buf.subarray(MAGIC_V1.length + SALT_LEN_V1, HEADER_LEN_V1);
+    const data = buf.subarray(HEADER_LEN_V1);
+    // timestamp fijo: Date.now() rompía skip idéntico en sync y provocaba 2.º decrypt
+    return JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 0 }));
   }
-  const salt = buf.subarray(MAGIC.length, MAGIC.length + SALT_LEN);
-  const iv = buf.subarray(MAGIC.length + SALT_LEN, HEADER_LEN);
-  const data = buf.subarray(HEADER_LEN);
-  // timestamp fijo: Date.now() rompía skip idéntico en sync y provocaba 2.º decrypt
-  return JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 0 }));
+
+  if (magic.equals(MAGIC_V2)) {
+    if (buf.length < NTV2_FIXED_OVERHEAD + 16) {
+      throw new Error('Vault sidecar too short');
+    }
+    let offset = MAGIC_V2.length;
+    const saltLen = buf[offset];
+    offset += 1;
+    if (!SALT_LEN_ALLOWED.has(saltLen)) {
+      throw new Error('Invalid vault salt/iv length');
+    }
+    if (buf.length < NTV2_FIXED_OVERHEAD + saltLen) {
+      throw new Error('Vault sidecar too short');
+    }
+    const salt = buf.subarray(offset, offset + saltLen);
+    offset += saltLen;
+    const iv = buf.subarray(offset, offset + IV_LEN);
+    offset += IV_LEN;
+    const flags = buf[offset];
+    offset += 1;
+    const iterations = buf.readUInt32BE(offset);
+    offset += 4;
+    const data = buf.subarray(offset);
+
+    const parts = { salt, iv, data, timestamp: 0 };
+    if (flags === FLAG_SHA512) {
+      parts.kdf = 'pbkdf2-sha512';
+    }
+    if (iterations > 0) {
+      parts.iterations = iterations;
+    }
+    return JSON.stringify(toEncryptedV2(parts));
+  }
+
+  throw new Error('Invalid vault sidecar magic');
 }
 
 /**
@@ -197,30 +270,42 @@ function extractAndPersistVaultSidecars(data) {
 /**
  * Si app-data aún tiene vault embebido, escribe/actualiza sidecars.
  * writeVaultSidecar: no-op si bytes iguales; rechaza shrink; permite crecer sobre sidecar tiny.
+ * @returns {{ migrated: boolean, writtenKeys: string[] }}
  */
 function migrateEmbeddedVaultToSidecars(parsed) {
   if (!parsed || typeof parsed !== 'object') {
-    return false;
+    return { migrated: false, writtenKeys: [] };
   }
   let migrated = false;
+  const writtenKeys = [];
   for (const key of VAULT_SIDECAR_KEYS) {
     const embedded = parsed[key];
     if (embedded == null || embedded === '') continue;
     try {
-      if (writeVaultSidecar(key, embedded)) {
+      const wrote = writeVaultSidecar(key, embedded);
+      if (wrote) {
         migrated = true;
+      }
+      const filePath = sidecarPathForKey(key);
+      if (filePath && fs.existsSync(filePath)) {
+        writtenKeys.push(key);
       }
     } catch (err) {
       console.warn(`[VaultSidecar] Migración ${key} fallida:`, err.message || err);
     }
   }
-  return migrated;
+  return { migrated, writtenKeys };
 }
 
-function stripVaultKeysFromObject(obj) {
+/**
+ * @param {object} obj
+ * @param {string[]|null} [onlyKeys] si se pasa, solo elimina esas keys; si no, todas las de vault
+ */
+function stripVaultKeysFromObject(obj, onlyKeys = null) {
   if (!obj || typeof obj !== 'object') return obj;
   const out = { ...obj };
-  for (const key of VAULT_SIDECAR_KEYS) {
+  const keys = onlyKeys == null ? VAULT_SIDECAR_KEYS : onlyKeys;
+  for (const key of keys) {
     delete out[key];
   }
   return out;
@@ -268,6 +353,8 @@ module.exports = {
   VAULT_SIDECAR_KEYS,
   VAULT_SIDECAR_FILES,
   MAGIC,
+  MAGIC_V1,
+  MAGIC_V2,
   getVaultDir,
   ensureVaultDir,
   sidecarPathForKey,

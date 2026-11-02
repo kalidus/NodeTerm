@@ -75,16 +75,27 @@ function readAppDataFromDisk() {
     }
 
     // Solo primaria escribe sidecars desde keys embebidas; merge sigue pudiendo usar embebido.
+    let vaultKeysSafeToStrip = [];
     if (!isSecondary) {
-      const migratedVault = migrateEmbeddedVaultToSidecars(parsed);
-      if (migratedVault) {
+      const { migrated, writtenKeys } = migrateEmbeddedVaultToSidecars(parsed);
+      vaultKeysSafeToStrip = writtenKeys;
+      if (migrated) {
         needsRewrite = true;
       }
     }
 
     if ((!isAppDataPlainJson(raw) || needsRewrite) && !isSecondary) {
       try {
-        const toWrite = stripVaultKeysFromObject(parsed);
+        // Solo strippear keys con sidecar en disco (migración OK o ya existente).
+        // No borrar embebido si writeVaultSidecar falló y no hay .bin.
+        const stamps = getVaultSidecarStamps();
+        const keysToStrip = [
+          ...new Set([
+            ...vaultKeysSafeToStrip,
+            ...VAULT_SIDECAR_KEYS.filter((k) => stamps[k] > 0)
+          ])
+        ];
+        const toWrite = stripVaultKeysFromObject(parsed, keysToStrip);
         fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(toWrite), { encoding: 'utf8', mode: 0o600 });
         parsed = toWrite;
         console.log('[AppData] Normalizado app-data.json (compacto, vault en sidecars)');

@@ -48,6 +48,22 @@ describe('vault-sidecar', () => {
     return JSON.stringify(toEncryptedV2({ salt, iv, data, timestamp: 2 }));
   }
 
+  function makePqcJson() {
+    const salt = crypto.randomBytes(32);
+    const iv = crypto.randomBytes(12);
+    const data = crypto.randomBytes(48);
+    return JSON.stringify(
+      toEncryptedV2({
+        salt,
+        iv,
+        data,
+        kdf: 'pbkdf2-sha512',
+        iterations: 210000,
+        timestamp: 3
+      })
+    );
+  }
+
   it('roundtrip binary from legacy number[] JSON', () => {
     const json = makeLegacyJson();
     const bin = vaultSidecar.encryptedJsonStringToBinary(json);
@@ -67,11 +83,48 @@ describe('vault-sidecar', () => {
   it('roundtrip binary from v2 base64 JSON', () => {
     const json = makeV2Json();
     const bin = vaultSidecar.encryptedJsonStringToBinary(json);
+    assert.ok(bin.subarray(0, 4).equals(Buffer.from('NTV1')));
     const back = vaultSidecar.binaryToEncryptedJsonString(bin);
     const { decodeEncryptedFields } = require('../../src/shared/vault-blob-encoding');
     assert.deepStrictEqual(
       Buffer.from(decodeEncryptedFields(JSON.parse(json)).data),
       Buffer.from(decodeEncryptedFields(JSON.parse(back)).data)
+    );
+  });
+
+  it('roundtrip NTV2 preserves salt 32, kdf and iterations', () => {
+    const json = makePqcJson();
+    const bin = vaultSidecar.encryptedJsonStringToBinary(json);
+    assert.ok(bin.subarray(0, 4).equals(Buffer.from('NTV2')));
+    assert.strictEqual(bin[4], 32);
+    const back = vaultSidecar.binaryToEncryptedJsonString(bin);
+    const parsed = JSON.parse(back);
+    assert.strictEqual(parsed.v, 2);
+    assert.strictEqual(parsed.kdf, 'pbkdf2-sha512');
+    assert.strictEqual(parsed.iterations, 210000);
+    assert.strictEqual(parsed.timestamp, 0);
+    const { decodeEncryptedFields } = require('../../src/shared/vault-blob-encoding');
+    const a = decodeEncryptedFields(JSON.parse(json));
+    const b = decodeEncryptedFields(parsed);
+    assert.strictEqual(a.salt.length, 32);
+    assert.strictEqual(b.salt.length, 32);
+    assert.deepStrictEqual(Buffer.from(a.salt), Buffer.from(b.salt));
+    assert.deepStrictEqual(Buffer.from(a.iv), Buffer.from(b.iv));
+    assert.deepStrictEqual(Buffer.from(a.data), Buffer.from(b.data));
+  });
+
+  it('rejects salt lengths other than 16 or 32', () => {
+    const bad = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(24),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(16),
+        timestamp: 0
+      })
+    );
+    assert.throws(
+      () => vaultSidecar.encryptedJsonStringToBinary(bad),
+      /Invalid vault salt\/iv length/
     );
   });
 
@@ -105,12 +158,16 @@ describe('vault-sidecar', () => {
   it('migrateEmbeddedVaultToSidecars then merge prefers files', () => {
     const json = makeV2Json();
     const parsed = { connections_encrypted: json, ui_theme: 'x' };
-    assert.strictEqual(vaultSidecar.migrateEmbeddedVaultToSidecars(parsed), true);
-    const without = vaultSidecar.stripVaultKeysFromObject(parsed);
+    const first = vaultSidecar.migrateEmbeddedVaultToSidecars(parsed);
+    assert.strictEqual(first.migrated, true);
+    assert.deepStrictEqual(first.writtenKeys, ['connections_encrypted']);
+    const without = vaultSidecar.stripVaultKeysFromObject(parsed, first.writtenKeys);
     const merged = vaultSidecar.mergeVaultSidecarsIntoData(without);
     assert.ok(merged.connections_encrypted);
     // Mismos bytes → no escribe de nuevo
-    assert.strictEqual(vaultSidecar.migrateEmbeddedVaultToSidecars(parsed), false);
+    const second = vaultSidecar.migrateEmbeddedVaultToSidecars(parsed);
+    assert.strictEqual(second.migrated, false);
+    assert.deepStrictEqual(second.writtenKeys, ['connections_encrypted']);
   });
 
   it('migrateEmbeddedVaultToSidecars grows over tiny wiped sidecar', () => {
@@ -134,11 +191,25 @@ describe('vault-sidecar', () => {
         timestamp: 0
       })
     );
-    assert.strictEqual(
-      vaultSidecar.migrateEmbeddedVaultToSidecars({ passwords_encrypted: bigJson }),
-      true
-    );
+    const result = vaultSidecar.migrateEmbeddedVaultToSidecars({
+      passwords_encrypted: bigJson
+    });
+    assert.strictEqual(result.migrated, true);
+    assert.ok(result.writtenKeys.includes('passwords_encrypted'));
     assert.ok(fs.statSync(filePath).size > tinyLen);
+  });
+
+  it('write/read PQC salt-32 sidecar via extractAndPersist', () => {
+    const json = makePqcJson();
+    const { settingsData, wroteVault } = vaultSidecar.extractAndPersistVaultSidecars({
+      connections_encrypted: json
+    });
+    assert.strictEqual(wroteVault, true);
+    assert.strictEqual(settingsData.connections_encrypted, undefined);
+    const merged = vaultSidecar.mergeVaultSidecarsIntoData(settingsData);
+    const parsed = JSON.parse(merged.connections_encrypted);
+    assert.strictEqual(parsed.kdf, 'pbkdf2-sha512');
+    assert.strictEqual(parsed.iterations, 210000);
   });
 
   it('extractAndPersist does not set wroteVault when shrink is refused', () => {
