@@ -71,3 +71,30 @@ export function setTerminalFrameStyle(styleId) {
   }
   return id;
 }
+
+/** Estilo de marco solo para paneles flotantes de HomeTab (independiente del global). */
+export function getCurrentHomeTabFrameStyle() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.HOME_TAB_FRAME_STYLE);
+    if (stored) return stored;
+    // Seed one-shot desde el global para no romper el aspecto actual
+    const seeded = getCurrentTerminalFrameStyle();
+    persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_FRAME_STYLE, seeded);
+    return seeded;
+  } catch {
+    return TERMINAL_FRAME_STYLE_DEFAULT;
+  }
+}
+
+export function setHomeTabFrameStyle(styleId) {
+  const id = styleId || TERMINAL_FRAME_STYLE_DEFAULT;
+  persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_FRAME_STYLE, id);
+  try {
+    window.dispatchEvent(new CustomEvent('home-frame-style-changed', {
+      detail: { style: id }
+    }));
+  } catch {
+    // Ignorar errores al despachar el evento
+  }
+  return id;
+}

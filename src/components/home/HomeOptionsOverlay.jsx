@@ -199,7 +199,7 @@ export default function HomeOptionsOverlay({
 
               <div className="home-options-field">
                 <div className="home-options-field-label">
-                  <span style={{ color: text }}>Estilo de marco</span>
+                  <span style={{ color: text }}>Estilo de marco (paneles)</span>
                   <i className="pi pi-desktop" style={{ color: primary, fontSize: '0.8rem', opacity: 0.8 }} />
                 </div>
                 <button
@@ -211,7 +211,7 @@ export default function HomeOptionsOverlay({
                     background: 'rgba(255,255,255,0.04)',
                     color: text
                   }}
-                  title="Estilo de marco de la ventana del terminal"
+                  title="Solo paneles de la Home"
                 >
                   <span className="home-options-select-text">{terminalFrameStyleLabel}</span>
                   <i className="pi pi-chevron-down" />

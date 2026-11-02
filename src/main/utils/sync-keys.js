@@ -127,6 +127,7 @@ const SYNC_KEYS = [
   'nodeterm_terminal_opacity',
   'nodeterm_home_backdrop_blur',
   'nodeterm_terminal_frame_style',
+  'nodeterm_home_frame_style',
   'nodeterm_minimal_mode',
 
   // RDP/Guacamole

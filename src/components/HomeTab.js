@@ -21,9 +21,9 @@ import {
 } from '../utils/homeTabSync';
 import {
   TERMINAL_FRAME_STYLE_OPTIONS,
-  getCurrentTerminalFrameStyle,
+  getCurrentHomeTabFrameStyle,
   getTerminalFrameStyleLabel,
-  setTerminalFrameStyle as persistTerminalFrameStyle
+  setHomeTabFrameStyle as persistHomeTabFrameStyle
 } from '../utils/terminalFrameStyle';
 import { adjustOpacity, homePanelSurface } from '../utils/homePanelOpacity';
 import {
@@ -349,15 +349,15 @@ const HomeTab = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal');
-  const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
+  const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => getCurrentHomeTabFrameStyle());
 
   useEffect(() => {
     const syncFrame = (e) => {
-      const style = e?.detail?.style || getCurrentTerminalFrameStyle();
+      const style = e?.detail?.style || getCurrentHomeTabFrameStyle();
       setTerminalFrameStyle(style);
     };
-    window.addEventListener('terminal-frame-style-changed', syncFrame);
-    return () => window.removeEventListener('terminal-frame-style-changed', syncFrame);
+    window.addEventListener('home-frame-style-changed', syncFrame);
+    return () => window.removeEventListener('home-frame-style-changed', syncFrame);
   }, []);
 
   const [favType, setFavType] = useState('all');
@@ -464,7 +464,7 @@ const HomeTab = ({
   const syncHomeOptionsFromStorage = React.useCallback(() => {
     setTerminalOpacity(readFloatSetting('nodeterm_terminal_opacity', 1.0));
     setHomeBackdropBlur(clampHomeBackdropBlur(readFloatSetting(HOME_BACKDROP_BLUR_KEY, HOME_BACKDROP_BLUR_DEFAULT)));
-    setTerminalFrameStyle(getCurrentTerminalFrameStyle());
+    setTerminalFrameStyle(getCurrentHomeTabFrameStyle());
     setShowLocalTerminalTabs(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE, false));
     setStatusBarVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, true));
     setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, false));
@@ -2268,7 +2268,7 @@ const HomeTab = ({
           appendTo={document.body}
         >
           <div style={{ padding: '8px', maxHeight: 'min(70vh, 420px)', overflowY: 'auto', color: themeColors.textPrimary || '#fff' }}>
-            <h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
+            <h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco (paneles)</h4>
             {TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
               <TerminalFrameStyleOption
                 key={style.id}
@@ -2276,7 +2276,7 @@ const HomeTab = ({
                 selected={terminalFrameStyle === style.id}
                 as="div"
                 onSelect={(id) => {
-                  persistTerminalFrameStyle(id);
+                  persistHomeTabFrameStyle(id);
                   frameStyleOverlayRef.current?.hide();
                 }}
               />
