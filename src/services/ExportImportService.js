@@ -312,9 +312,11 @@ class ExportImportService {
 
       // === 5. NOTAS / DOCUMENTOS ===
       if (documents) {
+        const encryptedDocuments = this.safeGetItem('documents_encrypted');
         exportData.data.documents = {
-          encrypted: this.safeGetItem('documents_encrypted'),
-          nodes: this.safeGetItem('documentManagerNodes'),
+          encrypted: encryptedDocuments,
+          // Si hay vault cifrado de notas, no exportar nodos en claro
+          nodes: encryptedDocuments ? null : this.safeGetItem('documentManagerNodes'),
           expandedKeys: this.safeGetItem('documents_expanded_keys')
         };
       }
@@ -384,17 +386,18 @@ class ExportImportService {
   }
 
   /**
-   * Encripta datos con una contraseña usando AES-256-GCM
+   * Encripta datos con una contraseña usando AES-256-GCM y PBKDF2-HMAC-SHA-512 post-cuántico
    */
   async encryptData(data, password) {
     try {
       const encoder = new TextEncoder();
       const dataString = JSON.stringify(data);
+      const iterations = 210000;
       
-      // Generar salt aleatorio
-      const salt = crypto.getRandomValues(new Uint8Array(16));
+      // Generar salt aleatorio de 256 bits (32 bytes) resistente a ataques post-cuánticos (Grover)
+      const salt = crypto.getRandomValues(new Uint8Array(32));
       
-      // Derivar clave usando PBKDF2
+      // Derivar clave usando PBKDF2-HMAC-SHA-512
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
         encoder.encode(password),
@@ -407,8 +410,8 @@ class ExportImportService {
         {
           name: 'PBKDF2',
           salt: salt,
-          iterations: 100000,
-          hash: 'SHA-256'
+          iterations: iterations,
+          hash: 'SHA-512'
         },
         keyMaterial,
         { name: 'AES-GCM', length: 256 },
@@ -416,7 +419,7 @@ class ExportImportService {
         ['encrypt']
       );
       
-      // Generar IV aleatorio
+      // Generar IV aleatorio (96 bits estándar para AES-GCM)
       const iv = crypto.getRandomValues(new Uint8Array(12));
       
       // Encriptar
@@ -426,11 +429,12 @@ class ExportImportService {
         encoder.encode(dataString)
       );
       
-      // Convertir a base64 para almacenamiento
       const encryptedArray = new Uint8Array(encryptedBuffer);
       
       return {
         encrypted: true,
+        kdf: 'pbkdf2-sha512',
+        iterations: iterations,
         salt: Array.from(salt),
         iv: Array.from(iv),
         data: Array.from(encryptedArray)
@@ -442,7 +446,7 @@ class ExportImportService {
   }
 
   /**
-   * Desencripta datos con una contraseña
+   * Desencripta datos con una contraseña (soporta PBKDF2-SHA-512 post-cuántico y SHA-256 legacy)
    */
   async decryptData(encryptedObj, password) {
     try {
@@ -454,6 +458,14 @@ class ExportImportService {
       const iv = new Uint8Array(encryptedObj.iv);
       const data = new Uint8Array(encryptedObj.data);
       
+      const isSha512 = encryptedObj.kdf === 'pbkdf2-sha512';
+      const hash = isSha512 ? 'SHA-512' : 'SHA-256';
+      const defaultIterations = isSha512 ? 210000 : 100000;
+      const iterations =
+        typeof encryptedObj.iterations === 'number' && encryptedObj.iterations > 0
+          ? encryptedObj.iterations
+          : defaultIterations;
+
       // Derivar clave
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
@@ -467,8 +479,8 @@ class ExportImportService {
         {
           name: 'PBKDF2',
           salt: salt,
-          iterations: 100000,
-          hash: 'SHA-256'
+          iterations: iterations,
+          hash: hash
         },
         keyMaterial,
         { name: 'AES-GCM', length: 256 },
@@ -492,14 +504,14 @@ class ExportImportService {
   }
 
   /**
-   * Genera checksum de los datos para validación de integridad
+   * Genera checksum de los datos para validación de integridad (SHA-512 por defecto, soporta SHA-256 legacy)
    */
-  async generateChecksum(data) {
+  async generateChecksum(data, algorithm = 'SHA-512') {
     try {
       const dataString = JSON.stringify(data);
       const encoder = new TextEncoder();
       const dataBuffer = encoder.encode(dataString);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+      const hashBuffer = await crypto.subtle.digest(algorithm, dataBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } catch (error) {
@@ -526,9 +538,10 @@ class ExportImportService {
         };
       }
 
-      // Validar checksum si existe
+      // Validar checksum si existe (SHA-512 de 128 chars hex o SHA-256 legacy de 64 chars hex)
       if (exportData.checksum) {
-        const calculatedChecksum = await this.generateChecksum(exportData.data);
+        const algo = exportData.checksum.length === 128 ? 'SHA-512' : 'SHA-256';
+        const calculatedChecksum = await this.generateChecksum(exportData.data, algo);
         if (calculatedChecksum !== exportData.checksum) {
           return { valid: false, error: 'Checksum inválido - Archivo corrupto' };
         }

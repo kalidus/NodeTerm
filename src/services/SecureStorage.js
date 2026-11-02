@@ -179,9 +179,114 @@ class SecureStorage {
   async decryptStorageKeyCached(storageKey, password) {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
-    return this._storageDecryptCache.get(storageKey, raw, password, () =>
-      this.decryptData(JSON.parse(raw), password)
+    const parsed = JSON.parse(raw);
+    const result = await this._storageDecryptCache.get(storageKey, raw, password, () =>
+      this.decryptData(parsed, password)
     );
+    if (parsed && parsed.kdf !== 'pbkdf2-sha512') {
+      this.upgradeVaultsToPqcIfNeeded(password).catch(() => {});
+    }
+    return result;
+  }
+
+  /**
+   * Comprueba si un objeto cifrado ya utiliza KDF post-cuántico (PBKDF2-HMAC-SHA-512 >= 210k iteraciones)
+   */
+  isPqcEncrypted(encryptedObj) {
+    return Boolean(
+      encryptedObj &&
+      typeof encryptedObj === 'object' &&
+      encryptedObj.kdf === 'pbkdf2-sha512' &&
+      typeof encryptedObj.iterations === 'number' &&
+      encryptedObj.iterations >= this.iterations
+    );
+  }
+
+  /**
+   * Migra silenciosamente en caliente todos los vaults locales (conexiones, contraseñas,
+   * notas/documentos y sesiones) y el verifier criptográfico a AES-256-GCM + PBKDF2-HMAC-SHA-512
+   * (210.000 iteraciones, salt de 32 bytes) si todavía están en formato legacy (SHA-256 / 100k).
+   * También cifra notas en claro (`documentManagerNodes`) si aún no están en `documents_encrypted`.
+   */
+  async upgradeVaultsToPqcIfNeeded(password) {
+    if (!password || typeof password !== 'string') {
+      return { upgraded: [], migratedPlaintextNotes: false, upgradedVerifier: false };
+    }
+    if (this._pqcUpgradePromise) {
+      return this._pqcUpgradePromise;
+    }
+
+    this._pqcUpgradePromise = (async () => {
+      const upgraded = [];
+      let migratedPlaintextNotes = false;
+      let upgradedVerifier = false;
+
+      try {
+        // 1. Si existen notas en texto plano y aún no hay vault de documentos, cifrarlas con PQC
+        const rawPlainNotes = localStorage.getItem('documentManagerNodes');
+        const existingEncryptedDocs = localStorage.getItem('documents_encrypted');
+        if (rawPlainNotes && rawPlainNotes.trim() && (!existingEncryptedDocs || !existingEncryptedDocs.trim())) {
+          try {
+            const parsedNotes = JSON.parse(rawPlainNotes);
+            if (Array.isArray(parsedNotes)) {
+              const encryptedDocs = await this.encryptData(parsedNotes, password);
+              const wrote = setVaultEncryptedItem('documents_encrypted', JSON.stringify(encryptedDocs));
+              if (wrote && wrote.ok) {
+                localStorage.removeItem('documentManagerNodes');
+                migratedPlaintextNotes = true;
+                upgraded.push('documents_encrypted');
+                console.log('🔒 [SecureStorage] Notas migradas automáticamente a cifrado post-cuántico (documents_encrypted)');
+              }
+            }
+          } catch (noteErr) {
+            console.warn('⚠️ [SecureStorage] No se pudieron migrar notas en texto plano a PQC:', noteErr);
+          }
+        }
+
+        // 2. Re-encriptar en el acto cualquier vault local que aún use KDF legacy (SHA-256)
+        const entries = this._getPresentVaultEntries(VAULT_LOCAL_STORAGE_KEYS);
+        for (const { key, raw } of entries) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (!parsed || this.isPqcEncrypted(parsed)) {
+              continue;
+            }
+            const decrypted = await this.decryptData(parsed, password);
+            const pqcEncrypted = await this.encryptData(decrypted, password);
+            const wrote = setVaultEncryptedItem(key, JSON.stringify(pqcEncrypted));
+            if (wrote && wrote.ok) {
+              upgraded.push(key);
+              console.log(`🔒 [SecureStorage] Bóveda '${key}' actualizada automáticamente a PQC (AES-256-GCM + PBKDF2-SHA512)`);
+            }
+          } catch (vaultErr) {
+            // Si un vault concreto no descifra con esta clave o falla, continuar con el resto sin bloquear
+            console.warn(`⚠️ [SecureStorage] Omitida migración PQC para '${key}':`, vaultErr?.message || vaultErr);
+          }
+        }
+
+        // 3. Actualizar verifier en disco si todavía usa KDF legacy
+        if (window.electron?.security?.getVaultVerifier) {
+          try {
+            const verifier = await window.electron.security.getVaultVerifier();
+            if (verifier && !this.isPqcEncrypted(verifier)) {
+              const isValid = await this.verifyVaultVerifier(verifier, password);
+              if (isValid) {
+                const remember = await this.isRememberPasswordEnabled();
+                await this.saveMasterKey(password, remember);
+                upgradedVerifier = true;
+                console.log('🔒 [SecureStorage] Verificador de bóveda actualizado automáticamente a PQC (PBKDF2-SHA512)');
+              }
+            }
+          } catch (_) {}
+        }
+      } finally {
+        this._pqcUpgradePromise = null;
+      }
+
+      return { upgraded, migratedPlaintextNotes, upgradedVerifier };
+    })();
+
+    return this._pqcUpgradePromise;
   }
 
   /**
@@ -425,6 +530,7 @@ class SecureStorage {
 
       this.masterKeyCache = masterKey;
       this.resetTimeout();
+      this.upgradeVaultsToPqcIfNeeded(masterKey).catch(() => {});
       return masterKey;
     } catch (error) {
       console.error('❌ [SecureStorage] Error cargando clave maestra:', error);
@@ -519,6 +625,7 @@ class SecureStorage {
     this.resetTimeout();
     const remember = await this.isRememberPasswordEnabled();
     await this.saveMasterKey(password, remember);
+    this.upgradeVaultsToPqcIfNeeded(password).catch(() => {});
   }
 
   /**
@@ -539,6 +646,7 @@ class SecureStorage {
       if (isValid) {
         this.masterKeyCache = password;
         this.resetTimeout();
+        this.upgradeVaultsToPqcIfNeeded(password).catch(() => {});
         return true;
       }
     }

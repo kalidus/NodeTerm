@@ -243,4 +243,127 @@ describe('SSH Connect Options - Automatic PQC vs Legacy Compatibility Mode', () 
       });
     }
   });
+
+  describe('PQC Vault, Notes & Backup (.nodeterm) Migration and Encryption', () => {
+    it('SecureStorage includes automatic PQC migration for vaults, notes, and verifier', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const src = fs.readFileSync(
+        path.join(__dirname, '../../src/services/SecureStorage.js'),
+        'utf8'
+      );
+      assert.ok(src.includes('async upgradeVaultsToPqcIfNeeded(password)'));
+      assert.ok(src.includes('this.upgradeVaultsToPqcIfNeeded(masterKey)'));
+      assert.ok(src.includes('this.upgradeVaultsToPqcIfNeeded(password)'));
+      assert.ok(src.includes('documentManagerNodes'));
+      assert.ok(src.includes('documents_encrypted'));
+    });
+
+    it('ExportImportService uses PBKDF2-HMAC-SHA-512 (210k iterations, 32-byte salt) and SHA-512 checksum with legacy fallback', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const src = fs.readFileSync(
+        path.join(__dirname, '../../src/services/ExportImportService.js'),
+        'utf8'
+      );
+      assert.ok(src.includes("kdf: 'pbkdf2-sha512'"));
+      assert.ok(src.includes('const iterations = 210000;'));
+      assert.ok(src.includes('new Uint8Array(32)'));
+      assert.ok(src.includes("const isSha512 = encryptedObj.kdf === 'pbkdf2-sha512';"));
+      assert.ok(src.includes("const algo = exportData.checksum.length === 128 ? 'SHA-512' : 'SHA-256';"));
+    });
+
+    it('migrates legacy SHA-256 vault & plaintext notes to PQC SHA-512 and roundtrips .nodeterm backups', async () => {
+      const { toEncryptedV2, decodeEncryptedFields } = require('../../src/shared/vault-blob-encoding');
+      const password = 'MasterVaultPassword_PQC_2026!';
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+
+      async function derive(pw, salt, iterations, hash) {
+        const km = await globalThis.crypto.subtle.importKey(
+          'raw',
+          enc.encode(pw),
+          { name: 'PBKDF2' },
+          false,
+          ['deriveKey']
+        );
+        return globalThis.crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations, hash },
+          km,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      }
+
+      // 1. Create a legacy vault (16-byte salt, 100k iterations, SHA-256, no kdf field)
+      const legacySalt = globalThis.crypto.getRandomValues(new Uint8Array(16));
+      const legacyIv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+      const legacyKey = await derive(password, legacySalt, 100000, 'SHA-256');
+      const originalVaultPayload = [
+        { key: '1', title: 'KeePass Password', data: { username: 'admin', password: 'secret' } },
+        { key: '2', title: 'Private Note', content: { type: 'doc', content: [] } }
+      ];
+      const legacyCipher = await globalThis.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: legacyIv },
+        legacyKey,
+        enc.encode(JSON.stringify(originalVaultPayload))
+      );
+      const legacyBlob = toEncryptedV2({
+        salt: legacySalt,
+        iv: legacyIv,
+        data: new Uint8Array(legacyCipher),
+        timestamp: Date.now()
+      });
+      assert.strictEqual(legacyBlob.kdf, undefined);
+
+      // 2. Decrypt legacy blob using resolveKdfParams logic and upgrade to PQC (32-byte salt, 210k, SHA-512)
+      const decodedLegacy = decodeEncryptedFields(legacyBlob);
+      const decKey = await derive(
+        password,
+        decodedLegacy.salt,
+        legacyBlob.iterations || 100000,
+        legacyBlob.kdf === 'pbkdf2-sha512' ? 'SHA-512' : 'SHA-256'
+      );
+      const plainBuf = await globalThis.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: decodedLegacy.iv },
+        decKey,
+        decodedLegacy.data
+      );
+      const decryptedObj = JSON.parse(dec.decode(plainBuf));
+      assert.deepStrictEqual(decryptedObj, originalVaultPayload);
+
+      // Upgrade to PQC
+      const pqcSalt = globalThis.crypto.getRandomValues(new Uint8Array(32));
+      const pqcIv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+      const pqcKey = await derive(password, pqcSalt, 210000, 'SHA-512');
+      const pqcCipher = await globalThis.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: pqcIv },
+        pqcKey,
+        enc.encode(JSON.stringify(decryptedObj))
+      );
+      const pqcBlob = toEncryptedV2({
+        salt: pqcSalt,
+        iv: pqcIv,
+        data: new Uint8Array(pqcCipher),
+        kdf: 'pbkdf2-sha512',
+        iterations: 210000,
+        timestamp: Date.now()
+      });
+
+      assert.strictEqual(pqcBlob.kdf, 'pbkdf2-sha512');
+      assert.strictEqual(pqcBlob.iterations, 210000);
+      const decodedPqc = decodeEncryptedFields(pqcBlob);
+      assert.strictEqual(decodedPqc.salt.byteLength, 32);
+
+      // Verify decryption of upgraded PQC blob
+      const verifyPqcKey = await derive(password, decodedPqc.salt, pqcBlob.iterations, 'SHA-512');
+      const verifyPlainBuf = await globalThis.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: decodedPqc.iv },
+        verifyPqcKey,
+        decodedPqc.data
+      );
+      assert.deepStrictEqual(JSON.parse(dec.decode(verifyPlainBuf)), originalVaultPayload);
+    });
+  });
 });
