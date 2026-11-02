@@ -35,6 +35,8 @@ export function EnhancedSSHForm({
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshAutoRecording = false, setSSHAutoRecording = () => {},
+  sshPersistSession = false, setSSHPersistSession = () => {},
+  sshTmuxSessionName = '', setSSHTmuxSessionName = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -451,6 +453,38 @@ export function EnhancedSSHForm({
 
             <div className="terminal-option-item">
               <div className="flex align-items-center">
+                <i className="pi pi-replay terminal-option-icon"></i>
+                <span className="terminal-option-text">{t('ssh.auth.persistSession')}</span>
+                <TerminalOptionHelp text={t('ssh.auth.persistSessionDescription')} />
+              </div>
+              <div className="terminal-dotted-spacer"></div>
+              <InputSwitch
+                checked={!!sshPersistSession && !sshUseBastionWallix}
+                onChange={(e) => setSSHPersistSession(e.value)}
+                className="terminal-switch"
+                disabled={!!sshUseBastionWallix}
+              />
+            </div>
+
+            {!!sshPersistSession && !sshUseBastionWallix && (
+              <div className="terminal-option-item terminal-option-item--field">
+                <div className="flex align-items-center">
+                  <i className="pi pi-tag terminal-option-icon"></i>
+                  <span className="terminal-option-text">{t('ssh.auth.tmuxSessionName')}</span>
+                  <TerminalOptionHelp text={t('ssh.auth.tmuxSessionNameDescription')} />
+                </div>
+                <div className="terminal-dotted-spacer"></div>
+                <InputText
+                  value={sshTmuxSessionName}
+                  onChange={(e) => setSSHTmuxSessionName(e.target.value)}
+                  placeholder={t('ssh.auth.tmuxSessionNamePlaceholder')}
+                  className="terminal-option-input"
+                />
+              </div>
+            )}
+
+            <div className="terminal-option-item">
+              <div className="flex align-items-center">
                 <i className="pi pi-shield terminal-option-icon"></i>
                 <span className="terminal-option-text">{t('ssh.auth.agentForwarding')}</span>
                 <TerminalOptionHelp text={t('ssh.auth.agentForwardingDescription')} />
@@ -486,7 +520,10 @@ export function EnhancedSSHForm({
               <div className="terminal-dotted-spacer"></div>
               <InputSwitch
                 checked={!!sshUseBastionWallix}
-                onChange={(e) => setSSHUseBastionWallix(e.value)}
+                onChange={(e) => {
+                  setSSHUseBastionWallix(e.value);
+                  if (e.value) setSSHPersistSession(false);
+                }}
                 className="terminal-switch"
               />
             </div>
@@ -1396,6 +1433,38 @@ export function EnhancedSSHForm({
 
                   <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
                     <div className="flex align-items-center">
+                      <i className="pi pi-replay terminal-option-icon"></i>
+                      <span className="terminal-option-text">{t('ssh.auth.persistSession')}</span>
+                      <TerminalOptionHelp text={t('ssh.auth.persistSessionDescription')} />
+                    </div>
+                    <div className="terminal-dotted-spacer"></div>
+                    <InputSwitch
+                      checked={!!sshPersistSession && !sshUseBastionWallix}
+                      onChange={(e) => setSSHPersistSession(e.value)}
+                      className="terminal-switch"
+                      disabled={!!sshUseBastionWallix}
+                    />
+                  </div>
+
+                  {!!sshPersistSession && !sshUseBastionWallix && (
+                    <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
+                      <div className="flex align-items-center">
+                        <i className="pi pi-tag terminal-option-icon"></i>
+                        <span className="terminal-option-text">{t('ssh.auth.tmuxSessionName')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.tmuxSessionNameDescription')} />
+                      </div>
+                      <div className="terminal-dotted-spacer"></div>
+                      <InputText
+                        value={sshTmuxSessionName}
+                        onChange={(e) => setSSHTmuxSessionName(e.target.value)}
+                        placeholder={t('ssh.auth.tmuxSessionNamePlaceholder')}
+                        className="terminal-option-input"
+                      />
+                    </div>
+                  )}
+
+                  <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
+                    <div className="flex align-items-center">
                       <i className="pi pi-shield terminal-option-icon"></i>
                       <span className="terminal-option-text">{t('ssh.auth.agentForwarding')}</span>
                       <TerminalOptionHelp text={t('ssh.auth.agentForwardingDescription')} />
@@ -1431,7 +1500,10 @@ export function EnhancedSSHForm({
                     <div className="terminal-dotted-spacer"></div>
                     <InputSwitch
                       checked={!!sshUseBastionWallix}
-                      onChange={(e) => setSSHUseBastionWallix(e.value)}
+                      onChange={(e) => {
+                        setSSHUseBastionWallix(e.value);
+                        if (e.value) setSSHPersistSession(false);
+                      }}
                       className="terminal-switch"
                     />
                   </div>

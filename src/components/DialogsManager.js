@@ -79,6 +79,10 @@ const DialogsManager = ({
   setSSHAgentForwarding,
   sshAutoRecording,
   setSSHAutoRecording,
+  sshPersistSession,
+  setSSHPersistSession,
+  sshTmuxSessionName,
+  setSSHTmuxSessionName,
   sshProxyJumpEnabled,
   setSSHProxyJumpEnabled,
   sshJumpHost,
@@ -127,6 +131,10 @@ const DialogsManager = ({
   setEditSSHAgentForwarding,
   editSSHAutoRecording,
   setEditSSHAutoRecording,
+  editSSHPersistSession,
+  setEditSSHPersistSession,
+  editSSHTmuxSessionName,
+  setEditSSHTmuxSessionName,
   editSSHProxyJumpEnabled,
   setEditSSHProxyJumpEnabled,
   editSSHJumpHost,
@@ -669,6 +677,10 @@ const DialogsManager = ({
         setSSHAgentForwarding={setSSHAgentForwarding}
         sshAutoRecording={sshAutoRecording}
         setSSHAutoRecording={setSSHAutoRecording}
+        sshPersistSession={sshPersistSession}
+        setSSHPersistSession={setSSHPersistSession}
+        sshTmuxSessionName={sshTmuxSessionName}
+        setSSHTmuxSessionName={setSSHTmuxSessionName}
         sshProxyJumpEnabled={sshProxyJumpEnabled}
         setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
         sshJumpHost={sshJumpHost}
@@ -741,6 +753,10 @@ const DialogsManager = ({
         setSSHAgentForwarding={editSSHNode ? setEditSSHAgentForwarding : setSSHAgentForwarding}
         sshAutoRecording={editSSHNode ? editSSHAutoRecording : sshAutoRecording}
         setSSHAutoRecording={editSSHNode ? setEditSSHAutoRecording : setSSHAutoRecording}
+        sshPersistSession={editSSHNode ? editSSHPersistSession : sshPersistSession}
+        setSSHPersistSession={editSSHNode ? setEditSSHPersistSession : setSSHPersistSession}
+        sshTmuxSessionName={editSSHNode ? editSSHTmuxSessionName : sshTmuxSessionName}
+        setSSHTmuxSessionName={editSSHNode ? setEditSSHTmuxSessionName : setSSHTmuxSessionName}
         sshProxyJumpEnabled={editSSHNode ? editSSHProxyJumpEnabled : sshProxyJumpEnabled}
         setSSHProxyJumpEnabled={editSSHNode ? setEditSSHProxyJumpEnabled : setSSHProxyJumpEnabled}
         sshJumpHost={editSSHNode ? editSSHJumpHost : sshJumpHost}

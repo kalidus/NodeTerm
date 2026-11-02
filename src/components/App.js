@@ -1786,6 +1786,8 @@ const App = () => {
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
     sshAutoRecording, setSSHAutoRecording,
+    sshPersistSession, setSSHPersistSession,
+    sshTmuxSessionName, setSSHTmuxSessionName,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost,
     sshJumpPort, setSSHJumpPort,
@@ -1810,6 +1812,8 @@ const App = () => {
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHAutoRecording, setEditSSHAutoRecording,
+    editSSHPersistSession, setEditSSHPersistSession,
+    editSSHTmuxSessionName, setEditSSHTmuxSessionName,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost,
     editSSHJumpPort, setEditSSHJumpPort,
@@ -1975,7 +1979,7 @@ const App = () => {
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder,
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
-    sshX11Forwarding, sshAgentForwarding, sshAutoRecording,
+    sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshPersistSession, sshTmuxSessionName,
     sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy,
     sshDescription,
     sshIcon,
@@ -1990,7 +1994,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-    editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording,
+    editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHPersistSession, editSSHTmuxSessionName,
     editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
@@ -2953,6 +2957,10 @@ const App = () => {
           setSSHAgentForwarding={setSSHAgentForwarding}
           sshAutoRecording={sshAutoRecording}
           setSSHAutoRecording={setSSHAutoRecording}
+          sshPersistSession={sshPersistSession}
+          setSSHPersistSession={setSSHPersistSession}
+          sshTmuxSessionName={sshTmuxSessionName}
+          setSSHTmuxSessionName={setSSHTmuxSessionName}
           sshProxyJumpEnabled={sshProxyJumpEnabled}
           setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
           sshJumpHost={sshJumpHost}
@@ -2999,6 +3007,10 @@ const App = () => {
           setEditSSHAgentForwarding={setEditSSHAgentForwarding}
           editSSHAutoRecording={editSSHAutoRecording}
           setEditSSHAutoRecording={setEditSSHAutoRecording}
+          editSSHPersistSession={editSSHPersistSession}
+          setEditSSHPersistSession={setEditSSHPersistSession}
+          editSSHTmuxSessionName={editSSHTmuxSessionName}
+          setEditSSHTmuxSessionName={setEditSSHTmuxSessionName}
           editSSHProxyJumpEnabled={editSSHProxyJumpEnabled}
           setEditSSHProxyJumpEnabled={setEditSSHProxyJumpEnabled}
           editSSHJumpHost={editSSHJumpHost}

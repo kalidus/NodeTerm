@@ -17,6 +17,11 @@ const {
   setupX11ForwardingListener,
   isHandshakeOrKexError
 } = require('../../utils/sshConnectOptions');
+const {
+  shouldUseTmuxPersist,
+  resolveTmuxSessionName,
+  buildTmuxAttachCommand
+} = require('../../utils/tmuxSession');
 
 class SSHAuthService {
   constructor() {
@@ -312,7 +317,7 @@ class SSHAuthService {
         extraOpts.x11 = shellOptions.x11;
       }
 
-      ssh2Client.shell(wndOpts, extraOpts, async (err, shellStream) => {
+      const attachInteractiveStream = async (err, shellStream) => {
         if (err) {
           sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
           ssh2Client.end();
@@ -411,7 +416,76 @@ class SSHAuthService {
         if (onReady) {
           onReady(realHostname, finalDistroId);
         }
-      });
+      };
+
+      /**
+       * Abre shell() normal, o tmux new -A si persistSession está activo.
+       * Si tmux no existe / falla, hace fallback a shell() con aviso.
+       */
+      const openInteractiveSession = () => {
+        if (!shouldUseTmuxPersist(config)) {
+          ssh2Client.shell(wndOpts, extraOpts, attachInteractiveStream);
+          return;
+        }
+
+        const sessionName = resolveTmuxSessionName(config);
+        const tmuxCmd = buildTmuxAttachCommand(sessionName);
+        const execOpts = {
+          pty: {
+            term: wndOpts.term,
+            cols: wndOpts.cols,
+            rows: wndOpts.rows
+          }
+        };
+        if (extraOpts.x11) {
+          execOpts.x11 = extraOpts.x11;
+        }
+
+        const fallbackToShell = (reason) => {
+          sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[NodeTerm] ${reason}\r\n`);
+          ssh2Client.shell(wndOpts, extraOpts, attachInteractiveStream);
+        };
+
+        ssh2Client.exec('command -v tmux', (probeErr, probeStream) => {
+          if (probeErr || !probeStream) {
+            fallbackToShell('No se pudo comprobar tmux; abriendo shell normal.');
+            return;
+          }
+
+          let probeOut = '';
+          probeStream.on('data', (data) => {
+            probeOut += data.toString('utf8');
+          });
+          probeStream.stderr?.on('data', (data) => {
+            probeOut += data.toString('utf8');
+          });
+          probeStream.on('close', (code) => {
+            if (code !== 0 || !probeOut.trim()) {
+              fallbackToShell('tmux no está instalado en el host; abriendo shell normal.');
+              return;
+            }
+
+            sendToRenderer(
+              sender,
+              `ssh:data:${tabId}`,
+              `\r\n[NodeTerm] Sesión persistente tmux: ${sessionName}\r\n`
+            );
+            conn.tmuxSessionName = sessionName;
+
+            ssh2Client.exec(tmuxCmd, execOpts, (execErr, tmuxStream) => {
+              if (execErr || !tmuxStream) {
+                fallbackToShell(
+                  `tmux falló (${execErr?.message || 'error'}); abriendo shell normal.`
+                );
+                return;
+              }
+              attachInteractiveStream(null, tmuxStream);
+            });
+          });
+        });
+      };
+
+      openInteractiveSession();
     });
 
     // Evento error

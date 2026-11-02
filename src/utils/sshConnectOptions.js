@@ -1,6 +1,7 @@
 const net = require('net');
 const fs = require('fs');
 const { registerSsh2PqcKex, PQC_KEX_ALGORITHMS } = require('./pqc/registerSsh2PqcKex');
+const { shouldUseTmuxPersist } = require('./tmuxSession');
 
 // Registrar soporte de intercambio de claves (KEX) híbrido Post-Cuántico en ssh2
 registerSsh2PqcKex();
@@ -425,7 +426,11 @@ function appendForwardingFlagsToCacheKey(cacheKey, config) {
 }
 
 function requiresDedicatedSshSession(config) {
-  return getEffectiveForwarding(config).requested || isProxyJumpEnabled(config);
+  // persistSession fuerza el camino dedicado (SSHAuthService + tmux),
+  // no el pool ssh2-promise que solo hace shell() normal.
+  return getEffectiveForwarding(config).requested
+    || isProxyJumpEnabled(config)
+    || shouldUseTmuxPersist(config);
 }
 
 function getBastionForwardingWarning(config) {

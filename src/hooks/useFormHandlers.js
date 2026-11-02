@@ -45,7 +45,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshPersistSession, sshTmuxSessionName, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -56,7 +56,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, setEditSSHLegacyCompatibility, editSSHDescription, setEditSSHDescription,
+  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHPersistSession, editSSHTmuxSessionName, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, setEditSSHLegacyCompatibility, editSSHDescription, setEditSSHDescription,
   editSSHIcon, setEditSSHIcon,
   editSSHAuthMethod, setEditSSHAuthMethod,
   editSSHPrivateKey, setEditSSHPrivateKey,
@@ -317,6 +317,10 @@ export const useFormHandlers = ({
         x11Forwarding: sshX11Forwarding || false,
         agentForwarding: sshAgentForwarding || false,
         autoRecording: sshAutoRecording || false,
+        persistSession: !userInfo.isWallix && !!sshPersistSession,
+        tmuxSessionName: (!userInfo.isWallix && sshPersistSession && sshTmuxSessionName)
+          ? String(sshTmuxSessionName).trim()
+          : '',
         proxyJumpEnabled: proxyJumpState.active,
         jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
         jumpPort: proxyJumpState.active ? (sshJumpPort || 22) : 22,
@@ -359,7 +363,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshPersistSession, sshTmuxSessionName, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -785,6 +789,10 @@ export const useFormHandlers = ({
         x11Forwarding: editSSHX11Forwarding || false,
         agentForwarding: editSSHAgentForwarding || false,
         autoRecording: editSSHAutoRecording || false,
+        persistSession: !userInfo.isWallix && !!editSSHPersistSession,
+        tmuxSessionName: (!userInfo.isWallix && editSSHPersistSession && editSSHTmuxSessionName)
+          ? String(editSSHTmuxSessionName).trim()
+          : '',
         proxyJumpEnabled: proxyJumpState.active,
         jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
         jumpPort: proxyJumpState.active ? (editSSHJumpPort || 22) : 22,
@@ -847,7 +855,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHPersistSession, editSSHTmuxSessionName, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHLegacyCompatibility, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
    * Guardar SSH en sidebar desde tab
@@ -867,6 +875,8 @@ export const useFormHandlers = ({
     const x11Forwarding = sshData.x11Forwarding || false;
     const agentForwarding = sshData.agentForwarding || false;
     const autoRecording = sshData.autoRecording || false;
+    const persistSession = !!sshData.persistSession;
+    const tmuxSessionName = sshData.tmuxSessionName ? String(sshData.tmuxSessionName).trim() : '';
     const proxyJumpEnabled = sshData.proxyJumpEnabled || false;
     const jumpHost = sshData.jumpHost || '';
     const jumpPort = sshData.jumpPort || 22;
@@ -967,6 +977,8 @@ export const useFormHandlers = ({
           x11Forwarding,
           agentForwarding,
           autoRecording,
+          persistSession: !isBastion && persistSession,
+          tmuxSessionName: (!isBastion && persistSession) ? tmuxSessionName : '',
           proxyJumpEnabled: proxyJumpState.active,
           jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
           jumpPort: proxyJumpState.active ? (jumpPort || 22) : 22,
@@ -1030,6 +1042,8 @@ export const useFormHandlers = ({
           x11Forwarding: x11Forwarding || false,
           agentForwarding: agentForwarding || false,
           autoRecording: autoRecording || false,
+          persistSession: !isBastion && persistSession,
+          tmuxSessionName: (!isBastion && persistSession) ? tmuxSessionName : '',
           proxyJumpEnabled: proxyJumpState.active,
           jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
           jumpPort: proxyJumpState.active ? (jumpPort || 22) : 22,

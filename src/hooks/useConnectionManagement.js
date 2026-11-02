@@ -527,6 +527,10 @@ export const useConnectionManagement = ({
         x11Forwarding: !!(isSidebarNode ? nodeOrConn.data.x11Forwarding : vault.x11Forwarding),
         agentForwarding: !!(isSidebarNode ? nodeOrConn.data.agentForwarding : vault.agentForwarding),
         autoRecording: !!(isSidebarNode ? nodeOrConn.data.autoRecording : vault.autoRecording),
+        persistSession: !useBastionWallix && !!(isSidebarNode ? nodeOrConn.data.persistSession : vault.persistSession),
+        tmuxSessionName: (!useBastionWallix && (isSidebarNode
+          ? (nodeOrConn.data.tmuxSessionName || '')
+          : (vault.tmuxSessionName || ''))) || '',
         proxyJumpEnabled: !!(isSidebarNode ? nodeOrConn.data.proxyJumpEnabled : vault.proxyJumpEnabled),
         jumpHost: isSidebarNode ? (nodeOrConn.data.jumpHost || '') : (vault.jumpHost || ''),
         jumpPort: isSidebarNode ? (nodeOrConn.data.jumpPort || 22) : (vault.jumpPort || 22),

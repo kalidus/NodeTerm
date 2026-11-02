@@ -158,6 +158,8 @@ export default function EditConnectionTabContent({
   const [sshX11Forwarding, setSSHX11Forwarding] = useState(false);
   const [sshAgentForwarding, setSSHAgentForwarding] = useState(false);
   const [sshAutoRecording, setSSHAutoRecording] = useState(false);
+  const [sshPersistSession, setSSHPersistSession] = useState(false);
+  const [sshTmuxSessionName, setSSHTmuxSessionName] = useState('');
   const [sshProxyJumpEnabled, setSSHProxyJumpEnabled] = useState(false);
   const [sshJumpHost, setSSHJumpHost] = useState('');
   const [sshJumpPort, setSSHJumpPort] = useState(22);
@@ -244,6 +246,8 @@ export default function EditConnectionTabContent({
       setSSHX11Forwarding(data.x11Forwarding || false);
       setSSHAgentForwarding(data.agentForwarding || false);
       setSSHAutoRecording(data.autoRecording || false);
+      setSSHPersistSession(!!data.persistSession);
+      setSSHTmuxSessionName(data.tmuxSessionName || '');
       setSSHProxyJumpEnabled(data.proxyJumpEnabled || false);
       setSSHJumpHost(data.jumpHost || '');
       setSSHJumpPort(data.jumpPort || 22);
@@ -318,6 +322,10 @@ export default function EditConnectionTabContent({
           x11Forwarding: sshX11Forwarding,
           agentForwarding: sshAgentForwarding,
           autoRecording: sshAutoRecording,
+          persistSession: !sshUseBastionWallix && !!sshPersistSession,
+          tmuxSessionName: (!sshUseBastionWallix && sshPersistSession && sshTmuxSessionName)
+            ? String(sshTmuxSessionName).trim()
+            : '',
           proxyJumpEnabled: sshProxyJumpEnabled,
           jumpHost: sshJumpHost,
           jumpPort: sshJumpPort,
@@ -380,7 +388,7 @@ export default function EditConnectionTabContent({
 
     return () => clearTimeout(saveTimeout);
   }, [
-    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshUseBastionWallix,
+    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshPersistSession, sshTmuxSessionName, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshLegacyCompatibility, sshDescription, sshIcon, sshUseBastionWallix,
     rdpFormData,
     vncFormData,
     fileName, fileHost, fileUser, filePassword, filePort, fileProtocol, fileRemoteFolder, fileTargetFolder,
@@ -757,6 +765,10 @@ export default function EditConnectionTabContent({
         x11Forwarding: sshX11Forwarding,
         agentForwarding: sshAgentForwarding,
         autoRecording: sshAutoRecording,
+        persistSession: !sshUseBastionWallix && !!sshPersistSession,
+        tmuxSessionName: (!sshUseBastionWallix && sshPersistSession && sshTmuxSessionName)
+          ? String(sshTmuxSessionName).trim()
+          : '',
         proxyJumpEnabled: sshProxyJumpEnabled,
         jumpHost: sshJumpHost,
         jumpPort: sshJumpPort,
@@ -855,6 +867,10 @@ export default function EditConnectionTabContent({
         x11Forwarding: sshX11Forwarding,
         agentForwarding: sshAgentForwarding,
         autoRecording: sshAutoRecording,
+        persistSession: !sshUseBastionWallix && !!sshPersistSession,
+        tmuxSessionName: (!sshUseBastionWallix && sshPersistSession && sshTmuxSessionName)
+          ? String(sshTmuxSessionName).trim()
+          : '',
         proxyJumpEnabled: sshProxyJumpEnabled,
         jumpHost: sshJumpHost,
         jumpPort: sshJumpPort,
@@ -1012,6 +1028,10 @@ export default function EditConnectionTabContent({
         x11Forwarding: sshX11Forwarding,
         agentForwarding: sshAgentForwarding,
         autoRecording: sshAutoRecording,
+        persistSession: !sshUseBastionWallix && !!sshPersistSession,
+        tmuxSessionName: (!sshUseBastionWallix && sshPersistSession && sshTmuxSessionName)
+          ? String(sshTmuxSessionName).trim()
+          : '',
         proxyJumpEnabled: sshProxyJumpEnabled,
         jumpHost: sshJumpHost,
         jumpPort: sshJumpPort,
@@ -1114,6 +1134,10 @@ export default function EditConnectionTabContent({
             setSSHAgentForwarding={setSSHAgentForwarding}
             sshAutoRecording={sshAutoRecording}
             setSSHAutoRecording={setSSHAutoRecording}
+            sshPersistSession={sshPersistSession}
+            setSSHPersistSession={setSSHPersistSession}
+            sshTmuxSessionName={sshTmuxSessionName}
+            setSSHTmuxSessionName={setSSHTmuxSessionName}
             sshProxyJumpEnabled={sshProxyJumpEnabled}
             setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
             sshJumpHost={sshJumpHost}
@@ -1132,6 +1156,8 @@ export default function EditConnectionTabContent({
             setSSHHostKeyPolicy={setSSHHostKeyPolicy}
             sshLegacyCompatibility={sshLegacyCompatibility}
             setSSHLegacyCompatibility={setSSHLegacyCompatibility}
+            sshUseBastionWallix={sshUseBastionWallix}
+            setSSHUseBastionWallix={setSSHUseBastionWallix}
             sshDescription={sshDescription}
             setSSHDescription={setSSHDescription}
             foldersOptions={folderOptionsList}

@@ -51,6 +51,8 @@ export const useDialogManagement = () => {
   const [sshX11Forwarding, setSSHX11Forwarding] = useState(false);
   const [sshAgentForwarding, setSSHAgentForwarding] = useState(false);
   const [sshAutoRecording, setSSHAutoRecording] = useState(false);
+  const [sshPersistSession, setSSHPersistSession] = useState(false);
+  const [sshTmuxSessionName, setSSHTmuxSessionName] = useState('');
   const [sshProxyJumpEnabled, setSSHProxyJumpEnabled] = useState(false);
   const [sshJumpHost, setSSHJumpHost] = useState('');
   const [sshJumpPort, setSSHJumpPort] = useState(22);
@@ -77,6 +79,8 @@ export const useDialogManagement = () => {
   const [editSSHX11Forwarding, setEditSSHX11Forwarding] = useState(false);
   const [editSSHAgentForwarding, setEditSSHAgentForwarding] = useState(false);
   const [editSSHAutoRecording, setEditSSHAutoRecording] = useState(false);
+  const [editSSHPersistSession, setEditSSHPersistSession] = useState(false);
+  const [editSSHTmuxSessionName, setEditSSHTmuxSessionName] = useState('');
   const [editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled] = useState(false);
   const [editSSHJumpHost, setEditSSHJumpHost] = useState('');
   const [editSSHJumpPort, setEditSSHJumpPort] = useState(22);
@@ -152,6 +156,8 @@ export const useDialogManagement = () => {
     setSSHX11Forwarding(false);
     setSSHAgentForwarding(false);
     setSSHAutoRecording(false);
+    setSSHPersistSession(false);
+    setSSHTmuxSessionName('');
     setSSHProxyJumpEnabled(false);
     setSSHJumpHost('');
     setSSHJumpPort(22);
@@ -369,6 +375,8 @@ export const useDialogManagement = () => {
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
     sshAutoRecording, setSSHAutoRecording,
+    sshPersistSession, setSSHPersistSession,
+    sshTmuxSessionName, setSSHTmuxSessionName,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost,
     sshJumpPort, setSSHJumpPort,
@@ -395,6 +403,8 @@ export const useDialogManagement = () => {
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHAutoRecording, setEditSSHAutoRecording,
+    editSSHPersistSession, setEditSSHPersistSession,
+    editSSHTmuxSessionName, setEditSSHTmuxSessionName,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost,
     editSSHJumpPort, setEditSSHJumpPort,

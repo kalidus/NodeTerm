@@ -31,6 +31,8 @@ export function EditSSHConnectionDialog({
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshAutoRecording = false, setSSHAutoRecording = () => {},
+  sshPersistSession = false, setSSHPersistSession = () => {},
+  sshTmuxSessionName = '', setSSHTmuxSessionName = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -85,6 +87,12 @@ export function EditSSHConnectionDialog({
       if (setSSHAutoRecording && typeof setSSHAutoRecording === 'function') {
         setSSHAutoRecording(editNodeData.data?.autoRecording || false);
       }
+      if (setSSHPersistSession && typeof setSSHPersistSession === 'function') {
+        setSSHPersistSession(!!editNodeData.data?.persistSession);
+      }
+      if (setSSHTmuxSessionName && typeof setSSHTmuxSessionName === 'function') {
+        setSSHTmuxSessionName(editNodeData.data?.tmuxSessionName || '');
+      }
       if (setSSHProxyJumpEnabled && typeof setSSHProxyJumpEnabled === 'function') {
         setSSHProxyJumpEnabled(editNodeData.data?.proxyJumpEnabled || false);
       }
@@ -122,7 +130,7 @@ export function EditSSHConnectionDialog({
         setSSHLegacyCompatibility(!!editNodeData.data?.legacyCompatibility);
       }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon, setSSHUseBastionWallix, setSSHLegacyCompatibility]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHPersistSession, setSSHTmuxSessionName, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon, setSSHUseBastionWallix, setSSHLegacyCompatibility]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -189,6 +197,10 @@ export function EditSSHConnectionDialog({
             setSSHAgentForwarding={setSSHAgentForwarding}
             sshAutoRecording={sshAutoRecording}
             setSSHAutoRecording={setSSHAutoRecording}
+            sshPersistSession={sshPersistSession}
+            setSSHPersistSession={setSSHPersistSession}
+            sshTmuxSessionName={sshTmuxSessionName}
+            setSSHTmuxSessionName={setSSHTmuxSessionName}
             sshProxyJumpEnabled={sshProxyJumpEnabled}
             setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
             sshJumpHost={sshJumpHost}

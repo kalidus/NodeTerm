@@ -31,6 +31,8 @@ export function NewSSHConnectionDialog({
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshAutoRecording = false, setSSHAutoRecording = () => {},
+  sshPersistSession = false, setSSHPersistSession = () => {},
+  sshTmuxSessionName = '', setSSHTmuxSessionName = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -64,6 +66,8 @@ export function NewSSHConnectionDialog({
       if (setSSHX11Forwarding) setSSHX11Forwarding(false);
       if (setSSHAgentForwarding) setSSHAgentForwarding(false);
       if (setSSHAutoRecording) setSSHAutoRecording(false);
+      if (setSSHPersistSession) setSSHPersistSession(false);
+      if (setSSHTmuxSessionName) setSSHTmuxSessionName('');
       if (setSSHProxyJumpEnabled) setSSHProxyJumpEnabled(false);
       if (setSSHJumpHost) setSSHJumpHost('');
       if (setSSHJumpPort) setSSHJumpPort(22);
@@ -82,7 +86,7 @@ export function NewSSHConnectionDialog({
     visible,
     setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort,
     setSSHTargetFolder, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding,
-    setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser,
+    setSSHAutoRecording, setSSHPersistSession, setSSHTmuxSessionName, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser,
     setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy,
     setSSHLegacyCompatibility, setSSHDescription, setSSHIcon, setSSHAuthMethod, setSSHPrivateKey
   ]);
@@ -157,6 +161,10 @@ export function NewSSHConnectionDialog({
           setSSHAgentForwarding={setSSHAgentForwarding}
           sshAutoRecording={sshAutoRecording}
           setSSHAutoRecording={setSSHAutoRecording}
+          sshPersistSession={sshPersistSession}
+          setSSHPersistSession={setSSHPersistSession}
+          sshTmuxSessionName={sshTmuxSessionName}
+          setSSHTmuxSessionName={setSSHTmuxSessionName}
           sshProxyJumpEnabled={sshProxyJumpEnabled}
           setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
           sshJumpHost={sshJumpHost}
