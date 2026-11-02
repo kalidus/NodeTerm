@@ -111,7 +111,8 @@ const {
   getBastionForwardingWarning,
   isProxyJumpEnabled,
   requiresDedicatedSshSession,
-  applyHostKeyPolicy
+  applyHostKeyPolicy,
+  isHandshakeOrKexError
 } = require('./src/utils/sshConnectOptions');
 const sshKnownHostsService = require('./src/main/services/SSHKnownHostsService');
 const { connectViaProxyJump } = require('./src/main/services/SSHProxyJumpService');
@@ -2715,7 +2716,31 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // Solo conectar si es una conexión nueva (no reutilizada del pool)
       ssh.setMaxListeners(300);
 
-      await ssh.connect();
+      try {
+        await ssh.connect();
+      } catch (firstConnectErr) {
+        // Si el servidor remoto falla en el handshake/KEX (por ejemplo equipos legacy con límite
+        // de paquete KEXINIT pequeño o implementación PQC defectuosa), reintentar automáticamente
+        // una vez en modo de compatibilidad legacy (sin PQC).
+        if (!config.legacyCompatibility && isHandshakeOrKexError(firstConnectErr)) {
+          try { ssh.close(); } catch (_) { }
+          const legacyConfig = { ...config, legacyCompatibility: true };
+          config = legacyConfig;
+          const legacyConnect = buildSshConnectOptions(
+            legacyConfig,
+            {
+              knownHostsService: sshKnownHostsService,
+              notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message)
+            }
+          );
+          ssh = new (getSSH2Promise())(legacyConnect.connectConfig);
+          ssh.setMaxListeners(300);
+          sshConnectionPool[cacheKey] = ssh;
+          await ssh.connect();
+        } else {
+          throw firstConnectErr;
+        }
+      }
 
       // Guardar en el pool solo para SSH directo (bastiones son independientes)
       if (!config.useBastionWallix) {
@@ -2968,12 +2993,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       (typeof err === 'string' && (
         err.includes('All configured authentication methods failed') ||
         err.includes('authentication') ||
-        err.includes('Authentication failed')
+        err.includes('Authentication failed') ||
+        err.includes('Failed to connect to agent')
       )) ||
       (err.message && (
         err.message.includes('All configured authentication methods failed') ||
         err.message.includes('authentication') ||
-        err.message.includes('Authentication failed')
+        err.message.includes('Authentication failed') ||
+        err.message.includes('Failed to connect to agent')
       ))
     );
 

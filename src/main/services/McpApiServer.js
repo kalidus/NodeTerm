@@ -27,6 +27,11 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const {
+  buildSshAlgorithms,
+  resolveSshAgentPath,
+  isHandshakeOrKexError
+} = require('../../utils/sshConnectOptions');
 const { Client } = require('ssh2');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 const recordingQuery = require('./recording-query');
@@ -451,48 +456,64 @@ class McpApiServer {
         resolve(poolEntry);
       });
 
+      let retriedLegacy = false;
+
+      // Preparar opciones de conexión
+      const buildConnectOptions = (forceLegacy = false) => {
+        const opts = {
+          host: connConfig.host,
+          port: connConfig.port || 22,
+          username: connConfig.username,
+          readyTimeout: 15000,
+          algorithms: buildSshAlgorithms({
+            ...connConfig,
+            legacyCompatibility: forceLegacy || !!connConfig.legacyCompatibility
+          }),
+          // ✅ SEGURIDAD: Verificar clave del host contra known_hosts (política accept-new previene ataques MitM)
+          hostVerifier: sshKnownHostsService.createHostVerifier(
+            connConfig.host,
+            connConfig.port || 22,
+            'accept-new',
+            (msg) => console.warn(`[MCP-SSH] ${msg}`)
+          )
+        };
+
+        // Autenticación: password o privateKey
+        if (connConfig.password) {
+          opts.password = connConfig.password;
+        }
+        if (connConfig.privateKey) {
+          opts.privateKey = connConfig.privateKey;
+          if (connConfig.passphrase) {
+            opts.passphrase = connConfig.passphrase;
+          }
+        }
+
+        // Si no hay credenciales, intentar con agente SSH del sistema solo si está disponible
+        if (!connConfig.password && !connConfig.privateKey) {
+          const agentPath = resolveSshAgentPath();
+          if (agentPath) {
+            opts.agent = agentPath;
+          }
+        }
+
+        return opts;
+      };
+
       client.on('error', (err) => {
+        if (!retriedLegacy && !connConfig.legacyCompatibility && isHandshakeOrKexError(err)) {
+          retriedLegacy = true;
+          try {
+            client.connect(buildConnectOptions(true));
+            return;
+          } catch (_) { /* fallback below */ }
+        }
         clearTimeout(timeout);
         this._cleanupPoolEntry(connectionId);
         reject(new Error(`SSH connection failed: ${err.message}`));
       });
 
-      // Preparar opciones de conexión
-      const connectOptions = {
-        host: connConfig.host,
-        port: connConfig.port || 22,
-        username: connConfig.username,
-        readyTimeout: 15000,
-        // ✅ SEGURIDAD: Verificar clave del host contra known_hosts (política accept-new previene ataques MitM)
-        hostVerifier: sshKnownHostsService.createHostVerifier(
-          connConfig.host,
-          connConfig.port || 22,
-          'accept-new',
-          (msg) => console.warn(`[MCP-SSH] ${msg}`)
-        )
-      };
-
-      // Autenticación: password o privateKey
-      if (connConfig.password) {
-        connectOptions.password = connConfig.password;
-      }
-      if (connConfig.privateKey) {
-        connectOptions.privateKey = connConfig.privateKey;
-        if (connConfig.passphrase) {
-          connectOptions.passphrase = connConfig.passphrase;
-        }
-      }
-
-      // Si no hay credenciales, intentar con agente SSH del sistema
-      if (!connConfig.password && !connConfig.privateKey) {
-        if (process.platform === 'win32') {
-          connectOptions.agent = '\\\\.\\pipe\\openssh-ssh-agent';
-        } else {
-          connectOptions.agent = process.env.SSH_AUTH_SOCK;
-        }
-      }
-
-      client.connect(connectOptions);
+      client.connect(buildConnectOptions(false));
     });
   }
 

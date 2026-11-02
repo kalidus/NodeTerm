@@ -378,6 +378,7 @@ function registerSSHHandlers(dependencies = {}) {
         password: sshConfig.password || sshConfig.sshPassword,
         privateKey: sshConfig.privateKey || sshConfig.sshPrivateKey || sshConfig.privateKeyPath,
         readyTimeout: 10000,
+        reconnect: false,
         algorithms: buildSshAlgorithms(sshConfig)
       };
 
@@ -389,9 +390,23 @@ function registerSSHHandlers(dependencies = {}) {
         } catch (_) {}
       }
 
-      const ssh = new SSH2Promise(config);
-      await ssh.connect();
-      await ssh.close();
+      try {
+        const ssh = new SSH2Promise(config);
+        await ssh.connect();
+        await ssh.close();
+      } catch (firstErr) {
+        const { isHandshakeOrKexError } = require('../../utils/sshConnectOptions');
+        if (!sshConfig.legacyCompatibility && isHandshakeOrKexError(firstErr)) {
+          const sshLegacy = new SSH2Promise({
+            ...config,
+            algorithms: buildSshAlgorithms({ ...sshConfig, legacyCompatibility: true })
+          });
+          await sshLegacy.connect();
+          await sshLegacy.close();
+        } else {
+          throw firstErr;
+        }
+      }
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message || String(err) };
@@ -458,7 +473,7 @@ function registerSSHHandlers(dependencies = {}) {
           return { success: true, home };
         }
       } else {
-        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
+        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const home = await ssh.exec('echo $HOME');
         await ssh.close();
@@ -544,7 +559,7 @@ function registerSSHHandlers(dependencies = {}) {
         }
       } else {
         // SSH directo: si no había conexión activa previa, crear conexión efímera con SSH2Promise
-        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
+        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const escapedPath = escapeShellPath(safePath);
         const lsOutput = await ssh.exec(`ls -la --color=never "${escapedPath}"`);
@@ -593,7 +608,7 @@ function registerSSHHandlers(dependencies = {}) {
         return { success: true, exists: cleanOutput.includes('exists') };
       } else {
         // SSH directo
-        const ssh = new SSH2Promise({ ...secureConfig, algorithms: buildSshAlgorithms(secureConfig) });
+        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
         await ssh.connect();
         const result = await ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
         await ssh.close();

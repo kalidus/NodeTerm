@@ -14,7 +14,8 @@ const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 const {
   buildSshConnectOptions,
   buildShellOptions,
-  setupX11ForwardingListener
+  setupX11ForwardingListener,
+  isHandshakeOrKexError
 } = require('../../utils/sshConnectOptions');
 
 class SSHAuthService {
@@ -65,7 +66,8 @@ class SSHAuthService {
 
     return errorMessage.includes('authentication') ||
       errorMessage.includes('Authentication failed') ||
-      errorMessage.includes('All configured authentication methods failed');
+      errorMessage.includes('All configured authentication methods failed') ||
+      errorMessage.includes('Failed to connect to agent');
   }
 
   /**
@@ -294,8 +296,11 @@ class SSHAuthService {
     this.setupKeyboardInteractive(ssh2Client, conn, sender, tabId);
     this.prepareSSH2Client(ssh2Client, config);
 
+    let clientReady = false;
+
     // Evento ready
     ssh2Client.on('ready', () => {
+      clientReady = true;
       const shellOptions = buildShellOptions(config);
       const wndOpts = {
         term: shellOptions.term,
@@ -411,6 +416,20 @@ class SSHAuthService {
 
     // Evento error
     ssh2Client.on('error', (err) => {
+      if (!clientReady && conn && !conn._retriedLegacy && !config?.legacyCompatibility && isHandshakeOrKexError(err)) {
+        conn._retriedLegacy = true;
+        const legacyConfig = { ...config, legacyCompatibility: true };
+        conn.config = legacyConfig;
+        try {
+          const fallbackOptions = buildSshConnectOptions(legacyConfig, {
+            includePassword: Boolean(manualPassword || (legacyConfig.password && legacyConfig.password.trim())),
+            interactive: true
+          });
+          ssh2Client.connect(fallbackOptions.connectConfig);
+          return;
+        } catch (_) { /* fallback below */ }
+      }
+
       const isAuthError = this.isAuthenticationError(err);
 
       if (isAuthError) {

@@ -1,3 +1,5 @@
+const { isHandshakeOrKexError } = require('../../utils/sshConnectOptions');
+
 function buildJumpConfig(config, buildSshConnectOptions, applyHostKeyPolicy) {
   const built = typeof buildSshConnectOptions === 'function' ? buildSshConnectOptions(config) : null;
   const jumpConfig = {
@@ -31,7 +33,7 @@ function buildTargetConfig(config, buildSshConnectOptions, applyHostKeyPolicy) {
   return applyHostKeyPolicy(targetConfig, config.host, config.port || 22, config);
 }
 
-function connectViaProxyJump({
+function connectViaProxyJumpOnce({
   config,
   Client,
   buildSshConnectOptions,
@@ -90,6 +92,20 @@ function connectViaProxyJump({
 
     jumpClient.connect(buildJumpConfig(config, buildSshConnectOptions, applyHostKeyPolicy));
   });
+}
+
+async function connectViaProxyJump(params) {
+  try {
+    return await connectViaProxyJumpOnce(params);
+  } catch (err) {
+    if (!params?.config?.legacyCompatibility && isHandshakeOrKexError(err)) {
+      return connectViaProxyJumpOnce({
+        ...params,
+        config: { ...params.config, legacyCompatibility: true }
+      });
+    }
+    throw err;
+  }
 }
 
 module.exports = {

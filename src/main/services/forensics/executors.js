@@ -211,30 +211,47 @@ function createSshExecutor(client, { kind = 'ssh-session', onClose } = {}) {
  * Soporta password o clave privada (contenido).
  */
 async function connectDirectSsh(config, { readyTimeout = 20000 } = {}) {
+  const { buildSshAlgorithms, isHandshakeOrKexError } = require('../../../utils/sshConnectOptions');
   const { Client } = require('ssh2');
-  const client = new Client();
-  const connectConfig = {
-    host: config.host,
-    port: Number(config.port) || 22,
-    username: config.username,
-    readyTimeout,
-    keepaliveInterval: 10000
-  };
-  if (config.password) connectConfig.password = config.password;
-  if (config.privateKey) {
-    connectConfig.privateKey = config.privateKey;
-    if (config.passphrase) connectConfig.passphrase = config.passphrase;
-  }
-  if (config.tryKeyboard) {
-    connectConfig.tryKeyboard = true;
-    client.on('keyboard-interactive', (_n, _i, _l, _p, finish) => finish([config.password || '']));
-  }
-  await new Promise((resolve, reject) => {
-    client.once('ready', resolve);
-    client.once('error', reject);
+
+  const tryConnect = (forceLegacy = false) => new Promise((resolve, reject) => {
+    const client = new Client();
+    const connectConfig = {
+      host: config.host,
+      port: Number(config.port) || 22,
+      username: config.username,
+      readyTimeout,
+      keepaliveInterval: 10000,
+      algorithms: buildSshAlgorithms({
+        ...config,
+        legacyCompatibility: forceLegacy || !!config.legacyCompatibility
+      })
+    };
+    if (config.password) connectConfig.password = config.password;
+    if (config.privateKey) {
+      connectConfig.privateKey = config.privateKey;
+      if (config.passphrase) connectConfig.passphrase = config.passphrase;
+    }
+    if (config.tryKeyboard) {
+      connectConfig.tryKeyboard = true;
+      client.on('keyboard-interactive', (_n, _i, _l, _p, finish) => finish([config.password || '']));
+    }
+    client.once('ready', () => resolve(client));
+    client.once('error', (err) => {
+      try { client.end(); } catch (_) { /* noop */ }
+      reject(err);
+    });
     client.connect(connectConfig);
   });
-  return client;
+
+  try {
+    return await tryConnect(false);
+  } catch (err) {
+    if (!config?.legacyCompatibility && isHandshakeOrKexError(err)) {
+      return tryConnect(true);
+    }
+    throw err;
+  }
 }
 
 async function createDirectSshExecutor(config) {

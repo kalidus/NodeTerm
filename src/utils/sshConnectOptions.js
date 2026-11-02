@@ -1,4 +1,5 @@
 const net = require('net');
+const fs = require('fs');
 const { registerSsh2PqcKex, PQC_KEX_ALGORITHMS } = require('./pqc/registerSsh2PqcKex');
 
 // Registrar soporte de intercambio de claves (KEX) híbrido Post-Cuántico en ssh2
@@ -28,9 +29,62 @@ function isLegacyCompatibility(config) {
   return !!(config && config.legacyCompatibility);
 }
 
-function buildSshAlgorithms(config = {}) {
-  const isBastion = isWallixBastion(config);
+/**
+ * Detecta si un error de conexión corresponde a un fallo en la fase de Handshake/KEX
+ * (y NO a credenciales ni a rechazo explícito de clave de host en known_hosts),
+ * permitiendo reintentar automáticamente en modo de compatibilidad legacy (sin PQC).
+ */
+function isHandshakeOrKexError(err) {
+  if (!err) return false;
+  const msg = typeof err === 'string' ? err : (err.message || '');
+  const lower = msg.toLowerCase();
 
+  // No reintentar si fue rechazado por política de known_hosts o por autenticación
+  if (
+    lower.includes('host denied') ||
+    lower.includes('known_hosts') ||
+    lower.includes('clave de host') ||
+    lower.includes('authentication') ||
+    lower.includes('enotfound') ||
+    lower.includes('econnrefused') ||
+    lower.includes('ehostunreach') ||
+    lower.includes('enetunreach')
+  ) {
+    return false;
+  }
+
+  if (err.level === 'handshake') {
+    return true;
+  }
+
+  return /handshake failed|signature verification failed|key exchange|no matching .* algorithm|unable to agree|unsupported algorithm|dh secret|bad packet length|packet corrupt|protocol error|econnreset/i.test(msg);
+}
+
+/**
+ * Reordena serverHostKey para priorizar el tipo de clave que ya esté registrado
+ * en known_hosts para este servidor, evitando falsos rechazos por cambio de tipo de clave.
+ */
+function prioritizeKnownHostKeyAlgorithms(algorithms, existingKeyType) {
+  if (!algorithms || !Array.isArray(algorithms.serverHostKey) || !existingKeyType) {
+    return algorithms;
+  }
+
+  const preferred = existingKeyType === 'ssh-rsa'
+    ? ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa']
+    : [existingKeyType];
+
+  const prioritized = [
+    ...preferred.filter((k) => algorithms.serverHostKey.includes(k)),
+    ...algorithms.serverHostKey.filter((k) => !preferred.includes(k))
+  ];
+
+  return {
+    ...algorithms,
+    serverHostKey: prioritized
+  };
+}
+
+function buildSshAlgorithms(config = {}) {
   const raw = isLegacyCompatibility(config)
     ? {
         kex: [
@@ -76,6 +130,9 @@ function buildSshAlgorithms(config = {}) {
         compress: ['none']
       }
     : {
+        // Prioridad 1: KEX Híbrido Post-Cuántico (ML-KEM-768 / sntrup761)
+        // Prioridad 2: KEX Clásico Moderno (Curve25519 / ECDH / DH-SHA2)
+        // Prioridad 3: Fallback al final para servidores antiguos (DH-SHA1)
         kex: [
           ...PQC_KEX_ALGORITHMS,
           'curve25519-sha256',
@@ -87,8 +144,13 @@ function buildSshAlgorithms(config = {}) {
           'diffie-hellman-group14-sha256',
           'diffie-hellman-group16-sha512',
           'diffie-hellman-group18-sha512',
-          ...(isBastion ? ['diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'] : [])
+          'diffie-hellman-group-exchange-sha1',
+          'diffie-hellman-group14-sha1',
+          'diffie-hellman-group1-sha1'
         ],
+        // Prioridad 1: AEAD y CTR de 256 bits (resistentes a Grover)
+        // Prioridad 2: AEAD y CTR de 192/128 bits
+        // Prioridad 3: Fallback CBC/3DES al final para equipos legacy
         cipher: [
           'aes256-gcm@openssh.com',
           'chacha20-poly1305@openssh.com',
@@ -96,7 +158,12 @@ function buildSshAlgorithms(config = {}) {
           'aes192-ctr',
           'aes128-gcm@openssh.com',
           'aes128-ctr',
-          ...(isBastion ? ['aes256-gcm', 'aes128-gcm'] : [])
+          'aes256-gcm',
+          'aes128-gcm',
+          'aes256-cbc',
+          'aes192-cbc',
+          'aes128-cbc',
+          '3des-cbc'
         ],
         serverHostKey: [
           'ssh-ed25519',
@@ -106,7 +173,7 @@ function buildSshAlgorithms(config = {}) {
           'rsa-sha2-512',
           'rsa-sha2-256',
           'ssh-rsa',
-          ...(isBastion ? ['ssh-dss'] : [])
+          'ssh-dss'
         ],
         hmac: [
           'hmac-sha2-512-etm@openssh.com',
@@ -156,11 +223,20 @@ function getEffectiveForwarding(config) {
 
 function resolveSshAgentPath() {
   if (process.env.SSH_AUTH_SOCK) {
-    return process.env.SSH_AUTH_SOCK;
+    try {
+      if (fs.existsSync(process.env.SSH_AUTH_SOCK)) {
+        return process.env.SSH_AUTH_SOCK;
+      }
+    } catch (_) { /* noop */ }
   }
 
   if (process.platform === 'win32') {
-    return '\\\\.\\pipe\\openssh-ssh-agent';
+    const winPipe = '\\\\.\\pipe\\openssh-ssh-agent';
+    try {
+      if (fs.existsSync(winPipe)) {
+        return winPipe;
+      }
+    } catch (_) { /* noop */ }
   }
 
   return undefined;
@@ -210,7 +286,7 @@ function setupX11ForwardingListener(ssh2Client) {
 }
 
 function normalizeHostKeyPolicy(policy) {
-  if (policy === 'strict' || policy === 'known_hosts' || policy === 'warn_new') {
+  if (policy === 'strict' || policy === 'known_hosts' || policy === 'warn_new' || policy === 'accept-new') {
     return policy;
   }
   return 'warn_new';
@@ -230,9 +306,20 @@ function applyHostKeyPolicy(connectConfig, host, port, config, context = {}) {
     return connectConfig;
   }
 
+  let algorithms = connectConfig.algorithms;
+  if (typeof knownHostsService.lookup === 'function') {
+    try {
+      const existing = knownHostsService.lookup(host, port || 22);
+      if (existing && existing.keyType && algorithms) {
+        algorithms = prioritizeKnownHostKeyAlgorithms(algorithms, existing.keyType);
+      }
+    } catch (_) { /* noop */ }
+  }
+
   const policy = normalizeHostKeyPolicy(config.hostKeyPolicy);
   return {
     ...connectConfig,
+    ...(algorithms ? { algorithms } : {}),
     // Sin hostHash: ssh2 entrega la clave publica en bruto (Buffer). Con hostHash,
     // ssh2 hashea en hex y no coincide con las huellas base64 de known_hosts.
     hostVerifier: knownHostsService.createHostVerifier(
@@ -252,7 +339,9 @@ function buildSshConnectOptions(config, options = {}) {
   const connectConfig = applyHostKeyPolicy({
     host: config.host,
     username: config.username,
-    port: config.port || 22
+    port: config.port || 22,
+    reconnect: false,
+    algorithms: buildSshAlgorithms(config)
   }, config.host, config.port || 22, config, { knownHostsService, notify });
 
   if (interactive) {
@@ -262,10 +351,11 @@ function buildSshConnectOptions(config, options = {}) {
     connectConfig.keepaliveCountMax = 3;
   }
 
-  connectConfig.algorithms = buildSshAlgorithms(config);
-
   if (config.privateKey && String(config.privateKey).trim()) {
     connectConfig.privateKey = config.privateKey;
+    if (config.passphrase && String(config.passphrase).trim()) {
+      connectConfig.passphrase = config.passphrase;
+    }
   }
 
   if (includePassword && config.password && config.password.trim()) {
@@ -354,6 +444,8 @@ function getBastionForwardingWarning(config) {
 module.exports = {
   isWallixBastion,
   isLegacyCompatibility,
+  isHandshakeOrKexError,
+  prioritizeKnownHostKeyAlgorithms,
   buildSshAlgorithms,
   PQC_KEX_ALGORITHMS,
   normalizeHostKeyPolicy,

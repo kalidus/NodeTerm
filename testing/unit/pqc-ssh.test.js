@@ -9,6 +9,8 @@ const {
   buildSshConnectOptions,
   buildSshAlgorithms,
   isLegacyCompatibility,
+  isHandshakeOrKexError,
+  prioritizeKnownHostKeyAlgorithms,
   appendForwardingFlagsToCacheKey
 } = require('../../src/utils/sshConnectOptions');
 const { toEncryptedV2 } = require('../../src/shared/vault-blob-encoding');
@@ -78,11 +80,15 @@ describe('SSH Connect Options - Automatic PQC vs Legacy Compatibility Mode', () 
     assert.strictEqual(connectConfig.algorithms.kex[0], 'mlkem768x25519-sha256');
     assert.strictEqual(connectConfig.algorithms.kex[1], 'sntrup761x25519-sha512@openssh.com');
     assert.strictEqual(connectConfig.algorithms.kex[2], 'sntrup761x25519-sha512');
-    // Classical fallback remains in the list so non-PQC servers negotiate transparently
+    // Classical fallback remains in the list so non-PQC and legacy servers negotiate transparently
     assert.ok(connectConfig.algorithms.kex.includes('curve25519-sha256'));
     assert.ok(connectConfig.algorithms.kex.includes('diffie-hellman-group14-sha256'));
-    // Legacy SHA1 KEX is NOT enabled in automatic default mode
-    assert.ok(!connectConfig.algorithms.kex.includes('diffie-hellman-group1-sha1'));
+    // Legacy SHA1 KEX is at the very end as last-resort fallback after all modern algorithms
+    assert.strictEqual(
+      connectConfig.algorithms.kex.at(-1),
+      'diffie-hellman-group1-sha1'
+    );
+    assert.strictEqual(connectConfig.reconnect, false);
 
     // 256-bit quantum-resistant symmetric ciphers first, filtered against runtime SUPPORTED_CIPHER
     assert.strictEqual(connectConfig.algorithms.cipher[0], 'aes256-gcm@openssh.com');
@@ -91,6 +97,26 @@ describe('SSH Connect Options - Automatic PQC vs Legacy Compatibility Mode', () 
     for (const cipher of connectConfig.algorithms.cipher) {
       assert.ok(ssh2Constants.SUPPORTED_CIPHER.includes(cipher));
     }
+  });
+
+  it('detects handshake/KEX errors for automatic legacy fallback and ignores auth/known_hosts errors', () => {
+    assert.strictEqual(isHandshakeOrKexError(new Error('Handshake failed: no matching key exchange algorithm')), true);
+    assert.strictEqual(isHandshakeOrKexError(new Error('Handshake failed: signature verification failed')), true);
+    assert.strictEqual(isHandshakeOrKexError(Object.assign(new Error('Packet corrupt'), { level: 'handshake' })), true);
+    assert.strictEqual(isHandshakeOrKexError(new Error('Handshake failed: Host denied (verification failed)')), false);
+    assert.strictEqual(isHandshakeOrKexError(new Error('All configured authentication methods failed')), false);
+    assert.strictEqual(isHandshakeOrKexError(new Error('connect ECONNREFUSED 192.168.1.50:22')), false);
+  });
+
+  it('prioritizes the host key algorithm already recorded in known_hosts to prevent key-type mismatches', () => {
+    const algos = buildSshAlgorithms({});
+    const reorderedEcdsa = prioritizeKnownHostKeyAlgorithms(algos, 'ecdsa-sha2-nistp256');
+    assert.strictEqual(reorderedEcdsa.serverHostKey[0], 'ecdsa-sha2-nistp256');
+
+    const reorderedRsa = prioritizeKnownHostKeyAlgorithms(algos, 'ssh-rsa');
+    assert.strictEqual(reorderedRsa.serverHostKey[0], 'rsa-sha2-512');
+    assert.strictEqual(reorderedRsa.serverHostKey[1], 'rsa-sha2-256');
+    assert.strictEqual(reorderedRsa.serverHostKey[2], 'ssh-rsa');
   });
 
   it('switches to legacy compatibility algorithms when legacyCompatibility is true', () => {

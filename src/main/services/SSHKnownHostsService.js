@@ -300,6 +300,15 @@ class SSHKnownHostsService {
   }
 
   lookup(host, port = 22) {
+    if (!this.loaded && this.filePath) {
+      try {
+        if (fs.existsSync(this.filePath)) {
+          const content = fs.readFileSync(this.filePath, 'utf8');
+          this.parseContent(content);
+        }
+        this.loaded = true;
+      } catch (_) { /* noop */ }
+    }
     const aliases = this.getHostAliases(host, port);
     for (const alias of aliases) {
       const entry = this.entries.get(alias);
@@ -387,7 +396,7 @@ class SSHKnownHostsService {
       return false;
     }
 
-    if (policy === 'warn_new') {
+    if (policy === 'warn_new' || policy === 'accept-new') {
       await this.append(host, port, key);
       return true;
     }

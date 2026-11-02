@@ -1,4 +1,4 @@
-const { buildSshAlgorithms } = require('../utils/sshConnectOptions');
+const { buildSshAlgorithms, isHandshakeOrKexError } = require('../utils/sshConnectOptions');
 const { Client } = require('ssh2');
 
 /**
@@ -21,7 +21,11 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     // Crear una nueva conexión SSH específicamente para este comando
     const statsConn = new Client();
 
+    let statsReady = false;
+    let statsRetriedLegacy = false;
+
     statsConn.on('ready', () => {
+      statsReady = true;
 
       // Ejecutar el comando directamente sin interferir con la shell del usuario
       statsConn.exec(command, (err, stream) => {
@@ -56,29 +60,43 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       });
     });
 
+    // Conectar usando las mismas credenciales pero para ejecutar comandos específicos
+    const buildStatsConnectConfig = (forceLegacy = false) => {
+      const cfg = {
+        host: config.bastionHost,
+        port: config.port || 22,
+        username: config.bastionUser,
+        readyTimeout: 10000,
+        algorithms: buildSshAlgorithms({
+          ...config,
+          useBastionWallix: true,
+          legacyCompatibility: forceLegacy || !!config.legacyCompatibility
+        }),
+        hostVerifier: () => true, // Aceptar cualquier host key para Wallix
+        compress: false // Sin compresión para mejor rendimiento
+      };
+
+      // Si hay password, usarlo. Si no, permitir autenticación interactiva
+      if (config.password && config.password.trim()) {
+        cfg.password = config.password;
+      } else {
+        cfg.tryKeyboard = true;
+      }
+      return cfg;
+    };
+
     statsConn.on('error', (err) => {
+      if (!statsReady && !statsRetriedLegacy && !config.legacyCompatibility && isHandshakeOrKexError(err)) {
+        statsRetriedLegacy = true;
+        try {
+          statsConn.connect(buildStatsConnectConfig(true));
+          return;
+        } catch (_) { /* fallback below */ }
+      }
       if (callback) callback(err, null);
     });
 
-    // Conectar usando las mismas credenciales pero para ejecutar comandos específicos
-    const statsConnectConfig = {
-      host: config.bastionHost,
-      port: config.port || 22,
-      username: config.bastionUser,
-      readyTimeout: 10000,
-      algorithms: buildSshAlgorithms({ ...config, useBastionWallix: true }),
-      hostVerifier: () => true, // Aceptar cualquier host key para Wallix
-      compress: false // Sin compresión para mejor rendimiento
-    };
-
-    // Si hay password, usarlo. Si no, permitir autenticación interactiva
-    if (config.password && config.password.trim()) {
-      statsConnectConfig.password = config.password;
-    } else {
-      statsConnectConfig.tryKeyboard = true;
-    }
-
-    statsConn.connect(statsConnectConfig);
+    statsConn.connect(buildStatsConnectConfig(false));
   };
 
   // ✅ COMPATIBILIDAD: Añadir método exec basado en promesas para que los handlers SSH funcionen
@@ -94,7 +112,11 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
   // Ya no necesitamos procesamiento especial, solo enviar todo al terminal
   // Los comandos de estadísticas van por conexión SSH separada
 
+  let isBastionReady = false;
+  let retriedLegacy = false;
+
   conn.on('ready', () => {
+    isBastionReady = true;
     conn.shell({
       term: 'xterm-256color',
       // Optimizaciones para reducir latencia en Wallix
@@ -158,31 +180,46 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     finish(responses);
   });
 
+  const buildMainConnectConfig = (forceLegacy = false) => {
+    const cfg = {
+      host: config.bastionHost,
+      port: config.port || 22,
+      username: config.bastionUser,
+      readyTimeout: 30000,
+      keepaliveInterval: 60000,
+      keepaliveCountMax: 3,
+      algorithms: buildSshAlgorithms({
+        ...config,
+        useBastionWallix: true,
+        legacyCompatibility: forceLegacy || !!config.legacyCompatibility
+      }),
+      hostVerifier: () => true, // Aceptar cualquier host key para Wallix
+      compress: false, // Sin compresión para reducir latencia
+      debug: false
+    };
+
+    // Si hay password, usarlo. Si no, permitir autenticación interactiva
+    if (config.password && config.password.trim()) {
+      cfg.password = config.password;
+    } else {
+      cfg.tryKeyboard = true;
+    }
+    return cfg;
+  };
+
   conn.on('error', (err) => {
+    if (!isBastionReady && !retriedLegacy && !config.legacyCompatibility && isHandshakeOrKexError(err)) {
+      retriedLegacy = true;
+      config.legacyCompatibility = true;
+      try {
+        conn.connect(buildMainConnectConfig(true));
+        return;
+      } catch (_) { /* fallback below */ }
+    }
     if (onError) onError(err);
   });
 
-  const connectConfig = {
-    host: config.bastionHost,
-    port: config.port || 22,
-    username: config.bastionUser,
-    readyTimeout: 30000,
-    keepaliveInterval: 60000,
-    keepaliveCountMax: 3,
-    algorithms: buildSshAlgorithms({ ...config, useBastionWallix: true }),
-    hostVerifier: () => true, // Aceptar cualquier host key para Wallix
-    compress: false, // Sin compresión para reducir latencia
-    debug: false
-  };
-
-  // Si hay password, usarlo. Si no, permitir autenticación interactiva
-  if (config.password && config.password.trim()) {
-    connectConfig.password = config.password;
-  } else {
-    connectConfig.tryKeyboard = true;
-  }
-
-  conn.connect(connectConfig);
+  conn.connect(buildMainConnectConfig(false));
 
   return { conn };
 }
