@@ -886,8 +886,15 @@ body:has(.aqp) .p-toast {
   padding: 3px 9px;
 }
 
-.aqp-gallery--form {
+.aqp-gallery--form,
+.aqp-gallery--frames {
   display: block;
+}
+
+.aqp-frame-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .aqp-gallery--typography {

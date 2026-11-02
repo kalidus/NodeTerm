@@ -6,6 +6,12 @@ import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from './presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList } from './tabThemeLoader';
 import { setUILayout, UI_LAYOUT_OPTIONS, getCurrentUILayoutId } from './appearanceLayout';
+import {
+  TERMINAL_FRAME_STYLE_OPTIONS,
+  getCurrentTerminalFrameStyle,
+  setTerminalFrameStyle
+} from './terminalFrameStyle';
+import TerminalFrameStyleOption from '../components/TerminalFrameStyleOption';
 import { getAvailableFonts } from './fontsList';
 import { explorerFonts, themes } from '../themes';
 import fontCatalog from './fontCatalog';
@@ -189,6 +195,7 @@ const RAIL_GROUPS = [
         chips: [
           { id: 'themes', labelKey: 'settings.quickPanel.chips.themes' },
           { id: 'styles', labelKey: 'settings.quickPanel.chips.styles' },
+          { id: 'frames', labelKey: 'settings.quickPanel.chips.frames' },
           { id: 'typography', labelKey: 'settings.quickPanel.chips.typography' },
           { id: 'presets', labelKey: 'settings.quickPanel.chips.presets' }
         ]
@@ -788,6 +795,36 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
   }
   extraCleanup.push(unmountEmbed);
 
+  let frameListRoot = null;
+
+  function unmountFrameList() {
+    const root = frameListRoot;
+    frameListRoot = null;
+    if (root) root.unmount();
+  }
+  extraCleanup.push(unmountFrameList);
+
+  function mountFrameList(host, styles) {
+    const root = createRoot(host);
+    frameListRoot = root;
+    const current = getCurrentTerminalFrameStyle();
+    root.render(
+      React.createElement(
+        React.Fragment,
+        null,
+        styles.map((style) => React.createElement(TerminalFrameStyleOption, {
+          key: style.id,
+          style,
+          selected: style.id === current,
+          onSelect: (id) => {
+            setTerminalFrameStyle(id);
+            queueMicrotask(() => refreshSelection());
+          }
+        }))
+      )
+    );
+  }
+
   function mountEmbed(section, key) {
     const host = el('div', 'aqp-embed');
     const body = el('div', 'aqp-body aqp-body--embed');
@@ -821,6 +858,7 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
   function renderStage() {
     const section = activeSection();
     unmountEmbed();
+    unmountFrameList();
     stage.replaceChildren();
     const head = el('div', 'aqp-stage-head');
     head.append(el('div', 'aqp-title', t(section.labelKey)));
@@ -1274,6 +1312,16 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
       };
     }
 
+    if (section === 'ui' && chip === 'frames') {
+      const styles = TERMINAL_FRAME_STYLE_OPTIONS.filter((style) => matchesQuery([style.label, style.id]));
+      const host = el('div', 'aqp-frame-list');
+      return {
+        mode: 'frames',
+        cards: styles.length ? [host] : [],
+        frameStyles: styles
+      };
+    }
+
     if (section === 'ui' && chip === 'styles') {
       const current = remembered('ui-layout', 'ui_layout', getCurrentUILayoutId());
       return {
@@ -1455,11 +1503,14 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
 
   function fillGrid() {
     if (!gridEl) return;
+    unmountFrameList();
     const catalog = currentCatalog();
     if (catalog.mode === 'apps') {
       gridEl.className = 'aqp-gallery aqp-gallery--apps';
     } else if (catalog.mode === 'form') {
       gridEl.className = 'aqp-gallery aqp-gallery--form';
+    } else if (catalog.mode === 'frames') {
+      gridEl.className = 'aqp-gallery aqp-gallery--frames';
     } else if (catalog.mode === 'typography') {
       gridEl.className = 'aqp-gallery aqp-gallery--typography';
     } else if (catalog.stacked) {
@@ -1473,6 +1524,9 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
       return;
     }
     catalog.cards.forEach(card => gridEl.append(card));
+    if (catalog.mode === 'frames') {
+      mountFrameList(catalog.cards[0], catalog.frameStyles);
+    }
   }
 
   function render() {
