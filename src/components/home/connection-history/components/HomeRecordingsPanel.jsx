@@ -90,10 +90,10 @@ async function openAllRecordings() {
   }
 }
 
-export const HomeRecordingsPanel = () => {
+export const HomeRecordingsPanel = ({ isActiveTab = false }) => {
   const [recordings, setRecordings] = useState([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!isActiveTab);
   const [failed, setFailed] = useState(false);
 
   const loadRecordings = useCallback(async () => {
@@ -116,14 +116,17 @@ export const HomeRecordingsPanel = () => {
   }, []);
 
   useEffect(() => {
+    if (!isActiveTab) return undefined;
     loadRecordings();
-  }, [loadRecordings]);
+    return undefined;
+  }, [isActiveTab, loadRecordings]);
 
   useEffect(() => {
+    if (!isActiveTab) return undefined;
     const onRefresh = () => { loadRecordings(); };
     window.addEventListener('refresh-audit-tab', onRefresh);
     return () => window.removeEventListener('refresh-audit-tab', onRefresh);
-  }, [loadRecordings]);
+  }, [isActiveTab, loadRecordings]);
 
   const countLabel = total > recordings.length
     ? `${recordings.length} de ${total}`

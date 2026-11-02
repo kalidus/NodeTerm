@@ -307,7 +307,6 @@ function registerRecordingHandlers() {
   // RECORDING: Listar todas las grabaciones
   ipcMain.handle('recording:list', async (event, filters = {}) => {
     try {
-      console.log('🔍 recording:list - Filtros recibidos:', JSON.stringify(filters, null, 2));
       const recordingsDir = await getRecordingsDirectory();
       
       // Verificar si existe el directorio
@@ -339,38 +338,17 @@ function registerRecordingHandlers() {
       // Filtrar nulos y aplicar filtros
       let filteredRecordings = recordings.filter(Boolean);
       
-      console.log(`📊 Total grabaciones antes de filtrar: ${filteredRecordings.length}`);
-      if (filteredRecordings.length > 0) {
-        console.log('📝 Ejemplo de grabación:', {
-          host: filteredRecordings[0].host,
-          username: filteredRecordings[0].username,
-          title: filteredRecordings[0].title
-        });
-      }
-      
       // Aplicar filtros si existen (comparación exacta)
       if (filters.host) {
-        console.log(`🔎 Filtrando por host: "${filters.host}"`);
-        filteredRecordings = filteredRecordings.filter(r => {
-          const match = r.host && r.host.toLowerCase() === filters.host.toLowerCase();
-          if (!match && r.host) {
-            console.log(`  ❌ No coincide: "${r.host}" !== "${filters.host}"`);
-          }
-          return match;
-        });
-        console.log(`📊 Después de filtrar por host: ${filteredRecordings.length}`);
+        filteredRecordings = filteredRecordings.filter(r => (
+          r.host && r.host.toLowerCase() === filters.host.toLowerCase()
+        ));
       }
       
       if (filters.username) {
-        console.log(`🔎 Filtrando por username: "${filters.username}"`);
-        filteredRecordings = filteredRecordings.filter(r => {
-          const match = r.username && r.username.toLowerCase() === filters.username.toLowerCase();
-          if (!match && r.username) {
-            console.log(`  ❌ No coincide: "${r.username}" !== "${filters.username}"`);
-          }
-          return match;
-        });
-        console.log(`📊 Después de filtrar por username: ${filteredRecordings.length}`);
+        filteredRecordings = filteredRecordings.filter(r => (
+          r.username && r.username.toLowerCase() === filters.username.toLowerCase()
+        ));
       }
       
       // Ordenar por fecha (más reciente primero)
