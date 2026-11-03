@@ -115,21 +115,12 @@ On Linux, `npm install` automatically repairs the Electron binary if the downloa
 
 ---
 
-## 📦 Version and Changelog
+## 📦 Version & Releases
 
-Detailed release history is maintained exclusively in **[CHANGELOG.md](../CHANGELOG.md)**. Both [GitHub Releases](https://github.com/kalidus/NodeTerm/releases) and the `npm run release` script use it to publish notes.
+[![Latest Release](https://img.shields.io/github/v/release/kalidus/NodeTerm?style=flat-square&color=2eb85c&logo=github&label=Release)](https://github.com/kalidus/NodeTerm/releases/latest)
+[![Changelog](https://img.shields.io/badge/Changelog-Full_History-blue?style=flat-square&logo=markdown)](../CHANGELOG.md)
 
-| | |
-|--|--|
-| **Latest Release** | **[v1.7.6](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.6)** (September 23, 2026) |
-| **Installers** | [Releases Downloads](https://github.com/kalidus/NodeTerm/releases) |
-
----
-
-## 🎨 Customization
-
-- Change themes, icons, and fonts directly from the Settings menu.
-- Sync preferences between desktop instances.
+Download installers in **[GitHub Releases](https://github.com/kalidus/NodeTerm/releases)** · Full history in **[CHANGELOG.md](../CHANGELOG.md)**.
 
 ---
 
@@ -140,10 +131,11 @@ Detailed release history is maintained exclusively in **[CHANGELOG.md](../CHANGE
 
 **Tech Stack**
 ```
-Frontend:  React 18 + PrimeReact + React Icons
-Backend:   Electron 28 + Node.js
-SSH:       node-ssh + ssh2-promise  
-Terminal:  xterm.js + addons
+Frontend:  React 19 + PrimeReact + Lucide / React Icons
+Backend:   Electron 40 + Node.js 24 LTS
+SSH/SFTP:  ssh2 + ssh2-promise
+RDP / VNC: IronRDP (WASM / Rust) + noVNC
+Terminal:  xterm.js 6.x + WebGL addon
 Build:     Webpack 5 + Babel
 ```
 
@@ -151,12 +143,13 @@ Build:     Webpack 5 + Babel
 ```
 NodeTerm/
 ├── 📁 src/
-│   ├── 📁 components/     # React Components
-│   ├── 📁 assets/         # CSS & Styles
-│   └── 📄 themes.js       # Terminal Themes
-├── 📄 main.js             # Electron Main Process
-├── 📄 preload.js          # Preload Script
-└── 📄 webpack.config.js   # Webpack Config
+│   ├── 📁 components/     # UI components (Tabs, Modals, HomeTab)
+│   ├── 📁 services/       # SSH, SFTP, IronRDP, VNC and Vault services
+│   ├── 📁 hooks/          # React hooks for state and terminal management
+│   └── 📁 assets/         # Styles and graphic assets
+├── 📁 mcp/                # Native Model Context Protocol server
+├── 📄 main.js             # Electron main process (IPC / Windowing)
+└── 📄 preload.js          # Secure preload bridge (Context Isolation)
 ```
 
 </details>
@@ -165,59 +158,43 @@ NodeTerm/
 
 ## 🗓️ Roadmap
 
-| Version | Focus | Status |
-|---------|-------|--------|
-| **v1.7.6** | HomeTab, native RDP/VNC, themes and security | Published |
-| **v1.7.5** | IronRDP WASM, home dashboard, Guacamole | Published |
-| **v1.7.4** | Release clipboard hotfix | Published |
-| **v1.7.3** | Performance, unified UX, Cygwin on-demand | Published |
-| **v1.7.2** | Release process / CI | Published |
-| **v1.7.1** | MCP agent: open terminals & secure inject | Included in 1.7.x |
-| **v1.7.0** | SSH monitor, GPU/Linux & pacman | Included in 1.7.x |
-| **v1.6.9** | Native MCP server | Published |
-| **v1.8.0** | Multi-shell integrated terminal | Concept |
+```
+  ✅ v1.7 (Consolidated)         🎯 In Progress                  🔮 Future (v1.8+)
+ ─────────────────────────      ─────────────────────────       ─────────────────────────
+ • IronRDP WASM & Native VNC    • Continuous IPC & perf tuning  • Advanced Mux & Atelier
+ • Vault & Secrets hardening    • Quick Appearance Panel polish • New MCP tools & skills
+ • Native MCP server            • Cold/warm start optimization  • Multi-shell integration
+ • HomeTab & Quick Studio
+```
+
+> Have ideas or suggestions? Join the roadmap discussions on [GitHub Discussions](https://github.com/kalidus/NodeTerm/discussions).
 
 ---
 
 <a id="donate"></a>
 ## 💖 Support the Project
 
-If **NodeTerm** helps you in your daily work and you'd like to support its ongoing development and maintenance, you can sponsor the project on GitHub or leave a ⭐ on GitHub.
+NodeTerm is an independent open-source project built for the community. If it makes your day-to-day work easier as a sysadmin, developer, or infrastructure enthusiast, any kind of support is warmly welcome:
 
-Your support enables focused development, security maintenance of the AES-256 vault, new protocols, and expanding AI and MCP agent integrations.
-
-<p align="left">
-  <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
-  &nbsp;
-  <a href="SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
-</p>
-
-### 🏆 Featured Sponsorship Tiers
-- ☕ **Developer Coffee ($5/mo)**: Name in `docs/SPONSORS.md` and official Sponsor badge on GitHub.
-- 🚀 **Ecosystem Supporter ($25/mo)**: Highlighted name in `README.md` & `docs/SPONSORS.md` + priority roadmap voting.
-- 🏢 **Infrastructure Partner ($100/mo)**: Corporate logo & link on `README.md` & `docs/SPONSORS.md` + special mention in Release Notes.
-- 👑 **Lead Visionary Partner ($250+/mo)**: Premier top banner logo placement on `README.md` & `docs/SPONSORS.md` + priority channel for custom MCP integrations.
-
-See full details, goals, and rewards in [**SPONSORS.md**](SPONSORS.md).
-
-<details>
-<summary><b>Other one-time contribution methods (Crypto / Direct Donations)</b></summary>
+- ⭐ **Star the repo on GitHub**: Helps increase project visibility.
+- 💬 **Share your feedback**: Propose ideas, report bugs, or recommend NodeTerm to your team.
+- ☕ **Buy me a coffee or donate**: If you'd like to financially support the time spent on development.
 
 <br/>
+
 <p align="left">
+  <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="32" alt="GitHub Sponsors"/></a>
+  &nbsp;
   <a href="https://ko-fi.com/kalidus"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" height="32" alt="Ko-fi"/></a>
   &nbsp;
   <a href="https://buymeacoffee.com/kalidus"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" height="32" alt="Buy Me A Coffee"/></a>
-</p>
-
-<p align="left">
-  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum_%2F_EVM-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="32" alt="Ethereum / EVM"/></a>
+  &nbsp;
+  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="32" alt="Ethereum / EVM"/></a>
   &nbsp;
   <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="32" alt="Solana"/></a>
 </p>
-</details>
 
-Every bit of support is greatly appreciated and helps drive NodeTerm forward! 🙏
+Thank you so much to everyone supporting NodeTerm! 🙏
 
 ---
 
