@@ -87,9 +87,18 @@ const MultiVaultSubTab = ({ showToast }) => {
       const res = await window.electron.vaults.delete({ vaultId: vault.id });
       if (!res?.success) throw new Error(res?.error || 'Error');
       try {
-        localStorage.removeItem(`connections_encrypted__${vault.id}`);
+        const { removeExtraVaultLocalStorageKeys } = await import(
+          '../../../../utils/extraDomainVaults'
+        );
+        removeExtraVaultLocalStorageKeys(vault.id);
       } catch (_) {
-        /* noop */
+        try {
+          localStorage.removeItem(`connections_encrypted__${vault.id}`);
+          localStorage.removeItem(`passwords_encrypted__${vault.id}`);
+          localStorage.removeItem(`documents_encrypted__${vault.id}`);
+        } catch (__) {
+          /* noop */
+        }
       }
       await refresh();
       window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
@@ -111,11 +120,11 @@ const MultiVaultSubTab = ({ showToast }) => {
         />
         <div>
           <label htmlFor="multi-vault-flag" className="font-medium">
-            Vaults experimentales (solo conexiones)
+            Vaults experimentales (conexiones, passwords y notas)
           </label>
           <p className="m-0 mt-1 text-sm" style={{ opacity: 0.8 }}>
-            Permite crear vaults adicionales con clave maestra propia. El vault principal no cambia.
-            Función experimental: haz copia de seguridad antes de usarla.
+            Permite crear vaults adicionales con clave maestra propia para conexiones, passwords y notas.
+            El vault principal no cambia. Función experimental: haz copia de seguridad antes de usarla.
           </p>
         </div>
       </div>

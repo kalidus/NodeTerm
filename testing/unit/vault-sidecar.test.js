@@ -263,6 +263,23 @@ describe('vault-sidecar', () => {
     );
   });
 
+  it('sidecarPathForKey maps extra vault passwords/documents bins', () => {
+    const pw = vaultSidecar.sidecarPathForKey('passwords_encrypted__work');
+    const doc = vaultSidecar.sidecarPathForKey('documents_encrypted__work');
+    const conn = vaultSidecar.sidecarPathForKey('connections_encrypted__work');
+    assert.ok(pw && pw.replace(/\\/g, '/').endsWith('vault/work/passwords.bin'));
+    assert.ok(doc && doc.replace(/\\/g, '/').endsWith('vault/work/documents.bin'));
+    assert.ok(conn && conn.replace(/\\/g, '/').endsWith('vault/work/connections.bin'));
+
+    const workDir = path.join(tmpRoot, 'vault', 'work');
+    fs.mkdirSync(workDir, { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'passwords.bin'), Buffer.from('NTV1' + 'x'.repeat(40)));
+    fs.writeFileSync(path.join(workDir, 'documents.bin'), Buffer.from('NTV1' + 'y'.repeat(40)));
+    const keys = vaultSidecar.listExtraVaultSidecarKeys();
+    assert.ok(keys.includes('passwords_encrypted__work'));
+    assert.ok(keys.includes('documents_encrypted__work'));
+  });
+
   it('writeVaultSidecar refuses catastrophic shrink unless allowShrink', () => {
     const bigData = crypto.randomBytes(4096);
     const bigJson = JSON.stringify(

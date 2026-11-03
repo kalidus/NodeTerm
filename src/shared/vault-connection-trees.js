@@ -367,15 +367,58 @@ function findVaultIdForNode(nodes, nodeKey) {
 }
 
 /**
- * Prefijo de storage key para blobs de conexiones de un vault extra.
+ * Prefijo de storage key para blobs de un dominio (conexiones / passwords / documents).
+ * @param {'connections'|'passwords'|'documents'} kind
  * @param {string} vaultId
- * @returns {string|null} null si es el principal / default
+ * @returns {string}
  */
-function connectionVaultStorageKey(vaultId) {
+function vaultKindStorageKey(kind, vaultId) {
+  const base =
+    kind === 'passwords'
+      ? 'passwords_encrypted'
+      : kind === 'documents'
+        ? 'documents_encrypted'
+        : 'connections_encrypted';
   if (vaultId == null || vaultId === '' || vaultId === DEFAULT_VAULT_ID) {
-    return 'connections_encrypted';
+    return base;
   }
-  return `connections_encrypted__${vaultId}`;
+  return `${base}__${vaultId}`;
+}
+
+function connectionVaultStorageKey(vaultId) {
+  return vaultKindStorageKey('connections', vaultId);
+}
+
+function passwordVaultStorageKey(vaultId) {
+  return vaultKindStorageKey('passwords', vaultId);
+}
+
+function documentVaultStorageKey(vaultId) {
+  return vaultKindStorageKey('documents', vaultId);
+}
+
+/**
+ * @param {string} storageKey
+ * @returns {{ kind: 'connections'|'passwords'|'documents', vaultId: string }|null}
+ */
+function parseVaultKindStorageKey(storageKey) {
+  if (typeof storageKey !== 'string' || !storageKey) return null;
+  const kinds = [
+    ['connections_encrypted', 'connections'],
+    ['passwords_encrypted', 'passwords'],
+    ['documents_encrypted', 'documents']
+  ];
+  for (const [base, kind] of kinds) {
+    if (storageKey === base) {
+      return { kind, vaultId: DEFAULT_VAULT_ID };
+    }
+    const prefix = `${base}__`;
+    if (storageKey.startsWith(prefix)) {
+      const vaultId = storageKey.slice(prefix.length);
+      if (vaultId) return { kind, vaultId };
+    }
+  }
+  return null;
 }
 
 /**
@@ -383,21 +426,35 @@ function connectionVaultStorageKey(vaultId) {
  * @returns {{ kind: 'connections', vaultId: string }|null}
  */
 function parseConnectionVaultStorageKey(storageKey) {
-  if (storageKey === 'connections_encrypted') {
-    return { kind: 'connections', vaultId: DEFAULT_VAULT_ID };
-  }
-  if (typeof storageKey === 'string' && storageKey.startsWith('connections_encrypted__')) {
-    const vaultId = storageKey.slice('connections_encrypted__'.length);
-    if (vaultId) return { kind: 'connections', vaultId };
-  }
-  return null;
+  const parsed = parseVaultKindStorageKey(storageKey);
+  return parsed && parsed.kind === 'connections' ? parsed : null;
 }
 
-/**
- * True si la clave es un blob de conexiones (principal o extra).
- */
+function parsePasswordVaultStorageKey(storageKey) {
+  const parsed = parseVaultKindStorageKey(storageKey);
+  return parsed && parsed.kind === 'passwords' ? parsed : null;
+}
+
+function parseDocumentVaultStorageKey(storageKey) {
+  const parsed = parseVaultKindStorageKey(storageKey);
+  return parsed && parsed.kind === 'documents' ? parsed : null;
+}
+
 function isConnectionVaultStorageKey(storageKey) {
   return parseConnectionVaultStorageKey(storageKey) != null;
+}
+
+function isPasswordVaultStorageKey(storageKey) {
+  return parsePasswordVaultStorageKey(storageKey) != null;
+}
+
+function isDocumentVaultStorageKey(storageKey) {
+  return parseDocumentVaultStorageKey(storageKey) != null;
+}
+
+/** True si es blob de conexiones, passwords o documents (principal o extra). */
+function isDomainVaultStorageKey(storageKey) {
+  return parseVaultKindStorageKey(storageKey) != null;
 }
 
 module.exports = {
@@ -413,7 +470,16 @@ module.exports = {
   splitConnectionTrees,
   setVaultRootChildren,
   findVaultIdForNode,
+  vaultKindStorageKey,
   connectionVaultStorageKey,
+  passwordVaultStorageKey,
+  documentVaultStorageKey,
+  parseVaultKindStorageKey,
   parseConnectionVaultStorageKey,
-  isConnectionVaultStorageKey
+  parsePasswordVaultStorageKey,
+  parseDocumentVaultStorageKey,
+  isConnectionVaultStorageKey,
+  isPasswordVaultStorageKey,
+  isDocumentVaultStorageKey,
+  isDomainVaultStorageKey
 };

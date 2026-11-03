@@ -53,6 +53,15 @@ describe('vault-write', () => {
     assert.strictEqual(r.reason, 'invalid_key');
   });
 
+  it('setVaultEncryptedItem accepts passwords/documents encrypted__vaultId', () => {
+    const a = setVaultEncryptedItem('passwords_encrypted__work', 'x'.repeat(3000));
+    const b = setVaultEncryptedItem('documents_encrypted__work', 'y'.repeat(3000));
+    assert.strictEqual(a.ok, true);
+    assert.strictEqual(b.ok, true);
+    assert.ok(store.get('passwords_encrypted__work'));
+    assert.ok(store.get('documents_encrypted__work'));
+  });
+
   it('setVaultEncryptedItem accepts connections_encrypted__vaultId', () => {
     const r = setVaultEncryptedItem('connections_encrypted__work', '{"v":2,"data":"abc"}');
     assert.strictEqual(r.ok, true);

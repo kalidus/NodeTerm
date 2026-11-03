@@ -15,7 +15,7 @@ import {
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
-  loadDocumentTree,
+  loadDocumentTreeVisible,
   saveDocumentTree,
   createDocumentNode,
   createFolderNode,
@@ -39,7 +39,12 @@ import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
 import { getHomeTabActive, subscribeHomeTabActive } from '../utils/homeTabActiveBus';
 import { FolderIconSelectorModal } from './FolderIconSelector';
-import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
+import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
+import {
+  isVaultRoot,
+  getVaultRootId,
+  DEFAULT_VAULT_ID
+} from '../shared/vault-connection-trees';
 import NotesBrowser from './notes/NotesBrowser';
 import { renderDocumentNodeIcon } from './notes/documentNodeIcon';
 import {
@@ -551,6 +556,51 @@ const DocumentsSidebar = ({
     };
   }, []);
 
+  const ensureQuickNoteInTree = useCallback((rawTree) => {
+    const tree = Array.isArray(rawTree) ? rawTree.map((n) => ({ ...n })) : [];
+
+    const migrateQuickNote = (list) => {
+      const arr = Array.isArray(list) ? [...list] : [];
+      const idx = arr.findIndex((n) => n.key === 'quick_note');
+      if (idx < 0) {
+        arr.unshift({
+          key: 'quick_note',
+          label: 'Notas rápidas',
+          type: 'quick-notes-group',
+          droppable: false,
+          children: []
+        });
+        return arr;
+      }
+      const qn = { ...arr[idx] };
+      if (qn.type !== 'quick-notes-group') {
+        qn.type = 'quick-notes-group';
+        if (qn.data?.content && qn.data.content.trim() && qn.data.content.trim() !== '<p></p>') {
+          const migratedChild = {
+            key: `quick_note_child_${Date.now()}`,
+            label: 'Nota rápida',
+            type: 'document',
+            data: { ...qn.data }
+          };
+          qn.children = [migratedChild, ...(qn.children || [])];
+        } else {
+          qn.children = qn.children || [];
+        }
+        delete qn.data;
+      }
+      arr[idx] = qn;
+      return arr;
+    };
+
+    if (tree.some(isVaultRoot)) {
+      return tree.map((n) => {
+        if (getVaultRootId(n) !== DEFAULT_VAULT_ID || n.data?.locked) return n;
+        return { ...n, children: migrateQuickNote(n.children || []) };
+      });
+    }
+    return migrateQuickNote(tree);
+  }, []);
+
   useEffect(() => {
     // Soft reload on sync/events: never flip isLoading (avoids tree flash after first paint)
     const reloadFromStorage = async () => {
@@ -558,42 +608,23 @@ const DocumentsSidebar = ({
         const savedExp = localStorage.getItem('documents_expanded_keys');
         if (savedExp) setExpandedKeys(JSON.parse(savedExp));
       } catch {}
-      const tree = await loadDocumentTree(secureStorage, masterKey);
-      const hasQuickNote = tree.some(node => node.key === 'quick_note');
-      if (!hasQuickNote) {
-        tree.unshift({
-          key: 'quick_note',
-          label: 'Notas rápidas',
-          type: 'quick-notes-group',
-          droppable: false,
-          children: []
-        });
-      } else {
-        // Migrar nodo antiguo de nota única a contenedor
-        const qn = tree.find(n => n.key === 'quick_note');
-        if (qn && qn.type !== 'quick-notes-group') {
-          qn.type = 'quick-notes-group';
-          // Si tenía contenido, preservarlo como primer hijo
-          if (qn.data?.content && qn.data.content.trim() && qn.data.content.trim() !== '<p></p>') {
-            const migratedChild = {
-              key: `quick_note_child_${Date.now()}`,
-              label: 'Nota rápida',
-              type: 'document',
-              data: { ...qn.data }
-            };
-            qn.children = [migratedChild, ...(qn.children || [])];
-          } else {
-            qn.children = qn.children || [];
-          }
-          delete qn.data;
-        }
-      }
-      setDocumentNodes(tree);
+      const loaded = await loadDocumentTreeVisible(
+        secureStorage,
+        masterKey,
+        getVisibleConnectionVaultIds()
+      );
+      setDocumentNodes(ensureQuickNoteInTree(loaded.nodes || []));
       setIsLoading(false);
     };
     window.addEventListener('documents-storage-updated', reloadFromStorage);
-    return () => window.removeEventListener('documents-storage-updated', reloadFromStorage);
-  }, [masterKey, secureStorage]);
+    window.addEventListener('visible-connection-vaults-changed', reloadFromStorage);
+    window.addEventListener('extra-vaults-reload', reloadFromStorage);
+    return () => {
+      window.removeEventListener('documents-storage-updated', reloadFromStorage);
+      window.removeEventListener('visible-connection-vaults-changed', reloadFromStorage);
+      window.removeEventListener('extra-vaults-reload', reloadFromStorage);
+    };
+  }, [masterKey, secureStorage, ensureQuickNoteInTree]);
 
   useEffect(() => {
     try {
@@ -606,46 +637,21 @@ const DocumentsSidebar = ({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      await waitForVaultSyncIfNeeded('documents_encrypted', 5000);
       if (cancelled) return;
-      const tree = await loadDocumentTree(secureStorage, masterKey);
+      const loaded = await loadDocumentTreeVisible(
+        secureStorage,
+        masterKey,
+        getVisibleConnectionVaultIds()
+      );
       if (cancelled) return;
-      const hasQuickNote = tree.some(node => node.key === 'quick_note');
-      if (!hasQuickNote) {
-        tree.unshift({
-          key: 'quick_note',
-          label: 'Notas rápidas',
-          type: 'quick-notes-group',
-          droppable: false,
-          children: []
-        });
-      } else {
-        // Migrar nodo antiguo de nota única a contenedor
-        const qn = tree.find(n => n.key === 'quick_note');
-        if (qn && qn.type !== 'quick-notes-group') {
-          qn.type = 'quick-notes-group';
-          if (qn.data?.content && qn.data.content.trim() && qn.data.content.trim() !== '<p></p>') {
-            const migratedChild = {
-              key: `quick_note_child_${Date.now()}`,
-              label: 'Nota rápida',
-              type: 'document',
-              data: { ...qn.data }
-            };
-            qn.children = [migratedChild, ...(qn.children || [])];
-          } else {
-            qn.children = qn.children || [];
-          }
-          delete qn.data;
-        }
-      }
-      setDocumentNodes(tree);
+      setDocumentNodes(ensureQuickNoteInTree(loaded.nodes || []));
       setIsLoading(false);
     };
     load();
     return () => {
       cancelled = true;
     };
-  }, [masterKey, secureStorage]);
+  }, [masterKey, secureStorage, ensureQuickNoteInTree]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -1584,10 +1590,21 @@ const DocumentsSidebar = ({
     if (!dragNode?.key || dragNode.key === 'quick_note') return;
     if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) return;
 
+    if (isVaultRoot(dragNode)) {
+      return;
+    }
+
     // El contenido de una carpeta enlazada es un reflejo del disco: ni se
     // reordena ni se puede soltar nada dentro desde el árbol.
     if (dragNode.data?.virtual || isLinkedFolder(dropNode) || isCloudFolder(dropNode) || dropNode?.data?.virtual) {
       return;
+    }
+
+    if (dropNode?.key) {
+      const dropInFull = findNodeInTree(documentNodes, dropNode.key);
+      if (dropPoint === 0 && dropInFull && isVaultRoot(dropInFull) && dropInFull.data?.locked) {
+        return;
+      }
     }
 
     if (dropNode?.key && isDescendantInFullTree(documentNodes, dragNode.key, dropNode.key)) {
@@ -1622,7 +1639,15 @@ const DocumentsSidebar = ({
   };
 
   const filteredDocumentNodes = useMemo(() => {
-    return documentNodes.filter(node => node.key !== 'quick_note');
+    return documentNodes
+      .filter((node) => node.key !== 'quick_note')
+      .map((node) => {
+        if (!isVaultRoot(node) || !Array.isArray(node.children)) return node;
+        return {
+          ...node,
+          children: node.children.filter((c) => c.key !== 'quick_note')
+        };
+      });
   }, [documentNodes]);
 
   const treeValue = useMemo(
@@ -1927,7 +1952,7 @@ const DocumentsSidebar = ({
 
   const isQuickNoteSelected = useMemo(() => {
     if (selectedNodeKey === 'quick_note') return true;
-    const qn = documentNodes.find(n => n.key === 'quick_note');
+    const qn = findNodeInTree(documentNodes, 'quick_note');
     if (qn && qn.children) {
       return qn.children.some(child => child.key === selectedNodeKey);
     }
@@ -1950,7 +1975,7 @@ const DocumentsSidebar = ({
 
   const activePanelNotes = useMemo(() => {
     if (isQuickNoteSelected) {
-      const qn = documentNodes.find(n => n.key === 'quick_note');
+      const qn = findNodeInTree(documentNodes, 'quick_note');
       return qn?.children || [];
     }
     if (isFolderSelected && selectedNodeForDetails) {
@@ -2372,7 +2397,7 @@ const DocumentsSidebar = ({
               </span>
               {/* Indicador del número de notas rápidas */}
               {(() => {
-                const qn = documentNodes.find(n => n.key === 'quick_note');
+                const qn = findNodeInTree(documentNodes, 'quick_note');
                 const count = qn?.children?.length || 0;
                 return count > 0 ? (
                   <span className="qnp-count-badge" style={{ flexShrink: 0 }}>{count}</span>

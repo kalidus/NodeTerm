@@ -1,4 +1,7 @@
-import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+import {
+  VAULT_LOCAL_STORAGE_KEYS,
+  listVaultStorageKeys
+} from '../shared/vault-local-storage-keys';
 import {
   toEncryptedV2,
   decodeEncryptedFields,
@@ -244,7 +247,8 @@ class SecureStorage {
         }
 
         // 2. Re-encriptar en el acto cualquier vault local que aún use KDF legacy (SHA-256)
-        const entries = this._getPresentVaultEntries(VAULT_LOCAL_STORAGE_KEYS);
+        // Incluye blobs de vaults extra presentes; si la clave no coincide se omiten
+        const entries = this._getPresentVaultEntries(listVaultStorageKeys());
         for (const { key, raw } of entries) {
           try {
             const parsed = JSON.parse(raw);

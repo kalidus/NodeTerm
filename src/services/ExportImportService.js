@@ -103,6 +103,8 @@ class ExportImportService {
 
     const {
       connectionVaultStorageKey,
+      passwordVaultStorageKey,
+      documentVaultStorageKey,
       DEFAULT_VAULT_ID
     } = require('../shared/vault-connection-trees');
 
@@ -121,15 +123,15 @@ class ExportImportService {
       vault: {
         id: vaultId,
         name: connectionsVaultName || (isExtraVault ? vaultId : 'default'),
-        scope: isExtraVault ? 'extra-connections' : 'primary'
+        scope: isExtraVault ? 'extra-vault' : 'primary'
       },
       categories: {
         connections: connections,
-        passwords: isExtraVault ? false : passwords,
+        passwords: passwords,
         conversations: isExtraVault ? false : conversations,
         config: isExtraVault ? false : config,
         recordings: isExtraVault ? false : recordings,
-        documents: isExtraVault ? false : documents
+        documents: documents
       },
       data: {}
     };
@@ -180,10 +182,15 @@ class ExportImportService {
 
       // === 2. CONTRASEÑAS ===
       if (passwords) {
-        const encryptedPasswords = this.safeGetItem('passwords_encrypted');
-        const passwordNodes = this.safeGetItem('passwordManagerNodes');
+        const pwKey = passwordVaultStorageKey(vaultId);
+        const encryptedPasswords = this.safeGetItem(pwKey);
+        const passwordNodes = isExtraVault
+          ? null
+          : this.safeGetItem('passwordManagerNodes');
         
         console.log('[ExportImportService] Exportando contraseñas:', {
+          vaultId,
+          storageKey: pwKey,
           hasEncrypted: !!encryptedPasswords,
           hasNodes: !!passwordNodes,
           nodesLength: Array.isArray(passwordNodes) ? passwordNodes.length : 'N/A',
@@ -194,9 +201,11 @@ class ExportImportService {
           encrypted: encryptedPasswords,
           // Si hay vault cifrado, no exportar nodos en claro
           nodes: encryptedPasswords ? null : passwordNodes,
-          expandedKeys: this.safeGetItem('passwords_expanded_keys'),
-          allExpanded: this.safeGetItem('passwords_all_expanded'),
-          count: this.safeGetItem('passwords_count')
+          expandedKeys: isExtraVault ? null : this.safeGetItem('passwords_expanded_keys'),
+          allExpanded: isExtraVault ? null : this.safeGetItem('passwords_all_expanded'),
+          count: isExtraVault ? null : this.safeGetItem('passwords_count'),
+          vaultId,
+          storageKey: pwKey
         };
       }
 
@@ -339,12 +348,19 @@ class ExportImportService {
 
       // === 5. NOTAS / DOCUMENTOS ===
       if (documents) {
-        const encryptedDocuments = this.safeGetItem('documents_encrypted');
+        const docKey = documentVaultStorageKey(vaultId);
+        const encryptedDocuments = this.safeGetItem(docKey);
         exportData.data.documents = {
           encrypted: encryptedDocuments,
           // Si hay vault cifrado de notas, no exportar nodos en claro
-          nodes: encryptedDocuments ? null : this.safeGetItem('documentManagerNodes'),
-          expandedKeys: this.safeGetItem('documents_expanded_keys')
+          nodes: encryptedDocuments
+            ? null
+            : isExtraVault
+              ? null
+              : this.safeGetItem('documentManagerNodes'),
+          expandedKeys: isExtraVault ? null : this.safeGetItem('documents_expanded_keys'),
+          vaultId,
+          storageKey: docKey
         };
       }
 
@@ -974,28 +990,41 @@ class ExportImportService {
    * Importa contraseñas
    */
   async importPasswords(passwordsData, options) {
+    const {
+      passwordVaultStorageKey,
+      DEFAULT_VAULT_ID
+    } = require('../shared/vault-connection-trees');
+    const vaultId =
+      passwordsData?.vaultId && passwordsData.vaultId !== DEFAULT_VAULT_ID
+        ? String(passwordsData.vaultId)
+        : DEFAULT_VAULT_ID;
+    const storageKey =
+      passwordsData?.storageKey || passwordVaultStorageKey(vaultId);
+
     if (options.replace) {
-      localStorage.removeItem('passwords_encrypted');
-      localStorage.removeItem('passwordManagerNodes');
+      localStorage.removeItem(storageKey);
+      if (vaultId === DEFAULT_VAULT_ID) {
+        localStorage.removeItem('passwordManagerNodes');
+      }
     }
 
     if (passwordsData.encrypted) {
-      localStorage.setItem('passwords_encrypted', JSON.stringify(passwordsData.encrypted));
+      localStorage.setItem(storageKey, JSON.stringify(passwordsData.encrypted));
     }
 
-    if (passwordsData.nodes) {
+    if (passwordsData.nodes && vaultId === DEFAULT_VAULT_ID) {
       localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordsData.nodes));
     }
 
-    if (passwordsData.expandedKeys) {
+    if (passwordsData.expandedKeys && vaultId === DEFAULT_VAULT_ID) {
       localStorage.setItem('passwords_expanded_keys', JSON.stringify(passwordsData.expandedKeys));
     }
 
-    if (passwordsData.allExpanded !== null) {
+    if (passwordsData.allExpanded !== null && vaultId === DEFAULT_VAULT_ID) {
       localStorage.setItem('passwords_all_expanded', JSON.stringify(passwordsData.allExpanded));
     }
 
-    if (passwordsData.count) {
+    if (passwordsData.count && vaultId === DEFAULT_VAULT_ID) {
       localStorage.setItem('passwords_count', passwordsData.count);
     }
   }
@@ -1071,16 +1100,31 @@ class ExportImportService {
   async importDocuments(documentsData, options) {
     if (!documentsData || typeof documentsData !== 'object') return;
 
+    const {
+      documentVaultStorageKey,
+      DEFAULT_VAULT_ID
+    } = require('../shared/vault-connection-trees');
+    const vaultId =
+      documentsData?.vaultId && documentsData.vaultId !== DEFAULT_VAULT_ID
+        ? String(documentsData.vaultId)
+        : DEFAULT_VAULT_ID;
+    const storageKey =
+      documentsData?.storageKey || documentVaultStorageKey(vaultId);
+
     if (options.replace) {
-      localStorage.removeItem('documents_encrypted');
-      localStorage.removeItem('documentManagerNodes');
-      localStorage.removeItem('documents_expanded_keys');
+      localStorage.removeItem(storageKey);
+      if (vaultId === DEFAULT_VAULT_ID) {
+        localStorage.removeItem('documentManagerNodes');
+        localStorage.removeItem('documents_expanded_keys');
+      }
     }
 
     if (documentsData.encrypted) {
-      localStorage.setItem('documents_encrypted', JSON.stringify(documentsData.encrypted));
-      localStorage.removeItem('documentManagerNodes');
-    } else if (documentsData.nodes != null) {
+      localStorage.setItem(storageKey, JSON.stringify(documentsData.encrypted));
+      if (vaultId === DEFAULT_VAULT_ID) {
+        localStorage.removeItem('documentManagerNodes');
+      }
+    } else if (documentsData.nodes != null && vaultId === DEFAULT_VAULT_ID) {
       const nodesArray = Array.isArray(documentsData.nodes) ? documentsData.nodes : null;
       if (nodesArray) {
         if (options.merge && localStorage.getItem('documentManagerNodes')) {

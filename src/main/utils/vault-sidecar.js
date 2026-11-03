@@ -15,9 +15,16 @@ const {
   decodeEncryptedFields
 } = require('../../shared/vault-blob-encoding');
 const {
-  parseConnectionVaultStorageKey,
+  parseVaultKindStorageKey,
   DEFAULT_VAULT_ID
 } = require('../../shared/vault-connection-trees');
+
+/** kind → filename under vault/<id>/ */
+const EXTRA_VAULT_BIN_BY_KIND = {
+  connections: 'connections.bin',
+  passwords: 'passwords.bin',
+  documents: 'documents.bin'
+};
 
 const MAGIC_V1 = Buffer.from('NTV1');
 const MAGIC_V2 = Buffer.from('NTV2');
@@ -81,25 +88,26 @@ function sidecarPathForKey(storageKey) {
   if (VAULT_SIDECAR_FILES[storageKey]) {
     return path.join(getVaultDir(DEFAULT_VAULT_ID), VAULT_SIDECAR_FILES[storageKey]);
   }
-  const parsed = parseConnectionVaultStorageKey(storageKey);
+  const parsed = parseVaultKindStorageKey(storageKey);
   if (parsed && parsed.vaultId !== DEFAULT_VAULT_ID) {
-    return path.join(getVaultDir(parsed.vaultId), 'connections.bin');
+    const bin = EXTRA_VAULT_BIN_BY_KIND[parsed.kind];
+    if (bin) return path.join(getVaultDir(parsed.vaultId), bin);
   }
   return null;
 }
 
 /**
- * True si la clave tiene sidecar conocido (principal o connections de vault extra).
+ * True si la clave tiene sidecar conocido (principal o dominio de vault extra).
  */
 function isVaultSidecarKey(storageKey) {
   return sidecarPathForKey(storageKey) != null;
 }
 
 /**
- * Descubre claves de vaults extra presentes en disco (vault/<id>/connections.bin).
+ * Descubre claves de vaults extra presentes en disco (vault/<id>/*.bin).
  * @returns {string[]}
  */
-function listExtraConnectionVaultKeys() {
+function listExtraVaultSidecarKeys() {
   const root = getVaultRootDir();
   if (!fs.existsSync(root)) return [];
   const keys = [];
@@ -113,12 +121,19 @@ function listExtraConnectionVaultKeys() {
     if (!ent.isDirectory()) continue;
     const id = ent.name;
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) continue;
-    const bin = path.join(root, id, 'connections.bin');
-    if (fs.existsSync(bin)) {
-      keys.push(`connections_encrypted__${id}`);
+    for (const [kind, binName] of Object.entries(EXTRA_VAULT_BIN_BY_KIND)) {
+      const bin = path.join(root, id, binName);
+      if (fs.existsSync(bin)) {
+        keys.push(`${kind === 'connections' ? 'connections' : kind}_encrypted__${id}`);
+      }
     }
   }
   return keys;
+}
+
+/** @deprecated alias — prefer listExtraVaultSidecarKeys */
+function listExtraConnectionVaultKeys() {
+  return listExtraVaultSidecarKeys().filter((k) => k.startsWith('connections_encrypted__'));
 }
 
 /**
@@ -134,7 +149,7 @@ function listAllVaultSidecarKeys(data = null) {
     seen.add(k);
     out.push(k);
   };
-  for (const k of listExtraConnectionVaultKeys()) add(k);
+  for (const k of listExtraVaultSidecarKeys()) add(k);
   if (data && typeof data === 'object') {
     for (const k of Object.keys(data)) add(k);
   }
@@ -251,7 +266,7 @@ function writeVaultSidecar(storageKey, jsonStr, options = {}) {
   if (!filePath || jsonStr == null || jsonStr === '') {
     return false;
   }
-  const parsed = parseConnectionVaultStorageKey(storageKey);
+  const parsed = parseVaultKindStorageKey(storageKey);
   const vaultId =
     parsed && parsed.vaultId !== DEFAULT_VAULT_ID ? parsed.vaultId : DEFAULT_VAULT_ID;
   ensureVaultDir(vaultId === DEFAULT_VAULT_ID ? undefined : vaultId);
@@ -463,6 +478,7 @@ module.exports = {
   sidecarPathForKey,
   isVaultSidecarKey,
   listExtraConnectionVaultKeys,
+  listExtraVaultSidecarKeys,
   listAllVaultSidecarKeys,
   encryptedJsonStringToBinary,
   binaryToEncryptedJsonString,

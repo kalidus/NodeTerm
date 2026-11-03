@@ -1,5 +1,5 @@
 /**
- * Flag experimental de vaults independientes (solo conexiones en v1).
+ * Flag experimental de vaults independientes (conexiones, passwords y notas).
  */
 
 export const MULTI_VAULT_FLAG_KEY = 'nodeterm_experimental_multi_vault';

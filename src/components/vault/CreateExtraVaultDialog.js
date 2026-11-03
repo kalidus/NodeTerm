@@ -88,8 +88,8 @@ const CreateExtraVaultDialog = ({ visible, onHide, onCreated, showToast }) => {
     >
       <div className="flex flex-column gap-3">
         <p className="m-0 text-sm" style={{ opacity: 0.85 }}>
-          Crea un vault independiente con su propia clave maestra. Solo almacena conexiones/hosts
-          (passwords y notas siguen en el vault principal en esta versión).
+          Crea un vault independiente con su propia clave maestra. Incluye conexiones, passwords y
+          notas (documentos) separados del vault principal.
         </p>
         <div className="flex flex-column gap-2">
           <label htmlFor="new-vault-name">Nombre</label>

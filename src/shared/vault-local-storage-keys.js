@@ -2,11 +2,11 @@
  * Claves de localStorage que contienen vaults cifrados con la master key.
  * Fuente de verdad para validar contrasena al desbloquear.
  *
- * Además de las 4 claves del vault principal, se admiten blobs de conexiones
- * de vaults extra: connections_encrypted__<vaultId>
+ * Además de las 4 claves del vault principal, se admiten blobs de vaults extra:
+ * connections_encrypted__<vaultId>, passwords_encrypted__*, documents_encrypted__*
  */
 
-const { isConnectionVaultStorageKey } = require('./vault-connection-trees');
+const { isDomainVaultStorageKey } = require('./vault-connection-trees');
 
 const VAULT_LOCAL_STORAGE_KEYS = [
   'connections_encrypted',
@@ -16,15 +16,14 @@ const VAULT_LOCAL_STORAGE_KEYS = [
 ];
 
 /**
- * True si la clave es un blob de vault permitido (principal o conexiones de vault extra).
+ * True si la clave es un blob de vault permitido (principal o dominio de vault extra).
  * @param {string} key
  * @returns {boolean}
  */
 function isAllowedVaultStorageKey(key) {
   if (typeof key !== 'string' || !key) return false;
   if (VAULT_LOCAL_STORAGE_KEYS.includes(key)) return true;
-  // connections_encrypted__<vaultId>
-  return isConnectionVaultStorageKey(key);
+  return isDomainVaultStorageKey(key);
 }
 
 /**

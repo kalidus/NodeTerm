@@ -1,6 +1,19 @@
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { setVaultEncryptedItem } from '../shared/vault-write';
 import { mimeForName, extensionOf } from '../shared/library-mime';
+import {
+  documentVaultStorageKey,
+  DEFAULT_VAULT_ID
+} from '../shared/vault-connection-trees';
+import { stripVaultRootNodes } from './extraConnectionVaults';
+import {
+  loadVisibleDocumentTrees,
+  savePartitionedDocumentTrees,
+  saveActiveVaultDomainTree
+} from './extraDomainVaults';
+import { isMultiVaultEnabled } from './multiVaultFlag';
+import { getVisibleConnectionVaultIds } from './activeConnectionVault';
+import { waitForVaultSyncIfNeeded } from './waitForVaultSync';
 
 const STORAGE_KEY_TREE = 'documents_encrypted';
 const STORAGE_KEY_TREE_PLAIN = 'documentManagerNodes';
@@ -11,7 +24,8 @@ export const generateLibraryFileId = () => `libfile_${Date.now()}_${Math.random(
 export const generateLinkedFolderId = () => `libmount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 export const generateCloudFolderId = () => `libcloud_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export async function loadDocumentTree(secureStorage, masterKey) {
+/** Carga solo el vault principal (plano). */
+export async function loadMainDocumentTree(secureStorage, masterKey) {
   try {
     if (masterKey && secureStorage) {
       const encryptedData = localStorage.getItem(STORAGE_KEY_TREE);
@@ -20,7 +34,7 @@ export async function loadDocumentTree(secureStorage, masterKey) {
           STORAGE_KEY_TREE,
           masterKey
         );
-        return Array.isArray(decrypted) ? decrypted : [];
+        return stripVaultRootNodes(Array.isArray(decrypted) ? decrypted : []);
       }
       const plainData = localStorage.getItem(STORAGE_KEY_TREE_PLAIN);
       if (plainData) {
@@ -32,16 +46,59 @@ export async function loadDocumentTree(secureStorage, masterKey) {
           localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
           localStorageSyncService.debouncedSync({ [STORAGE_KEY_TREE]: encStr });
         }
-        return parsed;
+        return stripVaultRootNodes(Array.isArray(parsed) ? parsed : []);
       }
       return [];
     }
     const saved = localStorage.getItem(STORAGE_KEY_TREE_PLAIN);
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return stripVaultRootNodes(Array.isArray(parsed) ? parsed : []);
   } catch (error) {
     console.error('Error loading documents:', error);
     return [];
   }
+}
+
+/**
+ * Compat: carga el principal. Preferir loadDocumentTreeVisible con multi-vault.
+ */
+export async function loadDocumentTree(secureStorage, masterKey) {
+  return loadMainDocumentTree(secureStorage, masterKey);
+}
+
+/**
+ * Carga documents respetando vaults visibles (plano o multi-root).
+ * @returns {{ nodes, multiRoot, lockedVaultIds, visibleIds? }}
+ */
+export async function loadDocumentTreeVisible(secureStorage, masterKey, visibleIds) {
+  if (!isMultiVaultEnabled()) {
+    return {
+      nodes: await loadMainDocumentTree(secureStorage, masterKey),
+      multiRoot: false,
+      lockedVaultIds: []
+    };
+  }
+
+  const ids =
+    Array.isArray(visibleIds) && visibleIds.length
+      ? visibleIds
+      : getVisibleConnectionVaultIds();
+
+  for (const id of ids) {
+    await waitForVaultSyncIfNeeded(documentVaultStorageKey(id), 5000);
+  }
+
+  const loaded = await loadVisibleDocumentTrees(ids, masterKey, secureStorage, {
+    migrateMainNodes: () => loadMainDocumentTree(secureStorage, masterKey)
+  });
+
+  return {
+    nodes: loaded.nodes || [],
+    multiRoot: !!loaded.multiRoot,
+    lockedVaultIds: loaded.lockedVaultIds || [],
+    visibleIds: loaded.visibleIds
+  };
 }
 
 function notifyDocumentsChanged() {
@@ -51,22 +108,34 @@ function notifyDocumentsChanged() {
 
 export async function saveDocumentTree(tree, secureStorage, masterKey) {
   try {
-    if (masterKey && secureStorage) {
-      const encrypted = await secureStorage.encryptData(tree, masterKey);
-      const encStr = JSON.stringify(encrypted);
-      const wrote = setVaultEncryptedItem(STORAGE_KEY_TREE, encStr);
-      if (!wrote.ok) {
-        console.error(
-          '[DocumentsVault] Guardado rechazado:',
-          wrote.reason || 'unknown'
-        );
-        return false;
-      }
-      localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
-      localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
-      notifyDocumentsChanged();
-      return true;
+    if (!masterKey && localStorage.getItem(STORAGE_KEY_TREE)) {
+      return false;
     }
+
+    if (isMultiVaultEnabled() && masterKey && secureStorage) {
+      const saved = await savePartitionedDocumentTrees(tree, masterKey, secureStorage);
+      if (saved.ok) {
+        localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
+        notifyDocumentsChanged();
+      }
+      return !!saved.ok;
+    }
+
+    if (masterKey && secureStorage) {
+      const saved = await saveActiveVaultDomainTree(
+        'documents',
+        tree,
+        DEFAULT_VAULT_ID,
+        masterKey,
+        secureStorage
+      );
+      if (saved.ok) {
+        localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
+        notifyDocumentsChanged();
+      }
+      return !!saved.ok;
+    }
+
     const plainStr = JSON.stringify(tree);
     localStorage.setItem(STORAGE_KEY_TREE_PLAIN, plainStr);
     localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });

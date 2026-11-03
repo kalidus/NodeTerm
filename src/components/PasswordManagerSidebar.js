@@ -42,9 +42,9 @@ import connectionStore from '../utils/connectionStore';
 import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
-import localStorageSyncService from '../services/LocalStorageSyncService';
-import { setVaultEncryptedItem } from '../shared/vault-write';
-import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
+import { loadPasswordTree, savePasswordTree } from '../utils/passwordStore';
+import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
+import { isVaultRoot } from '../shared/vault-connection-trees';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -264,52 +264,17 @@ const PasswordManagerSidebar = ({
   const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
-  // CARGAR passwords (con o sin encriptación) — tras sync, para no cifrar [] sobre el sidecar
+  // CARGAR passwords (vaults visibles: plano o multi-root)
   useEffect(() => {
     let cancelled = false;
     const loadPasswords = async () => {
       try {
-        await waitForVaultSyncIfNeeded('passwords_encrypted', 5000);
+        setIsLoading(true);
+        const visibleIds = getVisibleConnectionVaultIds();
+        const loaded = await loadPasswordTree(secureStorage, masterKey, visibleIds);
         if (cancelled) return;
-        if (masterKey && secureStorage) {
-          // CON master key: Cargar encriptado
-          const encryptedData = localStorage.getItem('passwords_encrypted');
-          
-          if (encryptedData) {
-            const decrypted = await secureStorage.decryptStorageKeyCached(
-              'passwords_encrypted',
-              masterKey
-            );
-            if (!cancelled) setPasswordNodes(Array.isArray(decrypted) ? decrypted : []);
-          } else {
-            // Migración: Si hay datos sin encriptar, encriptarlos
-            const plainData = localStorage.getItem('passwordManagerNodes');
-            if (plainData) {
-              const parsed = JSON.parse(plainData);
-              
-              // Encriptar y guardar
-              const encrypted = await secureStorage.encryptData(parsed, masterKey);
-              const encStr = JSON.stringify(encrypted);
-              const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
-              if (wrote.ok) {
-                localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
-                localStorage.removeItem('passwordManagerNodes');
-              }
-              
-              if (!cancelled) setPasswordNodes(parsed);
-            } else if (!cancelled) {
-              setPasswordNodes([]);
-            }
-          }
-        } else {
-          // SIN master key: Funciona como antes
-          const saved = localStorage.getItem('passwordManagerNodes');
-          if (saved) {
-            if (!cancelled) setPasswordNodes(JSON.parse(saved));
-          } else if (!cancelled) {
-            setPasswordNodes([]);
-          }
-        }
+        skipSaveFromCloudRef.current = true;
+        setPasswordNodes(Array.isArray(loaded.nodes) ? loaded.nodes : []);
       } catch (error) {
         console.error('Error loading passwords:', error);
         if (!cancelled) setPasswordNodes([]);
@@ -320,13 +285,17 @@ const PasswordManagerSidebar = ({
 
     loadPasswords();
     window.addEventListener('passwords-storage-updated', loadPasswords);
+    window.addEventListener('visible-connection-vaults-changed', loadPasswords);
+    window.addEventListener('extra-vaults-reload', loadPasswords);
     return () => {
       cancelled = true;
       window.removeEventListener('passwords-storage-updated', loadPasswords);
+      window.removeEventListener('visible-connection-vaults-changed', loadPasswords);
+      window.removeEventListener('extra-vaults-reload', loadPasswords);
     };
   }, [masterKey, secureStorage]);
 
-  // GUARDAR passwords (con o sin encriptación)
+  // GUARDAR passwords (particionado si hay vault-roots)
   useEffect(() => {
     const savePasswords = async () => {
       if (isLoading) return;
@@ -336,31 +305,17 @@ const PasswordManagerSidebar = ({
         return;
       }
 
-      // Vault cifrado en disco: no sobrescribir con estado en claro tras descarga de Nextcloud
       if (!masterKey && localStorage.getItem('passwords_encrypted')) {
         return;
       }
 
       try {
-        if (masterKey && secureStorage) {
-          // CON master key: Guardar encriptado
-          const encrypted = await secureStorage.encryptData(passwordNodes, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
-          if (!wrote.ok) {
-            console.error(
-              '[PasswordVault] Guardado rechazado:',
-              wrote.reason || 'unknown'
-            );
-            return;
-          }
-          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
-          
-          // Limpiar datos sin encriptar
-          localStorage.removeItem('passwordManagerNodes');
-        } else {
-          // ✅ SEGURIDAD: no persistir el vault en claro sin master key
-          console.warn('[PasswordVault] Guardado omitido: se requiere master key para cifrar el vault');
+        const ok = await savePasswordTree(passwordNodes, secureStorage, masterKey);
+        if (!ok && masterKey && showToast) {
+          // savePasswordTree ya loguea; aviso solo si falla con master key
+        }
+        if (!ok && !masterKey) {
+          console.warn('[PasswordVault] Guardado omitido: se requiere master key');
           if (showToast) {
             showToast({
               severity: 'warn',
@@ -370,7 +325,6 @@ const PasswordManagerSidebar = ({
             });
           }
         }
-        window.dispatchEvent(new CustomEvent('password-vault-changed'));
       } catch (error) {
         console.error('Error saving passwords:', error);
       }
@@ -431,62 +385,28 @@ const PasswordManagerSidebar = ({
     };
   }, [passwordNodes, iconTheme, showToast]);
 
-  // Escuchar sincronización desde Nextcloud
+  // Escuchar sincronización desde Nextcloud (principal; extras no sync)
   useEffect(() => {
     const handler = async (e) => {
       const { count, silent } = e.detail || {};
       try {
-        if (masterKey && secureStorage) {
-          const encryptedData = localStorage.getItem('passwords_encrypted');
-          if (encryptedData) {
-            const decrypted = await secureStorage.decryptStorageKeyCached(
-              'passwords_encrypted',
-              masterKey
-            );
-            skipSaveFromCloudRef.current = true;
-            setPasswordNodes(decrypted);
-            if (!silent) {
-              showToast && showToast({
-                severity: 'success',
-                summary: 'Sincronizado',
-                detail:
-                  count != null
-                    ? `${count} password(s) descargado(s) desde Nextcloud`
-                    : 'Contraseñas actualizadas desde la nube',
-                life: 3000
-              });
-            }
-          } else {
-            const plainData = localStorage.getItem('passwordManagerNodes');
-            if (plainData) {
-              setPasswordNodes(JSON.parse(plainData));
-            } else {
-              setPasswordNodes([]);
-            }
-            if (!silent) {
-              showToast && showToast({
-                severity: 'success',
-                summary: 'Sincronizado',
-                detail: 'Contraseñas actualizadas desde la nube',
-                life: 3000
-              });
-            }
-          }
-        } else {
-          const saved = localStorage.getItem('passwordManagerNodes');
-          if (saved) {
-            setPasswordNodes(JSON.parse(saved));
-          } else {
-            setPasswordNodes([]);
-          }
-          if (!silent) {
-            showToast && showToast({
-              severity: 'success',
-              summary: 'Sincronizado',
-              detail: 'Contraseñas actualizadas desde la nube',
-              life: 3000
-            });
-          }
+        const loaded = await loadPasswordTree(
+          secureStorage,
+          masterKey,
+          getVisibleConnectionVaultIds()
+        );
+        skipSaveFromCloudRef.current = true;
+        setPasswordNodes(Array.isArray(loaded.nodes) ? loaded.nodes : []);
+        if (!silent) {
+          showToast && showToast({
+            severity: 'success',
+            summary: 'Sincronizado',
+            detail:
+              count != null
+                ? `${count} password(s) descargado(s) desde Nextcloud`
+                : 'Contraseñas actualizadas desde la nube',
+            life: 3000
+          });
         }
       } catch (err) {
         console.error('Error recargando passwords sincronizados:', err);
@@ -1066,6 +986,34 @@ const PasswordManagerSidebar = ({
 
     if (!dragNode?.key) return;
     if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) return;
+
+    if (isVaultRoot(dragNode)) {
+      showToast && showToast({
+        severity: 'warn',
+        summary: 'Operación no permitida',
+        detail: 'No se puede mover la carpeta raíz de un vault.',
+        life: 2500
+      });
+      return;
+    }
+
+    if (dropNode?.key) {
+      const dropInFull = findNodeInTree(passwordNodes, dropNode.key);
+      if (
+        dropPoint === 0 &&
+        dropInFull &&
+        isVaultRoot(dropInFull) &&
+        dropInFull.data?.locked
+      ) {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'Vault bloqueado',
+          detail: 'Desbloquea el vault destino antes de mover secretos.',
+          life: 3000
+        });
+        return;
+      }
+    }
 
     if (dropNode?.key && isDescendantInFullTree(passwordNodes, dragNode.key, dropNode.key)) {
       return;

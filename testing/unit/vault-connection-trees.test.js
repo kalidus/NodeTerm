@@ -11,8 +11,15 @@ const {
   detectKeyCollisions,
   findVaultIdForNode,
   connectionVaultStorageKey,
+  passwordVaultStorageKey,
+  documentVaultStorageKey,
   parseConnectionVaultStorageKey,
+  parsePasswordVaultStorageKey,
+  parseDocumentVaultStorageKey,
   isConnectionVaultStorageKey,
+  isPasswordVaultStorageKey,
+  isDocumentVaultStorageKey,
+  isDomainVaultStorageKey,
   DEFAULT_VAULT_ID
 } = require('../../src/shared/vault-connection-trees');
 
@@ -170,6 +177,24 @@ describe('vault-connection-trees', () => {
     assert.strictEqual(parseConnectionVaultStorageKey('passwords_encrypted'), null);
     assert.strictEqual(isConnectionVaultStorageKey('connections_encrypted__x'), true);
     assert.strictEqual(isConnectionVaultStorageKey('ui_theme'), false);
+  });
+
+  it('password/document vault storage keys', () => {
+    assert.strictEqual(passwordVaultStorageKey(DEFAULT_VAULT_ID), 'passwords_encrypted');
+    assert.strictEqual(passwordVaultStorageKey('work'), 'passwords_encrypted__work');
+    assert.strictEqual(documentVaultStorageKey('work'), 'documents_encrypted__work');
+    assert.deepStrictEqual(parsePasswordVaultStorageKey('passwords_encrypted__x'), {
+      kind: 'passwords',
+      vaultId: 'x'
+    });
+    assert.deepStrictEqual(parseDocumentVaultStorageKey('documents_encrypted'), {
+      kind: 'documents',
+      vaultId: DEFAULT_VAULT_ID
+    });
+    assert.strictEqual(isPasswordVaultStorageKey('passwords_encrypted__a'), true);
+    assert.strictEqual(isDocumentVaultStorageKey('documents_encrypted__a'), true);
+    assert.strictEqual(isDomainVaultStorageKey('passwords_encrypted__a'), true);
+    assert.strictEqual(isDomainVaultStorageKey('ui_theme'), false);
   });
 
   it('mergeVisibleVaultTrees: 1 vault → plano; N → raíces', () => {

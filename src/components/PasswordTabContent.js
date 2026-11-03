@@ -5,8 +5,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { isFavorite, toggleFavorite } from '../utils/connectionStore';
 import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks';
-import { setVaultEncryptedItem } from '../shared/vault-write';
-import localStorageSyncService from '../services/LocalStorageSyncService';
+import { loadPasswordTree, savePasswordTree } from '../utils/passwordStore';
 
 /**
  * Extrae el dominio limpio de una URL para obtener el favicon o mostrar el host.
@@ -289,25 +288,8 @@ const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
     const saveTimeout = setTimeout(async () => {
       let passwordNodes = [];
       try {
-        if (masterKey && secureStorage) {
-          const encryptedData = localStorage.getItem('passwords_encrypted');
-          if (encryptedData) {
-            passwordNodes = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
-              masterKey
-            );
-          } else {
-            const plainData = localStorage.getItem('passwordManagerNodes');
-            if (plainData) {
-              passwordNodes = JSON.parse(plainData);
-            }
-          }
-        } else {
-          const saved = localStorage.getItem('passwordManagerNodes');
-          if (saved) {
-            passwordNodes = JSON.parse(saved);
-          }
-        }
+        const loaded = await loadPasswordTree(secureStorage, masterKey);
+        passwordNodes = loaded.nodes || [];
       } catch (e) {
         console.error('Error cargando contraseñas para guardar:', e);
       }
@@ -353,18 +335,10 @@ const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
       const updatedNodes = updateNodeInList(passwordNodes);
 
       try {
-        if (masterKey && secureStorage) {
-          const encrypted = await secureStorage.encryptData(updatedNodes, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
-          if (!wrote.ok) {
-            console.error('[PasswordTab] Guardado rechazado:', wrote.reason);
-            return;
-          }
-          localStorage.removeItem('passwordManagerNodes');
-          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
-        } else {
-          localStorage.setItem('passwordManagerNodes', JSON.stringify(updatedNodes));
+        const ok = await savePasswordTree(updatedNodes, secureStorage, masterKey);
+        if (!ok) {
+          console.error('[PasswordTab] Guardado rechazado');
+          return;
         }
 
         window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {

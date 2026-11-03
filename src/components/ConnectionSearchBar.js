@@ -135,31 +135,9 @@ const ConnectionSearchBar = ({
   useEffect(() => {
     const loadPasswords = async () => {
       try {
-        if (masterKey && secureStorage) {
-          const encryptedData = localStorage.getItem('passwords_encrypted');
-
-          if (encryptedData) {
-            const decrypted = await secureStorage.decryptData(
-              JSON.parse(encryptedData),
-              masterKey
-            );
-            setPasswordNodes(decrypted);
-          } else {
-            const plainData = localStorage.getItem('passwordManagerNodes');
-            if (plainData) {
-              setPasswordNodes(JSON.parse(plainData));
-            } else {
-              setPasswordNodes([]);
-            }
-          }
-        } else {
-          const saved = localStorage.getItem('passwordManagerNodes');
-          if (saved) {
-            setPasswordNodes(JSON.parse(saved));
-          } else {
-            setPasswordNodes([]);
-          }
-        }
+        const { loadPasswordTree } = await import('../utils/passwordStore');
+        const loaded = await loadPasswordTree(secureStorage, masterKey);
+        setPasswordNodes(Array.isArray(loaded.nodes) ? loaded.nodes : []);
       } catch (error) {
         if (error.name !== 'OperationError') {
           console.error('Error loading passwords for search:', error);
@@ -171,13 +149,23 @@ const ConnectionSearchBar = ({
     loadPasswords();
 
     const handleStorageChange = (e) => {
-      if (e.key === 'passwordManagerNodes' || e.key === 'passwords_encrypted') {
+      if (
+        e.key === 'passwordManagerNodes' ||
+        e.key === 'passwords_encrypted' ||
+        (typeof e.key === 'string' && e.key.startsWith('passwords_encrypted__'))
+      ) {
         loadPasswords();
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('password-vault-changed', loadPasswords);
+    window.addEventListener('visible-connection-vaults-changed', loadPasswords);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('password-vault-changed', loadPasswords);
+      window.removeEventListener('visible-connection-vaults-changed', loadPasswords);
+    };
   }, [masterKey, secureStorage]);
 
   const findAllPasswords = (nodes) => {

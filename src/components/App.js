@@ -68,6 +68,10 @@ import {
   DEFAULT_VAULT_ID
 } from '../utils/activeConnectionVault';
 import { connectionVaultStorageKey, isVaultRoot } from '../shared/vault-connection-trees';
+import {
+  seedEmptyDomainVaultBlobs,
+  removeExtraVaultLocalStorageKeys
+} from '../utils/extraDomainVaults';
 import ExtraVaultUnlockDialog from './vault/ExtraVaultUnlockDialog';
 import CreateExtraVaultDialog from './vault/CreateExtraVaultDialog';
 import {
@@ -458,40 +462,44 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Actualizar contador de passwords cuando haya masterKey o en claro
+  // Actualizar contador de passwords (vaults visibles)
   useEffect(() => {
     const updatePasswordsCount = async () => {
       try {
         let count = 0;
-        const walk = (list) => Array.isArray(list) ? list.reduce((acc, n) => acc + (n?.data?.type === 'password' ? 1 : 0) + (Array.isArray(n?.children) ? walk(n.children) : 0), 0) : 0;
+        const walk = (list) =>
+          Array.isArray(list)
+            ? list.reduce(
+                (acc, n) =>
+                  acc +
+                  (n?.data?.type === 'password' ? 1 : 0) +
+                  (Array.isArray(n?.children) ? walk(n.children) : 0),
+                0
+              )
+            : 0;
 
-        // Intentar con datos encriptados si hay masterKey
-        const enc = localStorage.getItem('passwords_encrypted');
-        if (enc && masterKey) {
-          try {
-            const decrypted = await secureStorage.decryptStorageKeyCached('passwords_encrypted', masterKey);
-            // Los passwords se guardan como árbol; contar de forma recursiva
-            count = walk(decrypted);
-          } catch { }
+        try {
+          const { loadPasswordTree } = await import('../utils/passwordStore');
+          const loaded = await loadPasswordTree(secureStorage, masterKey);
+          count = walk(loaded.nodes || []);
+        } catch {
+          /* noop */
         }
 
-        // Fallback: datos sin cifrar
-        if (!count) {
-          const plain = localStorage.getItem('passwordManagerNodes');
-          if (plain) {
-            try { count = walk(JSON.parse(plain)); } catch { }
+        if (!isNaN(count) && count >= 0) {
+          try {
+            localStorage.setItem('passwords_count', String(count));
+          } catch {
+            /* noop */
           }
         }
-
-        // Guardar contador si es un número válido
-        if (!isNaN(count) && count >= 0) {
-          try { localStorage.setItem('passwords_count', String(count)); } catch { }
-        }
-      } catch { }
+      } catch {
+        /* noop */
+      }
     };
 
     updatePasswordsCount();
-  }, [masterKey, secureStorage]);
+  }, [masterKey, secureStorage, visibleVaultIds]);
 
   // Tras descarga de Nextcloud: pedir clave maestra si hay vaults cifrados y no está configurada
   useEffect(() => {
@@ -2502,7 +2510,7 @@ const App = () => {
       if (!vaultId) return;
       const ok = await appConfirm({
         header: 'Eliminar vault',
-        message: `¿Eliminar permanentemente «${name || vaultId}» y sus conexiones?`,
+        message: `¿Eliminar permanentemente «${name || vaultId}» y sus conexiones, passwords y notas?`,
         acceptLabel: 'Eliminar',
         rejectLabel: 'Cancelar',
         acceptClassName: 'p-button-danger'
@@ -2512,11 +2520,7 @@ const App = () => {
         vaultKeyring.lock(vaultId);
         const res = await window.electron?.vaults?.delete?.({ vaultId });
         if (!res?.success) throw new Error(res?.error || 'Error');
-        try {
-          localStorage.removeItem(connectionVaultStorageKey(vaultId));
-        } catch (_) {
-          /* noop */
-        }
+        removeExtraVaultLocalStorageKeys(vaultId);
         const visible = visibleVaultIdsRef.current || [];
         if (visible.includes(vaultId)) {
           if (visible.length === 1) {
@@ -3570,17 +3574,12 @@ const App = () => {
           onCreated={async (vault) => {
             if (vault?.id && secureStorage && vaultKeyring.getKey(vault.id)) {
               try {
-                const key = vaultKeyring.getKey(vault.id);
-                const encrypted = await secureStorage.encryptData([], key);
-                const encStr = JSON.stringify(encrypted);
-                const storageKey = connectionVaultStorageKey(vault.id);
-                setVaultEncryptedItem(storageKey, encStr);
-                localStorageSyncService.updateCache(storageKey, encStr);
-                localStorageSyncService.debouncedSync({ [storageKey]: encStr });
+                await seedEmptyDomainVaultBlobs(vault.id, secureStorage);
               } catch (e) {
                 console.warn('[App] empty vault seed:', e?.message || e);
               }
               await switchActiveVault(vault.id);
+              window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
               return;
             }
             await loadNodes();

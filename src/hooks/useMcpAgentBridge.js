@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
-import localStorageSyncService from '../services/LocalStorageSyncService';
 import { terminalAgentBridge } from '../services/TerminalAgentBridge';
-import { setVaultEncryptedItem } from '../shared/vault-write';
 
 /**
  * Hook para desacoplar el puente MCP Agent Bridge (window.nodeterm_integration)
@@ -30,72 +28,50 @@ export const useMcpAgentBridge = ({
       getMasterKey: () => masterKey,
       getSecureStorage: () => secureStorage,
       getPasswords: async () => {
-        if (!secureStorage) return [];
-        const encryptedData = localStorage.getItem('passwords_encrypted');
-        if (encryptedData && masterKey) {
-          try {
-            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
-          } catch (e) {
-            console.error('MCP getPasswords decryption error:', e);
-            return [];
-          }
+        try {
+          const { loadPasswordTree } = await import('../utils/passwordStore');
+          const loaded = await loadPasswordTree(secureStorage, masterKey);
+          return loaded.nodes || [];
+        } catch (e) {
+          console.error('MCP getPasswords error:', e);
+          return [];
         }
-        const plainData = localStorage.getItem('passwordManagerNodes');
-        return plainData ? JSON.parse(plainData) : [];
       },
       getDocuments: async () => {
-        if (!secureStorage) return [];
-        const encryptedData = localStorage.getItem('documents_encrypted');
-        if (encryptedData && masterKey) {
-          try {
-            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
-          } catch (e) {
-            console.error('MCP getDocuments decryption error:', e);
-            return [];
-          }
+        try {
+          const { loadDocumentTreeVisible } = await import('../utils/documentStore');
+          const loaded = await loadDocumentTreeVisible(secureStorage, masterKey);
+          return loaded.nodes || [];
+        } catch (e) {
+          console.error('MCP getDocuments error:', e);
+          return [];
         }
-        const plainData = localStorage.getItem('documentManagerNodes');
-        return plainData ? JSON.parse(plainData) : [];
       },
       savePasswords: async (newPasswords) => {
-        if (!secureStorage) return false;
-        if (masterKey) {
-          const encrypted = await secureStorage.encryptData(newPasswords, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('passwords_encrypted', encStr);
-          if (!wrote.ok) {
-            console.error('[MCP] savePasswords rechazado:', wrote.reason);
-            return false;
+        try {
+          const { savePasswordTree } = await import('../utils/passwordStore');
+          const ok = await savePasswordTree(newPasswords, secureStorage, masterKey);
+          if (ok) {
+            window.dispatchEvent(new CustomEvent('passwords-storage-updated'));
           }
-          localStorage.removeItem('passwordManagerNodes');
-          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
-        } else {
-          const plainStr = JSON.stringify(newPasswords);
-          localStorage.setItem('passwordManagerNodes', plainStr);
-          localStorageSyncService.debouncedSync({ passwordManagerNodes: plainStr });
+          return !!ok;
+        } catch (e) {
+          console.error('[MCP] savePasswords:', e);
+          return false;
         }
-        window.dispatchEvent(new CustomEvent('passwords-storage-updated'));
-        return true;
       },
       saveDocuments: async (newDocuments) => {
-        if (!secureStorage) return false;
-        if (masterKey) {
-          const encrypted = await secureStorage.encryptData(newDocuments, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('documents_encrypted', encStr);
-          if (!wrote.ok) {
-            console.error('[MCP] saveDocuments rechazado:', wrote.reason);
-            return false;
+        try {
+          const { saveDocumentTree } = await import('../utils/documentStore');
+          const ok = await saveDocumentTree(newDocuments, secureStorage, masterKey);
+          if (ok) {
+            window.dispatchEvent(new CustomEvent('documents-storage-updated'));
           }
-          localStorage.removeItem('documentManagerNodes');
-          localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
-        } else {
-          const plainStr = JSON.stringify(newDocuments);
-          localStorage.setItem('documentManagerNodes', plainStr);
-          localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
+          return !!ok;
+        } catch (e) {
+          console.error('[MCP] saveDocuments:', e);
+          return false;
         }
-        window.dispatchEvent(new CustomEvent('documents-storage-updated'));
-        return true;
       },
       upsertPassword: async (item) => {
         const getPasswords = window.nodeterm_integration.getPasswords;
