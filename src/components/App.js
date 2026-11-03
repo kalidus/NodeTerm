@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
@@ -172,14 +172,14 @@ const App = () => {
 
           // 3. Aplicar temas con verificación (await para asegurar carga)
           // Preferir cargar desde archivo compartido (sync)
-          await themeManager.loadSharedTheme();
+          await themeManager.loadSharedTheme({ skipTransition: true });
           if (statusBarThemeManager.loadSharedTheme) {
             await statusBarThemeManager.loadSharedTheme();
           } else {
             statusBarThemeManager.loadSavedTheme();
           }
 
-          // 4. Verificar que los temas se aplicaron (boot-splash ya oculto en index.js)
+          // 4. Verificar que los temas se aplicaron (la ventana sigue oculta hasta renderer-ready)
           const rootStyles = getComputedStyle(document.documentElement);
           const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
           const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
@@ -187,7 +187,7 @@ const App = () => {
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
             !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
             console.warn('[Theme] Failsafe: Tema no cargado, aplicando Nord');
-            themeManager.applyTheme('Nord');
+            themeManager.applyTheme('Nord', { skipTransition: true });
             statusBarThemeManager.applyTheme('Night Owl');
           }
         };
@@ -295,6 +295,56 @@ const App = () => {
 
     initializeApp();
   }, [secureStorage]);
+
+  const rendererReadySentRef = useRef(false);
+
+  // La splash de Electron sigue encima hasta que el shell (o el desbloqueo) está pintado y tematizado.
+  useLayoutEffect(() => {
+    if (!isAppReady || rendererReadySentRef.current) return;
+    let cancelled = false;
+
+    const revealWhenPainted = async () => {
+      try {
+        const { themeManager } = await import('../utils/themeManager');
+        const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
+        const savedTheme = localStorage.getItem('ui_theme');
+        if (savedTheme && !themeManager.getCurrentTheme()) {
+          themeManager._applyThemeInternal(savedTheme, false, {
+            preserveSidebarFontColor: true,
+            skipTransition: true,
+          });
+        }
+        await Promise.race([
+          themeManager.loadSharedTheme({ skipTransition: true }),
+          new Promise((resolve) => setTimeout(resolve, 150)),
+        ]);
+        if (typeof statusBarThemeManager.loadSavedTheme === 'function') {
+          statusBarThemeManager.loadSavedTheme();
+        }
+        if (document.body) document.body.classList.remove('theme-transitioning');
+      } catch (err) {
+        console.warn('[App] Tema de arranque:', err);
+      }
+
+      if (cancelled || rendererReadySentRef.current) return;
+
+      const splash = document.getElementById('boot-splash');
+      if (splash) splash.style.display = 'none';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled || rendererReadySentRef.current) return;
+          rendererReadySentRef.current = true;
+          if (window.electron && window.electron.ipcRenderer) {
+            window.electron.ipcRenderer.send('app:renderer-ready');
+          }
+        });
+      });
+    };
+
+    revealWhenPainted();
+    return () => { cancelled = true; };
+  }, [isAppReady]);
 
   const [dialogsManagerArmed, setDialogsManagerArmed] = useState(false);
 

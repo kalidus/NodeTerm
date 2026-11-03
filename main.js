@@ -1515,12 +1515,12 @@ function createWindow() {
       try { splashWindow.setAlwaysOnTop(false); } catch (_) {}
     }
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
+      const { applyWindowCornersOnStartup } = require('./src/main/handlers/window-handlers');
+      applyWindowCornersOnStartup(mainWindow);
       if (initialBounds.isMaximized) {
         try { mainWindow.maximize(); } catch (_) {}
       }
-      const { applyWindowCornersOnStartup } = require('./src/main/handlers/window-handlers');
-      applyWindowCornersOnStartup(mainWindow);
+      mainWindow.show();
     }
     closeSplash();
 

@@ -139,7 +139,7 @@
       })();
     </script>
     <style>
-      /* Estilos críticos de arranque: evitan flash blanco y permiten fade-in */
+      /* Estilos críticos de arranque: evitan flash blanco. Sin fundido: la ventana nace oculta. */
       html, body { height: 100%; }
       body {
         margin: 0;
@@ -149,11 +149,9 @@
         -moz-osx-font-smoothing: grayscale;
       }
 
-      /* El contenido React inicia oculto y aparece suavemente */
-      #root { opacity: 0; transition: opacity 240ms ease; min-height: 100%; }
-      html.app-ready #root { opacity: 1; }
+      #root { opacity: 1; min-height: 100%; }
 
-      /* Splash de arranque: cubre todo hasta que la app esté lista */
+      /* Cubre el renderer hasta que App oculta este nodo, ya con el shell pintado. */
       #boot-splash {
         position: fixed;
         inset: 0;
@@ -166,9 +164,8 @@
         color: #e3f2fd;
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans", "Liberation Sans", sans-serif;
         letter-spacing: 0.2px;
-        transition: opacity 300ms ease, visibility 0s linear 300ms;
       }
-      #boot-splash.hidden { opacity: 0; visibility: hidden; }
+      #boot-splash.hidden { display: none; }
       #boot-splash .brand { font-weight: 600; font-size: 18px; opacity: 0.95; }
       #boot-splash .spinner {
         width: 14px; height: 14px; border-radius: 50%;

@@ -521,7 +521,7 @@ export const useThemeManagement = () => {
 
         // Cargar tema UI guardado (Preferir compartido)
         if (themeManager.loadSharedTheme) {
-          themeManager.loadSharedTheme();
+          themeManager.loadSharedTheme({ skipTransition: true });
         } else {
           themeManager.loadSavedTheme();
         }
@@ -542,7 +542,7 @@ export const useThemeManagement = () => {
           // Si los temas no se aplicaron, forzar aplicación
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
             !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-            themeManager.applyTheme('Nord', { preserveSidebarFontColor: true });
+            themeManager.applyTheme('Nord', { preserveSidebarFontColor: true, skipTransition: true });
             statusBarThemeManager.applyTheme('Night Owl');
           }
         }, 100);

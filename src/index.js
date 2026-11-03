@@ -231,30 +231,16 @@ import localStorageSyncService from './services/LocalStorageSyncService';
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-// Multi-instancia: cargar app-data.json compartido antes del primer render
-const hideBootSplashEarly = () => {
-  requestAnimationFrame(() => {
-    const splash = document.getElementById('boot-splash');
-    if (splash) splash.classList.add('hidden');
-    markStartup('boot-splash oculto');
-  });
-};
-
 const paintApp = () => {
   applyEarlyBootTheme();
   initializeGlobalThemes();
   root.render(<App />);
   markStartup('React root.render');
 
+  // La ventana sigue oculta. app:renderer-ready sale de App cuando el shell real está pintado.
   requestAnimationFrame(() => {
-    document.documentElement.classList.add('app-ready');
     if (window.electron && window.electron.platform) {
       document.documentElement.classList.add(`platform-${window.electron.platform}`);
-    }
-    hideBootSplashEarly();
-    markStartup('app-ready');
-    if (window.electron && window.electron.ipcRenderer) {
-      window.electron.ipcRenderer.send('app:renderer-ready');
     }
     const idleCss = (fn, timeout) => {
       if (typeof requestIdleCallback === 'function') {

@@ -237,26 +237,38 @@ class ThemeManager {
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => this.applyCheckboxStyles(), 100);
-          this.loadSharedTheme(); // Cargar tema compartido
+          this.loadSharedTheme({ skipTransition: true });
         });
       } else {
         setTimeout(() => this.applyCheckboxStyles(), 100);
-        this.loadSharedTheme(); // Cargar tema compartido
+        this.loadSharedTheme({ skipTransition: true });
       }
     }
   }
 
-  // Cargar tema desde archivo compartido (Sync)
-  async loadSharedTheme() {
+  // Cargar tema desde archivo compartido (Sync).
+  // La primera carga (arranque) se reutiliza para no aplicar el tema dos veces.
+  loadSharedTheme(options = {}) {
+    if (!this._initialSharedLoad) {
+      this._initialSharedLoad = this._fetchAndApplySharedTheme({ skipTransition: true });
+    }
+    if (options.skipTransition) {
+      return this._initialSharedLoad;
+    }
+    return this._fetchAndApplySharedTheme(options);
+  }
+
+  async _fetchAndApplySharedTheme(options = {}) {
+    const applyOptions = {
+      preserveSidebarFontColor: true,
+      skipTransition: !!options.skipTransition,
+    };
     try {
       if (window.electron && window.electron.theme) {
         const sharedConfig = await window.electron.theme.get();
         if (sharedConfig && sharedConfig.themeName) {
-          // console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
           // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
-          this._applyThemeInternal(sharedConfig.themeName, false, {
-            preserveSidebarFontColor: true,
-          });
+          this._applyThemeInternal(sharedConfig.themeName, false, applyOptions);
           return;
         }
       }
@@ -267,9 +279,13 @@ class ThemeManager {
     // Fallback a localStorage si no hay compartido
     const savedTheme = localStorage.getItem('ui_theme');
     if (savedTheme) {
-      this.applyTheme(savedTheme, {
-        preserveSidebarFontColor: true,
-      });
+      if (options.skipTransition) {
+        this._applyThemeInternal(savedTheme, false, applyOptions);
+      } else {
+        this.applyTheme(savedTheme, {
+          preserveSidebarFontColor: true,
+        });
+      }
     }
   }
 
@@ -291,12 +307,17 @@ class ThemeManager {
       return;
     }
 
+    // El arranque vuelve a pedir el mismo tema (local + archivo compartido). No reanimar.
+    if (!save && this.currentTheme === theme) {
+      return;
+    }
+
     if (save && !isUserCustomTitlebar()) {
       localStorage.removeItem('custom_titlebar_color');
       localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     }
 
-    if (typeof document !== 'undefined' && document.body) {
+    if (!options.skipTransition && typeof document !== 'undefined' && document.body) {
       document.body.classList.add('theme-transitioning');
       if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer);
       this.themeTransitionTimer = setTimeout(() => {
