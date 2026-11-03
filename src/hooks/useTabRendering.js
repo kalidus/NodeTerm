@@ -174,7 +174,7 @@ export const useTabRendering = ({
     if (groupBarRef.current) syncGroupBarHeight(groupBarRef.current);
   }, [tabGroups.length, activeGroupId, groupsInline, syncGroupBarHeight]);
 
-  const toggleGroupsInline = () => {
+  const toggleGroupsInline = useCallback(() => {
     setGroupsInline((prev) => {
       const next = !prev;
       try {
@@ -184,7 +184,28 @@ export const useTabRendering = ({
       }
       return next;
     });
-  };
+  }, []);
+
+  const renderGroupsInlineToggle = useCallback(() => {
+    if (currentTabLayout === 'termius') return null;
+    return (
+      <button
+        type="button"
+        className={`groups-inline-toggle${groupsInline ? ' groups-inline-toggle--active' : ''}`}
+        onClick={toggleGroupsInline}
+        aria-pressed={groupsInline}
+        aria-label={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
+        title={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
+        style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect x="1" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" />
+          <rect x="7.35" y="6.7" width="1.3" height="2.6" rx="0.4" fill="currentColor" opacity="0.7" />
+          <rect x="9.8" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" opacity="0.55" />
+        </svg>
+      </button>
+    );
+  }, [currentTabLayout, groupsInline, isDraggable, toggleGroupsInline]);
 
   /**
    * RENDERIZA LA BARRA DE GRUPOS — Segunda fila de tabs (estilo TabView).
@@ -406,23 +427,7 @@ export const useTabRendering = ({
         )}
         </div>
 
-        {!isTermiusLayout && (
-          <button
-            type="button"
-            className={`groups-inline-toggle${groupsInline ? ' groups-inline-toggle--active' : ''}`}
-            onClick={toggleGroupsInline}
-            aria-pressed={groupsInline}
-            aria-label={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
-            title={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
-            style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <rect x="1" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" />
-              <rect x="7.35" y="6.7" width="1.3" height="2.6" rx="0.4" fill="currentColor" opacity="0.7" />
-              <rect x="9.8" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" opacity="0.55" />
-            </svg>
-          </button>
-        )}
+        {!isTermiusLayout && !groupsInline && renderGroupsInlineToggle()}
 
         {groupsInline && !isTermiusLayout && (
           <span className="groups-inline-divider" aria-hidden="true" />
@@ -432,6 +437,8 @@ export const useTabRendering = ({
   };
 
   return {
-    renderGroupTabs
+    renderGroupTabs,
+    renderGroupsInlineToggle,
+    groupsInline
   };
 };

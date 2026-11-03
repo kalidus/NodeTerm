@@ -2091,7 +2091,9 @@ const App = () => {
 
   // Tab rendering hook
   const {
-    renderGroupTabs
+    renderGroupTabs,
+    renderGroupsInlineToggle,
+    groupsInline
   } = useTabRendering({
     tabGroups,
     activeGroupId,
@@ -3226,6 +3228,8 @@ const App = () => {
 
           // Tab rendering props
           renderGroupTabs={renderGroupTabs}
+          renderGroupsInlineToggle={renderGroupsInlineToggle}
+          groupsInline={groupsInline}
           filteredTabs={filteredTabs}
           setOpenTabOrder={setOpenTabOrder}
 
