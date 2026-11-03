@@ -18,6 +18,7 @@
     "general": "General",
     "security": "Security",
     "masterKey": "Master Key",
+    "vaults": "Vaults",
     "audit": "Audit",
     "appearance": "Appearance",
     "interface": "Interface",
@@ -45,6 +46,7 @@
   "sidebarDescriptions": {
     "general": "Global behavior preferences",
     "masterKey": "Manage encryption and master key",
+    "vaults": "Experimental connection vaults",
     "audit": "Configure logs and auditing",
     "users": "User and access management",
     "interface": "Customize the main interface",

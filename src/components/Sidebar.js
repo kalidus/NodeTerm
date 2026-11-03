@@ -3170,7 +3170,7 @@ const Sidebar = React.memo(({
                 }
               }}
               expandedKeys={expandedKeys}
-              onToggle={e => setExpandedKeys(e.value)}
+              onToggle={(e) => setExpandedKeys(e.value)}
               dragdropScope="sidebar"
               onDragDrop={onDragDrop}
               onDragEnd={() => {

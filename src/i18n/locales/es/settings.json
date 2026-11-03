@@ -18,6 +18,7 @@
     "general": "General",
     "security": "Seguridad",
     "masterKey": "Clave Maestra",
+    "vaults": "Vaults",
     "audit": "Auditoría",
     "appearance": "Apariencia",
     "interface": "Interfaz",
@@ -45,6 +46,7 @@
   "sidebarDescriptions": {
     "general": "Ajustes globales de comportamiento",
     "masterKey": "Gestiona cifrado y clave maestra",
+    "vaults": "Vaults experimentales de conexiones",
     "audit": "Configura registro y auditoría",
     "users": "Gestión de usuarios y accesos",
     "interface": "Personaliza la interfaz principal",

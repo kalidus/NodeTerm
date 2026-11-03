@@ -53,6 +53,22 @@ import { useAppChromeLayout } from '../hooks/useAppChromeLayout';
 
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
+import vaultKeyring from '../services/VaultKeyring';
+import {
+  loadVaultConnectionTree,
+  saveActiveVaultConnectionTree,
+  stripVaultRootNodes,
+  listRegisteredExtraVaults
+} from '../utils/extraConnectionVaults';
+import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
+import {
+  getActiveConnectionVaultId,
+  setActiveConnectionVaultId,
+  DEFAULT_VAULT_ID
+} from '../utils/activeConnectionVault';
+import { connectionVaultStorageKey } from '../shared/vault-connection-trees';
+import ExtraVaultUnlockDialog from './vault/ExtraVaultUnlockDialog';
+import CreateExtraVaultDialog from './vault/CreateExtraVaultDialog';
 import {
   getConnectionSearchShortcut,
   matchesShortcut,
@@ -152,6 +168,11 @@ const App = () => {
   const [masterKey, setMasterKey] = useState(null);
   const [showCloudRestoreMasterKey, setShowCloudRestoreMasterKey] = useState(false);
   const [cloudRestoreVaults, setCloudRestoreVaults] = useState(null);
+  const [extraVaultUnlock, setExtraVaultUnlock] = useState(null); // { vault, mode }
+  const [showCreateExtraVault, setShowCreateExtraVault] = useState(false);
+  const [activeVaultId, setActiveVaultId] = useState(() => getActiveConnectionVaultId());
+  const activeVaultIdRef = useRef(activeVaultId);
+  activeVaultIdRef.current = activeVaultId;
 
   // 🚀 OPTIMIZACIÓN: Cargar tema de pestañas de forma diferida para no bloquear el render inicial
   useEffect(() => {
@@ -2129,6 +2150,44 @@ const App = () => {
   // Función para cargar nodos (centralizada para permitir recargas externas)
   const loadNodes = useCallback(async () => {
     try {
+      const viewingVaultId = activeVaultIdRef.current || DEFAULT_VAULT_ID;
+      const viewingExtra =
+        isMultiVaultEnabled() && viewingVaultId && viewingVaultId !== DEFAULT_VAULT_ID;
+
+      // Vault extra activo: cargar solo su blob (selector Termius)
+      if (viewingExtra) {
+        setIsLoadingConnections(true);
+        const storageKey = connectionVaultStorageKey(viewingVaultId);
+        await waitForVaultSyncIfNeeded(storageKey, 5000);
+        const loaded = await loadVaultConnectionTree(
+          viewingVaultId,
+          masterKey,
+          secureStorage
+        );
+        if (loaded.locked) {
+          isExternalReloadRef.current = true;
+          setNodes([]);
+          hasLoadedNodesRef.current = true;
+          setIsLoadingConnections(false);
+          const extras = await listRegisteredExtraVaults();
+          const meta = extras.find((v) => v.id === viewingVaultId);
+          setExtraVaultUnlock({
+            vault: {
+              id: viewingVaultId,
+              name: meta?.name || viewingVaultId,
+              icon: meta?.icon
+            },
+            mode: 'unlock'
+          });
+          return;
+        }
+        isExternalReloadRef.current = true;
+        setNodes(Array.isArray(loaded.nodes) ? loaded.nodes : []);
+        hasLoadedNodesRef.current = true;
+        setIsLoadingConnections(false);
+        return;
+      }
+
       // Solo esperar sync si falta vault o es tiny (warm path: decrypt ya desde LS)
       await waitForVaultSyncIfNeeded('connections_encrypted', 5000);
 
@@ -2158,7 +2217,7 @@ const App = () => {
               ? lastDecryptedResult
               : await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
             if (decrypted) {
-              migrated = migrateWallixBastionInTree(decrypted);
+              migrated = stripVaultRootNodes(migrateWallixBastionInTree(decrypted));
               lastDecryptedDataStr = encryptedData;
               lastDecryptedKey = masterKey;
               lastDecryptedResult = decrypted;
@@ -2166,12 +2225,13 @@ const App = () => {
             }
           }
           if (decrypted) {
+            const nextTree = stripVaultRootNodes(migrated);
             // Solo marcar recarga externa si el estado realmente cambia; con la misma
             // referencia React no re-renderiza y la marca quedaría pegada, saltando un guardado real.
             setNodes((prev) => {
-              if (prev === migrated) return prev;
+              if (prev === nextTree) return prev;
               isExternalReloadRef.current = true;
-              return migrated;
+              return nextTree;
             });
             hasLoadedNodesRef.current = true;
           } else {
@@ -2190,7 +2250,9 @@ const App = () => {
                     masterKey
                   );
                   if (decryptedDisk) {
-                    const migratedDisk = migrateWallixBastionInTree(decryptedDisk);
+                    const migratedDisk = stripVaultRootNodes(
+                      migrateWallixBastionInTree(decryptedDisk)
+                    );
                     isExternalReloadRef.current = true;
                     setNodes(migratedDisk);
                     hasLoadedNodesRef.current = true;
@@ -2221,7 +2283,7 @@ const App = () => {
               localStorageSyncService.debouncedSync({ connections_encrypted: encStr });
             }
             isExternalReloadRef.current = true;
-            setNodes(migrateWallixBastionInTree(migratedNodes));
+            setNodes(stripVaultRootNodes(migrateWallixBastionInTree(migratedNodes)));
             hasLoadedNodesRef.current = true;
           } else {
             isExternalReloadRef.current = true;
@@ -2245,7 +2307,7 @@ const App = () => {
             });
           };
           isExternalReloadRef.current = true;
-          setNodes(migrateWallixBastionInTree(migrateNodes(loadedNodes)));
+          setNodes(stripVaultRootNodes(migrateWallixBastionInTree(migrateNodes(loadedNodes))));
           hasLoadedNodesRef.current = true;
         } else {
           isExternalReloadRef.current = true;
@@ -2275,15 +2337,15 @@ const App = () => {
         setIsLoadingConnections(false);
       }
     }
-  }, [masterKey, secureStorage, getDefaultNodes]);
+  }, [masterKey, secureStorage, getDefaultNodes, activeVaultId]);
 
-  // Carga inicial y cuando cambia la masterKey
+  // Carga inicial y cuando cambia la masterKey / vault activo
   useEffect(() => {
     if (!masterKey) {
       hasLoadedNodesRef.current = false;
     }
     loadNodes();
-  }, [loadNodes, masterKey]);
+  }, [loadNodes, masterKey, activeVaultId]);
 
   // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN Y SYNC)
   useEffect(() => {
@@ -2302,10 +2364,41 @@ const App = () => {
       }
 
       try {
+        const viewingVaultId = activeVaultIdRef.current || DEFAULT_VAULT_ID;
+        const viewingExtra =
+          isMultiVaultEnabled() && viewingVaultId !== DEFAULT_VAULT_ID;
+
+        if (masterKey || viewingExtra) {
+          if (viewingExtra && !vaultKeyring.isUnlocked(viewingVaultId)) {
+            return;
+          }
+          if (isMultiVaultEnabled() || viewingExtra) {
+            const saved = await saveActiveVaultConnectionTree(
+              nodes,
+              viewingVaultId,
+              masterKey,
+              secureStorage
+            );
+            if (!saved.ok) {
+              console.error('[App] Guardado vault activo rechazado:', saved.reason);
+              return;
+            }
+            localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+            if (viewingVaultId === DEFAULT_VAULT_ID && saved.encryptedStr) {
+              lastDecryptedDataStr = saved.encryptedStr;
+              lastDecryptedKey = masterKey;
+              lastDecryptedResult = saved.nodes;
+              lastMigratedResult = saved.nodes;
+            }
+            if (updateTreeHash) updateTreeHash(JSON.stringify(saved.nodes || nodes));
+            return;
+          }
+        }
+
         const nodesStr = JSON.stringify(nodes);
-        
+
         if (masterKey) {
-           // CON master key: Guardar encriptado
+          // CON master key: Guardar encriptado (modo clásico, un solo vault)
           const encrypted = await secureStorage.encryptData(nodes, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
           const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr);
@@ -2315,30 +2408,23 @@ const App = () => {
           }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
 
-          // Actualizar caché para evitar re-desencriptar en la siguiente comprobación
           lastDecryptedDataStr = encryptedStr;
           lastDecryptedKey = masterKey;
           lastDecryptedResult = nodes;
           lastMigratedResult = nodes;
 
-          // Sincronizar cambios cifrados
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
-          localStorageSyncService.debouncedSync({ 
-            'connections_encrypted': encryptedStr,
-            [STORAGE_KEYS.TREE_DATA]: null 
+          localStorageSyncService.debouncedSync({
+            connections_encrypted: encryptedStr,
+            [STORAGE_KEYS.TREE_DATA]: null
           });
         } else {
-          // SIN master key: Guardar como antes
           localStorage.setItem(STORAGE_KEYS.TREE_DATA, nodesStr);
-          
-          // Sincronizar cambios
           localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, nodesStr);
           localStorageSyncService.debouncedSync({ [STORAGE_KEYS.TREE_DATA]: nodesStr });
         }
 
-        // Actualizar el hash en el hook para que el polling ignore este cambio propio
         if (updateTreeHash) updateTreeHash(nodesStr);
-
       } catch (error) {
         console.error('Error saving nodes:', error);
       }
@@ -2346,6 +2432,118 @@ const App = () => {
 
     saveNodes();
   }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
+
+  const switchActiveVault = useCallback(
+    async (vaultId) => {
+      const next = setActiveConnectionVaultId(vaultId || DEFAULT_VAULT_ID);
+      // Flush del vault actual antes de cambiar la vista
+      try {
+        if (nodes?.length && (masterKey || vaultKeyring.isUnlocked(activeVaultIdRef.current))) {
+          await saveActiveVaultConnectionTree(
+            nodes,
+            activeVaultIdRef.current,
+            masterKey,
+            secureStorage
+          );
+        }
+      } catch (e) {
+        console.warn('[App] flush before switch:', e?.message || e);
+      }
+      activeVaultIdRef.current = next;
+      setActiveVaultId(next);
+      hasLoadedNodesRef.current = false;
+      // loadNodes se dispara por el efecto [activeVaultId]
+    },
+    [nodes, masterKey, secureStorage]
+  );
+
+  // === Vaults extra (conexiones): eventos UI ===
+  useEffect(() => {
+    const showToastMsg = (severity, summary, detail) => {
+      try {
+        toast?.current?.show?.({ severity, summary, detail, life: 3500 });
+      } catch (_) {
+        /* noop */
+      }
+    };
+
+    const onUnlockRequest = (ev) => {
+      const detail = ev?.detail || {};
+      const vaultId = detail.vaultId || detail.id;
+      if (!vaultId) return;
+      setExtraVaultUnlock({
+        vault: { id: vaultId, name: detail.name, icon: detail.icon },
+        mode: 'unlock'
+      });
+    };
+
+    const onLockRequest = (ev) => {
+      const vaultId = ev?.detail?.vaultId;
+      if (!vaultId) return;
+      vaultKeyring.lock(vaultId);
+      if (activeVaultIdRef.current === vaultId) {
+        switchActiveVault(DEFAULT_VAULT_ID);
+      }
+      showToastMsg('info', 'Vault', 'Vault bloqueado (las sesiones abiertas siguen activas)');
+    };
+
+    const onCreateRequest = () => setShowCreateExtraVault(true);
+
+    const onDeleteRequest = async (ev) => {
+      const { vaultId, name } = ev?.detail || {};
+      if (!vaultId) return;
+      const ok = await appConfirm({
+        header: 'Eliminar vault',
+        message: `¿Eliminar permanentemente «${name || vaultId}» y sus conexiones?`,
+        acceptLabel: 'Eliminar',
+        rejectLabel: 'Cancelar',
+        acceptClassName: 'p-button-danger'
+      });
+      if (!ok) return;
+      try {
+        vaultKeyring.lock(vaultId);
+        const res = await window.electron?.vaults?.delete?.({ vaultId });
+        if (!res?.success) throw new Error(res?.error || 'Error');
+        try {
+          localStorage.removeItem(connectionVaultStorageKey(vaultId));
+        } catch (_) {
+          /* noop */
+        }
+        if (activeVaultIdRef.current === vaultId) {
+          await switchActiveVault(DEFAULT_VAULT_ID);
+        }
+        showToastMsg('success', 'Vault', 'Vault eliminado');
+      } catch (e) {
+        showToastMsg('error', 'Vault', e?.message || 'No se pudo eliminar');
+      }
+    };
+
+    const onReloadExtras = () => {
+      if (typeof loadNodes === 'function') loadNodes();
+    };
+
+    window.addEventListener('request-unlock-extra-vault', onUnlockRequest);
+    window.addEventListener('request-lock-extra-vault', onLockRequest);
+    window.addEventListener('request-create-extra-vault', onCreateRequest);
+    window.addEventListener('request-delete-extra-vault', onDeleteRequest);
+    window.addEventListener('extra-vaults-reload', onReloadExtras);
+    return () => {
+      window.removeEventListener('request-unlock-extra-vault', onUnlockRequest);
+      window.removeEventListener('request-lock-extra-vault', onLockRequest);
+      window.removeEventListener('request-create-extra-vault', onCreateRequest);
+      window.removeEventListener('request-delete-extra-vault', onDeleteRequest);
+      window.removeEventListener('extra-vaults-reload', onReloadExtras);
+    };
+  }, [loadNodes, switchActiveVault]);
+
+  const handleExtraVaultUnlocked = useCallback(
+    async (vaultId) => {
+      if (!vaultId) return;
+      await switchActiveVault(vaultId);
+    },
+    [switchActiveVault]
+  );
+
   // API MCP / API Server: window.nodeterm_integration y ciclo de vida PTY
   useMcpAgentBridge({
     nodes,
@@ -2882,6 +3080,13 @@ const App = () => {
           sidebarCollapsed={sidebarCollapsed}
           mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
           tabBarCollapsed={tabBarCollapsed}
+          activeVaultId={activeVaultId}
+          onSelectVault={switchActiveVault}
+          onRequestUnlockVault={(vault) => {
+            if (!vault?.id) return;
+            setExtraVaultUnlock({ vault, mode: 'unlock' });
+          }}
+          onRequestCreateVault={() => setShowCreateExtraVault(true)}
         />
 
         {dialogsManagerArmed && (
@@ -3327,6 +3532,42 @@ const App = () => {
               ? getGeneralTreeContextMenuItems()
               : getTreeContextMenuItems(treeContextMenu?.node || selectedNode)
           }
+        />
+
+        <ExtraVaultUnlockDialog
+          visible={!!extraVaultUnlock}
+          vault={extraVaultUnlock?.vault}
+          mode={extraVaultUnlock?.mode || 'unlock'}
+          onHide={() => setExtraVaultUnlock(null)}
+          onSuccess={(vaultId) => handleExtraVaultUnlocked(vaultId)}
+          showToast={(severity, summary, detail) => {
+            toast?.current?.show?.({ severity, summary, detail, life: 3500 });
+          }}
+        />
+        <CreateExtraVaultDialog
+          visible={showCreateExtraVault}
+          onHide={() => setShowCreateExtraVault(false)}
+          onCreated={async (vault) => {
+            if (vault?.id && secureStorage && vaultKeyring.getKey(vault.id)) {
+              try {
+                const key = vaultKeyring.getKey(vault.id);
+                const encrypted = await secureStorage.encryptData([], key);
+                const encStr = JSON.stringify(encrypted);
+                const storageKey = connectionVaultStorageKey(vault.id);
+                setVaultEncryptedItem(storageKey, encStr);
+                localStorageSyncService.updateCache(storageKey, encStr);
+                localStorageSyncService.debouncedSync({ [storageKey]: encStr });
+              } catch (e) {
+                console.warn('[App] empty vault seed:', e?.message || e);
+              }
+              await switchActiveVault(vault.id);
+              return;
+            }
+            await loadNodes();
+          }}
+          showToast={(severity, summary, detail) => {
+            toast?.current?.show?.({ severity, summary, detail, life: 3500 });
+          }}
         />
 
         {/* Diálogos modales y overlays globales */}

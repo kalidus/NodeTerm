@@ -7,6 +7,9 @@ import { MAX_SPLIT_PANES } from '../utils/splitTreeLayout';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
 import { setVaultEncryptedItem } from '../shared/vault-write';
+import { findVaultIdForNode } from '../shared/vault-connection-trees';
+import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
+import { getActiveConnectionVaultId } from '../utils/activeConnectionVault';
 
 function normalizeTreeNodes(inputNodes) {
   const seenKeys = new Set();
@@ -641,6 +644,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               password: node.data?.password || '',
               port: node.data?.port || 22,
               originalKey: node.key,
+              vaultId: getActiveConnectionVaultId() || findVaultIdForNode(nodes, node.key),
               name: node.label,
               useBastionWallix: node.data?.useBastionWallix || false,
               bastionHost: node.data?.bastionHost || '',
@@ -662,6 +666,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               key: tabId,
               label: node.label,
               originalKey: node.key,
+              vaultId: sshConfig.vaultId,
               sshConfig: sshConfig,
               type: 'terminal',
               createdAt: Date.now(),
@@ -1367,11 +1372,11 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       });
     }
     return items;
-  }, [tabManagementProps]);
+  }, [tabManagementProps, nodes]);
 
   // Función para generar items del menú contextual general del árbol
   const getGeneralTreeContextMenuItems = useCallback(() => {
-    return [
+    const items = [
       {
         label: 'Nueva Carpeta',
         icon: 'pi pi-folder',
@@ -1394,6 +1399,17 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       }
     ];
+    if (isMultiVaultEnabled()) {
+      items.push({ separator: true });
+      items.push({
+        label: 'Nuevo vault…',
+        icon: 'pi pi-box',
+        command: () => {
+          window.dispatchEvent(new CustomEvent('request-create-extra-vault'));
+        }
+      });
+    }
+    return items;
   }, []);
 
   return {

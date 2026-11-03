@@ -14,6 +14,10 @@ const {
   toEncryptedV2,
   decodeEncryptedFields
 } = require('../../shared/vault-blob-encoding');
+const {
+  parseConnectionVaultStorageKey,
+  DEFAULT_VAULT_ID
+} = require('../../shared/vault-connection-trees');
 
 const MAGIC_V1 = Buffer.from('NTV1');
 const MAGIC_V2 = Buffer.from('NTV2');
@@ -27,7 +31,7 @@ const FLAG_SHA512 = 1;
 const HEADER_LEN_V1 = MAGIC_V1.length + SALT_LEN_V1 + IV_LEN;
 const NTV2_FIXED_OVERHEAD = MAGIC_V2.length + 1 + IV_LEN + 1 + 4; // magic+saltLen+iv+flags+iters
 
-/** localStorage key → filename under vault/ */
+/** localStorage key → filename under vault/ (vault principal) */
 const VAULT_SIDECAR_FILES = {
   connections_encrypted: 'connections.bin',
   passwords_encrypted: 'passwords.bin',
@@ -37,25 +41,104 @@ const VAULT_SIDECAR_FILES = {
 
 const VAULT_SIDECAR_KEYS = Object.keys(VAULT_SIDECAR_FILES);
 
-function getVaultDir() {
+function getVaultRootDir() {
   if (process.env.NODETERM_TEST_DATA_DIR) {
     return path.join(process.env.NODETERM_TEST_DATA_DIR, 'vault');
   }
   return path.join(getNodeTermDataDir(), 'vault');
 }
 
-function ensureVaultDir() {
-  const dir = getVaultDir();
+/**
+ * Directorio de sidecars: vault/ (principal) o vault/<vaultId>/ (extra).
+ * @param {string} [vaultId]
+ */
+function getVaultDir(vaultId) {
+  const root = getVaultRootDir();
+  if (!vaultId || vaultId === DEFAULT_VAULT_ID) {
+    return root;
+  }
+  // Evitar path traversal
+  const safe = String(vaultId).replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safe || safe !== String(vaultId)) {
+    return root;
+  }
+  return path.join(root, safe);
+}
+
+function ensureVaultDir(vaultId) {
+  const dir = getVaultDir(vaultId);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   return dir;
 }
 
+/**
+ * @param {string} storageKey
+ * @returns {string|null}
+ */
 function sidecarPathForKey(storageKey) {
-  const name = VAULT_SIDECAR_FILES[storageKey];
-  if (!name) return null;
-  return path.join(getVaultDir(), name);
+  if (VAULT_SIDECAR_FILES[storageKey]) {
+    return path.join(getVaultDir(DEFAULT_VAULT_ID), VAULT_SIDECAR_FILES[storageKey]);
+  }
+  const parsed = parseConnectionVaultStorageKey(storageKey);
+  if (parsed && parsed.vaultId !== DEFAULT_VAULT_ID) {
+    return path.join(getVaultDir(parsed.vaultId), 'connections.bin');
+  }
+  return null;
+}
+
+/**
+ * True si la clave tiene sidecar conocido (principal o connections de vault extra).
+ */
+function isVaultSidecarKey(storageKey) {
+  return sidecarPathForKey(storageKey) != null;
+}
+
+/**
+ * Descubre claves de vaults extra presentes en disco (vault/<id>/connections.bin).
+ * @returns {string[]}
+ */
+function listExtraConnectionVaultKeys() {
+  const root = getVaultRootDir();
+  if (!fs.existsSync(root)) return [];
+  const keys = [];
+  let entries;
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch (_) {
+    return [];
+  }
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const id = ent.name;
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) continue;
+    const bin = path.join(root, id, 'connections.bin');
+    if (fs.existsSync(bin)) {
+      keys.push(`connections_encrypted__${id}`);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Claves de sidecar a considerar (base + extras en disco + keys del payload).
+ * @param {object|null} [data]
+ * @returns {string[]}
+ */
+function listAllVaultSidecarKeys(data = null) {
+  const seen = new Set(VAULT_SIDECAR_KEYS);
+  const out = [...VAULT_SIDECAR_KEYS];
+  const add = (k) => {
+    if (!k || seen.has(k) || !isVaultSidecarKey(k)) return;
+    seen.add(k);
+    out.push(k);
+  };
+  for (const k of listExtraConnectionVaultKeys()) add(k);
+  if (data && typeof data === 'object') {
+    for (const k of Object.keys(data)) add(k);
+  }
+  return out;
 }
 
 function isSha512Kdf(obj) {
@@ -168,7 +251,10 @@ function writeVaultSidecar(storageKey, jsonStr, options = {}) {
   if (!filePath || jsonStr == null || jsonStr === '') {
     return false;
   }
-  ensureVaultDir();
+  const parsed = parseConnectionVaultStorageKey(storageKey);
+  const vaultId =
+    parsed && parsed.vaultId !== DEFAULT_VAULT_ID ? parsed.vaultId : DEFAULT_VAULT_ID;
+  ensureVaultDir(vaultId === DEFAULT_VAULT_ID ? undefined : vaultId);
   const binary = encryptedJsonStringToBinary(jsonStr);
   if (fs.existsSync(filePath)) {
     try {
@@ -223,7 +309,7 @@ function deleteVaultSidecar(storageKey) {
  */
 function mergeVaultSidecarsIntoData(data) {
   const out = data && typeof data === 'object' ? { ...data } : {};
-  for (const key of VAULT_SIDECAR_KEYS) {
+  for (const key of listAllVaultSidecarKeys(out)) {
     try {
       const fromFile = readVaultSidecar(key);
       if (fromFile != null) {
@@ -245,7 +331,7 @@ function extractAndPersistVaultSidecars(data) {
   const settingsData = { ...(data || {}) };
   let wroteVault = false;
 
-  for (const key of VAULT_SIDECAR_KEYS) {
+  for (const key of listAllVaultSidecarKeys(settingsData)) {
     const value = settingsData[key];
     delete settingsData[key];
     if (value === undefined || value === null || value === '') {
@@ -278,7 +364,7 @@ function migrateEmbeddedVaultToSidecars(parsed) {
   }
   let migrated = false;
   const writtenKeys = [];
-  for (const key of VAULT_SIDECAR_KEYS) {
+  for (const key of listAllVaultSidecarKeys(parsed)) {
     const embedded = parsed[key];
     if (embedded == null || embedded === '') continue;
     try {
@@ -304,7 +390,7 @@ function migrateEmbeddedVaultToSidecars(parsed) {
 function stripVaultKeysFromObject(obj, onlyKeys = null) {
   if (!obj || typeof obj !== 'object') return obj;
   const out = { ...obj };
-  const keys = onlyKeys == null ? VAULT_SIDECAR_KEYS : onlyKeys;
+  const keys = onlyKeys == null ? listAllVaultSidecarKeys(obj) : onlyKeys;
   for (const key of keys) {
     delete out[key];
   }
@@ -313,7 +399,7 @@ function stripVaultKeysFromObject(obj, onlyKeys = null) {
 
 function getVaultSidecarStamps() {
   const stamps = {};
-  for (const key of VAULT_SIDECAR_KEYS) {
+  for (const key of listAllVaultSidecarKeys()) {
     const filePath = sidecarPathForKey(key);
     let mtime = 0;
     try {
@@ -330,7 +416,7 @@ function getVaultSidecarStamps() {
 
 function getVaultSidecarsMtimeMax() {
   let max = 0;
-  for (const key of VAULT_SIDECAR_KEYS) {
+  for (const key of listAllVaultSidecarKeys()) {
     const filePath = sidecarPathForKey(key);
     if (!filePath) continue;
     try {
@@ -349,21 +435,42 @@ function listVaultSidecarBasenames() {
   return Object.values(VAULT_SIDECAR_FILES);
 }
 
+/**
+ * Borra el directorio completo de un vault extra (vault/<id>/).
+ * No toca el vault principal.
+ */
+function deleteExtraVaultDir(vaultId) {
+  if (!vaultId || vaultId === DEFAULT_VAULT_ID) return false;
+  const safe = String(vaultId).replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safe || safe !== String(vaultId)) return false;
+  const dir = getVaultDir(safe);
+  const root = getVaultRootDir();
+  if (dir === root) return false;
+  if (!fs.existsSync(dir)) return false;
+  fs.rmSync(dir, { recursive: true, force: true });
+  return true;
+}
+
 module.exports = {
   VAULT_SIDECAR_KEYS,
   VAULT_SIDECAR_FILES,
   MAGIC,
   MAGIC_V1,
   MAGIC_V2,
+  getVaultRootDir,
   getVaultDir,
   ensureVaultDir,
   sidecarPathForKey,
+  isVaultSidecarKey,
+  listExtraConnectionVaultKeys,
+  listAllVaultSidecarKeys,
   encryptedJsonStringToBinary,
   binaryToEncryptedJsonString,
   writeVaultSidecar,
   isCatastrophicVaultShrink,
   readVaultSidecar,
   deleteVaultSidecar,
+  deleteExtraVaultDir,
   mergeVaultSidecarsIntoData,
   extractAndPersistVaultSidecars,
   migrateEmbeddedVaultToSidecars,

@@ -53,6 +53,12 @@ describe('vault-write', () => {
     assert.strictEqual(r.reason, 'invalid_key');
   });
 
+  it('setVaultEncryptedItem accepts connections_encrypted__vaultId', () => {
+    const r = setVaultEncryptedItem('connections_encrypted__work', '{"v":2,"data":"abc"}');
+    assert.strictEqual(r.ok, true);
+    assert.ok(store.get('connections_encrypted__work'));
+  });
+
   it('invalidateVaultStamp is a no-op when missing', () => {
     invalidateVaultStamp('passwords_encrypted');
     assert.strictEqual(store.get(VAULT_STAMPS_LS), undefined);

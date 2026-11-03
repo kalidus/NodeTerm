@@ -52,7 +52,8 @@ const VALID_LISTENER_CHANNELS = [
   /^ssh-tunnel:.*$/, // Eventos de túneles SSH
   /^terminal:.*$/,
   /^linux-terminal:.*$/,
-  /^appdata:changed$/
+  /^appdata:changed$/,
+  /^vaults:changed$/
 ];
 
 function isAllowedListenerChannel(channel) {
@@ -190,15 +191,16 @@ contextBridge.exposeInMainWorld('electron', {
     delete: (file) => ipcRenderer.invoke('home-wallpaper:delete', file)
   },
   security: {
-    getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
+    getMasterKey: (vaultId) => ipcRenderer.invoke('security:get-master-key', vaultId),
     saveMasterKey: (payload, rememberPassword) => {
       // IMPORTANTE: no usar !payload.salt — el objeto { masterKey, verifier } incluye
       // verifier.salt y si se confundiera el shape, la clave no se persistiría.
-      if (payload && typeof payload === 'object' && (payload.masterKey || payload.encryptedMasterKey || payload.verifier)) {
+      if (payload && typeof payload === 'object' && (payload.masterKey || payload.encryptedMasterKey || payload.verifier || payload.vaultId)) {
         return ipcRenderer.invoke('security:save-master-key', {
           masterKey: payload.masterKey ?? payload.encryptedMasterKey ?? null,
           verifier: payload.verifier ?? payload.vaultVerifier ?? null,
-          rememberPassword: payload.rememberPassword ?? rememberPassword
+          rememberPassword: payload.rememberPassword ?? rememberPassword,
+          vaultId: payload.vaultId
         });
       }
       if (typeof payload === 'string') {
@@ -212,11 +214,26 @@ contextBridge.exposeInMainWorld('electron', {
         rememberPassword
       });
     },
-    hasMasterKey: () => ipcRenderer.invoke('security:has-master-key'),
-    getVaultVerifier: () => ipcRenderer.invoke('security:get-vault-verifier'),
-    getRememberPassword: () => ipcRenderer.invoke('security:get-remember-password'),
-    setRememberPassword: (remember) => ipcRenderer.invoke('security:set-remember-password', remember),
-    clearMasterKey: () => ipcRenderer.invoke('security:clear-master-key')
+    hasMasterKey: (vaultId) => ipcRenderer.invoke('security:has-master-key', vaultId),
+    getVaultVerifier: (vaultId) => ipcRenderer.invoke('security:get-vault-verifier', vaultId),
+    getRememberPassword: (vaultId) => ipcRenderer.invoke('security:get-remember-password', vaultId),
+    setRememberPassword: (remember, vaultId) =>
+      ipcRenderer.invoke('security:set-remember-password', remember, vaultId),
+    clearMasterKey: (vaultId) => ipcRenderer.invoke('security:clear-master-key', vaultId)
+  },
+  vaults: {
+    list: () => ipcRenderer.invoke('vaults:list'),
+    get: (vaultId) => ipcRenderer.invoke('vaults:get', vaultId),
+    create: (payload) => ipcRenderer.invoke('vaults:create', payload),
+    rename: (payload) => ipcRenderer.invoke('vaults:rename', payload),
+    delete: (payload) => ipcRenderer.invoke('vaults:delete', payload),
+    flagKey: () => ipcRenderer.invoke('vaults:flag-key'),
+    onChanged: (func) => {
+      if (typeof func !== 'function') return () => {};
+      const subscription = () => func();
+      ipcRenderer.on('vaults:changed', subscription);
+      return () => ipcRenderer.off('vaults:changed', subscription);
+    }
   },
   appdata: {
     getAll: () => ipcRenderer.invoke('appdata:get-all'),
@@ -406,6 +423,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-tunnel:.*$/,
         /^theme:.*$/,
         /^security:.*$/,
+        /^vaults:.*$/,
         /^appdata:.*$/,
         /^agentzero:.*$/,
         /^anythingllm:.*$/,

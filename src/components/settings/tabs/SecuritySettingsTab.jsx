@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import MasterKeySubTab from './security/MasterKeySubTab';
+import MultiVaultSubTab from './security/MultiVaultSubTab';
 import AuditSubTab from './security/AuditSubTab';
 
 const SecuritySettingsTab = ({
@@ -54,6 +55,9 @@ const SecuritySettingsTab = ({
             showToast={handleShowToast}
             toastRef={toastRef}
           />
+        )}
+        {currentSubTab === 'vaults' && (
+          <MultiVaultSubTab showToast={handleShowToast} />
         )}
         {currentSubTab === 'auditoria' && (
           <AuditSubTab

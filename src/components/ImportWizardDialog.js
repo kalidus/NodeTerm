@@ -335,6 +335,11 @@ const ImportWizardDialog = ({
     const [useEncryption, setUseEncryption] = useState(false);
     const [encryptPassword, setEncryptPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [exportVaultId, setExportVaultId] = useState('default');
+    const [exportVaultOptions, setExportVaultOptions] = useState([
+        { id: 'default', name: 'Vault principal' }
+    ]);
+    const [importAsNewVault, setImportAsNewVault] = useState(false);
 
     // Ejecutar redirección al abrir/cambiar props iniciales
     useEffect(() => {
@@ -346,6 +351,25 @@ const ImportWizardDialog = ({
                 setSelectedSource(null);
                 setCurrentStep(0);
             }
+            setExportVaultId('default');
+            setImportAsNewVault(false);
+            (async () => {
+                const opts = [{ id: 'default', name: 'Vault principal' }];
+                try {
+                    if (
+                        localStorage.getItem('nodeterm_experimental_multi_vault') === 'true' &&
+                        window.electron?.vaults?.list
+                    ) {
+                        const res = await window.electron.vaults.list();
+                        for (const v of res?.vaults || []) {
+                            opts.push({ id: v.id, name: v.name || v.id });
+                        }
+                    }
+                } catch (_) {
+                    /* noop */
+                }
+                setExportVaultOptions(opts);
+            })();
         }
     }, [visible, initialSource, initialStep]);
 
@@ -964,14 +988,18 @@ const ImportWizardDialog = ({
             setImportProgress(40);
             setImportStatus('Empaquetando datos cifrados...');
 
+            const vaultMeta = exportVaultOptions.find((v) => v.id === exportVaultId);
+            const isExtra = exportVaultId && exportVaultId !== 'default';
             const exportData = await exportImportService.exportAllData({
                 connections: nodetermOptions.connections,
-                passwords: nodetermOptions.passwords,
-                conversations: nodetermOptions.conversations,
-                config: nodetermOptions.config,
-                documents: nodetermOptions.documents,
-                recordings: nodetermOptions.recordings,
-                encryptPassword: useEncryption ? encryptPassword : null
+                passwords: isExtra ? false : nodetermOptions.passwords,
+                conversations: isExtra ? false : nodetermOptions.conversations,
+                config: isExtra ? false : nodetermOptions.config,
+                documents: isExtra ? false : nodetermOptions.documents,
+                recordings: isExtra ? false : nodetermOptions.recordings,
+                encryptPassword: useEncryption ? encryptPassword : null,
+                connectionsVaultId: exportVaultId,
+                connectionsVaultName: vaultMeta?.name || exportVaultId
             });
 
             setImportProgress(70);
@@ -1044,7 +1072,9 @@ const ImportWizardDialog = ({
             categories: Object.entries(nodetermOptions)
                 .filter(([_, enabled]) => enabled)
                 .map(([key]) => key),
-            decryptPassword: password || null
+            decryptPassword: password || null,
+            importConnectionsAsNewVault: !!importAsNewVault,
+            newVaultName: data?.vault?.name || data?.data?.connections?.vaultName || null
         });
 
         setImportProgress(100);
@@ -1056,14 +1086,19 @@ const ImportWizardDialog = ({
                 connections: result.connections || 0,
                 passwords: result.passwords || 0,
                 conversations: result.conversations || 0,
-                config: result.config ? 1 : 0
+                config: result.config ? 1 : 0,
+                ...(result.newVault
+                    ? { vault: result.newVault.name || result.newVault.id }
+                    : {})
             }
         });
 
         showToastSafe({
             severity: 'success',
             summary: 'Importación exitosa',
-            detail: 'Datos de NodeTerm importados correctamente',
+            detail: result.newVault
+                ? `Conexiones importadas como vault «${result.newVault.name || result.newVault.id}». Desbloquéalo con su clave.`
+                : 'Datos de NodeTerm importados correctamente',
             life: 5000
         });
 
@@ -1660,6 +1695,46 @@ const ImportWizardDialog = ({
                         <h5 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-color)' }}>
                             📦 Categorías a Exportar
                         </h5>
+
+                        {exportVaultOptions.length > 1 && (
+                            <div style={{ marginBottom: '12px' }}>
+                                <label
+                                    htmlFor="exp-vault-select"
+                                    style={{
+                                        fontSize: '11px',
+                                        color: 'var(--text-color-secondary)',
+                                        marginBottom: '4px',
+                                        display: 'block'
+                                    }}
+                                >
+                                    Vault de conexiones
+                                </label>
+                                <select
+                                    id="exp-vault-select"
+                                    value={exportVaultId}
+                                    onChange={(e) => setExportVaultId(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 10px',
+                                        borderRadius: 6,
+                                        border: '1px solid var(--surface-border)',
+                                        background: 'var(--surface-ground)',
+                                        color: 'var(--text-color)'
+                                    }}
+                                >
+                                    {exportVaultOptions.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {exportVaultId !== 'default' && (
+                                    <small style={{ display: 'block', marginTop: 6, opacity: 0.8 }}>
+                                        Solo se exportarán las conexiones de este vault.
+                                    </small>
+                                )}
+                            </div>
+                        )}
                         
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 15px' }}>
                             {[
@@ -2062,6 +2137,27 @@ const ImportWizardDialog = ({
                                         </div>
                                     ))}
                                 </div>
+                                {localStorage.getItem('nodeterm_experimental_multi_vault') === 'true' &&
+                                    nodetermOptions.connections && (
+                                    <div
+                                        className="p-field-checkbox"
+                                        style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: 12 }}
+                                    >
+                                        <Checkbox
+                                            inputId="import-as-new-vault"
+                                            checked={importAsNewVault}
+                                            onChange={(e) => setImportAsNewVault(!!e.checked)}
+                                        />
+                                        <label htmlFor="import-as-new-vault" style={{ margin: 0, cursor: 'pointer', lineHeight: 1.3 }}>
+                                            <span style={{ fontSize: '12.5px', fontWeight: 600, display: 'block' }}>
+                                                Importar conexiones como vault nuevo
+                                            </span>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>
+                                                Crea un vault extra con el blob cifrado (misma clave maestra del origen)
+                                            </span>
+                                        </label>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -96,8 +96,21 @@ class ExportImportService {
       config = true,
       recordings = false,
       documents = true,
-      encryptPassword = null
+      encryptPassword = null,
+      connectionsVaultId = null, // null/'default' = principal; otro id = vault extra
+      connectionsVaultName = null
     } = options;
+
+    const {
+      connectionVaultStorageKey,
+      DEFAULT_VAULT_ID
+    } = require('../shared/vault-connection-trees');
+
+    const vaultId =
+      connectionsVaultId && connectionsVaultId !== DEFAULT_VAULT_ID
+        ? String(connectionsVaultId)
+        : DEFAULT_VAULT_ID;
+    const isExtraVault = vaultId !== DEFAULT_VAULT_ID;
 
     const exportData = {
       version: this.supportedVersion,
@@ -105,13 +118,18 @@ class ExportImportService {
       appVersion: window.electronAPI?.getVersionInfo ? 
         (await window.electronAPI.getVersionInfo()).appVersion : getVersionInfo().appVersion,
       encrypted: !!encryptPassword,
+      vault: {
+        id: vaultId,
+        name: connectionsVaultName || (isExtraVault ? vaultId : 'default'),
+        scope: isExtraVault ? 'extra-connections' : 'primary'
+      },
       categories: {
         connections: connections,
-        passwords: passwords,
-        conversations: conversations,
-        config: config,
-        recordings: recordings,
-        documents: documents
+        passwords: isExtraVault ? false : passwords,
+        conversations: isExtraVault ? false : conversations,
+        config: isExtraVault ? false : config,
+        recordings: isExtraVault ? false : recordings,
+        documents: isExtraVault ? false : documents
       },
       data: {}
     };
@@ -119,17 +137,24 @@ class ExportImportService {
     try {
       // === 1. CONEXIONES ===
       if (connections) {
-        const treeData = this.safeGetItem('basicapp2_tree_data');
-        const encryptedConnections = this.safeGetItem('connections_encrypted');
-        const importSources = this.safeGetItem('IMPORT_SOURCES');
-        const favorites = this.safeGetItem('nodeterm_favorite_connections');
-        const favoriteGroups = this.safeGetItem('nodeterm_favorite_groups');
-        const favoriteGroupAssignments = this.safeGetItem('nodeterm_favorite_group_assignments');
-        const favoriteMemberOrder = this.safeGetItem('nodeterm_favorite_member_order');
-        const filterConfig = this.safeGetItem('nodeterm_filter_config');
-        const groupAssignments = this.safeGetItem('nodeterm_group_assignments');
+        const storageKey = connectionVaultStorageKey(vaultId);
+        const treeData = isExtraVault ? null : this.safeGetItem('basicapp2_tree_data');
+        const encryptedConnections = this.safeGetItem(storageKey);
+        const importSources = isExtraVault ? null : this.safeGetItem('IMPORT_SOURCES');
+        const favorites = isExtraVault ? null : this.safeGetItem('nodeterm_favorite_connections');
+        const favoriteGroups = isExtraVault ? null : this.safeGetItem('nodeterm_favorite_groups');
+        const favoriteGroupAssignments = isExtraVault
+          ? null
+          : this.safeGetItem('nodeterm_favorite_group_assignments');
+        const favoriteMemberOrder = isExtraVault
+          ? null
+          : this.safeGetItem('nodeterm_favorite_member_order');
+        const filterConfig = isExtraVault ? null : this.safeGetItem('nodeterm_filter_config');
+        const groupAssignments = isExtraVault ? null : this.safeGetItem('nodeterm_group_assignments');
         
         console.log('[ExportImportService] Exportando conexiones:', {
+          vaultId,
+          storageKey,
           hasTreeData: !!treeData,
           treeDataLength: Array.isArray(treeData) ? treeData.length : 'N/A',
           hasEncrypted: !!encryptedConnections,
@@ -147,7 +172,9 @@ class ExportImportService {
           favoriteGroupAssignments: favoriteGroupAssignments,
           favoriteMemberOrder: favoriteMemberOrder,
           filterConfig: filterConfig,
-          groupAssignments: groupAssignments
+          groupAssignments: groupAssignments,
+          vaultId,
+          vaultName: exportData.vault.name
         };
       }
 
@@ -567,7 +594,9 @@ class ExportImportService {
       merge = false,
       replace = false,
       categories = ['connections', 'passwords', 'conversations', 'config', 'documents'],
-      decryptPassword = null
+      decryptPassword = null,
+      importConnectionsAsNewVault = false,
+      newVaultName = null
     } = options;
 
     try {
@@ -597,13 +626,26 @@ class ExportImportService {
         conversations: 0,
         config: 0,
         recordings: 0,
-        documents: 0
+        documents: 0,
+        newVault: null
       };
 
       // 4. Importar por categorías
       if (categories.includes('connections') && dataToImport.connections) {
-        await this.importConnections(dataToImport.connections, { merge, replace });
-        importStats.connections = this.countImportedConnections(dataToImport.connections);
+        if (importConnectionsAsNewVault) {
+          const vaultMeta = exportData.vault || {};
+          importStats.newVault = await this.importConnectionsAsNewVault(dataToImport.connections, {
+            name:
+              newVaultName ||
+              dataToImport.connections.vaultName ||
+              vaultMeta.name ||
+              'Vault importado'
+          });
+          importStats.connections = this.countImportedConnections(dataToImport.connections);
+        } else {
+          await this.importConnections(dataToImport.connections, { merge, replace });
+          importStats.connections = this.countImportedConnections(dataToImport.connections);
+        }
       }
 
       if (categories.includes('passwords') && dataToImport.passwords) {
@@ -812,6 +854,59 @@ class ExportImportService {
     } catch (error) {
       throw new Error(`Error al restaurar backup: ${error.message}`);
     }
+  }
+
+  /**
+   * Importa conexiones cifradas como un vault extra nuevo.
+   * El blob permanece cifrado: hay que desbloquearlo con la misma clave maestra del vault origen.
+   */
+  async importConnectionsAsNewVault(connectionsData, options = {}) {
+    const { connectionVaultStorageKey } = require('../shared/vault-connection-trees');
+    const { setVaultEncryptedItem } = require('../shared/vault-write');
+
+    if (!window.electron?.vaults?.create) {
+      throw new Error('API de vaults no disponible');
+    }
+    const name = String(options.name || 'Vault importado').trim() || 'Vault importado';
+    const created = await window.electron.vaults.create({ name });
+    if (!created?.success || !created.vault) {
+      throw new Error(created?.error || 'No se pudo crear el vault');
+    }
+
+    const storageKey = connectionVaultStorageKey(created.vault.id);
+    let enc = connectionsData?.encrypted;
+    if (enc == null) {
+      throw new Error('El archivo no incluye conexiones cifradas para crear un vault');
+    }
+    if (typeof enc !== 'string') {
+      enc = JSON.stringify(enc);
+    }
+    const wrote = setVaultEncryptedItem(storageKey, enc);
+    if (!wrote.ok) {
+      try {
+        await window.electron.vaults.delete({ vaultId: created.vault.id });
+      } catch (_) {
+        /* noop */
+      }
+      throw new Error(`No se pudo guardar el vault importado: ${wrote.reason}`);
+    }
+    try {
+      // Persistencia a disco vía sync si está disponible
+      const syncMod = await import('./LocalStorageSyncService');
+      const sync = syncMod.default || syncMod;
+      sync.updateCache?.(storageKey, enc);
+      sync.debouncedSync?.({ [storageKey]: enc });
+    } catch (_) {
+      /* noop */
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
+    } catch (_) {
+      /* noop */
+    }
+
+    return created.vault;
   }
 
   /**

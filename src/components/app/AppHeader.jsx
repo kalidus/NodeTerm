@@ -30,7 +30,11 @@ export const AppHeader = ({
   iconTheme,
   expandedKeys,
   sidebarCollapsed = false,
-  tabBarCollapsed = false
+  tabBarCollapsed = false,
+  activeVaultId,
+  onSelectVault,
+  onRequestUnlockVault,
+  onRequestCreateVault
 }) => {
   if (titleBarCollapsed || isMinimalMode) {
     return null;
@@ -138,6 +142,10 @@ export const AppHeader = ({
       sidebarCollapsed={sidebarCollapsed}
       isMinimalMode={isMinimalMode}
       tabBarCollapsed={tabBarCollapsed}
+      activeVaultId={activeVaultId}
+      onSelectVault={onSelectVault}
+      onRequestUnlockVault={onRequestUnlockVault}
+      onRequestCreateVault={onRequestCreateVault}
     />
   );
 };

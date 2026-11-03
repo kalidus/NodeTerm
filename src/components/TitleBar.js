@@ -7,6 +7,7 @@ import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
 import TitleBarUpdateButton from './TitleBarUpdateButton';
 import TitleBarSearch from './TitleBarSearch';
+import VaultSelector from './vault/VaultSelector';
 import {
   UI_LAYOUT_OPTIONS,
   getCurrentUILayoutId,
@@ -104,6 +105,10 @@ const TitleBar = ({
   isMinimalMode = false,
   tabBarCollapsed = false,
   sidebarCallbacksRef,
+  activeVaultId,
+  onSelectVault,
+  onRequestUnlockVault,
+  onRequestCreateVault,
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -497,7 +502,17 @@ const TitleBar = ({
           >Ignorar</button>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%',
+          gap: 6,
+          WebkitAppRegion: 'no-drag',
+          flexShrink: 0,
+          zIndex: 2
+        }}
+      >
         <svg
           width="18"
           height="18"
@@ -519,6 +534,12 @@ const TitleBar = ({
           </g>
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
+        <VaultSelector
+          activeVaultId={activeVaultId}
+          onSelectVault={onSelectVault}
+          onRequestUnlock={onRequestUnlockVault}
+          onRequestCreate={onRequestCreateVault}
+        />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <TitleBarSearch

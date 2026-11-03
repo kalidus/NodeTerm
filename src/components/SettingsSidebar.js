@@ -24,6 +24,7 @@ const SETTINGS_SECTIONS = [
     icon: 'pi pi-shield',
     subitems: [
       { id: 'clave-maestra', labelKey: 'sidebar.masterKey', descriptionKey: 'sidebarDescriptions.masterKey', icon: 'pi pi-key' },
+      { id: 'vaults', labelKey: 'sidebar.vaults', descriptionKey: 'sidebarDescriptions.vaults', icon: 'pi pi-box' },
       { id: 'auditoria', labelKey: 'sidebar.audit', descriptionKey: 'sidebarDescriptions.audit', icon: 'pi pi-video' }
     ]
   },

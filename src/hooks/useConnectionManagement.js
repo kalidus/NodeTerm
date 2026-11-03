@@ -3,6 +3,8 @@ import connectionStore from '../utils/connectionStore';
 import { findConnectionInTree, resolveWantedTreeId } from '../utils/findConnectionInTree';
 import { normalizeRdpColorDepth, resolveRdpScreenDimensions } from '../utils/rdpScreenConfig';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import { findVaultIdForNode, DEFAULT_VAULT_ID } from '../shared/vault-connection-trees';
+import { getActiveConnectionVaultId } from '../utils/activeConnectionVault';
 
 const SSH_LIKE_TYPES = ['ssh', 'sftp', 'ftp', 'scp', 'explorer'];
 
@@ -510,6 +512,13 @@ export const useConnectionManagement = ({
     setSshTabs(prevTabs => {
       const nowTs = Date.now();
       const tabId = `${conn.originalKey}_${nowTs}`;
+      const treeForVault = resolveTree();
+      const vaultId =
+        nodeOrConn?.vaultId ||
+        nodeOrConn?.data?.vaultId ||
+        getActiveConnectionVaultId() ||
+        findVaultIdForNode(treeForVault, conn.originalKey) ||
+        DEFAULT_VAULT_ID;
       const sshConfig = {
         host: conn.host,
         username: conn.username,
@@ -518,6 +527,7 @@ export const useConnectionManagement = ({
         authMethod,
         port: conn.port,
         originalKey: conn.originalKey,
+        vaultId,
         name: conn.name,
         useBastionWallix,
         bastionHost,
@@ -545,6 +555,7 @@ export const useConnectionManagement = ({
         key: tabId,
         label: conn.name,
         originalKey: conn.originalKey,
+        vaultId,
         iconId: conn.iconId,
         sshConfig: sshConfig,
         type: 'terminal',

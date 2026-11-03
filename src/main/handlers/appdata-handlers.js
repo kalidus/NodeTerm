@@ -24,6 +24,8 @@ const {
   getVaultSidecarStamps,
   readVaultSidecar,
   listVaultSidecarBasenames,
+  listAllVaultSidecarKeys,
+  isVaultSidecarKey,
   ensureVaultDir,
   getVaultDir
 } = require('../utils/vault-sidecar');
@@ -109,7 +111,7 @@ function readAppDataFromDisk() {
   // Si aún no hay sidecar, se conserva la key embebida (migración pendiente / secundaria).
   if (parsed) {
     const stamps = getVaultSidecarStamps();
-    for (const key of VAULT_SIDECAR_KEYS) {
+    for (const key of listAllVaultSidecarKeys(parsed)) {
       if (stamps[key] > 0) {
         delete parsed[key];
       }
@@ -259,7 +261,7 @@ function registerAppDataHandlers(dependencies) {
   });
 
   safeHandle('appdata:get-vault', async (_event, key) => {
-    if (!VAULT_SIDECAR_KEYS.includes(key)) {
+    if (!isVaultSidecarKey(key)) {
       return null;
     }
     try {

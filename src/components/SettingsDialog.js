@@ -166,7 +166,8 @@ const SettingsContent = ({
     const subTabMap = {
       // Dentro de Seguridad (índice 1)
       'clave-maestra': { parent: 'seguridad', index: 0 },
-      'auditoria': { parent: 'seguridad', index: 1 },
+      'vaults': { parent: 'seguridad', index: 1 },
+      'auditoria': { parent: 'seguridad', index: 2 },
       'nueva-pestana': { parent: 'seguridad', index: 2 },
       // Dentro de Apariencia (índice 3)
       'interfaz': { parent: 'apariencia', index: 0 },

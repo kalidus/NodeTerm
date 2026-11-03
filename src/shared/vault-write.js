@@ -4,7 +4,10 @@
  */
 
 const { isCatastrophicVaultPayloadShrink } = require('./vault-shrink-guard');
-const { VAULT_LOCAL_STORAGE_KEYS } = require('./vault-local-storage-keys');
+const {
+  VAULT_LOCAL_STORAGE_KEYS,
+  isAllowedVaultStorageKey
+} = require('./vault-local-storage-keys');
 
 const VAULT_STAMPS_LS = 'nodeterm_vault_stamps';
 
@@ -42,7 +45,7 @@ function invalidateVaultStamp(key) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 function setVaultEncryptedItem(key, encStr) {
-  if (!VAULT_LOCAL_STORAGE_KEYS.includes(key)) {
+  if (!isAllowedVaultStorageKey(key)) {
     console.error(`[VaultWrite] Clave no permitida: ${key}`);
     return { ok: false, reason: 'invalid_key' };
   }

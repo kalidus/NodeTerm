@@ -5,10 +5,14 @@
  */
 
 import { SYNC_KEYS } from '../shared/sync-keys';
-import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+import {
+  isAllowedVaultStorageKey,
+  listVaultStorageKeys
+} from '../shared/vault-local-storage-keys';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
 import { isCatastrophicVaultPayloadShrink } from '../shared/vault-shrink-guard';
 import { isTinyVaultPayload, VAULT_STAMPS_LS } from '../shared/vault-write';
+import { isConnectionVaultStorageKey } from '../shared/vault-connection-trees';
 
 const EXTRA_FETCH_ROUNDS = 2;
 const EXTRA_FETCH_DELAY_MS = 300;
@@ -115,7 +119,7 @@ class LocalStorageSyncService {
         const stamps = sharedData._vaultStamps || {};
         for (const key of SYNC_KEYS) {
             const localVal = localStorage.getItem(key);
-            if (VAULT_LOCAL_STORAGE_KEYS.includes(key)) {
+            if (isAllowedVaultStorageKey(key)) {
                 // Sidecar presente: el blob no viaja en getAll. Solo falta si hay local y no hay fichero.
                 if (!isEmptyValue(localVal) && !(stamps[key] > 0) && (sharedData[key] == null)) {
                     return true;
@@ -143,7 +147,7 @@ class LocalStorageSyncService {
         if (!Array.isArray(confirmedKeys)) return;
         const next = { ...this._readSavedVaultStamps() };
         const allowed = new Set(confirmedKeys);
-        for (const key of VAULT_LOCAL_STORAGE_KEYS) {
+        for (const key of listVaultStorageKeys(stamps)) {
             if (!allowed.has(key)) continue;
             if (stamps[key] > 0 && localStorage.getItem(key)) {
                 next[key] = stamps[key];
@@ -154,6 +158,13 @@ class LocalStorageSyncService {
         } catch (_) {
             /* noop */
         }
+    }
+
+    _vaultKeysForHydrate(sharedData) {
+        return listVaultStorageKeys({
+            ...(sharedData || {}),
+            ...((sharedData && sharedData._vaultStamps) || {})
+        });
     }
 
     /**
@@ -168,7 +179,7 @@ class LocalStorageSyncService {
         const confirmed = [];
 
         const toFetch = [];
-        for (const key of VAULT_LOCAL_STORAGE_KEYS) {
+        for (const key of this._vaultKeysForHydrate(sharedData)) {
             const stamp = stamps[key] || 0;
             if (!stamp) continue;
             const localVal = localStorage.getItem(key);
@@ -323,7 +334,12 @@ class LocalStorageSyncService {
         let needsWriteBack = false;
         const writtenKeys = [];
 
-        for (const key of SYNC_KEYS) {
+        const importKeys = new Set(SYNC_KEYS);
+        for (const key of Object.keys(normalized)) {
+            if (isAllowedVaultStorageKey(key)) importKeys.add(key);
+        }
+
+        for (const key of importKeys) {
             if (normalized[key] !== undefined && normalized[key] !== null) {
                 const localVal = localStorage.getItem(key);
                 if (isEmptyValue(normalized[key]) && !isEmptyValue(localVal)) {
@@ -335,7 +351,7 @@ class LocalStorageSyncService {
                     continue;
                 }
                 if (
-                    VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                    isAllowedVaultStorageKey(key) &&
                     localVal &&
                     vaultPayloadsEquivalent(localVal, normalized[key])
                 ) {
@@ -343,7 +359,7 @@ class LocalStorageSyncService {
                 }
                 // No importar un vault casi vacío sobre uno local sustancial
                 if (
-                    VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                    isAllowedVaultStorageKey(key) &&
                     isCatastrophicVaultPayloadShrink(localVal, normalized[key])
                 ) {
                     console.error(
@@ -426,12 +442,23 @@ class LocalStorageSyncService {
             // Inicializar caché si no existe
             if (!this._memoryCache) this._memoryCache = {};
 
-            for (const key of SYNC_KEYS) {
+            const syncKeySet = new Set(SYNC_KEYS);
+            // Incluir blobs de conexiones de vaults extra presentes en LS / overrides
+            for (const key of listVaultStorageKeys({ ...overrides, ...(this._memoryCache || {}) })) {
+                if (isConnectionVaultStorageKey(key) && key !== 'connections_encrypted') {
+                    syncKeySet.add(key);
+                }
+            }
+            for (const key of Object.keys(overrides)) {
+                if (isAllowedVaultStorageKey(key)) syncKeySet.add(key);
+            }
+
+            for (const key of syncKeySet) {
                 // PRIMERO: Intentar usar el override explícito si existe
                 if (overrides[key] !== undefined) {
                     const nextVal = overrides[key];
                     if (
-                        VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                        isAllowedVaultStorageKey(key) &&
                         isCatastrophicVaultPayloadShrink(
                             localStorage.getItem(key) || this._memoryCache?.[key],
                             nextVal
@@ -452,7 +479,7 @@ class LocalStorageSyncService {
                     if (value !== null) {
                         // LS envenenado (encrypt([])) vs caché buena: no empujar el vacío a disco
                         if (
-                            VAULT_LOCAL_STORAGE_KEYS.includes(key) &&
+                            isAllowedVaultStorageKey(key) &&
                             isCatastrophicVaultPayloadShrink(this._memoryCache?.[key], value)
                         ) {
                             console.error(

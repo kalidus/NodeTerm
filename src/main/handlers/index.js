@@ -30,6 +30,7 @@ let _sshTunnelHandlers = null;
 let _forensicsHandlers = null;
 let _themeHandlers = null;
 let _securityHandlers = null;
+let _vaultHandlers = null;
 let _appdataHandlers = null;
 let _localFsHandlers = null;
 let _libraryHandlers = null;
@@ -170,6 +171,11 @@ function getSecurityHandlers() {
   return _securityHandlers;
 }
 
+function getVaultHandlers() {
+  if (!_vaultHandlers) _vaultHandlers = require('./vault-handlers');
+  return _vaultHandlers;
+}
+
 function getAppDataHandlers() {
   if (!_appdataHandlers) _appdataHandlers = require('./appdata-handlers');
   return _appdataHandlers;
@@ -292,6 +298,7 @@ function registerBootstrapIpcHandlers() {
   runHandlerStep('library IPC', () => getLibraryHandlers().registerLibraryHandlers());
   // Security solo aquí (evita ×3 al combinar whenReady + critical + registerSecurity)
   runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers({}));
+  runHandlerStep('vaults IPC', () => getVaultHandlers().registerVaultHandlers());
 }
 
 /**
