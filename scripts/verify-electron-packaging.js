@@ -14,7 +14,7 @@ const REQUIRED_PATHS = [
   'preload.js',
   'src/main/workers/system-stats-worker.js',
   'package.json',
-  'config/librechat.full.yaml',
+  'src/resources/librechat/librechat.full.yaml',
   'dist/index.html',
   'src/main/utils/sync-keys.js',
   'src/shared/sync-keys.js',
@@ -34,7 +34,7 @@ const PACKAGE_JSON_GLOBS = [
   'src/shared/**',
   'src/services/**',
   'src/utils/**',
-  'config/librechat.full.yaml'
+  'src/resources/librechat/librechat.full.yaml'
 ];
 
 const VENDOR_DEP = 'file:third_party/ironrdp/wasm';

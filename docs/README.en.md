@@ -1,13 +1,13 @@
 <div align="center">
 
-  <img src="src/assets/app-icon.png" alt="NodeTerm Logo" width="80" style="border-radius:16px;"/>
+  <img src="../src/assets/app-icon.png" alt="NodeTerm Logo" width="80" style="border-radius:16px;"/>
 
   # 🚀 NodeTerm
 
   <b>A modern, multi-protocol "all-in-one" remote access client with built-in password vault and AI integration in an ultra-fast multi-tab workspace.</b>
 
   <p align="center">
-    <a href="README.md"><img src="https://img.shields.io/badge/Language-🇪🇸_Español-lightgrey?style=flat-square" alt="Español"/></a>
+    <a href="../README.md"><img src="https://img.shields.io/badge/Language-🇪🇸_Español-lightgrey?style=flat-square" alt="Español"/></a>
     <a href="README.en.md"><img src="https://img.shields.io/badge/Language-🇬🇧_English-blue?style=flat-square" alt="English"/></a>
   </p>
 
@@ -17,7 +17,7 @@
     <a href="#-advanced-ai-ecosystem-integrated-mcp-server"><img src="https://img.shields.io/badge/🤖_AI-MCP_Native-8a2be2?style=flat-square" alt="MCP Server"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/downloads/kalidus/NodeTerm/total?style=flat-square&color=007acc&logo=github&label=Downloads" alt="Total Downloads"/></a>
     <a href="https://github.com/kalidus/NodeTerm/stargazers"><img src="https://img.shields.io/github/stars/kalidus/NodeTerm?style=flat-square&color=ffb900&logo=github&label=Stars" alt="GitHub Stars"/></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 License"/></a>
+    <a href="../LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 License"/></a>
     <a href="#donate"><img src="https://img.shields.io/badge/Buy_me_a_coffee-☕_Donate-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Donate"/></a>
   </p>
 
@@ -35,7 +35,7 @@
     </a>
   </p>
 
-  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="85%"/>
+  <img src="../src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="85%"/>
 
 </div>
 
@@ -117,7 +117,7 @@ On Linux, `npm install` automatically repairs the Electron binary if the downloa
 
 ## 📦 Version and Changelog
 
-Detailed release history is maintained exclusively in **[CHANGELOG.md](CHANGELOG.md)**. Both [GitHub Releases](https://github.com/kalidus/NodeTerm/releases) and the `npm run release` script use it to publish notes.
+Detailed release history is maintained exclusively in **[CHANGELOG.md](../CHANGELOG.md)**. Both [GitHub Releases](https://github.com/kalidus/NodeTerm/releases) and the `npm run release` script use it to publish notes.
 
 | | |
 |--|--|
@@ -189,7 +189,7 @@ Your support enables focused development, security maintenance of the AES-256 va
 <p align="left">
   <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
   &nbsp;
-  <a href="docs/SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
+  <a href="SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
 </p>
 
 ### 🏆 Featured Sponsorship Tiers
@@ -198,7 +198,7 @@ Your support enables focused development, security maintenance of the AES-256 va
 - 🏢 **Infrastructure Partner ($100/mo)**: Corporate logo & link on `README.md` & `docs/SPONSORS.md` + special mention in Release Notes.
 - 👑 **Lead Visionary Partner ($250+/mo)**: Premier top banner logo placement on `README.md` & `docs/SPONSORS.md` + priority channel for custom MCP integrations.
 
-See full details, goals, and rewards in [**SPONSORS.md**](docs/SPONSORS.md).
+See full details, goals, and rewards in [**SPONSORS.md**](SPONSORS.md).
 
 <details>
 <summary><b>Other one-time contribution methods (Crypto / Direct Donations)</b></summary>
@@ -241,4 +241,4 @@ Contributions are welcome! If you'd like to improve NodeTerm:
 
 ## 📄 License
 
-GPL-3.0. Commercial licensing: see [LICENSE-COMMERCIAL.md](docs/legal/LICENSE-COMMERCIAL.md). Versions 1.7.6 and earlier remain under ISC. Made by [kalidus](https://github.com/kalidus).
+GPL-3.0. Commercial licensing: see [LICENSE-COMMERCIAL.md](legal/LICENSE-COMMERCIAL.md). Versions 1.7.6 and earlier remain under ISC. Made by [kalidus](https://github.com/kalidus).

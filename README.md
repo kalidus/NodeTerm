@@ -8,7 +8,7 @@
 
   <p align="center">
     <a href="README.md"><img src="https://img.shields.io/badge/Language-🇪🇸_Español-blue?style=flat-square" alt="Español"/></a>
-    <a href="README.en.md"><img src="https://img.shields.io/badge/Language-🇬🇧_English-lightgrey?style=flat-square" alt="English"/></a>
+    <a href="docs/README.en.md"><img src="https://img.shields.io/badge/Language-🇬🇧_English-lightgrey?style=flat-square" alt="English"/></a>
   </p>
 
   <p align="center">

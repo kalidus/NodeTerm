@@ -10,9 +10,9 @@ const execAsync = util.promisify(exec);
 const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 
 /** Ruta del template relativa a la raíz del repo / app.asar (no es el `librechat.yaml` generado en userData). */
-const LIBRECHAT_BUNDLE_YAML_REL = path.join('config', 'librechat.full.yaml');
+const LIBRECHAT_BUNDLE_YAML_REL = path.join('src', 'resources', 'librechat', 'librechat.full.yaml');
 
-/** Sube este número cuando cambies `config/librechat.full.yaml` para forzar la copia al YAML usado por Docker. */
+/** Sube este número cuando cambies `src/resources/librechat/librechat.full.yaml` para forzar la copia al YAML usado por Docker. */
 const LIBRECHAT_YAML_REVISION = 6;
 
 const { getNodeTermDataDir } = require('../main/utils/file-utils');
@@ -400,7 +400,7 @@ class LibreChatService {
   }
 
   /**
-   * Lee `config/librechat.full.yaml` del paquete (junto a package.json en el asar).
+   * Lee `src/resources/librechat/librechat.full.yaml` del paquete (junto a package.json en el asar).
    * Ese fichero es la fuente de verdad; el contenedor monta `config/librechat.yaml` generado aquí.
    */
   _readBundledLibreChatFullYaml() {
@@ -449,10 +449,10 @@ class LibreChatService {
       let yamlBody = this._readBundledLibreChatFullYaml();
       if (!yamlBody) {
         console.error(
-          '[LibreChat] Falta config/librechat.full.yaml en la instalación. Reinstala NodeTerm o copia ese fichero en la app.'
+          '[LibreChat] Falta src/resources/librechat/librechat.full.yaml en la instalación. Reinstala NodeTerm o copia ese fichero en la app.'
         );
         throw new Error(
-          'No se encontró config/librechat.full.yaml. Añade el fichero del repositorio o reinstala la aplicación.'
+          'No se encontró src/resources/librechat/librechat.full.yaml. Añade el fichero del repositorio o reinstala la aplicación.'
         );
       }
       yamlBody = yamlBody.replace(

@@ -49,7 +49,7 @@
       "dist/",
       "binaries/**",
       "main.js",
-      "config/librechat.full.yaml",
+      "src/resources/librechat/librechat.full.yaml",
       "preload.js",
       "package.json",
       "LICENSE",
