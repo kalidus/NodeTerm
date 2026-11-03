@@ -1921,13 +1921,13 @@ const MainContentArea = ({
                 background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
               }}>
                 <div
-                  className={`tabs-bar-shell${tabGroups?.length > 0 ? ' tabs-bar-shell--has-groups' : ''}${activeGroupId !== null ? ' tabs-bar-shell--group-active' : ''}${groupsInline ? ' tabs-bar-shell--groups-inline' : ''}`}
+                  className={`tabs-bar-shell${tabGroups?.length > 0 ? ' tabs-bar-shell--has-groups' : ''}${activeGroupId !== null ? ' tabs-bar-shell--group-active' : ''}${groupsInline && tabGroups?.length > 0 ? ' tabs-bar-shell--groups-inline' : ''}`}
                   style={{ width: '100%', minWidth: 0, overflow: 'hidden', position: 'relative' }}
                 >
                   {/* Barra de grupos: siempre visible, incluso cuando el grupo está vacío */}
                   {renderGroupTabs()}
                   {/* Solo mostrar TabView de pestañas si el grupo no está vacío (o siempre en layout Termius) */}
-                  {(currentTabLayout === 'termius' || groupsInline || !(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0)) && (
+                  {(currentTabLayout === 'termius' || (groupsInline && tabGroups?.length > 0) || !(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0)) && (
                     <div className="tabs-main-view-wrapper" style={{ position: 'relative' }}>
                       <TabView
                         activeIndex={activeTabIndex}
@@ -2164,7 +2164,7 @@ const MainContentArea = ({
                     </div>
                   )}
 
-                  {groupsInline && currentTabLayout !== 'termius' && typeof renderGroupsInlineToggle === 'function' && (
+                  {groupsInline && tabGroups?.length > 0 && currentTabLayout !== 'termius' && typeof renderGroupsInlineToggle === 'function' && (
                     <div className="groups-inline-toggle-slot">
                       {renderGroupsInlineToggle()}
                     </div>

@@ -58,8 +58,9 @@ export const useTabRendering = ({
   const applyGroupBarHeightRef = useRef(() => {});
 
   useLayoutEffect(() => {
-    applyGroupsInlineAttribute(groupsInline);
-  }, [groupsInline]);
+    // Sin grupos no hay barra que integrar: quitar el modo visual, pero conservar la preferencia.
+    applyGroupsInlineAttribute(groupsInline && tabGroups.length > 0);
+  }, [groupsInline, tabGroups.length]);
 
   useEffect(() => {
     const syncFromStorage = () => setGroupsInline(readGroupsInlinePreference());
@@ -187,7 +188,7 @@ export const useTabRendering = ({
   }, []);
 
   const renderGroupsInlineToggle = useCallback(() => {
-    if (currentTabLayout === 'termius') return null;
+    if (currentTabLayout === 'termius' || tabGroups.length === 0) return null;
     return (
       <button
         type="button"
@@ -205,7 +206,7 @@ export const useTabRendering = ({
         </svg>
       </button>
     );
-  }, [currentTabLayout, groupsInline, isDraggable, toggleGroupsInline]);
+  }, [currentTabLayout, groupsInline, isDraggable, tabGroups.length, toggleGroupsInline]);
 
   /**
    * RENDERIZA LA BARRA DE GRUPOS — Segunda fila de tabs (estilo TabView).
