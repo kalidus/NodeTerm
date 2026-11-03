@@ -974,10 +974,15 @@ const Sidebar = React.memo(({
     const unsubscribeFavorites = onFavoritesUpdate(() => bumpFavoritesRevision());
     const unsubscribeGroups = favoriteGroupsStore.onGroupsUpdate(() => bumpFavoritesRevision());
     const unsubscribeSourceTrees = onFavoriteSourceTreesUpdate(() => bumpFavoritesRevision());
+    const onVisibleVaults = () => bumpFavoritesRevision();
+    window.addEventListener('visible-connection-vaults-changed', onVisibleVaults);
+    window.addEventListener('extra-vaults-reload', onVisibleVaults);
     return () => {
       unsubscribeFavorites();
       unsubscribeGroups();
       unsubscribeSourceTrees();
+      window.removeEventListener('visible-connection-vaults-changed', onVisibleVaults);
+      window.removeEventListener('extra-vaults-reload', onVisibleVaults);
     };
   }, [bumpFavoritesRevision]);
 

@@ -44,7 +44,7 @@ import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import { loadPasswordTree, savePasswordTree } from '../utils/passwordStore';
 import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
-import { isVaultRoot } from '../shared/vault-connection-trees';
+import { isVaultRoot, findVaultIdForNode } from '../shared/vault-connection-trees';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -1645,7 +1645,8 @@ const PasswordManagerSidebar = ({
         id: node.key,
         type: node.data?.type || 'password',
         name: node.label,
-        ...node.data
+        ...node.data,
+        vaultId: findVaultIdForNode(passwordNodes, node.key)
       };
       const isFav = connectionStore.isFavorite(secretConnection);
 

@@ -226,7 +226,8 @@ function toSerializable(connection) {
       content: '',
       icon: connection.icon || (['document', 'quick-note'].includes(type) ? 'pi-file' : 'pi-key'),
       lastConnected: new Date().toISOString(),
-      lastAccessed: connection.lastAccessed || new Date().toISOString()
+      lastAccessed: connection.lastAccessed || new Date().toISOString(),
+      vaultId: connection.vaultId || undefined
     };
   }
 
@@ -315,7 +316,8 @@ function toSerializable(connection) {
     bindHost: connection.bindHost || undefined,
     // Guardar icono personalizado si existe
     customIcon: connection.customIcon || null,
-    lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
+    lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString(),
+    vaultId: connection.vaultId || undefined
   };
 }
 

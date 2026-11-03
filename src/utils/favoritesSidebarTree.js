@@ -1,6 +1,10 @@
 import { helpers as connHelpers } from './connectionStore';
 import favoriteGroupsStore from './favoriteGroupsStore';
 import { extractDragPlacement, isDescendantTreeKey, isShowMoreTreeNode } from './treeDragDrop';
+import { isMultiVaultEnabled } from './multiVaultFlag';
+import { getVisibleConnectionVaultIds } from './activeConnectionVault';
+import { DEFAULT_VAULT_ID } from '../shared/vault-connection-trees';
+import vaultKeyring from '../services/VaultKeyring';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
@@ -276,16 +280,39 @@ function loadLocalSourceTree(storageKey) {
   }
 }
 
+/**
+ * Con multi-vault, solo mostrar favoritos cuyo origen está en un árbol visible
+ * (árboles ya limitados a vaults visibles/desbloqueados). Huérfanos solo si
+ * guardan vaultId y ese vault sigue visible y desbloqueado.
+ */
+function isFavoriteVisibleInCurrentVaults(favorite, sourceNode) {
+  if (!isMultiVaultEnabled()) return true;
+  if (sourceNode) return true;
+
+  if (favorite?.vaultId) {
+    const id =
+      favorite.vaultId === DEFAULT_VAULT_ID || !favorite.vaultId
+        ? DEFAULT_VAULT_ID
+        : String(favorite.vaultId);
+    const visible = getVisibleConnectionVaultIds();
+    if (!visible.includes(id)) return false;
+    if (id !== DEFAULT_VAULT_ID && !vaultKeyring.isUnlocked(id)) return false;
+    return true;
+  }
+
+  return false;
+}
+
 export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavoriteGroups, documentNodes, passwordNodes }) {
-  const nodeByFavoriteId = indexNodesByFavoriteId(nodes);
-  indexNodesByFavoriteId(
-    documentNodes || cachedDocumentNodes || loadLocalSourceTree('documentManagerNodes'),
-    nodeByFavoriteId
-  );
-  indexNodesByFavoriteId(
-    passwordNodes || cachedPasswordNodes || loadLocalSourceTree('passwordManagerNodes'),
-    nodeByFavoriteId
-  );
+  const connectionNodes = nodes || [];
+  const docNodes =
+    documentNodes || cachedDocumentNodes || loadLocalSourceTree('documentManagerNodes');
+  const pwNodes =
+    passwordNodes || cachedPasswordNodes || loadLocalSourceTree('passwordManagerNodes');
+
+  const nodeByFavoriteId = indexNodesByFavoriteId(connectionNodes);
+  indexNodesByFavoriteId(docNodes, nodeByFavoriteId);
+  indexNodesByFavoriteId(pwNodes, nodeByFavoriteId);
   const userGroups = (groups || []).filter((group) => !group.isDefault);
   const connectionFavorites = (favorites || []).filter((favorite) => favorite?.type !== 'group');
 
@@ -310,6 +337,9 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
 
   for (const favorite of connectionFavorites) {
     const sourceNode = nodeByFavoriteId.get(favorite.id) || null;
+    if (!isFavoriteVisibleInCurrentVaults(favorite, sourceNode)) {
+      continue;
+    }
     const assignedGroupIds = (getFavoriteGroups ? getFavoriteGroups(favorite.id) : [])
       .filter((groupId) => groupFolderById.has(groupId));
 
