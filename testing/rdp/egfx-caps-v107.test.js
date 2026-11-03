@@ -7,10 +7,10 @@ const path = require('path');
 
 const root = path.join(__dirname, '../..');
 const vendorPkg = JSON.parse(
-  fs.readFileSync(path.join(root, 'third_party/ironrdp/wasm/package.json'), 'utf8')
+  fs.readFileSync(path.join(root, 'src/vendor/ironrdp/wasm/package.json'), 'utf8')
 );
 const patch = fs.readFileSync(
-  path.join(root, 'third_party/ironrdp/patches/egfx-nodeterm.patch'),
+  path.join(root, 'src/vendor/ironrdp/patches/egfx-nodeterm.patch'),
   'utf8'
 );
 

@@ -37,13 +37,13 @@ const PACKAGE_JSON_GLOBS = [
   'src/resources/librechat/librechat.full.yaml'
 ];
 
-const VENDOR_DEP = 'file:third_party/ironrdp/wasm';
-const VENDOR_JS = 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js';
-const VENDOR_WASM = 'third_party/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm';
-const VENDOR_PKG = 'third_party/ironrdp/wasm/package.json';
+const VENDOR_DEP = 'file:src/vendor/ironrdp/wasm';
+const VENDOR_JS = 'src/vendor/ironrdp/wasm/iron-remote-desktop-rdp.js';
+const VENDOR_WASM = 'src/vendor/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm';
+const VENDOR_PKG = 'src/vendor/ironrdp/wasm/package.json';
 
 /**
- * El WASM IronRDP NodeTerm viaja congelado en third_party/ironrdp/wasm/ (JS glue + .wasm binario);
+ * El WASM IronRDP NodeTerm viaja congelado en src/vendor/ironrdp/wasm/ (JS glue + .wasm binario);
  * releases no lo recompilan.
  * @param {object} rootPkg
  * @returns {string[]}
@@ -178,7 +178,7 @@ function main() {
   }
 
   if (vendorErrors.length) {
-    console.error('\n❌ Vendor IronRDP incompleto o no congelado. Releases deben usar file:third_party/ironrdp/wasm.');
+    console.error('\n❌ Vendor IronRDP incompleto o no congelado. Releases deben usar file:src/vendor/ironrdp/wasm.');
     process.exit(1);
   }
 

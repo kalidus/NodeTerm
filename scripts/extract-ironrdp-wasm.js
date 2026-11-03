@@ -6,7 +6,7 @@
  * Idempotente: si ya no hay data URL y existe el .wasm, valida y sale OK.
  *
  * Uso: node scripts/extract-ironrdp-wasm.js [dir-vendor]
- * Default: third_party/ironrdp/wasm
+ * Default: src/vendor/ironrdp/wasm
  */
 'use strict';
 
@@ -18,7 +18,7 @@ const JS_NAME = 'iron-remote-desktop-rdp.js';
 const WASM_NAME = 'iron-remote-desktop-rdp_bg.wasm';
 
 const vendorDir = path.resolve(
-  process.argv[2] || path.join(__dirname, '..', 'third_party', 'ironrdp', 'wasm')
+  process.argv[2] || path.join(__dirname, '..', 'src', 'vendor', 'ironrdp', 'wasm')
 );
 const jsPath = path.join(vendorDir, JS_NAME);
 const wasmPath = path.join(vendorDir, WASM_NAME);

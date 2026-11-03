@@ -10,9 +10,9 @@ const path = require('path');
 const assert = require('assert');
 
 const root = path.join(__dirname, '..');
-const vendorJs = path.join(root, 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js');
-const vendorWasm = path.join(root, 'third_party/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm');
-const vendorPkg = path.join(root, 'third_party/ironrdp/wasm/package.json');
+const vendorJs = path.join(root, 'src/vendor/ironrdp/wasm/iron-remote-desktop-rdp.js');
+const vendorWasm = path.join(root, 'src/vendor/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm');
+const vendorPkg = path.join(root, 'src/vendor/ironrdp/wasm/package.json');
 
 assert.ok(fs.existsSync(vendorJs), 'falta vendor JS');
 assert.ok(fs.existsSync(vendorWasm), 'falta vendor WASM');

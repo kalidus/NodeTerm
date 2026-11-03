@@ -1,9 +1,9 @@
-# IronRDP NodeTerm (`third_party/ironrdp`)
+# IronRDP NodeTerm (`src/vendor/ironrdp`)
 
-Todo el material IronRDP custom de NodeTerm vive aquí (no en `src/`).
+Todo el material IronRDP custom de NodeTerm vive aquí.
 
 ```
-third_party/ironrdp/
+src/vendor/ironrdp/
   wasm/       Paquete npm congelado (JS glue + .wasm binario)
   patches/    Parches para regenerar el WASM (mantenimiento)
 ```
@@ -15,7 +15,7 @@ El artefacto empaquetado es [`wasm/`](wasm/) (`iron-remote-desktop-rdp.js` + `ir
 Dependencia raíz:
 
 ```json
-"@devolutions/iron-remote-desktop-rdp": "file:third_party/ironrdp/wasm"
+"@devolutions/iron-remote-desktop-rdp": "file:src/vendor/ironrdp/wasm"
 ```
 
 Versión actual: ver `wasm/package.json` (`0.7.0-nodeterm-egfx.*`).

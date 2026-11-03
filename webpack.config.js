@@ -90,7 +90,7 @@ module.exports = (env, argv = {}) => {
     rules: [
       {
         test: /\.(js|jsx)$/,
-        exclude: /node_modules|third_party[\\/]ironrdp/,
+        exclude: /node_modules|src[\\/]vendor[\\/]ironrdp/,
         use: {
           loader: 'babel-loader',
           options: {

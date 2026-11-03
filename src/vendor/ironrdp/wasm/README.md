@@ -2,11 +2,11 @@
 
 Paquete local `@devolutions/iron-remote-desktop-rdp` desde IronRDP `38b074e4`.
 
-Ubicación: `third_party/ironrdp/wasm/` (antes `vendor/iron-remote-desktop-rdp`).
+Ubicación: `src/vendor/ironrdp/wasm/` (antes `third_party/ironrdp/wasm`).
 
 ## Contrato de freeze (producción)
 
-Este directorio **es el binario empaquetado**. Releases y CI solo hacen `npm ci` + webpack + electron-builder; **no** clonan IronRDP, **no** aplican `third_party/ironrdp/patches` y **no** ejecutan `wasm-pack`.
+Este directorio **es el binario empaquetado**. Releases y CI solo hacen `npm ci` + webpack + electron-builder; **no** clonan IronRDP, **no** aplican `src/vendor/ironrdp/patches` y **no** ejecutan `wasm-pack`.
 
 Contenido runtime:
 
@@ -19,7 +19,7 @@ Vite en library mode inlinea el `.wasm` como data URL; tras cada `ironrdp:wasm:b
 Dependencia raíz (obligatoria):
 
 ```json
-"@devolutions/iron-remote-desktop-rdp": "file:third_party/ironrdp/wasm"
+"@devolutions/iron-remote-desktop-rdp": "file:src/vendor/ironrdp/wasm"
 ```
 
 ## Capacidades
@@ -53,7 +53,7 @@ El script ya ejecuta `extract-ironrdp-wasm.js` al final. Luego bump del sufijo (
 1. Elegir commit/tag en Devolutions/IronRDP.
 2. Actualizar `$Commit` en `scripts/build-ironrdp-wasm.ps1`.
 3. Checkout limpio en `IRONRDP_SRC` (por defecto `../IronRDP`).
-4. Aplicar `third_party/ironrdp/patches/egfx-nodeterm.patch` (si falla, rebasear el patch sobre el árbol nuevo).
+4. Aplicar `src/vendor/ironrdp/patches/egfx-nodeterm.patch` (si falla, rebasear el patch sobre el árbol nuevo).
 5. `npm run ironrdp:wasm:build` → regenera este directorio.
 6. Bump versión (`0.7.0-nodeterm-egfx.N` o base nueva + `nodeterm-egfx.1`).
 7. Validar: `npm run ironrdp:wasm:measure:vendor`, `npm run test:rdp`, smoke EGFX/audio.

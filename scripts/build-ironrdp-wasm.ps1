@@ -28,7 +28,7 @@ try {
   Write-Warning "No se pudo fijar commit $Commit; se usa HEAD actual"
 }
 
-$patchDir = Join-Path $root 'third_party\ironrdp\patches'
+$patchDir = Join-Path $root 'src\vendor\ironrdp\patches'
 if (Test-Path $patchDir) {
   Get-ChildItem $patchDir -Filter '*.patch' | ForEach-Object {
     Write-Host "[ironrdp-wasm] Aplicando $($_.Name)"
@@ -57,7 +57,7 @@ try {
   Pop-Location
 }
 
-$dst = Join-Path $root 'third_party\ironrdp\wasm'
+$dst = Join-Path $root 'src\vendor\ironrdp\wasm'
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 Copy-Item (Join-Path $IronRdpSrc 'web-client\iron-remote-desktop-rdp\dist\*') $dst -Force
 
