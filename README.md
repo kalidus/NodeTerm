@@ -210,16 +210,16 @@ Tu apoyo me permite dedicar tiempo continuo al desarrollo, mejorar la seguridad 
 <p align="left">
   <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
   &nbsp;
-  <a href="SPONSORS.md"><img src="https://img.shields.io/badge/Ver_Beneficios_y_Tiers-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="Ver SPONSORS.md"/></a>
+  <a href="docs/SPONSORS.md"><img src="https://img.shields.io/badge/Ver_Beneficios_y_Tiers-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="Ver SPONSORS.md"/></a>
 </p>
 
 ### 🏆 Niveles de Patrocinio Destacados
-- ☕ **Developer Coffee ($5/mes)**: Mención en `SPONSORS.md` e insignia oficial de Sponsor en GitHub.
-- 🚀 **Ecosystem Supporter ($25/mes)**: Mención destacada en `README.md` y `SPONSORS.md` + voto prioritario en roadmap.
-- 🏢 **Infrastructure Partner ($100/mes)**: Logo corporativo y enlace en `README.md` y `SPONSORS.md` + agradecimiento especial en Release Notes.
-- 👑 **Lead Visionary Partner ($250+/mes)**: Banner preferencial en la portada de `README.md` y `SPONSORS.md` + canal prioritario de desarrollo de integraciones MCP.
+- ☕ **Developer Coffee ($5/mes)**: Mención en `docs/SPONSORS.md` e insignia oficial de Sponsor en GitHub.
+- 🚀 **Ecosystem Supporter ($25/mes)**: Mención destacada en `README.md` y `docs/SPONSORS.md` + voto prioritario en roadmap.
+- 🏢 **Infrastructure Partner ($100/mes)**: Logo corporativo y enlace en `README.md` y `docs/SPONSORS.md` + agradecimiento especial en Release Notes.
+- 👑 **Lead Visionary Partner ($250+/mes)**: Banner preferencial en la portada de `README.md` y `docs/SPONSORS.md` + canal prioritario de desarrollo de integraciones MCP.
 
-Consulta todos los detalles, metas y recompensas en el archivo [**SPONSORS.md**](SPONSORS.md).
+Consulta todos los detalles, metas y recompensas en el archivo [**SPONSORS.md**](docs/SPONSORS.md).
 
 <details>
 <summary><b>Otras formas de contribución puntual (Crypto / Donaciones directas)</b></summary>
@@ -275,4 +275,4 @@ Las PRs y sugerencias son bienvenidas. Usa Issues y Discussions segun el tipo de
 
 ## 📄 Licencia
 
-GPL-3.0. Licencia comercial: ver [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Versiones 1.7.6 e inferiores siguen en ISC. Hecho por [kalidus](https://github.com/kalidus).
+GPL-3.0. Licencia comercial: ver [LICENSE-COMMERCIAL.md](docs/legal/LICENSE-COMMERCIAL.md). Versiones 1.7.6 e inferiores siguen en ISC. Hecho por [kalidus](https://github.com/kalidus).

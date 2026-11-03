@@ -12,7 +12,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const REQUIRED_PATHS = [
   'main.js',
   'preload.js',
-  'system-stats-worker.js',
+  'src/main/workers/system-stats-worker.js',
   'package.json',
   'config/librechat.full.yaml',
   'dist/index.html',
@@ -136,12 +136,9 @@ function main() {
   const files = pkg.build?.files || [];
   const filesStr = files.join('\n');
   const unpackGaps = [];
-  if (!filesStr.includes('src/main/**')) unpackGaps.push('falta src/main/** en build.files');
+  if (!filesStr.includes('src/main/**')) unpackGaps.push('falta src/main/** en build.files (cubre system-stats-worker)');
   if (!filesStr.includes('src/services/**')) unpackGaps.push('falta src/services/** en build.files');
   if (!filesStr.includes('src/utils/**')) unpackGaps.push('falta src/utils/** en build.files');
-  if (!filesStr.includes('system-stats-worker.js')) {
-    unpackGaps.push('falta system-stats-worker.js en build.files');
-  }
 
   const vendorErrors = verifyIronRdpVendor(pkg);
 

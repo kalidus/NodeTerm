@@ -189,16 +189,16 @@ Your support enables focused development, security maintenance of the AES-256 va
 <p align="left">
   <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
   &nbsp;
-  <a href="SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
+  <a href="docs/SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
 </p>
 
 ### 🏆 Featured Sponsorship Tiers
-- ☕ **Developer Coffee ($5/mo)**: Name in `SPONSORS.md` and official Sponsor badge on GitHub.
-- 🚀 **Ecosystem Supporter ($25/mo)**: Highlighted name in `README.md` & `SPONSORS.md` + priority roadmap voting.
-- 🏢 **Infrastructure Partner ($100/mo)**: Corporate logo & link on `README.md` & `SPONSORS.md` + special mention in Release Notes.
-- 👑 **Lead Visionary Partner ($250+/mo)**: Premier top banner logo placement on `README.md` & `SPONSORS.md` + priority channel for custom MCP integrations.
+- ☕ **Developer Coffee ($5/mo)**: Name in `docs/SPONSORS.md` and official Sponsor badge on GitHub.
+- 🚀 **Ecosystem Supporter ($25/mo)**: Highlighted name in `README.md` & `docs/SPONSORS.md` + priority roadmap voting.
+- 🏢 **Infrastructure Partner ($100/mo)**: Corporate logo & link on `README.md` & `docs/SPONSORS.md` + special mention in Release Notes.
+- 👑 **Lead Visionary Partner ($250+/mo)**: Premier top banner logo placement on `README.md` & `docs/SPONSORS.md` + priority channel for custom MCP integrations.
 
-See full details, goals, and rewards in [**SPONSORS.md**](SPONSORS.md).
+See full details, goals, and rewards in [**SPONSORS.md**](docs/SPONSORS.md).
 
 <details>
 <summary><b>Other one-time contribution methods (Crypto / Direct Donations)</b></summary>
@@ -241,4 +241,4 @@ Contributions are welcome! If you'd like to improve NodeTerm:
 
 ## 📄 License
 
-GPL-3.0. Commercial licensing: see [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Versions 1.7.6 and earlier remain under ISC. Made by [kalidus](https://github.com/kalidus).
+GPL-3.0. Commercial licensing: see [LICENSE-COMMERCIAL.md](docs/legal/LICENSE-COMMERCIAL.md). Versions 1.7.6 and earlier remain under ISC. Made by [kalidus](https://github.com/kalidus).

@@ -33,7 +33,6 @@ jsconfig.json
 *.md
 !README.md
 CHANGELOG.md
-RELEASE_NOTES.md
 
 # Archivos de build y temporales
 build/

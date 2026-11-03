@@ -51,10 +51,12 @@
       "main.js",
       "config/librechat.full.yaml",
       "preload.js",
-      "system-stats-worker.js",
       "package.json",
       "LICENSE",
-      "THIRD_PARTY_NOTICES",
+      {
+        "from": "docs/legal/THIRD_PARTY_NOTICES",
+        "to": "THIRD_PARTY_NOTICES"
+      },
       "src/main/**",
       "src/shared/**",
       "src/services/**",
@@ -144,8 +146,14 @@
     ],
     "extraFiles": [
       "LICENSE",
-      "LICENSE-COMMERCIAL.md",
-      "THIRD_PARTY_NOTICES"
+      {
+        "from": "docs/legal/LICENSE-COMMERCIAL.md",
+        "to": "LICENSE-COMMERCIAL.md"
+      },
+      {
+        "from": "docs/legal/THIRD_PARTY_NOTICES",
+        "to": "THIRD_PARTY_NOTICES"
+      }
     ],
     "win": {
       "target": [

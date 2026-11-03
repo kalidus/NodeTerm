@@ -198,7 +198,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ## [1.7.2] - 2026-07-22
 
 **Proceso de release:** documenta aqui todos los cambios. `npm run release` publica esta seccion en GitHub.
-Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la version en curso). Resumen en `README.md`: ver [docs/release-process.md](docs/release-process.md).
+Borrador opcional para usuarios: `docs/RELEASE_NOTES.md` (solo la version en curso). Resumen en `README.md`: ver [docs/release-process.md](docs/release-process.md).
 
 ## [1.7.1] - 2026-07-21
 

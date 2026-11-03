@@ -60,7 +60,7 @@ function syncWorkerRunState() {
 function startStatsWorker() {
   if (statsWorker || isShuttingDown) return;
 
-  const workerPath = path.join(__dirname, '../../../system-stats-worker.js');
+  const workerPath = path.join(__dirname, '../workers/system-stats-worker.js');
   const execPath = resolveWorkerExecPath();
   const env = { ...process.env };
   if (execPath === process.execPath) {

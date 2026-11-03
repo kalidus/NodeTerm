@@ -28,7 +28,7 @@ Mantener un cliente de acceso remoto seguro, actualizar cifrados, dar soporte a 
 | :--- | :--- | :--- |
 | ☕ **Developer Coffee** | **$5 / mes** | • Insignia oficial de Sponsor en GitHub.<br>• Nombre incluido en la lista de Supporters de `SPONSORS.md`. |
 | 🚀 **Ecosystem Supporter** | **$25 / mes** | • Todos los beneficios anteriores.<br>• Nombre destacado en `README.md` y `SPONSORS.md`.<br>• Acceso prioritario a votación de roadmap y nuevas funciones. |
-| 🏢 **Infrastructure Partner** | **$100 / mes** | • Todos los beneficios anteriores.<br>• Logo y enlace corporativo destacado en la portada de `README.md` y `SPONSORS.md`.<br>• Mención de agradecimiento especial en las notas de cada release (`RELEASE_NOTES.md`). |
+| 🏢 **Infrastructure Partner** | **$100 / mes** | • Todos los beneficios anteriores.<br>• Logo y enlace corporativo destacado en la portada de `README.md` y `SPONSORS.md`.<br>• Mención de agradecimiento especial en las notas de cada release (`docs/RELEASE_NOTES.md`). |
 | 👑 **Lead Visionary Partner** | **$250+ / mes** | • Todos los beneficios anteriores.<br>• Logo y banner preferente en cabecera principal de `README.md` y `SPONSORS.md`.<br>• Canal directo de consulta y prioridad en desarrollo de conectores e integraciones MCP personalizadas. |
 
 👉 **[Patrocinar NodeTerm en GitHub Sponsors](https://github.com/sponsors/kalidus)**
@@ -77,7 +77,7 @@ Maintaining a secure remote workspace, updating cryptographic standards, ensurin
 | :--- | :--- | :--- |
 | ☕ **Developer Coffee** | **$5 / month** | • Official Sponsor badge on GitHub.<br>• Name listed in `SPONSORS.md`. |
 | 🚀 **Ecosystem Supporter** | **$25 / month** | • All previous benefits.<br>• Highlighted name in `README.md` and `SPONSORS.md`.<br>• Priority access to roadmap voting and feature requests. |
-| 🏢 **Infrastructure Partner** | **$100 / month** | • All previous benefits.<br>• Corporate logo & link featured on `README.md` and `SPONSORS.md`.<br>• Special mention in every release note (`RELEASE_NOTES.md`). |
+| 🏢 **Infrastructure Partner** | **$100 / month** | • All previous benefits.<br>• Corporate logo & link featured on `README.md` and `SPONSORS.md`.<br>• Special mention in every release note (`docs/RELEASE_NOTES.md`). |
 | 👑 **Lead Visionary Partner** | **$250+ / month** | • All previous benefits.<br>• Premier logo & banner placement at the top of `README.md` & `SPONSORS.md`.<br>• Direct priority consultation channel & input on custom MCP integrations. |
 
 👉 **[Sponsor NodeTerm on GitHub Sponsors](https://github.com/sponsors/kalidus)**

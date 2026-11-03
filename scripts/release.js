@@ -220,7 +220,7 @@ function getReleaseNotes(version) {
 }
 
 function getReleaseNotesFromReleaseFile(version) {
-    const notesPath = path.join(__dirname, '..', 'RELEASE_NOTES.md');
+    const notesPath = path.join(__dirname, '..', 'docs', 'RELEASE_NOTES.md');
     if (!fs.existsSync(notesPath)) return '';
     const content = fs.readFileSync(notesPath, 'utf8').replace(/\r\n/g, '\n');
     const escapedVersion = version.replace(/\./g, '\\.');
@@ -229,7 +229,7 @@ function getReleaseNotesFromReleaseFile(version) {
     return match ? match[0].trim() : '';
 }
 
-/** Publica en GitHub: sección ## [version] de CHANGELOG.md (fuente de verdad). RELEASE_NOTES.md solo si no hay changelog. */
+/** Publica en GitHub: sección ## [version] de CHANGELOG.md (fuente de verdad). docs/RELEASE_NOTES.md solo si no hay changelog. */
 function buildReleaseNotes(version) {
     const changelogNotes = getReleaseNotes(version);
     if (changelogNotes) {
@@ -385,7 +385,7 @@ async function main() {
         const branch = getOutput('git rev-parse --abbrev-ref HEAD') || 'main';
         const notes = buildReleaseNotes(fixVersion.replace(/^v/, ''));
         if (!notes.trim()) {
-            console.log('\x1b[31m❌ No hay notas en CHANGELOG.md ni RELEASE_NOTES.md para esa versión.\x1b[0m');
+            console.log('\x1b[31m❌ No hay notas en CHANGELOG.md ni docs/RELEASE_NOTES.md para esa versión.\x1b[0m');
             process.exit(1);
         }
         const ok = await upsertGithubRelease(tagName, branch, fixVersion.replace(/^v/, ''), notes);
@@ -472,7 +472,7 @@ async function main() {
         if (needsCommit) {
             const doCommit = nonInteractive ? (cli.commitPrep ? 's' : 'n') : await question('\n¿Hacer commit de la preparación de release? (S/n): ');
             if (doCommit.toLowerCase() !== 'n') {
-                await runCommand('git add package.json package-lock.json CHANGELOG.md RELEASE_NOTES.md README.md scripts/release.js', 'Añadiendo archivos de versión');
+                await runCommand('git add package.json package-lock.json CHANGELOG.md docs/RELEASE_NOTES.md README.md scripts/release.js', 'Añadiendo archivos de versión');
                 await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
             }
         }
