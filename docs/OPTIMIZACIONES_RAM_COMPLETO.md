@@ -329,7 +329,7 @@ const AIChatTab = React.lazy(() => import('./AIChatTab'));
 1. Abre NodeTerm
 2. Presiona `F12` para abrir DevTools
 3. Ve a la pestaña **"Console"**
-4. Ejecuta el script de `testing/test-ram-usage.js`:
+4. Ejecuta el script de `testing/manual/test-ram-usage.js`:
    ```javascript
    // Copia y pega el contenido del script en la consola
    testRAMUsage();
