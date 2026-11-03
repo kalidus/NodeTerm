@@ -40,6 +40,10 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
 
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', tabIndex.toString());
+    if (tab.key) {
+      e.dataTransfer.setData('application/x-nodeterm-tab-key', tab.key);
+      window._nodetermDraggedTabKey = tab.key;
+    }
   };
 
   const handleTabDragOver = (e, tabIndex) => {
@@ -266,6 +270,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     setDragOverTabIndex(null);
     // Limpiar el nodo SSH arrastrado si existe
     draggedSSHNodeRef.current = null;
+    window._nodetermDraggedTabKey = null;
   };
 
   return {

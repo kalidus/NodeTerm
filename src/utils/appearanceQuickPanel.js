@@ -140,7 +140,8 @@ const LAYOUT_STYLE_CLASS = {
   retro: 'retro',
   pills: 'pills',
   classicBrowser: 'classic',
-  chrome: 'chrome'
+  chrome: 'chrome',
+  termius: 'termius'
 };
 
 const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
@@ -1306,6 +1307,10 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
           onPick: () => {
             applyTabTheme(item.id);
             localStorage.setItem(TAB_THEME_STORAGE_KEY, item.id);
+            if (item.id === 'termius') {
+              applyTabLayout('termius');
+              localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, 'termius');
+            }
             refreshSelection();
           }
         }))

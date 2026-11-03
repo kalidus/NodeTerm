@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { generateAdvancedCSS } from '../utils/tabThemeStyles';
-import { applyTabTheme } from '../utils/tabThemeLoader';
+import { applyTabTheme, applyTabLayout, getTabLayoutList } from '../utils/tabThemeLoader';
 import '../styles/components/tab-theme-selector.css';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
+const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
 const REDUCED_MOTION_KEY = 'nodeterm_tab_reduced_motion';
 const ANIM_SPEED_KEY = 'nodeterm_tab_anim_speed'; // 'slow' | 'normal' | 'fast' | 'turbo'
 
@@ -21,6 +22,31 @@ const tabThemes = {
       transition: 'all 0.2s ease'
     },
     styles: {} // Se aplican dinámicamente desde el tema UI
+  },
+
+  termius: {
+    name: 'Termius',
+    description: 'Píldoras flotantes oscuras con grupos segmentados inline y sesión activa esmeralda',
+    preview: {
+      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, #1c2030 100%)',
+      borderRadius: '8px',
+      border: '1px solid rgba(16, 185, 129, 0.42)',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+      transition: 'all 0.2s ease'
+    },
+    styles: {
+      '--ui-tab-bar-bg': '#111420',
+      '--ui-tab-bg': '#1c2030',
+      '--ui-tab-active-bg': 'rgba(16, 185, 129, 0.16)',
+      '--ui-tab-hover-bg': '#252a3d',
+      '--ui-tab-text': '#94a3b8',
+      '--ui-tab-active-text': '#10b981',
+      '--ui-tab-border': 'rgba(255, 255, 255, 0.06)',
+      '--ui-tab-close-hover': '#34d399',
+      '--tab-border-radius': '8px',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)'
+    }
   },
   
   futuristic: {
@@ -2529,6 +2555,7 @@ const CATEGORIES = [
 
 const TabThemeSelector = () => {
   const [selectedTheme, setSelectedTheme] = useState('default');
+  const [selectedLayout, setSelectedLayout] = useState(() => localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default');
   const [currentUITheme, setCurrentUITheme] = useState('Light');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [animSpeed, setAnimSpeed] = useState('normal');
@@ -2537,11 +2564,14 @@ const TabThemeSelector = () => {
     const saved = localStorage.getItem(COLS_PER_ROW_KEY);
     return saved ? parseInt(saved, 10) : 3;
   });
+  const tabLayoutsList = useMemo(() => getTabLayoutList(), []);
 
   useEffect(() => {
     // Cargar tema guardado al inicializar
     const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
     setSelectedTheme(savedTheme);
+    const savedLayout = localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default';
+    setSelectedLayout(savedLayout);
     
     // Aplicar tema inicial
     applyTabThemeWithAnimations(savedTheme);
@@ -2569,6 +2599,12 @@ const TabThemeSelector = () => {
     if (!document.documentElement.hasAttribute('data-tab-anim-speed')) {
       document.documentElement.setAttribute('data-tab-anim-speed', savedSpeed);
     }
+
+    const onLayoutChanged = (ev) => {
+      if (ev?.detail) setSelectedLayout(ev.detail);
+    };
+    window.addEventListener('tab-layout-changed', onLayoutChanged);
+    return () => window.removeEventListener('tab-layout-changed', onLayoutChanged);
   }, []); // Solo ejecutar al montar el componente
 
   useEffect(() => {
@@ -2621,6 +2657,17 @@ const TabThemeSelector = () => {
     setSelectedTheme(themeName);
     localStorage.setItem(TAB_THEME_STORAGE_KEY, themeName);
     applyTabThemeWithAnimations(themeName);
+    if (themeName === 'termius') {
+      setSelectedLayout('termius');
+      localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, 'termius');
+      applyTabLayout('termius');
+    }
+  };
+
+  const handleLayoutSelect = (layoutId) => {
+    setSelectedLayout(layoutId);
+    localStorage.setItem(TAB_LAYOUT_STORAGE_KEY, layoutId);
+    applyTabLayout(layoutId);
   };
 
   const handleReducedMotionToggle = () => {
@@ -2780,6 +2827,29 @@ const TabThemeSelector = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sección de Estilos de Pestañas (Layouts) */}
+      <div className="tab-theme-explore-section" style={{ marginBottom: '1rem' }}>
+        <div className="tab-theme-explore-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div className="tab-theme-explore-title">
+            <i className="pi pi-sliders-h" />
+            Estilos de Pestañas
+          </div>
+          <div className="tab-theme-category-filters" style={{ flexWrap: 'wrap' }}>
+            {tabLayoutsList.map((layout) => (
+              <button
+                key={layout.id}
+                type="button"
+                className={`tab-theme-category-pill ${selectedLayout === layout.id ? 'active' : ''}`}
+                onClick={() => handleLayoutSelect(layout.id)}
+                title={layout.description}
+              >
+                <span>{layout.name}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -111,6 +111,15 @@ const tabLayouts = {
       borderRadius: '8px 8px 0 0',
       borderStyle: 'chrome'
     }
+  },
+  termius: {
+    name: 'Termius',
+    description: 'Píldoras flotantes con grupos segmentados inline y sesión esmeralda',
+    preview: {
+      tabHeight: '38px',
+      borderRadius: '8px',
+      borderStyle: 'termius'
+    }
   }
 };
 
@@ -120,6 +129,24 @@ const tabThemes = {
     name: 'Por Defecto',
     description: 'Respeta el tema de la interfaz seleccionado',
     styles: {} // Se aplican dinámicamente desde el tema UI
+  },
+
+  termius: {
+    name: 'Termius',
+    description: 'Píldoras flotantes oscuras con grupos segmentados y sesión activa esmeralda',
+    styles: {
+      '--ui-tab-bar-bg': '#111420',
+      '--ui-tab-bg': '#1c2030',
+      '--ui-tab-active-bg': 'rgba(16, 185, 129, 0.16)',
+      '--ui-tab-hover-bg': '#252a3d',
+      '--ui-tab-text': '#94a3b8',
+      '--ui-tab-active-text': '#10b981',
+      '--ui-tab-border': 'rgba(255, 255, 255, 0.06)',
+      '--ui-tab-close-hover': '#34d399',
+      '--tab-border-radius': '8px',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)'
+    }
   },
   
   futuristic: {
@@ -1783,6 +1810,11 @@ export const getTabLayoutList = () =>
 export const applyTabLayout = (layoutName) => {
   const selectedLayout = tabLayouts[layoutName] ? layoutName : 'default';
   document.documentElement.setAttribute('data-tab-layout', selectedLayout);
+  try {
+    window.dispatchEvent(new CustomEvent('tab-layout-changed', { detail: selectedLayout }));
+  } catch (_) {
+    // ignore
+  }
   return selectedLayout;
 };
 

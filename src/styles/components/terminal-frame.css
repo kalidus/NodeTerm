@@ -1,4 +1,4 @@
-﻿/* --- Component: TerminalFrame --- */
+/* --- Component: TerminalFrame --- */
 
 .terminal-frame {
     /* Ancla el headerExtra flotante (tema) al marco; sin esto, position:absolute usa el viewport
@@ -1804,6 +1804,7 @@ body.minimalist-terminal-mode .main-content-frame-content {
 }
 
 /* Barra de pestañas oculta: solo el marco principal. El contenido de la pestaña sigue montado. */
+body.tab-bar-hidden .terminal-frame.main-content-frame .tabs-bar-shell,
 body.tab-bar-hidden .terminal-frame.main-content-frame .p-tabview-nav-container,
 body.tab-bar-hidden .terminal-frame.main-content-frame .groups-tab-bar,
 body.tab-bar-hidden .terminal-frame.main-content-frame .groups-pill-bar {

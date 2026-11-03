@@ -774,6 +774,50 @@ body:has(.aqp) .p-toast {
   border-color: #3ddc97;
 }
 
+.aqp-layout-mock--termius {
+  align-items: center;
+  padding: 5px 6px;
+  gap: 4px;
+  background: #111420;
+}
+
+.aqp-layout-mock--termius span {
+  height: 15px;
+  border-radius: 5px;
+  background: #1c2030;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.aqp-layout-mock--termius span:first-child {
+  flex: 0.75;
+  background: #1c2030;
+  border-color: rgba(255, 255, 255, 0.1);
+  position: relative;
+  margin-right: 3px;
+}
+
+.aqp-layout-mock--termius span:first-child::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.aqp-layout-mock--termius span:nth-child(2) {
+  flex: 0.85;
+  background: #23283b;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.aqp-layout-mock--termius span:last-child {
+  flex: 1.3;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.48);
+}
+
 .aqp-studio {
   display: flex;
   flex: 1;

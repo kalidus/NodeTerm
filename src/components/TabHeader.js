@@ -48,6 +48,8 @@ const TabHeader = React.memo(({
   // Props específicas de la pestaña
   tab,
   idx,
+  groupColor,
+  groupName,
 
   // Estados de drag & drop
   isDragging,
@@ -74,9 +76,13 @@ const TabHeader = React.memo(({
   const [homeIconVersion, setHomeIconVersion] = useState(0);
   const [themeVersion, setThemeVersion] = useState(0);
   const [sidebarIconThemeVersion, setSidebarIconThemeVersion] = useState(0);
+  const [currentTabLayout, setCurrentTabLayout] = useState(() =>
+    document.documentElement.getAttribute('data-tab-layout') || localStorage.getItem('nodeterm_tab_layout') || 'default'
+  );
   // Verificar si el botón de inicio está bloqueado
   const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(readHomeButtonLocked);
   const [secretEntryActive, setSecretEntryActive] = useState(false);
+  const isTermiusLayout = currentTabLayout === 'termius';
 
   // Escuchar cambios en el icono de inicio y bloqueo
   useEffect(() => {
@@ -88,15 +94,22 @@ const TabHeader = React.memo(({
       setIsHomeButtonLocked(readHomeButtonLocked());
     };
 
+    const handleTabLayoutChange = (e) => {
+      const next = e?.detail || document.documentElement.getAttribute('data-tab-layout') || 'default';
+      setCurrentTabLayout(next);
+    };
+
     window.addEventListener('home-icon-changed', handleHomeIconChange);
     // Escuchar tanto evento de sync como evento nativo de storage
     window.addEventListener('settings-updated', handleSettingsUpdate);
     window.addEventListener('storage', handleSettingsUpdate);
+    window.addEventListener('tab-layout-changed', handleTabLayoutChange);
 
     return () => {
       window.removeEventListener('home-icon-changed', handleHomeIconChange);
       window.removeEventListener('settings-updated', handleSettingsUpdate);
       window.removeEventListener('storage', handleSettingsUpdate);
+      window.removeEventListener('tab-layout-changed', handleTabLayoutChange);
     };
   }, []);
 
@@ -219,7 +232,7 @@ const TabHeader = React.memo(({
 
   // Estilos especiales para la pestaña Home
   const homeTabStyles = useMemo(() => {
-    if (!isHomeTab) return {};
+    if (!isHomeTab || isTermiusLayout) return {};
 
     if (selected) {
       // Dejar que el CSS maneje el estilo activo para que sea idéntico a las otras pestañas
@@ -240,7 +253,7 @@ const TabHeader = React.memo(({
       borderRadius: 999,
       boxShadow: 'none'
     };
-  }, [isHomeTab, selected, isDarkTheme, currentTheme]);
+  }, [isHomeTab, isTermiusLayout, selected, isDarkTheme, currentTheme]);
 
   // Función para obtener colores según la categoría (igual que en NodeTermStatus)
   const getColorForCategory = (category) => {
@@ -449,14 +462,16 @@ const TabHeader = React.memo(({
   return (
     <div
       className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+      data-tab-type={tab.type}
       style={{
         ...style,
+        ...(groupColor ? { '--tab-group-color': groupColor } : {}),
         display: 'flex',
         alignItems: 'center',
-        justifyContent: isHomeTab ? 'center' : 'flex-start',
-        maxWidth: isHomeTab ? '100%' : 'inherit',
-        minWidth: isHomeTab ? '100%' : 'inherit',
-        width: isHomeTab ? '100%' : 'inherit',
+        justifyContent: (isHomeTab && !isTermiusLayout) ? 'center' : 'flex-start',
+        maxWidth: (isHomeTab && !isTermiusLayout) ? '100%' : 'inherit',
+        minWidth: (isHomeTab && !isTermiusLayout) ? '100%' : 'inherit',
+        width: (isHomeTab && !isTermiusLayout) ? '100%' : 'inherit',
         opacity: isDragging ? 0.5 : 1,
         transition: 'opacity 0.2s, border-left 0.2s, box-shadow 0.2s, background 0.2s, border 0.2s',
         cursor: isDragging ? 'grabbing' : 'grab',
@@ -488,149 +503,176 @@ const TabHeader = React.memo(({
       onDrop={(e) => onTabDrop && onTabDrop(e, idx)}
       onDragEnd={onTabDragEnd}
       onContextMenu={(e) => onTabContextMenu && onTabContextMenu(e, tab.key)}
-      title="Arrastra para reordenar pestañas | Clic derecho para ver opciones"
+      title={groupName ? `${tab.label} · Grupo: ${groupName}` : 'Arrastra para reordenar pestañas | Clic derecho para ver opciones'}
     >
       {leftIcon}
 
-      {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
-      {tab.type === 'terminal' && tabDistros && tabDistros[tab.key] && (
-        <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          <DistroIcon distro={tabDistros[tab.key]} size={14} />
-        </span>
-      )}
-
-      {/* Modo contraseña: prompt de secreto activo (terminal o cualquier panel del split) */}
-      {(tab.type === 'terminal' || tab.type === 'split') && secretEntryActive && (
-        <i
-          className="pi pi-lock"
-          title="Modo contraseña: la entrada no se reenvía ni se graba"
-          style={{
-            fontSize: 'var(--ui-font-size, 12px)',
-            marginRight: '4px',
-            color: '#f59e0b',
-            flexShrink: 0
-          }}
-        />
-      )}
-
       {/* Icono específico para pestaña de inicio */}
       {tab.type === 'home' && (
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            height: '100%',
-            filter: isDarkTheme ? 'drop-shadow(0 0 4px rgba(0,0,0,0.85))' : 'none'
-          }}
-        >
-          {getHomeTabIcon(22)}
+        isTermiusLayout ? (
+          <span className="termius-home-pill-content">
+            <svg
+              className="termius-workspace-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect x="2" y="2" width="5" height="5" rx="1.2" fill="currentColor" />
+              <rect x="9" y="2" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.85" />
+              <rect x="2" y="9" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.85" />
+              <rect x="9" y="9" width="5" height="5" rx="2.5" fill="currentColor" />
+            </svg>
+            <span className="termius-home-label">Workspace</span>
+          </span>
+        ) : (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
+              filter: isDarkTheme ? 'drop-shadow(0 0 4px rgba(0,0,0,0.85))' : 'none'
+            }}
+          >
+            {getHomeTabIcon(22)}
+          </span>
+        )
+      )}
+
+      {!isHomeTab && (
+        <span className="tab-header-icon-slot" style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+          {tab.type === 'terminal' && tabDistros && tabDistros[tab.key] && (
+            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              <DistroIcon distro={tabDistros[tab.key]} size={14} />
+            </span>
+          )}
+
+          {/* Modo contraseña: prompt de secreto activo (terminal o cualquier panel del split) */}
+          {(tab.type === 'terminal' || tab.type === 'split') && secretEntryActive && (
+            <i
+              className="pi pi-lock"
+              title="Modo contraseña: la entrada no se reenvía ni se graba"
+              style={{
+                fontSize: 'var(--ui-font-size, 12px)',
+                marginRight: '4px',
+                color: '#f59e0b',
+                flexShrink: 0
+              }}
+            />
+          )}
+
+          {/* Icono específico para configuración */}
+          {tab.type === 'settings' && (
+            <i className="pi pi-cog" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: primaryColor, flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para splits */}
+          {tab.type === 'split' && (
+            <i className="pi pi-window-maximize" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para exploradores */}
+          {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+            getSidebarConnectionIcon('explorer') ||
+            <i className="pi pi-folder-open" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para pestañas RDP */}
+          {tab.type === 'rdp' && (
+            getSidebarConnectionIcon('rdp') ||
+            <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para pestañas RDP-Guacamole */}
+          {tab.type === 'rdp-guacamole' && (
+            getSidebarConnectionIcon('rdp-guacamole') ||
+            <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para pestañas VNC-Guacamole */}
+          {tab.type === 'vnc-guacamole' && (
+            getSidebarConnectionIcon('vnc-guacamole') ||
+            <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para pestañas Guacamole */}
+          {tab.type === 'guacamole' && (
+            <i className="pi pi-globe" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#00C851', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
+          {(tab.type === 'local-terminal' || tab.type === 'docker') && getLocalTerminalIcon(tab)}
+
+          {/* Iconos de marca: clientes embebidos (logos oficiales) */}
+          {tab.type === 'anything-llm' && (
+            <AIClientBrandIcon tabType="anything-llm" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+          {tab.type === 'openwebui' && (
+            <AIClientBrandIcon tabType="openwebui" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+          {tab.type === 'librechat' && (
+            <AIClientBrandIcon tabType="librechat" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+          {tab.type === 'agentzero' && (
+            <AIClientBrandIcon tabType="agentzero" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+          {tab.type === 'openclaw' && (
+            <AIClientBrandIcon tabType="openclaw" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+          {tab.type === 'open-notebook' && (
+            <AIClientBrandIcon tabType="open-notebook" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
+          )}
+
+          {tab.type === 'forensics' && (
+            <i className="pi pi-search" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ef4444', flexShrink: 0 }}></i>
+          )}
+
+          {/* Icono específico para herramientas de red */}
+          {tab.type === 'network-tool' && (() => {
+            const toolsMap = {
+              'ping': { icon: 'pi pi-clock', color: '#22c55e' },
+              'traceroute': { icon: 'pi pi-sitemap', color: '#22c55e' },
+              'port-scan': { icon: 'pi pi-th-large', color: '#f59e0b' },
+              'network-scan': { icon: 'pi pi-globe', color: '#f59e0b' },
+              'dns-lookup': { icon: 'pi pi-search-plus', color: '#3b82f6' },
+              'reverse-dns': { icon: 'pi pi-replay', color: '#3b82f6' },
+              'ssl-check': { icon: 'pi pi-lock', color: '#ef4444' },
+              'http-headers': { icon: 'pi pi-file', color: '#ef4444' },
+              'host-vuln-scan': { icon: 'pi pi-exclamation-triangle', color: '#ef4444' },
+              'web-security-scan': { icon: 'pi pi-globe', color: '#ef4444' },
+              'cvss-calculator': { icon: 'pi pi-chart-bar', color: '#ef4444' },
+              'recent-vulns': { icon: 'pi pi-shield', color: '#ef4444' },
+              'whois': { icon: 'pi pi-id-card', color: '#8b5cf6' },
+              'subnet-calc': { icon: 'pi pi-calculator', color: '#8b5cf6' },
+              'wake-on-lan': { icon: 'pi pi-power-off', color: '#8b5cf6' }
+            };
+            const tool = toolsMap[tab.toolId];
+            const icon = tool ? tool.icon : 'pi pi-cog';
+            const color = tool ? tool.color : '#8b5cf6';
+            return <i className={icon} style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: color, flexShrink: 0 }}></i>;
+          })()}
         </span>
       )}
-
-      {/* Icono específico para configuración */}
-      {tab.type === 'settings' && (
-        <i className="pi pi-cog" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: primaryColor, flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para splits */}
-      {tab.type === 'split' && (
-        <i className="pi pi-window-maximize" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para exploradores */}
-      {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
-        getSidebarConnectionIcon('explorer') ||
-        <i className="pi pi-folder-open" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para pestañas RDP */}
-      {tab.type === 'rdp' && (
-        getSidebarConnectionIcon('rdp') ||
-        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para pestañas RDP-Guacamole */}
-      {tab.type === 'rdp-guacamole' && (
-        getSidebarConnectionIcon('rdp-guacamole') ||
-        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para pestañas VNC-Guacamole */}
-      {tab.type === 'vnc-guacamole' && (
-        getSidebarConnectionIcon('vnc-guacamole') ||
-        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para pestañas Guacamole */}
-      {tab.type === 'guacamole' && (
-        <i className="pi pi-globe" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#00C851', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
-      {(tab.type === 'local-terminal' || tab.type === 'docker') && getLocalTerminalIcon(tab)}
-
-      {/* Iconos de marca: clientes embebidos (logos oficiales) */}
-      {tab.type === 'anything-llm' && (
-        <AIClientBrandIcon tabType="anything-llm" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-      {tab.type === 'openwebui' && (
-        <AIClientBrandIcon tabType="openwebui" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-      {tab.type === 'librechat' && (
-        <AIClientBrandIcon tabType="librechat" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-      {tab.type === 'agentzero' && (
-        <AIClientBrandIcon tabType="agentzero" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-      {tab.type === 'openclaw' && (
-        <AIClientBrandIcon tabType="openclaw" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-      {tab.type === 'open-notebook' && (
-        <AIClientBrandIcon tabType="open-notebook" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
-      )}
-
-      {tab.type === 'forensics' && (
-        <i className="pi pi-search" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ef4444', flexShrink: 0 }}></i>
-      )}
-
-      {/* Icono específico para herramientas de red */}
-      {tab.type === 'network-tool' && (() => {
-        const toolsMap = {
-          'ping': { icon: 'pi pi-clock', color: '#22c55e' },
-          'traceroute': { icon: 'pi pi-sitemap', color: '#22c55e' },
-          'port-scan': { icon: 'pi pi-th-large', color: '#f59e0b' },
-          'network-scan': { icon: 'pi pi-globe', color: '#f59e0b' },
-          'dns-lookup': { icon: 'pi pi-search-plus', color: '#3b82f6' },
-          'reverse-dns': { icon: 'pi pi-replay', color: '#3b82f6' },
-          'ssl-check': { icon: 'pi pi-lock', color: '#ef4444' },
-          'http-headers': { icon: 'pi pi-file', color: '#ef4444' },
-          'host-vuln-scan': { icon: 'pi pi-exclamation-triangle', color: '#ef4444' },
-          'web-security-scan': { icon: 'pi pi-globe', color: '#ef4444' },
-          'cvss-calculator': { icon: 'pi pi-chart-bar', color: '#ef4444' },
-          'recent-vulns': { icon: 'pi pi-shield', color: '#ef4444' },
-          'whois': { icon: 'pi pi-id-card', color: '#8b5cf6' },
-          'subnet-calc': { icon: 'pi pi-calculator', color: '#8b5cf6' },
-          'wake-on-lan': { icon: 'pi pi-power-off', color: '#8b5cf6' }
-        };
-        const tool = toolsMap[tab.toolId];
-        const icon = tool ? tool.icon : 'pi pi-cog';
-        const color = tool ? tool.color : '#8b5cf6';
-        return <i className={icon} style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: color, flexShrink: 0 }}></i>;
-      })()}
 
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (
-        <span style={{ 
-          flex: '1 1 auto', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          minWidth: 0, /* Crucial para que el label se encoja antes que los iconos */
-          marginRight: '4px',
-          fontStyle: 'normal'
-        }}>
+        <span
+          className="tab-header-label-slot"
+          style={{ 
+            flex: '1 1 auto', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis', 
+            whiteSpace: 'nowrap',
+            minWidth: 0, /* Crucial para que el label se encoja antes que los iconos */
+            marginRight: '4px',
+            fontStyle: 'normal'
+          }}
+        >
           {tab.label}
         </span>
       )}

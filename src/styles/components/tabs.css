@@ -30,6 +30,9 @@
 :root[data-tab-layout="chrome"] {
   --tab-bar-height: 36px;
 }
+:root[data-tab-layout="termius"] {
+  --tab-bar-height: 38px;
+}
 
 .main-tab-view {
   flex-shrink: 0 !important; /* Solución preventiva: Evita que el componente TabView se estire */
@@ -1879,3 +1882,358 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
 :root .p-tabview .p-tabview-nav li:not(.home-tab):not(.p-highlight) .p-tabview-nav-link:hover {
     color: var(--ui-sidebar-text, var(--ui-tab-text-hover, rgba(255, 255, 255, 0.9))) !important;
 }
+
+/* ==========================================================================
+   Termius Tab Layout Styling (Píldoras Flotantes + Grupos Segmentados Inline)
+   ========================================================================== */
+
+/* Contenedor unificado en una sola fila (Grupos a la izquierda | Workspace + Pestañas a la derecha) */
+:root[data-tab-layout="termius"] .tabs-bar-shell {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  max-height: var(--tab-bar-height, 38px) !important;
+  background: var(--ui-tab-bar-bg, #111420) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 0 6px !important;
+  gap: 0 !important;
+  box-sizing: border-box !important;
+}
+
+:root[data-tab-layout="termius"] .tabs-bar-shell .tabs-main-view-wrapper {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:root[data-tab-layout="termius"] .tabs-bar-shell .main-tab-view {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame.main-content-frame .p-tabview-nav-container,
+:root[data-tab-layout="termius"] .main-tab-view .p-tabview-nav-container {
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  padding: 0 !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav {
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  align-items: center !important;
+  padding: 0 2px !important;
+  gap: 0 !important;
+}
+
+/* Barra de grupos inline a la izquierda en modo Termius */
+:root[data-tab-layout="termius"] .groups-tab-bar,
+:root[data-tab-layout="termius"] .groups-pill-bar,
+:root[data-tab-layout="termius"] .terminal-frame.main-content-frame .groups-tab-bar,
+:root[data-tab-layout="termius"] .terminal-frame.main-content-frame .groups-pill-bar {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex: 0 1 auto !important;
+  max-width: 55% !important;
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  max-height: var(--tab-bar-height, 38px) !important;
+  padding: 0 2px !important;
+  gap: 6px !important;
+  background: transparent !important;
+  border-bottom: none !important;
+}
+
+/* Separador vertical "|" estilo Termius entre segmentos */
+.termius-segment-divider {
+  display: none;
+}
+
+:root[data-tab-layout="termius"] .termius-segment-divider {
+  display: inline-block !important;
+  width: 1px !important;
+  min-width: 1px !important;
+  height: 16px !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  margin: 0 4px !important;
+  align-self: center !important;
+  flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Píldoras de grupo en modo Termius (como [Vault] [SFTP] a la izquierda de "|") */
+:root[data-tab-layout="termius"] .group-tab-item,
+:root[data-tab-layout="termius"] .group-pill {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: auto !important;
+  max-width: 180px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  gap: 6px !important;
+  align-self: center !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.12s ease !important;
+}
+
+:root[data-tab-layout="termius"] .group-tab-item:hover,
+:root[data-tab-layout="termius"] .group-pill:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-tab-layout="termius"] .group-tab-item--active,
+:root[data-tab-layout="termius"] .group-pill--active {
+  background: color-mix(in srgb, var(--gp-color, #10b981) 18%, rgba(20, 24, 38, 0.92)) !important;
+  border: 1px solid color-mix(in srgb, var(--gp-color, #10b981) 42%, transparent) !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+/* Indicador visual al arrastrar una pestaña sobre un grupo */
+.group-tab-item--drop-target,
+:root[data-tab-layout="termius"] .group-tab-item--drop-target {
+  outline: 2px dashed var(--gp-color, #10b981) !important;
+  outline-offset: 1px !important;
+  background: color-mix(in srgb, var(--gp-color, #10b981) 24%, rgba(20, 24, 38, 0.95)) !important;
+  color: #ffffff !important;
+}
+
+/* Píldora Workspace (Home) en modo Termius: [ ⊞ Workspace ] */
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.home-tab {
+  width: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  height: 26px !important;
+  margin-right: 6px !important;
+  align-self: center !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .group-tab-item--home,
+:root[data-tab-layout="termius"] .group-pill--home {
+  width: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  padding: 0 11px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  align-self: center !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover,
+:root[data-tab-layout="termius"] .group-tab-item--home:hover,
+:root[data-tab-layout="termius"] .group-pill--home:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .group-tab-item--home.group-tab-item--active,
+:root[data-tab-layout="termius"] .group-pill--home.group-pill--active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.termius-home-pill-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.termius-workspace-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* Divisor vertical "|" automático entre Workspace/Utilidades y Sesiones de Terminal */
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-segment-end {
+  margin-right: 13px !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-segment-end::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -7px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 1px !important;
+  height: 16px !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+/* Pestañas de sesión y utilidades en modo Termius */
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li:not(.home-tab) {
+  flex: 0 1 220px !important;
+  min-width: 110px !important;
+  max-width: 240px !important;
+  height: 26px !important;
+  margin-right: 6px !important;
+  align-self: center !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-utility-tab {
+  flex: 0 0 auto !important;
+  min-width: 90px !important;
+  max-width: 180px !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease !important;
+}
+
+/* Hover en pestaña inactiva en modo Termius */
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li:not(.home-tab):not(.p-highlight):hover .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li:not(.home-tab):not(.p-highlight) .p-tabview-nav-link:hover {
+  background: rgba(255, 255, 255, 0.095) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Pestaña de utilidad activa (SFTP / Vault / Configuración) en modo Termius */
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.termius-utility-tab.p-highlight .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-utility-tab.p-highlight .p-tabview-nav-link {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+/* Pestaña de SESIÓN ACTIVA en modo Termius: Verde esmeralda característico (o color de su grupo) */
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav li.termius-session-tab.p-highlight .p-tabview-nav-link,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab.p-highlight .p-tabview-nav-link {
+  background: color-mix(in srgb, var(--tab-group-color, #10b981) 16%, rgba(13, 28, 25, 0.88)) !important;
+  border: 1px solid color-mix(in srgb, var(--tab-group-color, #10b981) 34%, transparent) !important;
+  color: var(--tab-group-color, #10b981) !important;
+  box-shadow: none !important;
+}
+
+/* Orden interno de elementos en pestañas de sesión Termius: [ ×  nombre-host  🐧 ] */
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .close-tab-btn,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .p-button.close-tab-btn,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .p-button.p-button-rounded.p-button-text.p-button-sm.close-tab-btn {
+  order: -1 !important;
+  margin: 0 6px 0 0 !important;
+  padding: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  font-size: 0.65rem !important;
+  border-radius: 4px !important;
+  opacity: 0.7 !important;
+  color: currentColor !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab.p-highlight .close-tab-btn,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab.p-highlight .p-button.close-tab-btn {
+  opacity: 0.95 !important;
+  color: var(--tab-group-color, #10b981) !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .close-tab-btn:hover,
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .p-button.close-tab-btn:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: var(--tab-group-color, #34d399) !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .tab-header-label-slot {
+  order: 1 !important;
+  margin-right: 0 !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .tab-header-icon-slot {
+  order: 2 !important;
+  margin-left: 6px !important;
+  margin-right: 0 !important;
+}
+
+:root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li.termius-session-tab .tab-header-icon-slot > * {
+  margin-right: 0 !important;
+}
+
+/* Botones de acción (+ y ▾) limpios estilo Termius */
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons,
+:root[data-tab-layout="termius"] .local-terminal-buttons {
+  margin-left: 2px !important;
+  gap: 2px !important;
+  align-self: center !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons .tab-action-button,
+:root[data-tab-layout="termius"] .local-terminal-buttons .tab-action-button {
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+}
+
+:root[data-tab-layout="termius"] .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons .tab-action-button:hover,
+:root[data-tab-layout="termius"] .local-terminal-buttons .tab-action-button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  color: #e2e8f0 !important;
+}
+

@@ -33,24 +33,52 @@ export const useTabRendering = ({
 
   // Estado para el icono de grupos (refresca cuando cambia el icono)
   const [groupIconVersion, setGroupIconVersion] = useState(0);
+  const [currentTabLayout, setCurrentTabLayout] = useState(() =>
+    document.documentElement.getAttribute('data-tab-layout') || localStorage.getItem('nodeterm_tab_layout') || 'default'
+  );
+  const [dragOverGroupId, setDragOverGroupId] = useState(undefined);
 
   const groupBarRef = useRef(null);
   const groupHeightSyncRef = useRef({ resizeObserver: null, mutationObserver: null, observed: null });
 
   useEffect(() => {
     const handleGroupIconChange = () => setGroupIconVersion(v => v + 1);
+    const handleTabLayoutChange = (e) => {
+      const nextLayout = e?.detail || document.documentElement.getAttribute('data-tab-layout') || 'default';
+      setCurrentTabLayout(nextLayout);
+    };
     window.addEventListener('group-icon-changed', handleGroupIconChange);
-    return () => window.removeEventListener('group-icon-changed', handleGroupIconChange);
+    window.addEventListener('tab-layout-changed', handleTabLayoutChange);
+    return () => {
+      window.removeEventListener('group-icon-changed', handleGroupIconChange);
+      window.removeEventListener('tab-layout-changed', handleTabLayoutChange);
+    };
   }, []);
 
   const syncGroupBarHeight = useCallback((groupBar) => {
     if (!groupBar) return false;
+    const isTermius = (document.documentElement.getAttribute('data-tab-layout') || currentTabLayout) === 'termius';
+    if (isTermius) {
+      groupBar.style.removeProperty('--tab-bar-height');
+      groupBar.style.removeProperty('height');
+      groupBar.style.removeProperty('min-height');
+      groupBar.style.removeProperty('max-height');
+      return true;
+    }
+
     const root = groupBar.parentElement;
     const tabLink = root?.querySelector('.main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link')
       || document.querySelector('.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link');
     if (!tabLink) return false;
 
     const applyHeight = () => {
+      if (document.documentElement.getAttribute('data-tab-layout') === 'termius') {
+        groupBar.style.removeProperty('--tab-bar-height');
+        groupBar.style.removeProperty('height');
+        groupBar.style.removeProperty('min-height');
+        groupBar.style.removeProperty('max-height');
+        return;
+      }
       const height = Math.round(tabLink.getBoundingClientRect().height);
       if (height <= 0) return;
       groupBar.style.setProperty('--tab-bar-height', `${height}px`);
@@ -68,7 +96,7 @@ export const useTabRendering = ({
     }
     applyHeight();
     return true;
-  }, []);
+  }, [currentTabLayout]);
 
   const setGroupBarRef = useCallback((node) => {
     groupBarRef.current = node;
@@ -148,32 +176,113 @@ export const useTabRendering = ({
       }
     };
 
+    const isTermiusLayout = currentTabLayout === 'termius';
+
+    const resolveDraggedTabKey = (e) => {
+      try {
+        const fromTransfer = e.dataTransfer?.getData?.('application/x-nodeterm-tab-key');
+        if (fromTransfer) return fromTransfer;
+      } catch (_) {
+        // ignore
+      }
+      return window._nodetermDraggedTabKey || null;
+    };
+
+    const handleGroupDragOver = (e, targetGroupId) => {
+      const draggedKey = window._nodetermDraggedTabKey;
+      const hasTypes = e.dataTransfer?.types && (
+        Array.from(e.dataTransfer.types).includes('application/x-nodeterm-tab-key') ||
+        Array.from(e.dataTransfer.types).includes('text/plain')
+      );
+      if (!draggedKey && !hasTypes) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      if (dragOverGroupId !== targetGroupId) {
+        setDragOverGroupId(targetGroupId);
+      }
+    };
+
+    const handleGroupDragLeave = (e) => {
+      e.stopPropagation();
+      setDragOverGroupId(undefined);
+    };
+
+    const handleGroupDrop = (e, targetGroupId, targetLabel) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverGroupId(undefined);
+      const tabKey = resolveDraggedTabKey(e);
+      window._nodetermDraggedTabKey = null;
+      if (!tabKey || tabKey.startsWith('home_tab')) return;
+      moveTabToGroup(tabKey, targetGroupId);
+      if (toast && toast.current) {
+        toast.current.show({
+          severity: 'info',
+          summary: targetGroupId ? 'Pestaña movida al grupo' : 'Pestaña desagrupada',
+          detail: targetGroupId
+            ? `Movida a "${targetLabel}"`
+            : 'Movida a Workspace (sin grupo)',
+          life: 2200
+        });
+      }
+    };
+
+    const renderHomeGroupButton = () => (
+      <button
+        className={`group-tab-item group-pill group-tab-item--home group-pill--home${activeGroupId === null ? ' group-tab-item--active group-pill--active' : ''}${dragOverGroupId === null ? ' group-tab-item--drop-target' : ''}`}
+        onClick={() => switchGroup(null)}
+        onDragOver={(e) => handleGroupDragOver(e, null)}
+        onDragLeave={handleGroupDragLeave}
+        onDrop={(e) => handleGroupDrop(e, null, 'Workspace')}
+        title="Todas las pestañas (Workspace)"
+        aria-label="Workspace (sin grupo)"
+        style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
+      >
+        {isTermiusLayout ? (
+          <>
+            <svg
+              className="termius-workspace-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect x="2" y="2" width="5" height="5" rx="1.2" fill="currentColor" />
+              <rect x="9" y="2" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.85" />
+              <rect x="2" y="9" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.85" />
+              <rect x="9" y="9" width="5" height="5" rx="2.5" fill="currentColor" />
+            </svg>
+            <span className="group-tab-item__label group-pill__label">Workspace</span>
+          </>
+        ) : (
+          getGroupTabIcon(13)
+        )}
+      </button>
+    );
+
     return (
       <div
         ref={setGroupBarRef}
         className="groups-tab-bar groups-pill-bar"
         style={{ WebkitAppRegion: isDraggable ? 'drag' : 'inherit' }}
       >
-        {activeGroupId !== null && (
-          <button
-            className={`group-tab-item group-pill group-tab-item--home group-pill--home${activeGroupId === null ? ' group-tab-item--active group-pill--active' : ''}`}
-            onClick={() => switchGroup(null)}
-            title="Todas las pestañas (sin grupo)"
-            aria-label="Sin grupo"
-            style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
-          >
-            {getGroupTabIcon(13)}
-          </button>
-        )}
+        {!isTermiusLayout && activeGroupId !== null && renderHomeGroupButton()}
 
         {tabGroups.map((group) => {
           const isActive = activeGroupId === group.id;
           const tabCount = getTabsInGroup(group.id).length;
+          const isDropTarget = dragOverGroupId === group.id;
           return (
             <button
               key={group.id}
-              className={`group-tab-item group-pill${isActive ? ' group-tab-item--active group-pill--active' : ''}`}
-              onClick={() => switchGroup(group.id)}
+              className={`group-tab-item group-pill${isActive ? ' group-tab-item--active group-pill--active' : ''}${isDropTarget ? ' group-tab-item--drop-target' : ''}`}
+              onClick={() => switchGroup(isActive ? null : group.id)}
+              onDragOver={(e) => handleGroupDragOver(e, group.id)}
+              onDragLeave={handleGroupDragLeave}
+              onDrop={(e) => handleGroupDrop(e, group.id, group.name)}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -185,7 +294,7 @@ export const useTabRendering = ({
                   group: group
                 });
               }}
-              title={group.name}
+              title={`${group.name} (${tabCount} pestañas) · Clic para alternar · Arrastra pestañas aquí`}
               aria-label={`Grupo: ${group.name}`}
               style={{
                 '--gp-color': group.color,
@@ -219,6 +328,19 @@ export const useTabRendering = ({
             </button>
           );
         })}
+
+        {isTermiusLayout && (
+          <span className="termius-segment-divider termius-segment-divider--groups" aria-hidden="true" />
+        )}
+
+        {isTermiusLayout && activeGroupId !== null && (
+          <>
+            {renderHomeGroupButton()}
+            {getTabsInGroup(activeGroupId).length > 0 && (
+              <span className="termius-segment-divider termius-segment-divider--workspace" aria-hidden="true" />
+            )}
+          </>
+        )}
       </div>
     );
   };

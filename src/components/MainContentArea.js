@@ -597,8 +597,19 @@ const MainContentArea = ({
     };
   }, []);
 
+  const [currentTabLayout, setCurrentTabLayout] = useState(() =>
+    document.documentElement.getAttribute('data-tab-layout') || localStorage.getItem(TAB_LAYOUT_STORAGE_KEY) || 'default'
+  );
+
   useEffect(() => {
-    loadSavedTabLayout();
+    const applied = loadSavedTabLayout();
+    setCurrentTabLayout(applied);
+    const onTabLayoutChanged = (ev) => {
+      const next = ev?.detail || document.documentElement.getAttribute('data-tab-layout') || 'default';
+      setCurrentTabLayout(next);
+    };
+    window.addEventListener('tab-layout-changed', onTabLayoutChanged);
+    return () => window.removeEventListener('tab-layout-changed', onTabLayoutChanged);
   }, []);
 
 
@@ -1907,12 +1918,15 @@ const MainContentArea = ({
                 height: '100%',
                 background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
               }}>
-                <div style={{ width: '100%', minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+                <div
+                  className={`tabs-bar-shell${tabGroups?.length > 0 ? ' tabs-bar-shell--has-groups' : ''}${activeGroupId !== null ? ' tabs-bar-shell--group-active' : ''}`}
+                  style={{ width: '100%', minWidth: 0, overflow: 'hidden', position: 'relative' }}
+                >
                   {/* Barra de grupos: siempre visible, incluso cuando el grupo está vacío */}
                   {renderGroupTabs()}
-                  {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
-                  {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
-                    <div style={{ position: 'relative' }}>
+                  {/* Solo mostrar TabView de pestañas si el grupo no está vacío (o siempre en layout Termius) */}
+                  {(currentTabLayout === 'termius' || !(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0)) && (
+                    <div className="tabs-main-view-wrapper" style={{ position: 'relative' }}>
                       <TabView
                         activeIndex={activeTabIndex}
                         onTabChange={(e) => {
@@ -1956,18 +1970,51 @@ const MainContentArea = ({
                           // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
                           // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
                           const isHomeTab = tab.type === TAB_TYPES.HOME;
-                          const isSSHTab = tab.type === TAB_TYPES.TERMINAL || tab.type === TAB_TYPES.SPLIT || tab.isExplorerInSSH;
-                          const originalIdx = idx; // No usamos originalIdx para decisiones críticas
+                          const isUtilityTab =
+                            tab.type === 'explorer' ||
+                            tab.type === 'password' ||
+                            tab.type === 'password-folder' ||
+                            tab.type === 'document' ||
+                            tab.type === 'document-folder' ||
+                            tab.type === 'library-file' ||
+                            tab.type === 'settings' ||
+                            tab.type === TAB_TYPES.SETTINGS;
+                          const nextTab = filteredTabs[idx + 1];
+                          const nextIsUtilityOrHome = nextTab && (
+                            nextTab.type === TAB_TYPES.HOME ||
+                            nextTab.type === 'explorer' ||
+                            nextTab.type === 'password' ||
+                            nextTab.type === 'password-folder' ||
+                            nextTab.type === 'document' ||
+                            nextTab.type === 'document-folder' ||
+                            nextTab.type === 'library-file' ||
+                            nextTab.type === 'settings' ||
+                            nextTab.type === TAB_TYPES.SETTINGS
+                          );
+                          const isSegmentBoundary = Boolean(
+                            nextTab && (
+                              ((isHomeTab || isUtilityTab) && !nextIsUtilityOrHome) ||
+                              (tab.groupId && nextTab.groupId && tab.groupId !== nextTab.groupId)
+                            )
+                          );
+                          const tabGroup = (tab.groupId && Array.isArray(tabGroups))
+                            ? tabGroups.find(g => g.id === tab.groupId)
+                            : (activeGroupId && Array.isArray(tabGroups) ? tabGroups.find(g => g.id === activeGroupId) : null);
+                          const headerClasses = [
+                            isHomeTab ? 'home-tab' : '',
+                            isUtilityTab ? 'termius-utility-tab' : (!isHomeTab ? 'termius-session-tab' : ''),
+                            isSegmentBoundary ? 'termius-segment-end' : ''
+                          ].filter(Boolean).join(' ');
 
                           return (
                             <TabPanel
                               key={tab.key}
                               header={tab.label}
-                              headerClassName={isHomeTab ? 'home-tab' : ''}
+                              headerClassName={headerClasses}
                               headerTemplate={(options) => (
                                 <TabHeader
                                   // Props de PrimeReact
-                                  className={`${options.className} ${isHomeTab ? 'home-tab' : ''}`}
+                                  className={`${options.className} ${headerClasses}`}
                                   onClick={options.onClick}
                                   onKeyDown={options.onKeyDown}
                                   leftIcon={options.leftIcon}
@@ -1978,6 +2025,8 @@ const MainContentArea = ({
                                   // Props específicas
                                   tab={tab}
                                   idx={idx}
+                                  groupColor={tabGroup?.color}
+                                  groupName={tabGroup?.name}
 
                                   // Estados de drag & drop
                                   isDragging={memoizedTabProps.draggedTabIndex === idx}
