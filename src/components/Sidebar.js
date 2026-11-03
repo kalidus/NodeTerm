@@ -446,6 +446,8 @@ const Sidebar = React.memo(({
         next.add('passwords');
         next.add('documents');
         next.add('tools');
+        next.add('localExplorer');
+        next.add('settings');
         return next;
       });
     };
