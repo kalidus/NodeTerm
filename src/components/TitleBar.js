@@ -105,8 +105,8 @@ const TitleBar = ({
   isMinimalMode = false,
   tabBarCollapsed = false,
   sidebarCallbacksRef,
-  activeVaultId,
-  onSelectVault,
+  visibleVaultIds,
+  onToggleVault,
   onRequestUnlockVault,
   onRequestCreateVault,
 }) => {
@@ -535,8 +535,8 @@ const TitleBar = ({
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
         <VaultSelector
-          activeVaultId={activeVaultId}
-          onSelectVault={onSelectVault}
+          visibleVaultIds={visibleVaultIds}
+          onToggleVault={onToggleVault}
           onRequestUnlock={onRequestUnlockVault}
           onRequestCreate={onRequestCreateVault}
         />

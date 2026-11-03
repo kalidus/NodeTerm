@@ -5,9 +5,11 @@ const {
   getVaultRootId,
   makeVaultRootNode,
   mergeConnectionTrees,
+  mergeVisibleVaultTrees,
   splitConnectionTrees,
   setVaultRootChildren,
   detectKeyCollisions,
+  findVaultIdForNode,
   connectionVaultStorageKey,
   parseConnectionVaultStorageKey,
   isConnectionVaultStorageKey,
@@ -168,5 +170,72 @@ describe('vault-connection-trees', () => {
     assert.strictEqual(parseConnectionVaultStorageKey('passwords_encrypted'), null);
     assert.strictEqual(isConnectionVaultStorageKey('connections_encrypted__x'), true);
     assert.strictEqual(isConnectionVaultStorageKey('ui_theme'), false);
+  });
+
+  it('mergeVisibleVaultTrees: 1 vault → plano; N → raíces', () => {
+    const flat = mergeVisibleVaultTrees([
+      { vaultId: 'work', title: 'Work', locked: false, nodes: [host('w1')] }
+    ]);
+    assert.strictEqual(flat.multiRoot, false);
+    assert.strictEqual(flat.nodes.length, 1);
+    assert.strictEqual(flat.nodes[0].key, 'w1');
+
+    // Principal al final en la entrada → debe salir primero con label
+    const multi = mergeVisibleVaultTrees([
+      { vaultId: 'work', title: 'Work', nodes: [host('w1')] },
+      { vaultId: DEFAULT_VAULT_ID, title: 'Principal', nodes: [host('h1')] }
+    ]);
+    assert.strictEqual(multi.multiRoot, true);
+    assert.strictEqual(multi.nodes.length, 2);
+    assert.ok(multi.nodes.every(isVaultRoot));
+    assert.strictEqual(getVaultRootId(multi.nodes[0]), DEFAULT_VAULT_ID);
+    assert.strictEqual(multi.nodes[0].label, 'Principal');
+    assert.strictEqual(getVaultRootId(multi.nodes[1]), 'work');
+    assert.strictEqual(multi.nodes[1].label, 'Work');
+  });
+
+  it('makeVaultRootNode incluye label para el Tree', () => {
+    const root = makeVaultRootNode({
+      vaultId: 'abc',
+      title: 'Cliente',
+      locked: false,
+      children: []
+    });
+    assert.strictEqual(root.label, 'Cliente');
+    assert.strictEqual(root.title, 'Cliente');
+  });
+
+  it('split con principal envuelto + drag entre raíces', () => {
+    const { nodes } = mergeVisibleVaultTrees([
+      { vaultId: DEFAULT_VAULT_ID, title: 'Principal', nodes: [host('h1')] },
+      { vaultId: 'work', title: 'Work', nodes: [host('w1'), host('w2')] }
+    ]);
+
+    // Mover w1 al principal (simula drag)
+    const work = nodes.find((n) => getVaultRootId(n) === 'work');
+    const main = nodes.find((n) => getVaultRootId(n) === DEFAULT_VAULT_ID);
+    const moved = work.children[0];
+    work.children = work.children.slice(1);
+    main.children = [...main.children, moved];
+
+    const split = splitConnectionTrees(nodes);
+    assert.strictEqual(split.main.some((n) => n.key === 'h1'), true);
+    assert.strictEqual(split.main.some((n) => n.key === 'w1'), true);
+    assert.strictEqual(split.byVaultId.work.length, 1);
+    assert.strictEqual(split.byVaultId.work[0].key, 'w2');
+    assert.strictEqual(findVaultIdForNode(nodes, 'w1'), DEFAULT_VAULT_ID);
+    assert.strictEqual(findVaultIdForNode(nodes, 'w2'), 'work');
+  });
+
+  it('mergeConnectionTrees wrapMainAsRoot', () => {
+    const { nodes } = mergeConnectionTrees([host('a')], [
+      { vaultId: 'work', title: 'Work', locked: false, nodes: [host('w1')] }
+    ], { wrapMainAsRoot: true });
+    assert.strictEqual(nodes.length, 2);
+    assert.ok(nodes.every(isVaultRoot));
+    assert.strictEqual(getVaultRootId(nodes[0]), DEFAULT_VAULT_ID);
+    const split = splitConnectionTrees(nodes);
+    assert.strictEqual(split.main[0].key, 'a');
+    assert.strictEqual(split.byVaultId.work[0].key, 'w1');
   });
 });

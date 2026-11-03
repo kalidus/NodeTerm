@@ -46,10 +46,14 @@ function makeVaultRootNode(meta) {
   const vaultId = String(meta.vaultId);
   const locked = !!meta.locked;
   const children = locked ? [] : Array.isArray(meta.children) ? meta.children : [];
+  const label =
+    meta.title ||
+    (vaultId === DEFAULT_VAULT_ID ? 'Principal' : vaultId);
   return {
     key: vaultRootKey(vaultId),
     uid: vaultRootKey(vaultId),
-    title: meta.title || vaultId,
+    label,
+    title: label,
     droppable: true,
     leaf: false,
     type: VAULT_ROOT_TYPE,
@@ -107,16 +111,33 @@ function detectKeyCollisions(mainNodes, extras = []) {
  * Fusiona el árbol principal con vaults extra como raíces.
  * @param {object[]} mainNodes - nodos del vault principal (sin vault-root)
  * @param {Array<{ vaultId: string, title?: string, icon?: string, locked?: boolean, nodes?: object[] }>} extras
+ * @param {{ wrapMainAsRoot?: boolean, mainTitle?: string, mainIcon?: string }} [options]
+ *   Si wrapMainAsRoot=true (vista multi-check Termius), el principal también es vault-root.
  * @returns {{ nodes: object[], collisions: Array<{ key: string, sources: string[] }> }}
  */
-function mergeConnectionTrees(mainNodes, extras = []) {
+function mergeConnectionTrees(mainNodes, extras = [], options = {}) {
   const main = Array.isArray(mainNodes) ? mainNodes.filter((n) => !isVaultRoot(n)) : [];
   const unlockedForCollision = [];
   const rootNodes = [];
+  const wrapMain = !!options.wrapMainAsRoot;
+
+  if (wrapMain) {
+    unlockedForCollision.push({ vaultId: DEFAULT_VAULT_ID, nodes: main });
+    rootNodes.push(
+      makeVaultRootNode({
+        vaultId: DEFAULT_VAULT_ID,
+        title: options.mainTitle || 'Principal',
+        icon: options.mainIcon || 'pi pi-home',
+        locked: false,
+        children: main
+      })
+    );
+  }
 
   for (const extra of extras || []) {
     if (!extra || extra.vaultId == null || String(extra.vaultId) === '') continue;
     const vaultId = String(extra.vaultId);
+    if (vaultId === DEFAULT_VAULT_ID) continue;
     const locked = !!extra.locked;
     const children = locked ? [] : Array.isArray(extra.nodes) ? extra.nodes : [];
     if (!locked) {
@@ -133,8 +154,89 @@ function mergeConnectionTrees(mainNodes, extras = []) {
     );
   }
 
-  const { collisions } = detectKeyCollisions(main, unlockedForCollision);
-  return { nodes: [...main, ...rootNodes], collisions };
+  const collisionMain = wrapMain ? [] : main;
+  const { collisions } = detectKeyCollisions(collisionMain, unlockedForCollision);
+  return {
+    nodes: wrapMain ? rootNodes : [...main, ...rootNodes],
+    collisions
+  };
+}
+
+/**
+ * Fusiona N vaults visibles. Si solo hay uno desbloqueado → árbol plano;
+ * si hay varios → cada uno como vault-root (permite drag entre vaults).
+ * @param {Array<{ vaultId: string, title?: string, icon?: string, locked?: boolean, nodes?: object[] }>} vaults
+ * @returns {{ nodes: object[], collisions: Array, multiRoot: boolean }}
+ */
+function mergeVisibleVaultTrees(vaults = []) {
+  const list = (vaults || []).filter(
+    (v) => v && v.vaultId != null && String(v.vaultId) !== ''
+  );
+  if (list.length === 0) {
+    return { nodes: [], collisions: [], multiRoot: false };
+  }
+
+  if (list.length === 1) {
+    const only = list[0];
+    const id = String(only.vaultId);
+    if (only.locked) {
+      return {
+        nodes: [
+          makeVaultRootNode({
+            vaultId: id,
+            title: only.title,
+            icon: only.icon,
+            locked: true,
+            children: []
+          })
+        ],
+        collisions: [],
+        multiRoot: false
+      };
+    }
+    const flat = Array.isArray(only.nodes)
+      ? only.nodes.filter((n) => !isVaultRoot(n))
+      : [];
+    return { nodes: flat, collisions: [], multiRoot: false };
+  }
+
+  // Principal siempre primero; el resto en el orden de visibleIds
+  const ordered = [...list].sort((a, b) => {
+    const aId = String(a.vaultId);
+    const bId = String(b.vaultId);
+    if (aId === DEFAULT_VAULT_ID && bId !== DEFAULT_VAULT_ID) return -1;
+    if (bId === DEFAULT_VAULT_ID && aId !== DEFAULT_VAULT_ID) return 1;
+    return 0;
+  });
+
+  const unlockedForCollision = [];
+  const rootNodes = [];
+  for (const v of ordered) {
+    const vaultId = String(v.vaultId);
+    const locked = !!v.locked;
+    const children = locked
+      ? []
+      : Array.isArray(v.nodes)
+        ? v.nodes.filter((n) => !isVaultRoot(n))
+        : [];
+    if (!locked) unlockedForCollision.push({ vaultId, nodes: children });
+    rootNodes.push(
+      makeVaultRootNode({
+        vaultId,
+        title:
+          v.title ||
+          (vaultId === DEFAULT_VAULT_ID ? 'Principal' : vaultId),
+        icon:
+          v.icon ||
+          (vaultId === DEFAULT_VAULT_ID ? 'pi pi-home' : 'pi pi-box'),
+        locked,
+        children
+      })
+    );
+  }
+
+  const { collisions } = detectKeyCollisions([], unlockedForCollision);
+  return { nodes: rootNodes, collisions, multiRoot: true };
 }
 
 /**
@@ -174,7 +276,16 @@ function splitConnectionTrees(nodes) {
       continue;
     }
 
-    byVaultId[vaultId] = Array.isArray(node.children) ? node.children : [];
+    const children = Array.isArray(node.children) ? node.children : [];
+    // Principal envuelto como raíz (vista multi-check): sus hijos van a main
+    if (vaultId === DEFAULT_VAULT_ID) {
+      for (const child of children) {
+        if (!isVaultRoot(child)) main.push(child);
+      }
+      continue;
+    }
+
+    byVaultId[vaultId] = children;
   }
 
   return { main, byVaultId, lockedVaultIds, vaultMeta };
@@ -298,6 +409,7 @@ module.exports = {
   makeVaultRootNode,
   detectKeyCollisions,
   mergeConnectionTrees,
+  mergeVisibleVaultTrees,
   splitConnectionTrees,
   setVaultRootChildren,
   findVaultIdForNode,

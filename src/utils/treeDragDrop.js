@@ -1,12 +1,19 @@
 /** Nodo virtual del árbol de visualización (paginación "Mostrar más"). */
 export const isShowMoreTreeNode = (node) => !!node?.data?.isShowMoreBtn;
 
-/** Carpeta: droppable explícito, tipo carpeta conocido, o tiene hijos (legacy). */
+/** Carpeta: droppable explícito, tipo carpeta conocido, vault-root, o tiene hijos (legacy). */
 export function isTreeFolderNode(node) {
   if (!node) return false;
   if (node.droppable === true) return true;
   const folderType = node.data?.type;
-  if (folderType === 'document-folder' || folderType === 'password-folder') return true;
+  if (
+    folderType === 'document-folder' ||
+    folderType === 'password-folder' ||
+    folderType === 'vault-root'
+  ) {
+    return true;
+  }
+  if (node.type === 'vault-root') return true;
   return Array.isArray(node.children) && node.children.length > 0;
 }
 

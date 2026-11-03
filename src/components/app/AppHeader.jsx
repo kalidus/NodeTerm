@@ -31,8 +31,8 @@ export const AppHeader = ({
   expandedKeys,
   sidebarCollapsed = false,
   tabBarCollapsed = false,
-  activeVaultId,
-  onSelectVault,
+  visibleVaultIds,
+  onToggleVault,
   onRequestUnlockVault,
   onRequestCreateVault
 }) => {
@@ -142,8 +142,8 @@ export const AppHeader = ({
       sidebarCollapsed={sidebarCollapsed}
       isMinimalMode={isMinimalMode}
       tabBarCollapsed={tabBarCollapsed}
-      activeVaultId={activeVaultId}
-      onSelectVault={onSelectVault}
+      visibleVaultIds={visibleVaultIds}
+      onToggleVault={onToggleVault}
       onRequestUnlockVault={onRequestUnlockVault}
       onRequestCreateVault={onRequestCreateVault}
     />

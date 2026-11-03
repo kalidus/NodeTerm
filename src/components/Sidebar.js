@@ -71,6 +71,7 @@ import {
   isTreeFolderNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
+import { isVaultRoot } from '../shared/vault-connection-trees';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
 import SidebarSkeleton from './sidebar/SidebarSkeleton';
@@ -1498,6 +1499,17 @@ const Sidebar = React.memo(({
       return;
     }
 
+    // No mover la raíz de un vault (solo su contenido)
+    if (isVaultRoot(dragNode)) {
+      showToast && showToast({
+        severity: 'warn',
+        summary: 'Operación no permitida',
+        detail: 'No se puede mover la carpeta raíz de un vault.',
+        life: 2500
+      });
+      return;
+    }
+
     if (dropNode?.key) {
       const dropInFull = findNodeInTree(nodes, dropNode.key);
       if (dropPoint === 0 && dropInFull && !isTreeFolderNode(dropInFull)) {
@@ -1505,6 +1517,22 @@ const Sidebar = React.memo(({
           severity: 'warn',
           summary: 'Operación no permitida',
           detail: 'No se puede arrastrar elementos dentro de una sesión. Solo las carpetas pueden contener otros elementos.',
+          life: 3000
+        });
+        return;
+      }
+
+      // No soltar dentro de un vault bloqueado
+      if (
+        dropPoint === 0 &&
+        dropInFull &&
+        isVaultRoot(dropInFull) &&
+        dropInFull.data?.locked
+      ) {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'Vault bloqueado',
+          detail: 'Desbloquea el vault destino antes de mover conexiones.',
           life: 3000
         });
         return;
@@ -2158,7 +2186,8 @@ const Sidebar = React.memo(({
     }
     const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
-    const isFolder = !!(node.droppable || hasChildren);
+    const isVaultRootNode = isVaultRoot(node);
+    const isFolder = !!(node.droppable || hasChildren) && !isVaultRootNode;
     const isSSH = actionNode.data && actionNode.data.type === 'ssh';
     const isRDP = actionNode.data && actionNode.data.type === 'rdp';
     const isVNC = actionNode.data && (actionNode.data.type === 'vnc' || actionNode.data.type === 'vnc-guacamole');
@@ -2210,7 +2239,19 @@ const Sidebar = React.memo(({
         }
       });
     };
-    if (isSSH) {
+    if (isVaultRootNode) {
+      const locked = !!node.data?.locked;
+      const cacheKey = `vault-root-${locked}-${connectionIconSize}`;
+      icon = getCachedIcon(cacheKey, () => (
+        <span
+          className={locked ? 'pi pi-lock' : 'pi pi-box'}
+          style={{
+            color: locked ? '#f38ba8' : '#89b4fa',
+            fontSize: `${connectionIconSize}px`
+          }}
+        />
+      ));
+    } else if (isSSH) {
       // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
       if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = SSHIconPresets[node.data.customIcon.toUpperCase()];

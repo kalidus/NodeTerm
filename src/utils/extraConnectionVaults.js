@@ -1,18 +1,23 @@
 /**
- * Carga/guardado del vault de conexiones activo (selector Termius-like).
- * Un vault a la vez en el árbol; sin raíces-vault fusionadas.
+ * Carga/guardado de vaults de conexiones visibles (checks tipo Termius).
+ * 1 visible → árbol plano; N visibles → raíces vault-root (drag entre vaults).
  */
 
 import vaultKeyring from '../services/VaultKeyring';
 import {
   connectionVaultStorageKey,
   isVaultRoot,
+  mergeVisibleVaultTrees,
+  splitConnectionTrees,
   DEFAULT_VAULT_ID
 } from '../shared/vault-connection-trees';
 import { setVaultEncryptedItem, isTinyVaultPayload } from '../shared/vault-write';
 import { isMultiVaultEnabled } from './multiVaultFlag';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { getActiveConnectionVaultId } from './activeConnectionVault';
+import {
+  getActiveConnectionVaultId,
+  getVisibleConnectionVaultIds
+} from './activeConnectionVault';
 
 export async function listRegisteredExtraVaults() {
   if (!window.electron?.vaults?.list) return [];
@@ -24,7 +29,7 @@ export async function listRegisteredExtraVaults() {
   }
 }
 
-/** Elimina nodos vault-root residuales de un árbol (migración del modelo anterior). */
+/** Elimina nodos vault-root residuales de un árbol (vista plana / migración). */
 export function stripVaultRootNodes(nodes) {
   if (!Array.isArray(nodes)) return [];
   return nodes.filter((n) => !isVaultRoot(n));
@@ -47,7 +52,7 @@ async function readEncryptedBlob(storageKey) {
 }
 
 /**
- * Descarga el árbol del vault indicado.
+ * Descarga el árbol del vault indicado (sin envoltorio raíz).
  * @returns {{ nodes: object[], locked: boolean, vaultId: string, storageKey: string }}
  */
 export async function loadVaultConnectionTree(vaultId, masterKey, secureStorage) {
@@ -90,7 +95,7 @@ export async function loadVaultConnectionTree(vaultId, masterKey, secureStorage)
 }
 
 /**
- * Guarda el árbol visible en el vault activo.
+ * Guarda un árbol plano en un vault concreto.
  */
 export async function saveActiveVaultConnectionTree(nodes, vaultId, masterKey, secureStorage) {
   const id = vaultId || getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
@@ -123,29 +128,187 @@ export async function saveActiveVaultConnectionTree(nodes, vaultId, masterKey, s
 }
 
 /**
- * @deprecated Usado solo por el modelo de raíces fusionadas; mantener no-op safe.
+ * Carga y fusiona todos los vaults visibles.
+ * @returns {{ nodes, multiRoot, lockedVaultIds, collisions, visibleIds }}
  */
+export async function loadVisibleConnectionTrees(
+  visibleIds,
+  masterKey,
+  secureStorage,
+  { migrateMainNodes } = {}
+) {
+  const ids = Array.isArray(visibleIds) && visibleIds.length
+    ? visibleIds
+    : getVisibleConnectionVaultIds();
+
+  const registry = await listRegisteredExtraVaults();
+  const metaById = new Map(registry.map((v) => [v.id, v]));
+
+  const vaultPayloads = [];
+  const lockedVaultIds = [];
+
+  for (const rawId of ids) {
+    const id =
+      !rawId || rawId === DEFAULT_VAULT_ID ? DEFAULT_VAULT_ID : String(rawId);
+    const meta = metaById.get(id);
+
+    if (id === DEFAULT_VAULT_ID) {
+      let mainNodes = [];
+      if (typeof migrateMainNodes === 'function') {
+        mainNodes = (await migrateMainNodes()) || [];
+      }
+      vaultPayloads.push({
+        vaultId: DEFAULT_VAULT_ID,
+        title: 'Principal',
+        icon: 'pi pi-home',
+        locked: false,
+        nodes: stripVaultRootNodes(mainNodes)
+      });
+      continue;
+    }
+
+    const loaded = await loadVaultConnectionTree(id, masterKey, secureStorage);
+    if (loaded.locked) {
+      lockedVaultIds.push(id);
+      vaultPayloads.push({
+        vaultId: id,
+        title: meta?.name || id,
+        icon: meta?.icon || 'pi pi-lock',
+        locked: true,
+        nodes: []
+      });
+      continue;
+    }
+
+    vaultPayloads.push({
+      vaultId: id,
+      title: meta?.name || id,
+      icon: meta?.icon || 'pi pi-box',
+      locked: false,
+      nodes: loaded.nodes || []
+    });
+  }
+
+  const merged = mergeVisibleVaultTrees(vaultPayloads);
+  return {
+    nodes: merged.nodes,
+    multiRoot: merged.multiRoot,
+    collisions: merged.collisions,
+    lockedVaultIds,
+    visibleIds: ids
+  };
+}
+
+/**
+ * Parte el árbol (plano o multi-root) y cifra cada vault desbloqueado afectado.
+ * Vaults bloqueados o no presentes no se reescriben.
+ */
+export async function savePartitionedConnectionTrees(nodes, masterKey, secureStorage) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  const hasRoots = list.some(isVaultRoot);
+
+  if (!hasRoots) {
+    const active = getActiveConnectionVaultId();
+    const saved = await saveActiveVaultConnectionTree(
+      list,
+      active,
+      masterKey,
+      secureStorage
+    );
+    return {
+      wroteMain: active === DEFAULT_VAULT_ID && saved.ok,
+      wroteExtras: active !== DEFAULT_VAULT_ID && saved.ok ? [active] : [],
+      skippedLocked: [],
+      mainNodes: stripVaultRootNodes(list),
+      syncPayload: saved.encryptedStr ? { [saved.storageKey]: saved.encryptedStr } : {},
+      ok: saved.ok,
+      reason: saved.reason
+    };
+  }
+
+  const { main, byVaultId, lockedVaultIds } = splitConnectionTrees(list);
+  const syncPayload = {};
+  const wroteExtras = [];
+  const skippedLocked = [...lockedVaultIds];
+  let wroteMain = false;
+  let ok = true;
+  let reason;
+
+  // Solo reescribir vaults presentes como raíces en el árbol (no tocar los no visibles)
+  const rootIdsPresent = new Set(
+    list.filter(isVaultRoot).map((n) => (n.data && n.data.vaultId) || n.vaultId).filter(Boolean)
+  );
+  const principalVisible =
+    rootIdsPresent.has(DEFAULT_VAULT_ID) ||
+    // Nodos sueltos top-level = principal en modo legacy merge
+    list.some((n) => !isVaultRoot(n));
+
+  if (principalVisible && masterKey && secureStorage) {
+    const savedMain = await saveActiveVaultConnectionTree(
+      main,
+      DEFAULT_VAULT_ID,
+      masterKey,
+      secureStorage
+    );
+    wroteMain = savedMain.ok;
+    if (savedMain.encryptedStr) {
+      syncPayload[savedMain.storageKey] = savedMain.encryptedStr;
+    }
+    if (!savedMain.ok) {
+      ok = false;
+      reason = savedMain.reason;
+    }
+  }
+
+  for (const [vaultId, children] of Object.entries(byVaultId)) {
+    if (!rootIdsPresent.has(vaultId)) continue;
+    if (!vaultKeyring.isUnlocked(vaultId)) {
+      skippedLocked.push(vaultId);
+      continue;
+    }
+    const saved = await saveActiveVaultConnectionTree(
+      children,
+      vaultId,
+      masterKey,
+      secureStorage
+    );
+    if (saved.ok) {
+      wroteExtras.push(vaultId);
+      if (saved.encryptedStr) syncPayload[saved.storageKey] = saved.encryptedStr;
+    } else {
+      ok = false;
+      reason = saved.reason || reason;
+    }
+  }
+
+  return {
+    wroteMain,
+    wroteExtras,
+    skippedLocked,
+    mainNodes: main,
+    syncPayload,
+    ok,
+    reason
+  };
+}
+
 export async function appendExtraVaultRoots(mainNodes) {
   return { nodes: stripVaultRootNodes(mainNodes), collisions: [] };
 }
 
-/**
- * @deprecated
- */
-export async function savePartitionedConnectionTrees(nodes, masterKey, secureStorage) {
-  const active = getActiveConnectionVaultId();
-  const saved = await saveActiveVaultConnectionTree(nodes, active, masterKey, secureStorage);
-  return {
-    wroteMain: active === DEFAULT_VAULT_ID && saved.ok,
-    wroteExtras: active !== DEFAULT_VAULT_ID && saved.ok ? [active] : [],
-    skippedLocked: [],
-    mainNodes: stripVaultRootNodes(nodes),
-    syncPayload: saved.encryptedStr ? { [saved.storageKey]: saved.encryptedStr } : {}
-  };
+export function lockVaultInNodes(nodes, vaultId) {
+  if (!Array.isArray(nodes) || !vaultId) return stripVaultRootNodes(nodes);
+  // En vista multi-root: vaciar hijos y marcar locked; en plana no aplica
+  return nodes.map((n) => {
+    if (!isVaultRoot(n)) return n;
+    const id = (n.data && n.data.vaultId) || n.vaultId;
+    if (String(id) !== String(vaultId)) return n;
+    return {
+      ...n,
+      children: [],
+      data: { ...(n.data || {}), locked: true }
+    };
+  });
 }
 
-export function lockVaultInNodes(nodes) {
-  return stripVaultRootNodes(nodes);
-}
-
-export { isMultiVaultEnabled, DEFAULT_VAULT_ID };
+export { isMultiVaultEnabled, DEFAULT_VAULT_ID, mergeVisibleVaultTrees, splitConnectionTrees };
