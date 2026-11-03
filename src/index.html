@@ -30,6 +30,36 @@
       })();
     </script>
     <script>
+      // Estilo de boot-splash (mismo catálogo que unlock/splash Electron)
+      (function() {
+        try {
+          var VALID = {
+            classic: 1, 'vault-gate': 1, terminal: 1, 'premium-card': 1,
+            'glass-hud': 1, synthwave: 1, aurora: 1, matrix: 1,
+            ember: 1, nord: 1, midnight: 1
+          };
+          var LEGACY = {
+            'hologram-hud': 'glass-hud',
+            'synthwave-outrun': 'synthwave',
+            'terminal-minimalist': 'terminal'
+          };
+          var id = 'classic';
+          var m = /[?&]splash=([^&#]+)/.exec(location.search || '');
+          if (!m && location.hash) {
+            m = /^#splash=([^&]+)/.exec(location.hash) || /^#([^&]+)/.exec(location.hash);
+          }
+          if (m && m[1]) {
+            id = decodeURIComponent(m[1]).toLowerCase().trim();
+            if (LEGACY[id]) id = LEGACY[id];
+            if (!VALID[id]) id = 'classic';
+          }
+          document.documentElement.setAttribute('data-boot-splash', id);
+        } catch (e) {
+          document.documentElement.setAttribute('data-boot-splash', 'classic');
+        }
+      })();
+    </script>
+    <script>
       // Aplicar fondo básico INMEDIATAMENTE para evitar flash blanco
       // NO establecer variables CSS del tema aquí - el ThemeManager se encargará de eso
       (function() {
@@ -147,6 +177,75 @@
         animation: spin 720ms linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* Variantes boot-splash (IDs unificados con unlock) */
+      html[data-boot-splash='classic'] #boot-splash {
+        background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
+        color: #e3f2fd;
+      }
+      html[data-boot-splash='classic'] #boot-splash .spinner { border-color: rgba(59,130,246,0.25); border-top-color: #3b82f6; }
+
+      html[data-boot-splash='vault-gate'] #boot-splash {
+        background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
+        color: #e3f2fd;
+      }
+      html[data-boot-splash='vault-gate'] #boot-splash .spinner { border-color: rgba(59,130,246,0.25); border-top-color: #3b82f6; }
+
+      html[data-boot-splash='terminal'] #boot-splash {
+        background: #000;
+        color: #00ff66;
+        font-family: 'Fira Code', 'Courier New', monospace;
+      }
+      html[data-boot-splash='terminal'] #boot-splash .spinner { border-color: rgba(0,255,102,0.2); border-top-color: #00ff66; }
+
+      html[data-boot-splash='premium-card'] #boot-splash {
+        background: #080a0e;
+        color: #e2e8f0;
+      }
+      html[data-boot-splash='premium-card'] #boot-splash .spinner { border-color: rgba(14,99,156,0.3); border-top-color: #0e639c; }
+
+      html[data-boot-splash='glass-hud'] #boot-splash {
+        background: #06040d;
+        color: #00f2fe;
+      }
+      html[data-boot-splash='glass-hud'] #boot-splash .spinner { border-color: rgba(0,242,254,0.2); border-top-color: #00f2fe; }
+
+      html[data-boot-splash='synthwave'] #boot-splash {
+        background: #0f021a;
+        color: #ff007f;
+      }
+      html[data-boot-splash='synthwave'] #boot-splash .spinner { border-color: rgba(255,0,127,0.2); border-top-color: #ff007f; }
+
+      html[data-boot-splash='aurora'] #boot-splash {
+        background: linear-gradient(160deg, #7dd3fc 0%, #818cf8 48%, #c4b5fd 100%);
+        color: #1e1b4b;
+      }
+      html[data-boot-splash='aurora'] #boot-splash .spinner { border-color: rgba(99,102,241,0.25); border-top-color: #6366f1; }
+
+      html[data-boot-splash='matrix'] #boot-splash {
+        background: #020c06;
+        color: #22c55e;
+        font-family: 'Fira Code', 'Courier New', monospace;
+      }
+      html[data-boot-splash='matrix'] #boot-splash .spinner { border-color: rgba(34,197,94,0.25); border-top-color: #22c55e; }
+
+      html[data-boot-splash='ember'] #boot-splash {
+        background: #120a06;
+        color: #fb923c;
+      }
+      html[data-boot-splash='ember'] #boot-splash .spinner { border-color: rgba(249,115,22,0.3); border-top-color: #f97316; }
+
+      html[data-boot-splash='nord'] #boot-splash {
+        background: linear-gradient(180deg, #4c566a 0%, #2e3440 100%);
+        color: #eceff4;
+      }
+      html[data-boot-splash='nord'] #boot-splash .spinner { border-color: rgba(136,192,208,0.3); border-top-color: #88c0d0; }
+
+      html[data-boot-splash='midnight'] #boot-splash {
+        background: #07070f;
+        color: #a5b4fc;
+      }
+      html[data-boot-splash='midnight'] #boot-splash .spinner { border-color: rgba(129,140,248,0.3); border-top-color: #818cf8; }
     </style>
   </head>
   <body>

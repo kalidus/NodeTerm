@@ -85,7 +85,10 @@ export const AppearanceSettingsTab = ({
   }, [setSidebarFontColor]);
 
   return (
-    <div className="apariencia-tab-container" style={{ right: '8px', width: 'calc(100% - 8px)' }}>
+    <div
+      className="apariencia-tab-container"
+      style={{ right: '8px', width: 'calc(100% - 8px)', height: '100%', minHeight: 0 }}
+    >
       {activeSubTab === 'interfaz' && (
         <ThemeSelector
           showPreview={true}

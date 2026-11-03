@@ -600,6 +600,26 @@ const SettingsContent = ({
               overflow-y: auto !important;
               padding-right: 4px;
             }
+            .apariencia-tab-container > .style-picker-scroll-shell {
+              position: relative !important;
+              flex: 1 1 auto !important;
+              min-height: 0 !important;
+              height: 100% !important;
+              max-height: 100% !important;
+              overflow: hidden !important;
+            }
+            .style-picker-scroll-body.general-settings-container,
+            .style-picker-scroll-body {
+              position: absolute !important;
+              inset: 0 8px 0 0 !important;
+              overflow-y: scroll !important;
+              overflow-x: hidden !important;
+              height: auto !important;
+              max-height: none !important;
+              min-height: 0 !important;
+              display: block !important;
+              padding-bottom: 2rem !important;
+            }
             .presets-tab-wrapper::-webkit-scrollbar {
               width: 8px !important;
               display: block !important;

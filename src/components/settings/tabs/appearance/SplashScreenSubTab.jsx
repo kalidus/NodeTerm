@@ -1,177 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
+import { useTranslation } from '../../../../i18n/hooks/useTranslation';
+import SplashStyleThumb from '../../../splash/SplashStyleThumb';
+import SplashPreviewOverlay from '../../../splash/SplashPreviewOverlay';
+import {
+  SPLASH_STYLE_META,
+  normalizeSplashStyle
+} from '../../../splash/splashStyles';
 
 export const SplashScreenSubTab = ({ toastRef }) => {
+  const { t } = useTranslation('settings');
   const [splashStyle, setSplashStyle] = useState('classic');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewStyleId, setPreviewStyleId] = useState('classic');
 
   useEffect(() => {
-    if (window.electron && window.electron.theme && window.electron.theme.getSplashStyle) {
-      window.electron.theme.getSplashStyle().then(style => {
-        if (style) setSplashStyle(style);
-      }).catch(err => console.warn('Error al cargar splash style:', err));
+    if (window.electron?.theme?.getSplashStyle) {
+      window.electron.theme
+        .getSplashStyle()
+        .then((style) => {
+          if (style) {
+            const id = normalizeSplashStyle(style);
+            setSplashStyle(id);
+            setPreviewStyleId(id);
+          }
+        })
+        .catch((err) => console.warn('Error al cargar splash style:', err));
     }
   }, []);
 
   const handleSplashStyleChange = async (style) => {
-    setSplashStyle(style);
-    if (window.electron && window.electron.theme && window.electron.theme.saveSplashStyle) {
-      const res = await window.electron.theme.saveSplashStyle(style);
-      if (res && res.success && toastRef?.current) {
+    const id = normalizeSplashStyle(style);
+    setSplashStyle(id);
+    if (window.electron?.theme?.saveSplashStyle) {
+      const res = await window.electron.theme.saveSplashStyle(id);
+      if (res?.success && toastRef?.current) {
         toastRef.current.show({
           severity: 'success',
-          summary: 'Guardado',
-          detail: 'El estilo de la pantalla de inicio se ha actualizado y se aplicará en el próximo arranque.',
+          summary: t('splashScreen.savedTitle', 'Guardado'),
+          detail: t(
+            'splashScreen.savedDetail',
+            'El estilo de la pantalla de inicio se ha actualizado y se aplicará en el próximo arranque.'
+          ),
           life: 3000
         });
       }
     }
   };
 
-  const splashOptions = [
-    {
-      id: 'classic',
-      name: 'Classic (Original)',
-      desc: 'El tema clásico y minimalista original de NodeTerm con tonos azulados oscuros.',
-      bgColor: 'linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%)',
-      accentColor: '#3b82f6',
-      borderColor: 'rgba(59, 130, 246, 0.2)'
-    },
-    {
-      id: 'hologram-hud',
-      name: 'Hologram HUD',
-      desc: 'Estilo cyberpunk futurista en color cian brillante y violeta neón con rejilla táctica.',
-      bgColor: '#06040d',
-      accentColor: '#00f2fe',
-      borderColor: '#00f2fe'
-    },
-    {
-      id: 'synthwave-outrun',
-      name: 'Synthwave Outrun',
-      desc: 'Aesthetic retro de los 80s con gradientes fucsia y amarillo neón y líneas de horizonte.',
-      bgColor: '#0f021a',
-      accentColor: '#ff007f',
-      borderColor: '#ff007f'
-    },
-    {
-      id: 'terminal-minimalist',
-      name: 'Terminal Minimalist',
-      desc: 'Modo purista de línea de comandos en verde Matrix con ticker de log del sistema.',
-      bgColor: '#000000',
-      accentColor: '#00ff66',
-      borderColor: '#00ff66'
-    }
-  ];
+  const openPreview = (styleId, e) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
+    setPreviewStyleId(normalizeSplashStyle(styleId));
+    setPreviewOpen(true);
+  };
 
   return (
-    <div className="general-settings-container" style={{ maxWidth: '100%', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="general-settings-header-wrapper">
-        <div className="general-header-content">
-          <span className="general-header-icon protocol-dialog-header-icon" style={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            boxShadow: '0 2px 8px rgba(240, 147, 251, 0.25)'
-          }}>
-            <i className="pi pi-bolt"></i>
-          </span>
-          <div className="general-header-text">
-            <h3 className="general-header">Pantalla de Inicio (Splash Screen)</h3>
-            <p className="general-description">Personaliza el diseño y estilo visual de la pantalla de arranque de NodeTerm</p>
+    <div className="style-picker-scroll-shell">
+      <div className="style-picker-scroll-body general-settings-container">
+        <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+          <div className="general-header-content">
+            <span
+              className="general-header-icon protocol-dialog-header-icon"
+              style={{
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                boxShadow: '0 2px 8px rgba(240, 147, 251, 0.25)'
+              }}
+            >
+              <i className="pi pi-bolt" />
+            </span>
+            <div className="general-header-text">
+              <h3 className="general-header">
+                {t('splashScreen.title', 'Pantalla de Inicio (Splash Screen)')}
+              </h3>
+              <p className="general-description">
+                {t(
+                  'splashScreen.description',
+                  'Personaliza el diseño y estilo visual de la pantalla de arranque de NodeTerm'
+                )}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="general-settings-section" style={{ marginBottom: 0, width: '100%' }}>
-        <div className="general-section-header">
-          <div className="general-section-icon" style={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-          }}>
-            <i className="pi pi-eye"></i>
+        <div className="general-settings-section style-picker-section">
+          <div className="general-section-header">
+            <div
+              className="general-section-icon"
+              style={{
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+              }}
+            >
+              <i className="pi pi-eye" />
+            </div>
+            <h4 className="general-section-title">
+              {t('splashScreen.selectionTitle', 'Selección de Estilo')}
+            </h4>
           </div>
-          <h4 className="general-section-title">Selección de Estilo</h4>
-        </div>
 
-        <div className="general-settings-options" style={{ padding: '1.25rem' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1.25rem',
-            marginBottom: '1.5rem'
-          }}>
-            {splashOptions.map(opt => {
+          <div className="style-picker-grid">
+            {SPLASH_STYLE_META.map((opt) => {
               const isSelected = splashStyle === opt.id;
+              const name = t(opt.nameKey, opt.name);
+              const desc = t(opt.descKey, opt.desc);
               return (
                 <div
                   key={opt.id}
-                  className={`general-setting-card ${isSelected ? 'active' : ''}`}
+                  className={`style-picker-card${isSelected ? ' is-selected' : ''}`}
                   onClick={() => handleSplashStyleChange(opt.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSplashStyleChange(opt.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   style={{
-                    border: isSelected ? `2px solid ${opt.accentColor}` : '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '12px',
-                    padding: '1.25rem',
-                    cursor: 'pointer',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: isSelected ? `0 0 16px ${opt.accentColor}30` : 'none',
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    height: '140px'
+                    '--style-accent': opt.accentColor,
+                    borderColor: isSelected ? opt.accentColor : undefined,
+                    boxShadow: isSelected ? `0 0 18px ${opt.accentColor}33` : undefined
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ fontWeight: '700', fontSize: '1rem', color: isSelected ? opt.accentColor : 'var(--ui-dialog-text)' }}>
-                        {opt.name}
+                  <div className="style-picker-thumb-wrap">
+                    <SplashStyleThumb styleId={opt.id} alt={name} />
+                    <div className="style-picker-thumb-fade">
+                      <span
+                        className="style-picker-card-title"
+                        style={{ color: isSelected ? opt.accentColor : '#fff' }}
+                      >
+                        {name}
                       </span>
-                      {isSelected && (
-                        <i className="pi pi-check-circle" style={{ color: opt.accentColor, fontSize: '1.2rem' }}></i>
-                      )}
+                      {isSelected ? (
+                        <i className="pi pi-check-circle" style={{ color: opt.accentColor }} />
+                      ) : null}
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)', margin: 0, opacity: 0.85, lineHeight: '1.4' }}>
-                      {opt.desc}
-                    </p>
+                    <Button
+                      type="button"
+                      label={t('splashScreen.cardPreviewButton', 'Preview')}
+                      icon="pi pi-eye"
+                      className="p-button-sm p-button-outlined unlock-style-preview-btn"
+                      onClick={(e) => openPreview(opt.id, e)}
+                      aria-label={`${t('splashScreen.cardPreviewButton', 'Preview')}: ${name}`}
+                    />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: opt.bgColor, border: `1px solid ${opt.accentColor}` }}></div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', opacity: 0.7 }}>Acento: {opt.accentColor}</span>
-                  </div>
+                  <p className="style-picker-card-desc">{desc}</p>
                 </div>
               );
             })}
           </div>
-
-          {/* Interactive Preview Button */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1rem',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '10px'
-          }}>
-            <div>
-              <span style={{ fontWeight: '600', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem', color: 'var(--ui-dialog-text)' }}>
-                Previsualizar en Vivo
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
-                Abre una ventana externa interactiva para ver cómo luce el tema seleccionado.
-              </span>
-            </div>
-            <Button
-              label="Ver Previsualización"
-              icon="pi pi-external-link"
-              className="p-button-outlined"
-              onClick={() => {
-                if (window.electron?.app?.openSplashPreview) {
-                  window.electron.app.openSplashPreview(splashStyle);
-                }
-              }}
-            />
-          </div>
         </div>
       </div>
+
+      <SplashPreviewOverlay
+        visible={previewOpen}
+        styleId={previewStyleId}
+        onHide={() => setPreviewOpen(false)}
+      />
     </div>
   );
 };

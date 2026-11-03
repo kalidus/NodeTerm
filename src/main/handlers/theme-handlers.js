@@ -73,6 +73,12 @@ function registerThemeHandlers(dependencies) {
         const success = await savePreferredSplashStyle(style);
         return { success };
     });
+
+    safeHandle('theme:get-splash-preview-html', async (event, style) => {
+        const { buildSplashHtml } = require('../utils/splash-html');
+        const { normalizeSplashStyle } = require('../utils/splash-styles');
+        return buildSplashHtml(normalizeSplashStyle(style), { settingsPreview: true });
+    });
 }
 
 module.exports = {

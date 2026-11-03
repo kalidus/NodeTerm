@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { app, safeStorage } = require('electron');
+const { normalizeSplashStyle } = require('./splash-styles');
 
 /**
  * Utilidades para manejo de archivos y rutas
@@ -378,9 +379,9 @@ function getSplashPrefPath() {
 }
 
 /**
- * Guarda la preferencia de estilo de Splash Screen
- * @param {string} style - Estilo preferido (classic|hologram-hud|synthwave-outrun|terminal-minimalist)
- * @returns {Promise<boolean>} true si se guardó exitosamente
+ * Guarda la preferencia de estilo de Splash Screen (IDs unificados con unlock).
+ * @param {string} style
+ * @returns {Promise<boolean>}
  */
 async function savePreferredSplashStyle(style) {
   const prefPath = getSplashPrefPath();
@@ -388,10 +389,11 @@ async function savePreferredSplashStyle(style) {
   try {
     const dir = path.dirname(prefPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(prefPath, JSON.stringify({ preferredStyle: style }, null, 2), 'utf8');
+    const preferredStyle = normalizeSplashStyle(style);
+    fs.writeFileSync(prefPath, JSON.stringify({ preferredStyle }, null, 2), 'utf8');
     return true;
-  } catch { 
-    return false; 
+  } catch {
+    return false;
   }
 }
 
@@ -404,21 +406,29 @@ async function loadPreferredSplashStyle() {
 }
 
 /**
- * Carga de forma síncrona el estilo de Splash Screen
- * @returns {string} Estilo preferido o 'classic' por defecto
+ * Carga de forma síncrona el estilo de Splash Screen.
+ * Migra IDs legacy y reescribe el JSON si hace falta.
+ * @returns {string}
  */
 function loadPreferredSplashStyleSync() {
   const prefPath = getSplashPrefPath();
-  if (!prefPath) return 'classic';
+  if (!prefPath) return normalizeSplashStyle('classic');
   try {
-    if (!fs.existsSync(prefPath)) return 'classic';
+    if (!fs.existsSync(prefPath)) return normalizeSplashStyle('classic');
     const raw = fs.readFileSync(prefPath, 'utf8');
     const json = JSON.parse(raw || '{}');
-    const style = String(json.preferredStyle || '').toLowerCase();
-    const validStyles = ['classic', 'hologram-hud', 'synthwave-outrun', 'terminal-minimalist'];
-    return validStyles.includes(style) ? style : 'classic';
-  } catch { 
-    return 'classic'; 
+    const rawStyle = String(json.preferredStyle || '').toLowerCase().trim();
+    const preferredStyle = normalizeSplashStyle(rawStyle);
+    if (rawStyle && rawStyle !== preferredStyle) {
+      try {
+        fs.writeFileSync(prefPath, JSON.stringify({ preferredStyle }, null, 2), 'utf8');
+      } catch {
+        /* noop */
+      }
+    }
+    return preferredStyle;
+  } catch {
+    return normalizeSplashStyle('classic');
   }
 }
 

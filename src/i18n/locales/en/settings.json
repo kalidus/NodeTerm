@@ -124,6 +124,66 @@
       }
     }
   },
+  "splashScreen": {
+    "title": "Splash Screen",
+    "description": "Customize the visual design of NodeTerm's startup splash",
+    "selectionTitle": "Style selection",
+    "savedTitle": "Saved",
+    "savedDetail": "The splash style has been updated and will apply on the next launch.",
+    "previewTitle": "Live preview",
+    "previewDesc": "Opens an interactive preview of the selected startup splash style.",
+    "previewButton": "Open preview",
+    "cardPreviewButton": "Preview",
+    "previewHint": "Preview — press Escape or Close to exit",
+    "closePreview": "Close",
+    "accentLabel": "Accent",
+    "styles": {
+      "classic": {
+        "name": "Classic",
+        "desc": "The classic blue-dark startup theme."
+      },
+      "vaultGate": {
+        "name": "Vault Gate",
+        "desc": "Centered blue card over a vault backdrop."
+      },
+      "terminal": {
+        "name": "Terminal",
+        "desc": "Minimal Matrix-green console with CLI ticker."
+      },
+      "premiumCard": {
+        "name": "Premium Card",
+        "desc": "Polished centered card over a dark mask."
+      },
+      "glassHud": {
+        "name": "Glass HUD",
+        "desc": "Cyan holographic HUD with tactical grid."
+      },
+      "synthwave": {
+        "name": "Synthwave",
+        "desc": "80s retro fuchsia and amber neon."
+      },
+      "aurora": {
+        "name": "Aurora",
+        "desc": "Soft cool gradients without aggressive neon."
+      },
+      "matrix": {
+        "name": "Matrix",
+        "desc": "Green digital rain and hacker-console boot."
+      },
+      "ember": {
+        "name": "Ember",
+        "desc": "Warm charcoal and copper startup mood."
+      },
+      "nord": {
+        "name": "Nord",
+        "desc": "Nordic slate and polar blue palette."
+      },
+      "midnight": {
+        "name": "Midnight",
+        "desc": "Deep indigo with a quiet, elegant finish."
+      }
+    }
+  },
   "quickPanel": {
     "themes": "Themes",
     "moreSettings": "More settings",

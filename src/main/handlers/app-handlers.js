@@ -142,19 +142,13 @@ function registerAppHandlers(dependencies) {
   // Handler para abrir la previsualización del splash screen en el navegador predeterminado
   ipcMain.handle('app:open-splash-preview', async (event, style) => {
     try {
-      // ✅ RESILIENCIA: Buscar primero en dist/ (empaquetado), luego en testing/ (desarrollo)
-      let previewPath = path.join(app.getAppPath(), 'dist', 'splash-preview.html');
-      if (!fs.existsSync(previewPath)) {
-        previewPath = path.join(app.getAppPath(), 'testing', 'splash-preview.html');
-      }
-      if (!fs.existsSync(previewPath)) {
-        previewPath = path.join(__dirname, '..', '..', '..', 'testing', 'splash-preview.html');
-      }
-      if (!fs.existsSync(previewPath)) {
-        return { success: false, error: 'Archivo de previsualización del splash no encontrado' };
-      }
-      const fileUrl = `file://${previewPath.replace(/\\/g, '/')}${style ? '#' + style : ''}`;
-      await shell.openExternal(fileUrl);
+      const { buildSplashHtml } = require('../utils/splash-html');
+      const { normalizeSplashStyle } = require('../utils/splash-styles');
+      const id = normalizeSplashStyle(style);
+      const html = buildSplashHtml(id, { preview: true });
+      const tmpPath = path.join(app.getPath('temp'), 'nodeterm-splash-preview.html');
+      fs.writeFileSync(tmpPath, html, 'utf8');
+      await shell.openExternal(`file://${tmpPath.replace(/\\/g, '/')}#${id}`);
       return { success: true };
     } catch (error) {
       console.error('❌ Error al abrir la previsualización del splash:', error);

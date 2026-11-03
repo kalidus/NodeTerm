@@ -181,7 +181,8 @@ contextBridge.exposeInMainWorld('electron', {
     get: () => ipcRenderer.invoke('theme:get'),
     save: (config) => ipcRenderer.invoke('theme:save', config),
     getSplashStyle: () => ipcRenderer.invoke('theme:get-splash-style'),
-    saveSplashStyle: (style) => ipcRenderer.invoke('theme:save-splash-style', style)
+    saveSplashStyle: (style) => ipcRenderer.invoke('theme:save-splash-style', style),
+    getSplashPreviewHtml: (style) => ipcRenderer.invoke('theme:get-splash-preview-html', style)
   },
   homeWallpaper: {
     import: () => ipcRenderer.invoke('home-wallpaper:import'),

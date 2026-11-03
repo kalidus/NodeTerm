@@ -124,6 +124,66 @@
       }
     }
   },
+  "splashScreen": {
+    "title": "Pantalla de Inicio (Splash Screen)",
+    "description": "Personaliza el diseño y estilo visual de la pantalla de arranque de NodeTerm",
+    "selectionTitle": "Selección de Estilo",
+    "savedTitle": "Guardado",
+    "savedDetail": "El estilo de la pantalla de inicio se ha actualizado y se aplicará en el próximo arranque.",
+    "previewTitle": "Previsualizar en Vivo",
+    "previewDesc": "Abre una vista previa interactiva del estilo de arranque seleccionado.",
+    "previewButton": "Ver Previsualización",
+    "cardPreviewButton": "Preview",
+    "previewHint": "Vista previa — Escape o Cerrar para salir",
+    "closePreview": "Cerrar",
+    "accentLabel": "Acento",
+    "styles": {
+      "classic": {
+        "name": "Classic",
+        "desc": "El tema clásico de arranque con tonos azulados oscuros."
+      },
+      "vaultGate": {
+        "name": "Vault Gate",
+        "desc": "Card centrada azul sobre fondo de bóveda."
+      },
+      "terminal": {
+        "name": "Terminal",
+        "desc": "Consola minimalista en verde Matrix con ticker CLI."
+      },
+      "premiumCard": {
+        "name": "Premium Card",
+        "desc": "Tarjeta pulida centrada sobre máscara oscura."
+      },
+      "glassHud": {
+        "name": "Glass HUD",
+        "desc": "HUD cian holográfico con rejilla táctica."
+      },
+      "synthwave": {
+        "name": "Synthwave",
+        "desc": "Retro 80s con fucsia y ámbar neón."
+      },
+      "aurora": {
+        "name": "Aurora",
+        "desc": "Gradientes fríos suaves, sin neón agresivo."
+      },
+      "matrix": {
+        "name": "Matrix",
+        "desc": "Lluvia digital verde y acceso tipo consola hacker."
+      },
+      "ember": {
+        "name": "Ember",
+        "desc": "Carbón y cobre cálido de arranque."
+      },
+      "nord": {
+        "name": "Nord",
+        "desc": "Paleta nórdica slate y azul polar."
+      },
+      "midnight": {
+        "name": "Midnight",
+        "desc": "Índigo profundo con toque elegante."
+      }
+    }
+  },
   "quickPanel": {
     "themes": "Temas",
     "moreSettings": "Más ajustes",
