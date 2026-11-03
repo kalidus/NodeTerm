@@ -1,5 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { getGroupTabIcon } from '../themes/group-tab-icons';
+
+const GROUPS_INLINE_STORAGE_KEY = 'nodeterm_groups_inline';
+
+const readGroupsInlinePreference = () => {
+  try {
+    return localStorage.getItem(GROUPS_INLINE_STORAGE_KEY) === '1';
+  } catch (_) {
+    return false;
+  }
+};
+
+const applyGroupsInlineAttribute = (enabled) => {
+  document.documentElement.setAttribute('data-groups-inline', enabled ? '1' : '0');
+};
 
 export const useTabRendering = ({
   // Estados de pestañas
@@ -37,9 +51,32 @@ export const useTabRendering = ({
     document.documentElement.getAttribute('data-tab-layout') || localStorage.getItem('nodeterm_tab_layout') || 'default'
   );
   const [dragOverGroupId, setDragOverGroupId] = useState(undefined);
+  const [groupsInline, setGroupsInline] = useState(readGroupsInlinePreference);
 
   const groupBarRef = useRef(null);
   const groupHeightSyncRef = useRef({ resizeObserver: null, mutationObserver: null, observed: null });
+  const applyGroupBarHeightRef = useRef(() => {});
+
+  useLayoutEffect(() => {
+    applyGroupsInlineAttribute(groupsInline);
+  }, [groupsInline]);
+
+  useEffect(() => {
+    const syncFromStorage = () => setGroupsInline(readGroupsInlinePreference());
+    const onStorage = (event) => {
+      if (event.key === GROUPS_INLINE_STORAGE_KEY) syncFromStorage();
+    };
+    const onSettingsUpdated = (event) => {
+      const keys = event?.detail?.keys;
+      if (!keys || keys.includes(GROUPS_INLINE_STORAGE_KEY)) syncFromStorage();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('settings-updated', onSettingsUpdated);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('settings-updated', onSettingsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     const handleGroupIconChange = () => setGroupIconVersion(v => v + 1);
@@ -57,12 +94,19 @@ export const useTabRendering = ({
 
   const syncGroupBarHeight = useCallback((groupBar) => {
     if (!groupBar) return false;
-    const isTermius = (document.documentElement.getAttribute('data-tab-layout') || currentTabLayout) === 'termius';
-    if (isTermius) {
+    const layout = document.documentElement.getAttribute('data-tab-layout') || currentTabLayout;
+    const isTermius = layout === 'termius';
+
+    const clearForcedHeight = () => {
       groupBar.style.removeProperty('--tab-bar-height');
       groupBar.style.removeProperty('height');
       groupBar.style.removeProperty('min-height');
       groupBar.style.removeProperty('max-height');
+    };
+
+    if (isTermius) {
+      clearForcedHeight();
+      groupBar.style.removeProperty('--group-chip-height');
       return true;
     }
 
@@ -71,16 +115,22 @@ export const useTabRendering = ({
       || document.querySelector('.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link');
     if (!tabLink) return false;
 
-    const applyHeight = () => {
-      if (document.documentElement.getAttribute('data-tab-layout') === 'termius') {
-        groupBar.style.removeProperty('--tab-bar-height');
-        groupBar.style.removeProperty('height');
-        groupBar.style.removeProperty('min-height');
-        groupBar.style.removeProperty('max-height');
+    applyGroupBarHeightRef.current = () => {
+      const liveLayout = document.documentElement.getAttribute('data-tab-layout') || 'default';
+      if (liveLayout === 'termius') {
+        clearForcedHeight();
+        groupBar.style.removeProperty('--group-chip-height');
         return;
       }
+      const liveInline = document.documentElement.getAttribute('data-groups-inline') === '1';
       const height = Math.round(tabLink.getBoundingClientRect().height);
       if (height <= 0) return;
+      if (liveInline && liveLayout !== 'vscode') {
+        clearForcedHeight();
+        groupBar.style.setProperty('--group-chip-height', `${height}px`);
+        return;
+      }
+      groupBar.style.removeProperty('--group-chip-height');
       groupBar.style.setProperty('--tab-bar-height', `${height}px`);
       groupBar.style.setProperty('height', `${height}px`, 'important');
       groupBar.style.setProperty('min-height', `${height}px`, 'important');
@@ -91,10 +141,10 @@ export const useTabRendering = ({
     if (syncState.observed !== tabLink) {
       if (syncState.resizeObserver) syncState.resizeObserver.disconnect();
       syncState.observed = tabLink;
-      syncState.resizeObserver = new ResizeObserver(applyHeight);
+      syncState.resizeObserver = new ResizeObserver(() => applyGroupBarHeightRef.current());
       syncState.resizeObserver.observe(tabLink);
     }
-    applyHeight();
+    applyGroupBarHeightRef.current();
     return true;
   }, [currentTabLayout]);
 
@@ -122,7 +172,19 @@ export const useTabRendering = ({
 
   useEffect(() => {
     if (groupBarRef.current) syncGroupBarHeight(groupBarRef.current);
-  }, [tabGroups.length, activeGroupId, syncGroupBarHeight]);
+  }, [tabGroups.length, activeGroupId, groupsInline, syncGroupBarHeight]);
+
+  const toggleGroupsInline = () => {
+    setGroupsInline((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(GROUPS_INLINE_STORAGE_KEY, next ? '1' : '0');
+      } catch (_) {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   /**
    * RENDERIZA LA BARRA DE GRUPOS — Segunda fila de tabs (estilo TabView).
@@ -269,6 +331,7 @@ export const useTabRendering = ({
         className="groups-tab-bar groups-pill-bar"
         style={{ WebkitAppRegion: isDraggable ? 'drag' : 'inherit' }}
       >
+        <div className="groups-tab-bar__track">
         {!isTermiusLayout && activeGroupId !== null && renderHomeGroupButton()}
 
         {tabGroups.map((group) => {
@@ -340,6 +403,29 @@ export const useTabRendering = ({
               <span className="termius-segment-divider termius-segment-divider--workspace" aria-hidden="true" />
             )}
           </>
+        )}
+        </div>
+
+        {!isTermiusLayout && (
+          <button
+            type="button"
+            className={`groups-inline-toggle${groupsInline ? ' groups-inline-toggle--active' : ''}`}
+            onClick={toggleGroupsInline}
+            aria-pressed={groupsInline}
+            aria-label={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
+            title={groupsInline ? 'Separar barra de grupos' : 'Integrar grupos en la barra de pestañas'}
+            style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="1" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" />
+              <rect x="7.35" y="6.7" width="1.3" height="2.6" rx="0.4" fill="currentColor" opacity="0.7" />
+              <rect x="9.8" y="6.15" width="5.2" height="3.7" rx="1" fill="currentColor" opacity="0.55" />
+            </svg>
+          </button>
+        )}
+
+        {groupsInline && !isTermiusLayout && (
+          <span className="groups-inline-divider" aria-hidden="true" />
         )}
       </div>
     );

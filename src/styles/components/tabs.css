@@ -778,15 +778,61 @@
   background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg));
   border-bottom: 1px solid var(--ui-tabgroup-border, var(--ui-tab-border, rgba(255, 255, 255, 0.07)));
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.groups-tab-bar__track {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  gap: inherit;
 }
 
-.groups-tab-bar::-webkit-scrollbar,
-.groups-pill-bar::-webkit-scrollbar {
+.groups-tab-bar__track::-webkit-scrollbar {
   display: none;
+}
+
+.groups-inline-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 2px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-tabgroup-text, var(--ui-tab-text, rgba(255, 255, 255, 0.55)));
+  cursor: pointer;
+}
+
+.groups-inline-toggle:hover,
+.groups-inline-toggle--active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ui-tab-active-text, #fff);
+}
+
+.groups-inline-divider {
+  display: inline-block;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 1px;
+  min-width: 1px;
+  height: 16px;
+  margin: 0 4px 0 2px;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
 }
 
 .group-tab-item,
@@ -2235,5 +2281,91 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
   background: rgba(255, 255, 255, 0.08) !important;
   border: none !important;
   color: #e2e8f0 !important;
+}
+
+/* Grupos en la misma línea que las pestañas (sin cambiar el estilo del layout activo) */
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .tabs-bar-shell {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  flex: 0 0 var(--tab-bar-height, 34px) !important;
+  height: var(--tab-bar-height, 34px) !important;
+  min-height: var(--tab-bar-height, 34px) !important;
+  max-height: var(--tab-bar-height, 34px) !important;
+  background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
+  border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
+  box-sizing: border-box !important;
+}
+
+:root[data-groups-inline="1"][data-tab-layout="vscode"] .tabs-bar-shell {
+  border-bottom: 0 !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .tabs-bar-shell .tabs-main-view-wrapper {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: stretch !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .tabs-bar-shell .main-tab-view {
+  flex: 1 1 auto !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .tabs-bar-shell .p-tabview-panels {
+  display: none !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .groups-tab-bar,
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .groups-pill-bar {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  max-width: 45% !important;
+  min-width: 0 !important;
+  align-self: stretch !important;
+  align-items: center !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]) .groups-tab-bar__track {
+  align-self: stretch !important;
+  height: 100% !important;
+}
+
+:root[data-groups-inline="1"][data-tab-layout="vscode"] .groups-tab-bar,
+:root[data-groups-inline="1"][data-tab-layout="vscode"] .groups-pill-bar {
+  align-items: stretch !important;
+}
+
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]):not([data-tab-layout="vscode"]) .group-tab-item,
+:root[data-groups-inline="1"]:not([data-tab-layout="termius"]):not([data-tab-layout="vscode"]) .group-pill {
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  width: auto !important;
+  max-width: 180px !important;
+  height: var(--group-chip-height, 25px) !important;
+  min-height: var(--group-chip-height, 25px) !important;
+  max-height: var(--group-chip-height, 25px) !important;
+}
+
+:root[data-groups-inline="1"][data-tab-layout="vscode"] .group-tab-item,
+:root[data-groups-inline="1"][data-tab-layout="vscode"] .group-pill {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 180px !important;
+}
+
+:root[data-groups-inline="1"][data-tab-layout="chrome"] .p-tabview .p-tabview-nav::after {
+  content: none !important;
 }
 

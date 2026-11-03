@@ -367,7 +367,7 @@ class SyncManager {
       'connectionDetailsPanelHeight', 'lock_home_button', 'nodeterm_fav_type',
       'audit_auto_recording', 'audit_recording_quality', 'audit_encrypt_recordings',
       'nodeterm_language', 'home_tab_icon', 'statusBarIconTheme', 'statusBarPollingInterval',
-      'nodeterm_interactive_icon', 'nodeterm_tab_theme', 'nodeterm_tab_layout',
+      'nodeterm_interactive_icon', 'nodeterm_tab_theme', 'nodeterm_tab_layout', 'nodeterm_groups_inline',
       'nodeterm_sync_config', 'nodeterm_connection_history', 'ai_clients_enabled', 'selectedMcpServers',
       'nodeterm_default_local_terminal', 'nodeterm_scrollback_lines'
     ];

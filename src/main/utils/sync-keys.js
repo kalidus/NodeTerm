@@ -34,6 +34,7 @@ const SYNC_KEYS = [
   'sessionActionIconTheme',
   'nodeterm_tab_theme',
   'nodeterm_tab_layout',
+  'nodeterm_groups_inline',
   'nodeterm_expanded_keys',
   'uiFont',
   'uiFontSize',
