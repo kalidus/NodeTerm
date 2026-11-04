@@ -245,13 +245,11 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   // FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
   // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
   app.commandLine.appendSwitch('use-angle', 'gl');
-  // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
-  app.commandLine.appendSwitch('disable-vulkan');
+  // Desactivar Vulkan en Linux bajo Wayland/X11 (incompatible con wayland surface factory en Chromium)
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
-  // Alinear con Windows: rasterización HW / zero-copy (sin DirectComposition ni Vulkan)
-  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  // Rasterización HW / zero-copy con OpenGL de escritorio sin saltar blocklist de Vulkan
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
@@ -260,8 +258,8 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
-  // Wayland nativo opcional (mejor input/tearing en setups NVIDIA recientes)
-  const ozoneHint = (process.env.NODETERM_OZONE_HINT || '').trim().toLowerCase();
+  // Wayland nativo: por defecto 'auto' para usar Wayland cuando esté disponible en el entorno
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'auto').trim().toLowerCase();
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }
