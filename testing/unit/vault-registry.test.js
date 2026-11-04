@@ -62,6 +62,19 @@ describe('vault-registry', () => {
   it('rejects default id', () => {
     assert.throws(() => registry.createVault({ id: 'default', name: 'X' }), /inválido|Ya existe/);
   });
+
+  it('renames default vault display name', () => {
+    assert.strictEqual(registry.getDefaultVaultName(), 'Principal');
+    const renamed = registry.renameVault('default', 'Casa');
+    assert.strictEqual(renamed.id, 'default');
+    assert.strictEqual(renamed.name, 'Casa');
+    assert.strictEqual(registry.getDefaultVaultName(), 'Casa');
+
+    const regPath = path.join(tmpRoot, 'vaults.json');
+    const raw = JSON.parse(fs.readFileSync(regPath, 'utf8'));
+    assert.strictEqual(raw.defaultVaultName, 'Casa');
+    assert.deepStrictEqual(raw.vaults, []);
+  });
 });
 
 describe('vault-sidecar extras', () => {

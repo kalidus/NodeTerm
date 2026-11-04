@@ -18,19 +18,27 @@ function getVaultsRegistryPath() {
   return path.join(getNodeTermDataDir(), 'vaults.json');
 }
 
+const DEFAULT_VAULT_DISPLAY_NAME = 'Principal';
+
+function normalizeDefaultVaultName(raw) {
+  const name = String(raw || '').trim();
+  return name || DEFAULT_VAULT_DISPLAY_NAME;
+}
+
 function readRegistry() {
   const filePath = getVaultsRegistryPath();
   if (!fs.existsSync(filePath)) {
-    return { version: 1, vaults: [] };
+    return { version: 1, defaultVaultName: DEFAULT_VAULT_DISPLAY_NAME, vaults: [] };
   }
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     if (!parsed || typeof parsed !== 'object') {
-      return { version: 1, vaults: [] };
+      return { version: 1, defaultVaultName: DEFAULT_VAULT_DISPLAY_NAME, vaults: [] };
     }
     const vaults = Array.isArray(parsed.vaults) ? parsed.vaults : [];
     return {
       version: typeof parsed.version === 'number' ? parsed.version : 1,
+      defaultVaultName: normalizeDefaultVaultName(parsed.defaultVaultName),
       vaults: vaults
         .filter((v) => v && v.id && v.id !== DEFAULT_VAULT_ID)
         .map((v) => ({
@@ -43,7 +51,7 @@ function readRegistry() {
     };
   } catch (e) {
     console.warn('[VaultRegistry] Error leyendo vaults.json:', e.message);
-    return { version: 1, vaults: [] };
+    return { version: 1, defaultVaultName: DEFAULT_VAULT_DISPLAY_NAME, vaults: [] };
   }
 }
 
@@ -55,6 +63,7 @@ function writeRegistry(registry) {
   }
   const payload = {
     version: 1,
+    defaultVaultName: normalizeDefaultVaultName(registry.defaultVaultName),
     vaults: (registry.vaults || [])
       .filter((v) => v && v.id && v.id !== DEFAULT_VAULT_ID)
       .map((v, index) => ({
@@ -69,6 +78,10 @@ function writeRegistry(registry) {
   fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), { encoding: 'utf8', mode: 0o600 });
   fs.renameSync(tmp, filePath);
   return payload;
+}
+
+function getDefaultVaultName() {
+  return normalizeDefaultVaultName(readRegistry().defaultVaultName);
 }
 
 function listVaults() {
@@ -117,12 +130,26 @@ function createVault({ id, name, icon } = {}) {
 }
 
 function renameVault(vaultId, name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) throw new Error('Nombre vacío');
+
+  if (!vaultId || vaultId === DEFAULT_VAULT_ID) {
+    const reg = readRegistry();
+    reg.defaultVaultName = normalizeDefaultVaultName(trimmed);
+    writeRegistry(reg);
+    return {
+      id: DEFAULT_VAULT_ID,
+      name: reg.defaultVaultName,
+      icon: 'pi pi-home'
+    };
+  }
+
   const id = sanitizeVaultId(vaultId);
   if (!id) throw new Error('vaultId inválido');
   const reg = readRegistry();
   const entry = reg.vaults.find((v) => v.id === id);
   if (!entry) throw new Error('Vault no encontrado');
-  entry.name = String(name || '').trim() || entry.name;
+  entry.name = trimmed;
   writeRegistry(reg);
   return entry;
 }
@@ -183,11 +210,13 @@ function backupBeforeFirstExtraVault() {
 module.exports = {
   EXPERIMENTAL_FLAG_KEY,
   DEFAULT_VAULT_ID,
+  DEFAULT_VAULT_DISPLAY_NAME,
   getVaultsRegistryPath,
   readRegistry,
   writeRegistry,
   listVaults,
   getVault,
+  getDefaultVaultName,
   sanitizeVaultId,
   createVault,
   renameVault,

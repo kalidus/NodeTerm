@@ -6,6 +6,7 @@ const { ipcMain, BrowserWindow } = require('electron');
 const {
   listVaults,
   getVault,
+  getDefaultVaultName,
   createVault,
   renameVault,
   deleteVault,
@@ -37,9 +38,18 @@ function notifyVaultsChanged() {
 function registerVaultHandlers() {
   safeHandle('vaults:list', async () => {
     try {
-      return { success: true, vaults: listVaults() };
+      return {
+        success: true,
+        vaults: listVaults(),
+        defaultVaultName: getDefaultVaultName()
+      };
     } catch (e) {
-      return { success: false, error: e.message, vaults: [] };
+      return {
+        success: false,
+        error: e.message,
+        vaults: [],
+        defaultVaultName: 'Principal'
+      };
     }
   });
 

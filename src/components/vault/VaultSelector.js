@@ -5,7 +5,10 @@ import {
   DEFAULT_VAULT_ID,
   getVisibleConnectionVaultIds
 } from '../../utils/activeConnectionVault';
-import { listRegisteredExtraVaults } from '../../utils/extraConnectionVaults';
+import {
+  getDefaultVaultDisplayName,
+  listRegisteredExtraVaults
+} from '../../utils/extraConnectionVaults';
 import vaultKeyring from '../../services/VaultKeyring';
 
 /**
@@ -21,20 +24,30 @@ const VaultSelector = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [vaults, setVaults] = useState([]);
+  const [defaultVaultName, setDefaultVaultName] = useState('Principal');
   const [enabled, setEnabled] = useState(() => isMultiVaultEnabled());
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [renameId, setRenameId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renaming, setRenaming] = useState(false);
   const btnRef = useRef(null);
   const menuRef = useRef(null);
+  const renameInputRef = useRef(null);
 
   const refresh = useCallback(async () => {
     const on = isMultiVaultEnabled();
     setEnabled(on);
     if (!on) {
       setVaults([]);
+      setDefaultVaultName('Principal');
       return;
     }
-    const extras = await listRegisteredExtraVaults();
+    const [extras, mainName] = await Promise.all([
+      listRegisteredExtraVaults(),
+      getDefaultVaultDisplayName()
+    ]);
     setVaults(extras);
+    setDefaultVaultName(mainName);
   }, []);
 
   useEffect(() => {
@@ -58,9 +71,16 @@ const VaultSelector = ({
       const t = e.target;
       if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
       setOpen(false);
+      setRenameId(null);
     };
     const onKey = (e) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        if (renameId) {
+          setRenameId(null);
+          return;
+        }
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', onDoc, true);
     document.addEventListener('keydown', onKey);
@@ -68,7 +88,14 @@ const VaultSelector = ({
       document.removeEventListener('mousedown', onDoc, true);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, renameId]);
+
+  useEffect(() => {
+    if (renameId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renameId]);
 
   if (!enabled) return null;
 
@@ -81,7 +108,7 @@ const VaultSelector = ({
     if (visible.length === 0) return 'Ninguno';
     if (visible.length === 1) {
       const id = visible[0];
-      if (id === DEFAULT_VAULT_ID) return 'Principal';
+      if (id === DEFAULT_VAULT_ID) return defaultVaultName;
       const meta = vaults.find((v) => v.id === id);
       return meta?.name || id;
     }
@@ -101,17 +128,19 @@ const VaultSelector = ({
     }
     if (open) {
       setOpen(false);
+      setRenameId(null);
       return;
     }
     const rect = btnRef.current.getBoundingClientRect();
     setMenuPos({
       top: rect.bottom + 6,
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - 260))
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 280))
     });
     setOpen(true);
   };
 
   const handleToggle = (vaultId, currentlyChecked) => {
+    if (renameId) return;
     const nextChecked = !currentlyChecked;
     if (
       nextChecked &&
@@ -133,22 +162,204 @@ const VaultSelector = ({
     onToggleVault?.(vaultId, nextChecked);
   };
 
+  const handleLock = (e, vaultId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (vaultId === DEFAULT_VAULT_ID) return;
+    window.dispatchEvent(
+      new CustomEvent('request-lock-extra-vault', {
+        detail: { vaultId }
+      })
+    );
+  };
+
+  const handleUnlock = (e, vaultId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const meta = vaults.find((v) => v.id === vaultId);
+    onRequestUnlock?.({
+      id: vaultId,
+      name: meta?.name || vaultId,
+      icon: meta?.icon
+    });
+  };
+
+  const startRename = (e, vaultId, currentName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRenameId(vaultId);
+    setRenameValue(currentName);
+  };
+
+  const cancelRename = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    setRenameId(null);
+    setRenameValue('');
+  };
+
+  const commitRename = async (e, vaultId) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const next = String(renameValue || '').trim();
+    if (!next || renaming) return;
+    setRenaming(true);
+    try {
+      const res = await window.electron?.vaults?.rename?.({
+        vaultId,
+        name: next
+      });
+      if (!res?.success) throw new Error(res?.error || 'Error');
+      setRenameId(null);
+      setRenameValue('');
+      await refresh();
+      window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
+    } catch (_) {
+      /* toast no disponible aquí; el menú se mantiene abierto para reintentar */
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const noDrag = {
     WebkitAppRegion: 'no-drag',
     appRegion: 'no-drag'
   };
 
-  const renderCheckRow = (vaultId, title, iconClass, isLocked) => {
+  const iconBtnStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 22,
+    height: 22,
+    padding: 0,
+    border: 'none',
+    borderRadius: 4,
+    background: 'transparent',
+    color: 'inherit',
+    opacity: 0.7,
+    cursor: 'pointer',
+    flexShrink: 0
+  };
+
+  const renderCheckRow = (vaultId, title, iconClass, isLocked, canLock) => {
     const checked = visibleSet.has(vaultId);
+    const isEditing = renameId === vaultId;
+
     return (
-      <button
+      <div
         key={vaultId}
-        type="button"
         role="menuitemcheckbox"
         aria-checked={checked}
-        onClick={() => handleToggle(vaultId, checked)}
-        style={itemStyle(checked)}
+        onClick={() => {
+          if (!isEditing) handleToggle(vaultId, checked);
+        }}
+        style={{
+          ...itemStyle(checked && !isEditing),
+          cursor: isEditing ? 'default' : 'pointer'
+        }}
       >
+        <i className={iconClass} style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }} />
+
+        {isEditing ? (
+          <input
+            ref={renameInputRef}
+            value={renameValue}
+            disabled={renaming}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') commitRename(e, vaultId);
+              if (e.key === 'Escape') cancelRename(e);
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 22,
+              padding: '0 6px',
+              borderRadius: 4,
+              border: '1px solid var(--ui-context-border, rgba(255,255,255,0.2))',
+              background: 'var(--ui-dialog-bg, var(--ui-context-bg, #1e1e2e))',
+              color: 'inherit',
+              fontSize: 12,
+              outline: 'none'
+            }}
+          />
+        ) : (
+          <span
+            style={{
+              flex: 1,
+              textAlign: 'left',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {title}
+          </span>
+        )}
+
+        {isEditing ? (
+          <>
+            <button
+              type="button"
+              title="Guardar"
+              aria-label="Guardar nombre"
+              disabled={renaming || !String(renameValue || '').trim()}
+              onClick={(e) => commitRename(e, vaultId)}
+              style={iconBtnStyle}
+            >
+              <i className="pi pi-check" style={{ fontSize: 11 }} />
+            </button>
+            <button
+              type="button"
+              title="Cancelar"
+              aria-label="Cancelar edición"
+              disabled={renaming}
+              onClick={cancelRename}
+              style={iconBtnStyle}
+            >
+              <i className="pi pi-times" style={{ fontSize: 11 }} />
+            </button>
+          </>
+        ) : (
+          <>
+            {canLock ? (
+              isLocked ? (
+                <button
+                  type="button"
+                  title="Desbloquear"
+                  aria-label={`Desbloquear ${title}`}
+                  onClick={(e) => handleUnlock(e, vaultId)}
+                  style={iconBtnStyle}
+                >
+                  <i className="pi pi-lock" style={{ fontSize: 11 }} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  title="Bloquear"
+                  aria-label={`Bloquear ${title}`}
+                  onClick={(e) => handleLock(e, vaultId)}
+                  style={iconBtnStyle}
+                >
+                  <i className="pi pi-unlock" style={{ fontSize: 11 }} />
+                </button>
+              )
+            ) : null}
+            <button
+              type="button"
+              title="Renombrar"
+              aria-label={`Renombrar ${title}`}
+              onClick={(e) => startRename(e, vaultId, title)}
+              style={iconBtnStyle}
+            >
+              <i className="pi pi-pencil" style={{ fontSize: 11 }} />
+            </button>
+          </>
+        )}
+
         <span
           aria-hidden
           style={{
@@ -157,14 +368,15 @@ const VaultSelector = ({
             borderRadius: 3,
             border: checked
               ? '1px solid transparent'
-              : '1px solid rgba(255,255,255,0.35)',
+              : '1px solid color-mix(in srgb, var(--ui-context-text, #cdd6f4) 35%, transparent)',
             background: checked
               ? 'var(--primary-color, #89b4fa)'
               : 'transparent',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0
+            flexShrink: 0,
+            marginLeft: 2
           }}
         >
           {checked ? (
@@ -177,12 +389,7 @@ const VaultSelector = ({
             />
           ) : null}
         </span>
-        <i className={iconClass} style={{ fontSize: 12, opacity: 0.9 }} />
-        <span style={{ flex: 1, textAlign: 'left' }}>{title}</span>
-        {isLocked ? (
-          <span style={{ fontSize: 10, opacity: 0.65 }}>Bloqueado</span>
-        ) : null}
-      </button>
+      </div>
     );
   };
 
@@ -243,15 +450,18 @@ const VaultSelector = ({
               position: 'fixed',
               top: menuPos.top,
               left: menuPos.left,
-              minWidth: 240,
-              maxWidth: 300,
-              background: 'var(--surface-overlay, #1e1e2e)',
-              border: '1px solid var(--surface-border, #45475a)',
+              minWidth: 260,
+              maxWidth: 320,
+              background:
+                'var(--ui-context-bg, var(--ui-dialog-bg, #1e1e2e))',
+              border:
+                '1px solid var(--ui-context-border, rgba(255,255,255,0.14))',
               borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              boxShadow:
+                '0 8px 24px var(--ui-context-shadow, rgba(0,0,0,0.45))',
               zIndex: 100000,
               padding: 4,
-              color: 'var(--text-color, #cdd6f4)',
+              color: 'var(--ui-context-text, #cdd6f4)',
               ...noDrag
             }}
           >
@@ -267,22 +477,29 @@ const VaultSelector = ({
               Visibles en el árbol
             </div>
 
-            {renderCheckRow(DEFAULT_VAULT_ID, 'Principal', 'pi pi-home', false)}
+            {renderCheckRow(
+              DEFAULT_VAULT_ID,
+              defaultVaultName,
+              'pi pi-home',
+              false,
+              false
+            )}
 
             {vaults.map((v) => {
               const isLocked = !vaultKeyring.isUnlocked(v.id);
               return renderCheckRow(
                 v.id,
                 v.name,
-                isLocked ? 'pi pi-lock' : 'pi pi-unlock',
-                isLocked
+                isLocked ? 'pi pi-lock' : 'pi pi-box',
+                isLocked,
+                true
               );
             })}
 
             <div
               style={{
                 height: 1,
-                background: 'var(--surface-border)',
+                background: 'var(--ui-context-border, rgba(255,255,255,0.14))',
                 margin: '4px 0'
               }}
             />
@@ -290,6 +507,7 @@ const VaultSelector = ({
               type="button"
               onClick={() => {
                 setOpen(false);
+                setRenameId(null);
                 onRequestCreate?.();
               }}
               style={itemStyle(false)}
@@ -301,6 +519,7 @@ const VaultSelector = ({
               type="button"
               onClick={() => {
                 setOpen(false);
+                setRenameId(null);
                 window.dispatchEvent(
                   new CustomEvent('open-settings-tab', {
                     detail: { tab: 'security', subTab: 'vaults' }
@@ -328,10 +547,13 @@ function itemStyle(selected) {
     padding: '8px 10px',
     border: 'none',
     borderRadius: 6,
-    background: selected ? 'rgba(137, 180, 250, 0.12)' : 'transparent',
+    background: selected
+      ? 'color-mix(in srgb, var(--primary-color, #89b4fa) 18%, transparent)'
+      : 'transparent',
     color: 'inherit',
     cursor: 'pointer',
-    fontSize: 12
+    fontSize: 12,
+    boxSizing: 'border-box'
   };
 }
 

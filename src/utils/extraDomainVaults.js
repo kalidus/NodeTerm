@@ -16,7 +16,11 @@ import {
   getActiveConnectionVaultId,
   getVisibleConnectionVaultIds
 } from './activeConnectionVault';
-import { listRegisteredExtraVaults, stripVaultRootNodes } from './extraConnectionVaults';
+import {
+  getDefaultVaultDisplayName,
+  listRegisteredExtraVaults,
+  stripVaultRootNodes
+} from './extraConnectionVaults';
 
 async function readEncryptedBlob(storageKey) {
   let blob = localStorage.getItem(storageKey);
@@ -117,7 +121,10 @@ export async function loadVisibleDomainTrees(
       ? visibleIds
       : getVisibleConnectionVaultIds();
 
-  const registry = await listRegisteredExtraVaults();
+  const [registry, defaultVaultName] = await Promise.all([
+    listRegisteredExtraVaults(),
+    getDefaultVaultDisplayName()
+  ]);
   const metaById = new Map(registry.map((v) => [v.id, v]));
   const vaultPayloads = [];
   const lockedVaultIds = [];
@@ -134,7 +141,7 @@ export async function loadVisibleDomainTrees(
       }
       vaultPayloads.push({
         vaultId: DEFAULT_VAULT_ID,
-        title: 'Principal',
+        title: defaultVaultName,
         icon: 'pi pi-home',
         locked: false,
         nodes: stripVaultRootNodes(mainNodes)

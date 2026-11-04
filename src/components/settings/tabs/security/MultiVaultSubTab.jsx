@@ -3,6 +3,7 @@ import { Button } from 'primereact/button';
 import { Checkbox } from 'primereact/checkbox';
 import { InputText } from 'primereact/inputtext';
 import { isMultiVaultEnabled, setMultiVaultEnabled } from '../../../../utils/multiVaultFlag';
+import { DEFAULT_VAULT_ID } from '../../../../utils/activeConnectionVault';
 import vaultKeyring from '../../../../services/VaultKeyring';
 import { appConfirm } from '../../../ui/AppConfirm';
 import CreateExtraVaultDialog from '../../../vault/CreateExtraVaultDialog';
@@ -10,6 +11,7 @@ import CreateExtraVaultDialog from '../../../vault/CreateExtraVaultDialog';
 const MultiVaultSubTab = ({ showToast }) => {
   const [enabled, setEnabled] = useState(() => isMultiVaultEnabled());
   const [vaults, setVaults] = useState([]);
+  const [defaultVaultName, setDefaultVaultName] = useState('Principal');
   const [createVisible, setCreateVisible] = useState(false);
   const [renameId, setRenameId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
@@ -18,13 +20,18 @@ const MultiVaultSubTab = ({ showToast }) => {
   const refresh = useCallback(async () => {
     if (!window.electron?.vaults?.list) {
       setVaults([]);
+      setDefaultVaultName('Principal');
       return;
     }
     try {
       const res = await window.electron.vaults.list();
       setVaults(res?.vaults || []);
+      setDefaultVaultName(
+        String(res?.defaultVaultName || '').trim() || 'Principal'
+      );
     } catch (_) {
       setVaults([]);
+      setDefaultVaultName('Principal');
     }
   }, []);
 
@@ -110,6 +117,42 @@ const MultiVaultSubTab = ({ showToast }) => {
     }
   };
 
+  const renderRenameControls = (vault) => (
+    <div className="flex gap-1">
+      {renameId === vault.id ? (
+        <Button
+          icon="pi pi-check"
+          className="p-button-rounded p-button-text"
+          onClick={() => handleRename(vault)}
+          disabled={loading}
+        />
+      ) : (
+        <Button
+          icon="pi pi-pencil"
+          className="p-button-rounded p-button-text"
+          onClick={() => {
+            setRenameId(vault.id);
+            setRenameValue(vault.name);
+          }}
+        />
+      )}
+      {vault.id !== DEFAULT_VAULT_ID ? (
+        <Button
+          icon="pi pi-trash"
+          className="p-button-rounded p-button-text p-button-danger"
+          onClick={() => handleDelete(vault)}
+          disabled={loading}
+        />
+      ) : null}
+    </div>
+  );
+
+  const principalVault = {
+    id: DEFAULT_VAULT_ID,
+    name: defaultVaultName,
+    icon: 'pi pi-home'
+  };
+
   return (
     <div className="flex flex-column gap-3">
       <div className="flex align-items-start gap-2">
@@ -124,13 +167,46 @@ const MultiVaultSubTab = ({ showToast }) => {
           </label>
           <p className="m-0 mt-1 text-sm" style={{ opacity: 0.8 }}>
             Permite crear vaults adicionales con clave maestra propia para conexiones, passwords y notas.
-            El vault principal no cambia. Función experimental: haz copia de seguridad antes de usarla.
+            Función experimental: haz copia de seguridad antes de usarla.
           </p>
         </div>
       </div>
 
       {enabled && (
         <>
+          <div>
+            <h4 className="m-0 mb-2">Vault principal</h4>
+            <ul className="list-none p-0 m-0 flex flex-column gap-2">
+              <li
+                className="flex align-items-center justify-content-between gap-2 p-2 border-round"
+                style={{ border: '1px solid var(--surface-border)' }}
+              >
+                <div className="flex align-items-center gap-2 flex-1">
+                  <i className="pi pi-home" />
+                  {renameId === DEFAULT_VAULT_ID ? (
+                    <InputText
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="w-full"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRename(principalVault);
+                        if (e.key === 'Escape') setRenameId(null);
+                      }}
+                    />
+                  ) : (
+                    <div>
+                      <div className="font-medium">{defaultVaultName}</div>
+                      <small style={{ opacity: 0.7 }}>
+                        Usa la clave maestra de la app · {DEFAULT_VAULT_ID}
+                      </small>
+                    </div>
+                  )}
+                </div>
+                {renderRenameControls(principalVault)}
+              </li>
+            </ul>
+          </div>
+
           <div className="flex justify-content-between align-items-center">
             <h4 className="m-0">Vaults extra</h4>
             <Button
@@ -175,31 +251,7 @@ const MultiVaultSubTab = ({ showToast }) => {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-1">
-                    {renameId === vault.id ? (
-                      <Button
-                        icon="pi pi-check"
-                        className="p-button-rounded p-button-text"
-                        onClick={() => handleRename(vault)}
-                        disabled={loading}
-                      />
-                    ) : (
-                      <Button
-                        icon="pi pi-pencil"
-                        className="p-button-rounded p-button-text"
-                        onClick={() => {
-                          setRenameId(vault.id);
-                          setRenameValue(vault.name);
-                        }}
-                      />
-                    )}
-                    <Button
-                      icon="pi pi-trash"
-                      className="p-button-rounded p-button-text p-button-danger"
-                      onClick={() => handleDelete(vault)}
-                      disabled={loading}
-                    />
-                  </div>
+                  {renderRenameControls(vault)}
                 </li>
               ))}
             </ul>

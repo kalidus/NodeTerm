@@ -29,6 +29,18 @@ export async function listRegisteredExtraVaults() {
   }
 }
 
+/** Nombre visible del vault principal (persistido en vaults.json). */
+export async function getDefaultVaultDisplayName() {
+  if (!window.electron?.vaults?.list) return 'Principal';
+  try {
+    const res = await window.electron.vaults.list();
+    const name = String(res?.defaultVaultName || '').trim();
+    return name || 'Principal';
+  } catch (_) {
+    return 'Principal';
+  }
+}
+
 /** Elimina nodos vault-root residuales de un árbol (vista plana / migración). */
 export function stripVaultRootNodes(nodes) {
   if (!Array.isArray(nodes)) return [];
@@ -141,7 +153,10 @@ export async function loadVisibleConnectionTrees(
     ? visibleIds
     : getVisibleConnectionVaultIds();
 
-  const registry = await listRegisteredExtraVaults();
+  const [registry, defaultVaultName] = await Promise.all([
+    listRegisteredExtraVaults(),
+    getDefaultVaultDisplayName()
+  ]);
   const metaById = new Map(registry.map((v) => [v.id, v]));
 
   const vaultPayloads = [];
@@ -159,7 +174,7 @@ export async function loadVisibleConnectionTrees(
       }
       vaultPayloads.push({
         vaultId: DEFAULT_VAULT_ID,
-        title: 'Principal',
+        title: defaultVaultName,
         icon: 'pi pi-home',
         locked: false,
         nodes: stripVaultRootNodes(mainNodes)
