@@ -90,6 +90,29 @@ function createH264GpuPresenter(opts) {
     }
   };
 
+  const directPresent = (frame, regions) => {
+    const ctx = get2dContext();
+    if (!ctx) {
+      closeFrame(frame);
+      return;
+    }
+    if (!reported) {
+      reported = true;
+      if (isRdpDebugEnabled()) {
+        console.warn('[IronRDP WebCodecs] presenta por direct-gpu (drawImage)');
+      }
+    }
+    ctx.imageSmoothingEnabled = false;
+    for (const region of regions) {
+      ctx.drawImage(
+        frame,
+        region.sx, region.sy, region.sw, region.sh,
+        region.dx, region.dy, region.sw, region.sh
+      );
+    }
+    closeFrame(frame);
+  };
+
   const copyPresent = async (frame, regions) => {
     const ctx = get2dContext();
     try {
@@ -155,6 +178,22 @@ function createH264GpuPresenter(opts) {
       const job = latest;
       latest = null;
       void startGpuJob(job.frame, job.regions, job.resolve);
+      return;
+    }
+    if (mode === 'direct') {
+      const job = latest;
+      latest = null;
+      try {
+        directPresent(job.frame, job.regions);
+        if (typeof job.resolve === 'function') job.resolve();
+      } catch (err) {
+        if (isRdpDebugEnabled()) {
+          console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+        }
+        mode = 'copy';
+        copyBusy = true;
+        void runCopy(job.frame, job.regions, job.resolve);
+      }
       return;
     }
     if (copyBusy) return;
@@ -268,6 +307,18 @@ function createH264GpuPresenter(opts) {
     }
   };
 
+  const getForcedMode = () => {
+    try {
+      if (typeof window !== 'undefined' && window.__NODETERM_RDP_PRESENT_MODE__) {
+        return window.__NODETERM_RDP_PRESENT_MODE__;
+      }
+      if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem('NODETERM_RDP_PRESENT_MODE') || '';
+      }
+    } catch (_) {}
+    return '';
+  };
+
   const kick = (frame, regions) => new Promise((resolve) => {
     if (mode === 'webgpu' && gpu) {
       if (slotsBusyCount() >= 2 || !acquireSlot()) {
@@ -279,6 +330,28 @@ function createH264GpuPresenter(opts) {
         return;
       }
       void startGpuJob(frame, regions, resolve);
+      return;
+    }
+    if (mode === 'direct') {
+      try {
+        directPresent(frame, regions);
+        resolve();
+      } catch (err) {
+        if (isRdpDebugEnabled()) {
+          console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+        }
+        mode = 'copy';
+        if (copyBusy) {
+          if (latest) {
+            closeFrame(latest.frame);
+            if (typeof latest.resolve === 'function') latest.resolve();
+          }
+          latest = { frame, regions, resolve };
+          return;
+        }
+        copyBusy = true;
+        void runCopy(frame, regions, resolve);
+      }
       return;
     }
     if (copyBusy) {
@@ -295,6 +368,12 @@ function createH264GpuPresenter(opts) {
 
   const init = async () => {
     const gen = generation;
+    const forced = getForcedMode();
+    if (forced === 'copy' || forced === 'direct') {
+      mode = forced;
+      drainLatest();
+      return;
+    }
     try {
       const nav = typeof navigator === 'undefined' ? null : navigator;
       if (!nav?.gpu || typeof OffscreenCanvas !== 'function') throw new Error('sin WebGPU');
@@ -309,7 +388,8 @@ function createH264GpuPresenter(opts) {
       device.lost.then(() => {
         if (gpu?.device !== device) return;
         gpu = null;
-        mode = 'copy';
+        const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
+        mode = isWindows ? 'copy' : 'direct';
       });
       const module = device.createShaderModule({ code: SHADER });
       const pipeline = device.createRenderPipeline({
@@ -333,7 +413,11 @@ function createH264GpuPresenter(opts) {
     } catch (_) {
       if (gen !== generation) return;
       gpu = null;
-      mode = 'copy';
+      // En plataformas sin WebGPU (o en Linux donde Vulkan se desactiva para estabilidad de Wayland/ANGLE),
+      // usamos presentación directa por GPU mediante ctx.drawImage(VideoFrame) que en Linux/OpenGL es zero-copy.
+      // En Windows ese blit crasheaba el driver D3D11 (exit 34), por lo que en win32 solo caemos a copy.
+      const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
+      mode = isWindows ? 'copy' : 'direct';
     }
     if (gen !== generation) return;
     drainLatest();

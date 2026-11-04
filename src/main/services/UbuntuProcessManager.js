@@ -70,8 +70,8 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       }
       args = []; // Ubuntu funciona mejor sin argumentos
     } else {
-      // For non-Windows platforms, use bash directly
-      shell = '/bin/bash';
+      // For non-Windows platforms, respetar el shell configurado por el usuario en Linux ($SHELL)
+      shell = process.env.SHELL || '/bin/bash';
       args = ['--login'];
     }
 

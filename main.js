@@ -201,7 +201,7 @@ function resolveV8MaxOldSpaceMb() {
   let totalBytes = 0;
   try {
     totalBytes = require('os').totalmem();
-  } catch (_) {}
+  } catch (_) { }
   const totalGb = totalBytes > 0 ? totalBytes / (1024 * 1024 * 1024) : 8;
   return Math.max(512, Math.min(3072, Math.round(totalGb * 128)));
 }
@@ -225,7 +225,7 @@ if (app) {
   try {
     const totalGb = (require('os').totalmem() / (1024 * 1024 * 1024)).toFixed(1);
     console.log(`[MEM] V8 max-old-space-size=${heapMb} MB (RAM ${totalGb} GB)`);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function getTotalRamGb() {
@@ -245,23 +245,24 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   // FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
   // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
   app.commandLine.appendSwitch('use-angle', 'gl');
-  // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
-  app.commandLine.appendSwitch('disable-vulkan');
+  // Desactivar Vulkan en Linux bajo Wayland/X11 (incompatible con wayland surface factory en Chromium)
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
-  // Alinear con Windows: rasterización HW / zero-copy (sin DirectComposition ni Vulkan)
+  // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  // Rasterización HW / zero-copy con OpenGL de escritorio sin saltar blocklist de Vulkan
+  app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,WaylandDrmClientBuffer');
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
-  // Wayland nativo opcional (mejor input/tearing en setups NVIDIA recientes)
-  const ozoneHint = (process.env.NODETERM_OZONE_HINT || '').trim().toLowerCase();
+  // Wayland nativo: por defecto 'auto' para usar Wayland cuando esté disponible en el entorno
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'auto').trim().toLowerCase();
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }
@@ -390,11 +391,11 @@ try {
       if (!isAlive) {
         try {
           fs.rmSync(path.join(tempRoot, entry), { recursive: true, force: true });
-        } catch (_) {}
+        } catch (_) { }
       }
     }
   }
-} catch (_) {}
+} catch (_) { }
 // ============================================================================
 
 // 🚀 OPTIMIZACIÓN: Docker con lazy loading (no se usa hasta listar contenedores)
@@ -1266,7 +1267,7 @@ function createWindow() {
     if (navigationUrl.startsWith('http://') || navigationUrl.startsWith('https://')) {
       try {
         mainWindow.webContents.send('system:open-browser-popup', { url: navigationUrl });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -1284,7 +1285,7 @@ function createWindow() {
 
   // Cierre de la ventana principal
   mainWindow.on('close', () => {
-    try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) {}
+    try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) { }
     isAppQuitting.value = true;
     app.quit();
   });
@@ -1293,7 +1294,7 @@ function createWindow() {
   const scheduleSaveBounds = () => {
     if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
     saveBoundsTimer = setTimeout(() => {
-      try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) {}
+      try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) { }
     }, 400);
   };
   mainWindow.on('resize', scheduleSaveBounds);
@@ -1304,11 +1305,11 @@ function createWindow() {
     try {
       const rdp = require('./src/main/services/RdpNativeBridgeService');
       if (rdp.activeConnections && rdp.activeConnections.size > 0) return true;
-    } catch (_) {}
+    } catch (_) { }
     try {
       const vnc = require('./src/main/services/VncNativeBridgeService');
       if (vnc.activeConnections && vnc.activeConnections.size > 0) return true;
-    } catch (_) {}
+    } catch (_) { }
     return false;
   };
 
@@ -1317,7 +1318,7 @@ function createWindow() {
     const shouldThrottle = mainWindow.isMinimized() && !hasActiveGraphicalSessions();
     try {
       mainWindow.webContents.setBackgroundThrottling(shouldThrottle);
-    } catch (_) {}
+    } catch (_) { }
   };
   mainWindow.on('minimize', syncBackgroundThrottling);
   mainWindow.on('restore', syncBackgroundThrottling);
@@ -1332,7 +1333,7 @@ function createWindow() {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('system:open-browser-popup', { url });
             }
-          } catch (_) {}
+          } catch (_) { }
         }
         return { action: 'deny' };
       });
@@ -1511,26 +1512,24 @@ function createWindow() {
     if (hasShownMainWindow) return;
     hasShownMainWindow = true;
     logTiming('🎯 Showing main window - React App ready');
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      try { splashWindow.setAlwaysOnTop(false); } catch (_) {}
-    }
+    closeSplash();
     if (mainWindow && !mainWindow.isDestroyed()) {
       const { applyWindowCornersOnStartup } = require('./src/main/handlers/window-handlers');
       applyWindowCornersOnStartup(mainWindow);
       if (initialBounds.isMaximized) {
-        try { mainWindow.maximize(); } catch (_) {}
+        try { mainWindow.maximize(); } catch (_) { }
       }
       mainWindow.show();
+      try { mainWindow.focus(); } catch (_) { }
     }
-    closeSplash();
 
-    // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
-    // Usar setImmediate para ejecutar en el siguiente tick del event loop
-    setImmediate(() => {
+    // 🚀 OPTIMIZACIÓN: Dejar respirar el hilo principal y el compositor (Wayland/X11)
+    // antes de arrancar los servicios secundarios pesados para garantizar interactividad inmediata
+    setTimeout(() => {
       initializeServicesAfterShow().catch(err => {
         console.error('❌ [POST-SHOW] Error en initializeServicesAfterShow:', err);
       });
-    });
+    }, 600);
   };
 
   // Escuchar evento de sincronización del React renderer
@@ -1541,7 +1540,7 @@ function createWindow() {
   // Mostrar ventana cuando esté lista para mostrar (con timer de seguridad fallback)
   mainWindow.once('ready-to-show', () => {
     logTiming('🎯 ready-to-show - VENTANA LISTA (Esperando renderer o timeout)');
-    
+
     // Timer de seguridad fallback (5 segundos) por si el renderer tiene un error fatal o tarda demasiado
     setTimeout(() => {
       showMainWindow();
@@ -3076,7 +3075,7 @@ async function stopAiClientDockerContainersOnQuit() {
 function requestGracefulQuit(signal) {
   if (isAppQuitting.value || appCleanupInProgress || appCleanupCompleted) return;
   console.log(`[quit] Señal ${signal}, cierre ordenado`);
-  try { app.quit(); } catch (_) {}
+  try { app.quit(); } catch (_) { }
 }
 
 process.on('SIGTERM', () => requestGracefulQuit('SIGTERM'));
@@ -3100,8 +3099,8 @@ app.on('before-quit', async (event) => {
   // Safeguard: Forzar salida limpia tras 1.5 segundos si alguna tarea asíncrona no responde
   const forceExitTimeout = setTimeout(() => {
     console.warn('[quit] Forzando salida de la aplicación tras timeout de limpieza.');
-    try { app.exit(0); } catch (_) {}
-    try { process.exit(0); } catch (_) {}
+    try { app.exit(0); } catch (_) { }
+    try { process.exit(0); } catch (_) { }
   }, 1500);
 
   try {
@@ -3110,7 +3109,7 @@ app.on('before-quit', async (event) => {
     // detecte el cierre de electron y devuelva el prompt de la terminal
     const { stopStatsWorker } = require('./src/main/services/StatsWorkerService');
     stopStatsWorker();
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     if (idleMonitorInterval) {
@@ -3120,10 +3119,10 @@ app.on('before-quit', async (event) => {
     try {
       const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner');
       ConnectionPoolCleaner.stopOrphanCleanup();
-    } catch (e) {}
+    } catch (e) { }
     try {
       clearAllRegisteredTabs();
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       await Promise.race([
@@ -3137,7 +3136,7 @@ app.on('before-quit', async (event) => {
     // ✅ REFACTORIZADO: Limpiar todas las conexiones SSH con SSHConnectionCleanupService
     try {
       sshCleanupService.cleanupAllConnections(sshConnections);
-    } catch (e) {}
+    } catch (e) { }
 
     // Limpiar también el pool de conexiones con mejor limpieza
     Object.values(sshConnectionPool).forEach(poolConn => {
@@ -3151,7 +3150,7 @@ app.on('before-quit', async (event) => {
           poolConn.ssh.removeAllListeners('end');
         }
         poolConn.close();
-      } catch (e) {}
+      } catch (e) { }
     });
 
     // Cleanup SSH tunnels
@@ -3166,29 +3165,29 @@ app.on('before-quit', async (event) => {
 
     // Cleanup Cygwin processes
     if (Cygwin && Cygwin.CygwinHandlers) {
-      try { Cygwin.CygwinHandlers.cleanup(); } catch (error) {}
+      try { Cygwin.CygwinHandlers.cleanup(); } catch (error) { }
     }
 
     // Cleanup Docker processes
     const docker = getDocker();
     if (docker && docker.DockerHandlers) {
-      try { docker.DockerHandlers.cleanup(); } catch (error) {}
+      try { docker.DockerHandlers.cleanup(); } catch (error) { }
     }
 
     // Cleanup Terminal processes
-    try { PowerShell.cleanup(); } catch (e) {}
-    try { UbuntuProcessManager.cleanup(); } catch (e) {}
-    try { Claude.cleanup(); } catch (e) {}
-    try { OpenCode.cleanup(); } catch (e) {}
-    try { CodexCli.cleanup(); } catch (e) {}
-    try { AntigravityCli.cleanup(); } catch (e) {}
-    try { HermesCli.cleanup(); } catch (e) {}
+    try { PowerShell.cleanup(); } catch (e) { }
+    try { UbuntuProcessManager.cleanup(); } catch (e) { }
+    try { Claude.cleanup(); } catch (e) { }
+    try { OpenCode.cleanup(); } catch (e) { }
+    try { CodexCli.cleanup(); } catch (e) { }
+    try { AntigravityCli.cleanup(); } catch (e) { }
+    try { HermesCli.cleanup(); } catch (e) { }
 
     // Cleanup RDP and Guacamole
     try {
       const { getRdpHandlers } = require('./src/main/handlers');
       getRdpHandlers().cleanupRdpConnections();
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       if (typeof _guacdService !== 'undefined' && _guacdService) {
@@ -3197,13 +3196,13 @@ app.on('before-quit', async (event) => {
           new Promise(resolve => setTimeout(resolve, 500))
         ]);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Cleanup MCP API Server
     try {
       const mcpApiServer = require('./src/main/services/McpApiServer');
       mcpApiServer.stop();
-    } catch (e) {}
+    } catch (e) { }
 
   } catch (err) {
     console.error('[quit] Error en limpieza before-quit:', err);
@@ -3217,9 +3216,9 @@ app.on('before-quit', async (event) => {
       try {
         const currentTempUserData = path.join(app.getPath('temp'), `NodeTerm-Instance-${process.pid}`);
         if (fs.existsSync(currentTempUserData)) {
-          try { fs.rmSync(currentTempUserData, { recursive: true, force: true }); } catch (_) {}
+          try { fs.rmSync(currentTempUserData, { recursive: true, force: true }); } catch (_) { }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     console.log('[quit] Ejecutando exit final...');
@@ -3227,10 +3226,10 @@ app.on('before-quit', async (event) => {
     try {
       if (process.stdout && typeof process.stdout.destroy === 'function') process.stdout.destroy();
       if (process.stderr && typeof process.stderr.destroy === 'function') process.stderr.destroy();
-    } catch (_) {}
+    } catch (_) { }
 
-    try { app.exit(0); } catch (_) {}
-    try { process.exit(0); } catch (_) {}
+    try { app.exit(0); } catch (_) { }
+    try { process.exit(0); } catch (_) { }
   }
 });
 
@@ -3351,7 +3350,7 @@ ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
   sshStatsService.setPollingInterval(intervalMs);
   try {
     require('./src/main/services/StatsWorkerService').setStatsBaseInterval(intervalMs);
-  } catch (_) {}
+  } catch (_) { }
 });
 
 // window:minimize|maximize|unmaximize|isMaximized|close|set-corners

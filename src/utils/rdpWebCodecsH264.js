@@ -37,6 +37,24 @@ function isRdpDebugEnabled() {
   }
 }
 
+/**
+ * Mezcla de croma AVC444 por software en CPU (JavaScript).
+ * Desactivado por defecto: en resoluciones altas o al mover ventanas, calcular el
+ * croma 4:4:4 píxel a píxel en bucles JS con copyTo/putImageData bloquea el hilo
+ * principal y causa 0x112f en el servidor Windows. El stream principal H.264
+ * (4:2:0) por GPU corre fluido a 60 FPS sin consumo de CPU.
+ */
+function isAvc444ChromaMergeEnabled() {
+  if (typeof window === 'undefined') return false;
+  if (window.__NODETERM_RDP_CHROMA_MERGE__ === true) return true;
+  if (window.__NODETERM_RDP_CHROMA_MERGE__ === false) return false;
+  try {
+    return window.localStorage?.getItem('NODETERM_RDP_CHROMA_MERGE') === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
 /** Convierte AVC (length-prefixed) a Annex B (start codes). */
 function avcToAnnexB(avcData) {
   const src = avcData instanceof Uint8Array ? avcData : new Uint8Array(avcData);
@@ -899,7 +917,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
       if (chromaFrame) settleFrame(1);
       return;
     }
-    if (chromaFrame && chromaMeta) {
+    if (chromaFrame && chromaMeta && isAvc444ChromaMergeEnabled()) {
       const chromaTargets = paintTargets(chromaMeta, frameW, frameH);
       let painted = false;
       const mergeStart = nowMs();
@@ -993,6 +1011,24 @@ function createRdpWebCodecsDecoder(opts = {}) {
       const box = unionAlignedBox(targets.regions, frameW, frameH);
 
       if (presentFrame) {
+        if (!isAvc444ChromaMergeEnabled()) {
+          if (meta.display === false) {
+            closeQuiet(frame);
+            settleFrame(1);
+            return;
+          }
+          if (hold.lumaFrame) {
+            closeQuiet(hold.lumaFrame);
+            hold.lumaFrame = null;
+            hold.meta = null;
+            hold.targets = null;
+          }
+          stats.paint420 += 1;
+          enqueuePresent(frame, targets);
+          settleFrame(1);
+          keepOpen = true;
+          return;
+        }
         const nextIsChroma = !!(order[0] && order[0].display === false);
         const action = avcUnitHoldAction(meta.display !== false, nextIsChroma);
         if (action === 'present-420') {
@@ -1314,6 +1350,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
 module.exports = {
   isWebCodecsH264Available,
   isWebCodecsH264Enabled,
+  isAvc444ChromaMergeEnabled,
   avcToAnnexB,
   avcCodecString,
   avcChunkType,

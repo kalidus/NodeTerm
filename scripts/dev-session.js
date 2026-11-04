@@ -54,7 +54,7 @@ const child = spawn(process.execPath, [
   concurrentlyBin,
   '--kill-others',
   'node node_modules/webpack-cli/bin/cli.js --watch --mode development',
-  'wait-on dist/.webpack-ready -t 180000 && electron .'
+  'wait-on dist/.webpack-ready -t 180000 && electron . --disable-features=Vulkan'
 ], {
   cwd: root,
   stdio: 'inherit',
