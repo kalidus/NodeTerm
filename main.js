@@ -249,6 +249,8 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
+  // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
   // Rasterización HW / zero-copy con OpenGL de escritorio sin saltar blocklist de Vulkan
   app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -256,7 +258,7 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,WaylandDrmClientBuffer');
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   // Wayland nativo: por defecto 'auto' para usar Wayland cuando esté disponible en el entorno

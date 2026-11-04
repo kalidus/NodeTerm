@@ -196,11 +196,12 @@ async function getSystemStats() {
   } catch (_) {}
 
   // ── Discos ──
-  // Windows: fsSize() pasa por WMI. No hace falta en cada tick de CPU/RAM.
-  if (process.platform === 'win32') {
-    const nowDisk = Date.now();
-    const needDisk = !lastDiskSampleAt || (nowDisk - lastDiskSampleAt) >= DISK_SAMPLE_INTERVAL_MS;
-    if (needDisk) {
+  // Throttle de muestreo de discos (15s): evita consultas WMI en Windows
+  // y llamadas frecuentes a statfsSync en Linux sobre posibles montajes lentos o de red.
+  const nowDisk = Date.now();
+  const needDisk = !lastDiskSampleAt || (nowDisk - lastDiskSampleAt) >= DISK_SAMPLE_INTERVAL_MS;
+  if (needDisk) {
+    if (process.platform === 'win32') {
       try {
         const d = await Promise.race([getSI().fsSize(), new Promise((_, rej) => setTimeout(() => rej(), 3000))]);
         if (Array.isArray(d) && d.length > 0) {
@@ -214,10 +215,15 @@ async function getSystemStats() {
           lastDiskSampleAt = nowDisk;
         }
       } catch (_) {}
+    } else {
+      const disks = readDisksSync();
+      if (disks.length > 0) {
+        stats.disks = disks;
+        lastDiskSampleAt = nowDisk;
+      }
     }
   } else {
-    const disks = readDisksSync();
-    if (disks.length > 0) stats.disks = disks;
+    stats.disks = Array.isArray(lastValidStats.disks) ? [...lastValidStats.disks] : [];
   }
 
   // ── Red (/proc/net/dev — sin subprocesos) ──
