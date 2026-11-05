@@ -182,17 +182,63 @@ NodeTerm es un proyecto independiente de código abierto creado para la comunida
 
 <br/>
 
-<p align="left">
+<p align="left" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
   <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="32" alt="GitHub Sponsors"/></a>
-  &nbsp;
+  <a href="https://paypal.me/k4lidus"><img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" height="32" alt="PayPal"/></a>
   <a href="https://ko-fi.com/kalidus"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" height="32" alt="Ko-fi"/></a>
-  &nbsp;
   <a href="https://buymeacoffee.com/kalidus"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" height="32" alt="Buy Me A Coffee"/></a>
-  &nbsp;
-  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="32" alt="Ethereum / EVM"/></a>
-  &nbsp;
-  <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="32" alt="Solana"/></a>
 </p>
+
+<table style="border: none; border-collapse: collapse; background: transparent;">
+  <tr style="border: none; background: transparent;">
+    <td style="border: none; padding: 0 16px 0 0; vertical-align: top;">
+      <details>
+        <summary style="list-style: none; cursor: pointer; display: inline-flex; align-items: center;">
+          <img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="32" alt="Ethereum"/>
+          <img src="https://img.shields.io/badge/-QR-238636?style=for-the-badge&logo=qrcode&logoColor=white" height="32" alt="QR"/>
+        </summary>
+        <br/>
+        <table>
+          <tr>
+            <th align="center">Ethereum / EVM (ETH, Polygon, Arbitrum, BSC)</th>
+          </tr>
+          <tr>
+            <td align="center">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ethereum:0x7D18e60b2717edA94e6a48d05e6d09038dCf9342" width="130" alt="EVM QR"/><br/>
+              <sub>Escanea con MetaMask / Rabby / Trust</sub>
+            </td>
+          </tr>
+          <tr>
+            <td align="center"><code>0x7D18e60b2717edA94e6a48d05e6d09038dCf9342</code></td>
+          </tr>
+        </table>
+      </details>
+    </td>
+    <td style="border: none; padding: 0; vertical-align: top;">
+      <details>
+        <summary style="list-style: none; cursor: pointer; display: inline-flex; align-items: center;">
+          <img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="32" alt="Solana"/>
+          <img src="https://img.shields.io/badge/-QR-238636?style=for-the-badge&logo=qrcode&logoColor=white" height="32" alt="QR"/>
+        </summary>
+        <br/>
+        <table>
+          <tr>
+            <th align="center">Solana (SOL, USDC)</th>
+          </tr>
+          <tr>
+            <td align="center">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=solana:DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh" width="130" alt="Solana QR"/><br/>
+              <sub>Escanea con Phantom / Solflare</sub>
+            </td>
+          </tr>
+          <tr>
+            <td align="center"><code>DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh</code></td>
+          </tr>
+        </table>
+      </details>
+    </td>
+  </tr>
+</table>
 
 ¡Muchas gracias a toda la comunidad por hacer posible NodeTerm! 🙏
 
