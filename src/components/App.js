@@ -12,6 +12,7 @@ import { setHomeTabActive } from '../utils/homeTabActiveBus';
 import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
 import { isSecretEntry } from '../services/terminalAgentState';
 import { broadcastDestinationIds, findTabOwningTerminal, findTerminalNode } from '../utils/broadcastMembership';
+import { resolveActiveSshSession } from '../utils/activeSshSession';
 import { resolvePtyChannel } from '../utils/localPtyChannel';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
@@ -1635,6 +1636,44 @@ const App = () => {
     hideTerminalContextMenu
   });
 
+  const [focusedSshTabId, setFocusedSshTabId] = useState(null);
+  const [readySshTabIds, setReadySshTabIds] = useState(() => new Set());
+
+  useEffect(() => {
+    const onFocus = (event) => {
+      const tabId = event?.detail?.tabId;
+      if (tabId != null) setFocusedSshTabId(tabId);
+    };
+    window.addEventListener('ssh-terminal-focus', onFocus);
+    return () => window.removeEventListener('ssh-terminal-focus', onFocus);
+  }, []);
+
+  useEffect(() => {
+    const ipc = window.electron?.ipcRenderer;
+    if (!ipc?.on) return undefined;
+    const remember = (tabId, ready) => {
+      if (tabId == null) return;
+      setReadySshTabIds((prev) => {
+        const key = String(tabId);
+        const has = prev.has(key);
+        if (ready && has) return prev;
+        if (!ready && !has) return prev;
+        const next = new Set(prev);
+        if (ready) next.add(key);
+        else next.delete(key);
+        return next;
+      });
+    };
+    const onReady = (data) => remember(data?.tabId, true);
+    const onDown = (data) => remember(data?.tabId, false);
+    const offReady = ipc.on('ssh-connection-ready', onReady);
+    const offDown = ipc.on('ssh-connection-disconnected', onDown);
+    return () => {
+      if (typeof offReady === 'function') offReady();
+      if (typeof offDown === 'function') offDown();
+    };
+  }, []);
+
 
   // Recording management hook
   const {
@@ -2739,6 +2778,11 @@ const App = () => {
   // Memoizar cálculos costosos que se hacen en cada render
   const activeTab = filteredTabs[activeTabIndex] || null;
 
+  const activeSshSession = useMemo(
+    () => resolveActiveSshSession(activeTab, focusedSshTabId, sshConnectionStatus, readySshTabIds),
+    [activeTab, focusedSshTabId, sshConnectionStatus, readySshTabIds]
+  );
+
   const isHomeTabActive = useMemo(() => {
     return activeTab?.type === TAB_TYPES.HOME || activeTab?.type === 'home';
   }, [activeTab]);
@@ -2861,7 +2905,8 @@ const App = () => {
     onOpenWallixRefresh: (node) => {
       setWallixRefreshNode(node);
       setShowWallixRefreshDialog(true);
-    }
+    },
+    activeSshSession
   }), [
     isLoadingConnections, nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -2869,6 +2914,7 @@ const App = () => {
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer, openSessionNodeKeys,
     handleSyncActiveEditTabFromSidebar,
+    activeSshSession,
 
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,

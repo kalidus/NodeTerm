@@ -176,8 +176,13 @@ const TerminalComponent = forwardRef(({
     const activeRef = useRef(active);
     const layoutSuspendedRef = useRef(!!layoutSuspended);
     const onTerminalFocusRef = useRef(onTerminalFocus);
+    const publishSshFocusRef = useRef(() => {});
     layoutSuspendedRef.current = !!layoutSuspended;
     onTerminalFocusRef.current = onTerminalFocus;
+    publishSshFocusRef.current = () => {
+        if (isLocalTerminal || tabId == null) return;
+        window.dispatchEvent(new CustomEvent('ssh-terminal-focus', { detail: { tabId } }));
+    };
 
     const fitStable = () => {
         const stable = stableFitRef.current;
@@ -510,6 +515,7 @@ const TerminalComponent = forwardRef(({
             if (typeof term.current.onFocus === 'function') {
                 focusDisposable = term.current.onFocus(() => {
                     onTerminalFocusRef.current?.();
+                    publishSshFocusRef.current?.();
                 });
             }
         } catch (_) { /* noop */ }
@@ -1037,7 +1043,10 @@ const TerminalComponent = forwardRef(({
     return (
         <div
             className="terminal-component-wrapper"
-            onMouseDown={() => onTerminalFocus?.()}
+            onMouseDown={() => {
+                onTerminalFocus?.();
+                publishSshFocusRef.current?.();
+            }}
             style={{
                 display: 'flex',
                 flexDirection: 'column',

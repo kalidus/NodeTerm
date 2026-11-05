@@ -126,7 +126,10 @@
     "downloadFromNextcloud": "Download configuration from Nextcloud",
     "autoSyncLatest": "Automatically sync the latest version",
     "changeFile": "Change file",
-    "removeFile": "Remove file"
+    "removeFile": "Remove file",
+    "showRemoteExplorer": "Session file explorer",
+    "showConnectionTree": "Connection tree",
+    "remoteExplorerNeedsSsh": "Open an SSH session to browse its files"
   },
   "appMenu": {
     "file": "File",
@@ -313,5 +316,34 @@
     "download": "Download",
     "delete": "Delete",
     "rename": "Rename"
+  },
+  "remoteExplorer": {
+    "waiting": "Connecting to the session…",
+    "disconnected": "The session is not connected",
+    "loading": "Loading…",
+    "empty": "Empty folder",
+    "listError": "Could not list the folder",
+    "dropHint": "Drop to upload",
+    "refresh": "Refresh",
+    "newFolder": "New folder",
+    "open": "Open",
+    "rename": "Rename",
+    "delete": "Delete",
+    "download": "Download",
+    "folderName": "Folder name",
+    "accept": "OK",
+    "confirmDelete": "Delete \"{name}\"?",
+    "foldersSkippedTitle": "Folders were not uploaded",
+    "foldersSkipped": "This view uploads files only. Drop the files, not the folder.",
+    "uploadOkTitle": "Upload complete",
+    "uploadOk": "Uploaded {count} file(s).",
+    "uploadFailTitle": "Upload failed",
+    "uploadFail": "Failed to upload {count} file(s).",
+    "uploadNoPath": "Could not read the local file path.",
+    "createdTitle": "Folder created",
+    "renamedTitle": "Renamed",
+    "deletedTitle": "Deleted",
+    "downloadedTitle": "Download complete",
+    "actionFailTitle": "Could not complete the action"
   }
 }

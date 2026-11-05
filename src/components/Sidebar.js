@@ -84,6 +84,7 @@ import {
 import { openAIClientById } from './sidebar/openAIClientTabs';
 import { useSidebarTrash } from './sidebar/useSidebarTrash';
 import SidebarTrashModal from './sidebar/SidebarTrashModal';
+import RemoteFileExplorerSidebar from './sidebar/RemoteFileExplorerSidebar';
 import { useSidebarSectionAppearance } from '../hooks/useSidebarSectionAppearance';
 import { useTreeDragHoverExpand } from '../hooks/useTreeDragHoverExpand';
 import {
@@ -185,7 +186,8 @@ const Sidebar = React.memo(({
   onOpenWallixRefresh,  // callback para refrescar carpetas importadas de Wallix
   openSessionNodeKeys = new Set(),
   isTransitioningSidebar = false,
-  onSyncActiveEditTab
+  onSyncActiveEditTab,
+  activeSshSession = null
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -251,6 +253,40 @@ const Sidebar = React.memo(({
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
+  const [connectionsPane, setConnectionsPane] = useState('tree');
+  const explorerDismissedRef = useRef(false);
+  const seenSshTabIdsRef = useRef(new Set());
+  const remotePathMemoryRef = useRef(new Map());
+  const activeSshTabId = activeSshSession?.tabId ? String(activeSshSession.tabId) : null;
+
+  useEffect(() => {
+    if (showFavoritesView || viewMode !== 'connections') return;
+    if (!activeSshTabId) {
+      setConnectionsPane('tree');
+      return;
+    }
+    if (!seenSshTabIdsRef.current.has(activeSshTabId)) {
+      seenSshTabIdsRef.current.add(activeSshTabId);
+      explorerDismissedRef.current = false;
+      setConnectionsPane('explorer');
+      return;
+    }
+    if (!explorerDismissedRef.current) {
+      setConnectionsPane('explorer');
+    }
+  }, [activeSshTabId, showFavoritesView, viewMode]);
+
+  const toggleConnectionsPane = useCallback(() => {
+    if (!activeSshSession) return;
+    setConnectionsPane((prev) => {
+      if (prev === 'explorer') {
+        explorerDismissedRef.current = true;
+        return 'tree';
+      }
+      explorerDismissedRef.current = false;
+      return 'explorer';
+    });
+  }, [activeSshSession]);
   const connectionsAppearance = sectionAppearance.resolve('connections');
   const favoritesAppearance = sectionAppearance.resolve('favorites');
   const passwordsAppearance = sectionAppearance.resolve('passwords');
@@ -2881,6 +2917,11 @@ const Sidebar = React.memo(({
     if (onNodeContextMenu) onNodeContextMenu(event, resolved);
   }, [nodes, onNodeContextMenu]);
 
+  const remoteExplorerOpen = viewMode === 'connections'
+    && !showFavoritesView
+    && connectionsPane === 'explorer'
+    && !!activeSshSession;
+
   const showToolbarExpandAll = activeTab === 'connections'
     || activeTab === 'favorites'
     || activeTab === 'documents'
@@ -2930,6 +2971,33 @@ const Sidebar = React.memo(({
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
           {createTabGroupBtn}
+          <span className="sidebar-panel-toolbar-sep" aria-hidden="true" />
+          <span
+            title={activeSshSession
+              ? (remoteExplorerOpen ? t('tooltips.showConnectionTree') : t('tooltips.showRemoteExplorer'))
+              : t('tooltips.remoteExplorerNeedsSsh')}
+            style={{ display: 'inline-flex' }}
+          >
+            <button
+              type="button"
+              className={`sidebar-panel-toolbar-btn${remoteExplorerOpen ? ' is-active' : ''}`}
+              onClick={toggleConnectionsPane}
+              disabled={!activeSshSession}
+              aria-pressed={remoteExplorerOpen}
+            >
+              <span style={TB_ICON}>
+                {remoteExplorerOpen ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          </span>
         </>)}
 
         {/* ── FAVORITOS ── */}
@@ -3013,7 +3081,7 @@ const Sidebar = React.memo(({
         )}
         <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
         <div className="sidebar-panel-toolbar-right-end">
-          {(activeTab === 'connections' || activeTab === 'favorites') && (
+          {(activeTab === 'connections' || activeTab === 'favorites') && !remoteExplorerOpen && (
             <ConnectionsLayoutMenu
               layout={connectionsLayout}
               onSelect={(layout) => {
@@ -3039,7 +3107,7 @@ const Sidebar = React.memo(({
               }}
             />
           )}
-          {showToolbarExpandAll && !(
+          {showToolbarExpandAll && !remoteExplorerOpen && !(
             (activeTab === 'passwords' && passwordsVaultLayout !== 'tree')
             || (activeTab === 'documents' && documentsNotesLayout !== 'tree')
             || ((activeTab === 'connections' || activeTab === 'favorites') && connectionsLayout !== 'tree')
@@ -3099,6 +3167,7 @@ const Sidebar = React.memo(({
         <div
           ref={treeContainerRef}
           style={{
+            display: remoteExplorerOpen ? 'none' : 'block',
             flex: 1,
             minHeight: 0,
             overflowY: 'hidden',
@@ -3267,8 +3336,27 @@ const Sidebar = React.memo(({
           )}
         </div>
 
+        {activeSshSession && (
+          <div style={{
+            display: remoteExplorerOpen ? 'flex' : 'none',
+            flex: 1,
+            minHeight: 0,
+            flexDirection: 'column'
+          }}>
+            <RemoteFileExplorerSidebar
+              tabId={activeSshSession.tabId}
+              sshConfig={activeSshSession.sshConfig}
+              sessionLabel={activeSshSession.label}
+              connected={activeSshSession.connected}
+              status={activeSshSession.status}
+              showToast={showToast}
+              pathMemoryRef={remotePathMemoryRef}
+            />
+          </div>
+        )}
+
         {/* Panel de detalles de conexión */}
-        <ConnectionDetailsPanel
+        {!remoteExplorerOpen && <ConnectionDetailsPanel
           selectedNode={selectedNodeForDetails}
           uiTheme={uiTheme}
           iconTheme={activeTreeAppearance.iconTheme}
@@ -3282,7 +3370,7 @@ const Sidebar = React.memo(({
             setSelectedNodeKey(null);
             setSelectedNodeForDetails(null);
           }}
-        />
+        />}
       </div>
 
       {(viewMode === 'passwords' || mountedSidebarViews.has('passwords')) && (

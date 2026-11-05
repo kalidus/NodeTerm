@@ -126,7 +126,10 @@
     "downloadFromNextcloud": "Descarga la configuración desde Nextcloud",
     "autoSyncLatest": "Sincroniza automáticamente la versión más reciente",
     "changeFile": "Cambiar archivo",
-    "removeFile": "Remover archivo"
+    "removeFile": "Remover archivo",
+    "showRemoteExplorer": "Explorador de archivos de la sesión",
+    "showConnectionTree": "Árbol de conexiones",
+    "remoteExplorerNeedsSsh": "Abre una sesión SSH para ver sus archivos"
   },
   "appMenu": {
     "file": "Archivo",
@@ -313,5 +316,34 @@
     "download": "Descargar",
     "delete": "Eliminar",
     "rename": "Renombrar"
+  },
+  "remoteExplorer": {
+    "waiting": "Conectando con la sesión…",
+    "disconnected": "La sesión no está conectada",
+    "loading": "Cargando…",
+    "empty": "Carpeta vacía",
+    "listError": "No se pudo listar la carpeta",
+    "dropHint": "Suelta para subir",
+    "refresh": "Actualizar",
+    "newFolder": "Nueva carpeta",
+    "open": "Abrir",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
+    "download": "Descargar",
+    "folderName": "Nombre de la carpeta",
+    "accept": "Aceptar",
+    "confirmDelete": "¿Eliminar \"{name}\"?",
+    "foldersSkippedTitle": "Carpetas no subidas",
+    "foldersSkipped": "En esta vista solo se suben ficheros. Arrastra los archivos, no la carpeta.",
+    "uploadOkTitle": "Subida completada",
+    "uploadOk": "Se subieron {count} archivo(s).",
+    "uploadFailTitle": "Error al subir",
+    "uploadFail": "Falló la subida de {count} archivo(s).",
+    "uploadNoPath": "No se pudo leer la ruta local del archivo.",
+    "createdTitle": "Carpeta creada",
+    "renamedTitle": "Renombrado",
+    "deletedTitle": "Eliminado",
+    "downloadedTitle": "Descarga completada",
+    "actionFailTitle": "No se pudo completar"
   }
 }
