@@ -258,13 +258,25 @@ const Sidebar = React.memo(({
   const seenSshTabIdsRef = useRef(new Set());
   const remotePathMemoryRef = useRef(new Map());
   const activeSshTabId = activeSshSession?.tabId ? String(activeSshSession.tabId) : null;
+  const activeSshConnected = !!activeSshSession?.connected;
+  const activeSshStatus = activeSshSession?.status || null;
 
   useEffect(() => {
     if (showFavoritesView || viewMode !== 'connections') return;
+
     if (!activeSshTabId) {
       setConnectionsPane('tree');
       return;
     }
+
+    const failed = activeSshStatus === 'error' || activeSshStatus === 'disconnected';
+    if (failed || !activeSshConnected) {
+      // connecting / error / disconnected: árbol (no explorar a medias)
+      setConnectionsPane('tree');
+      return;
+    }
+
+    // Solo al conectar con éxito
     if (!seenSshTabIdsRef.current.has(activeSshTabId)) {
       seenSshTabIdsRef.current.add(activeSshTabId);
       explorerDismissedRef.current = false;
@@ -274,10 +286,10 @@ const Sidebar = React.memo(({
     if (!explorerDismissedRef.current) {
       setConnectionsPane('explorer');
     }
-  }, [activeSshTabId, showFavoritesView, viewMode]);
+  }, [activeSshConnected, activeSshStatus, activeSshTabId, showFavoritesView, viewMode]);
 
   const toggleConnectionsPane = useCallback(() => {
-    if (!activeSshSession) return;
+    if (!activeSshSession?.connected) return;
     setConnectionsPane((prev) => {
       if (prev === 'explorer') {
         explorerDismissedRef.current = true;
@@ -2920,7 +2932,7 @@ const Sidebar = React.memo(({
   const remoteExplorerOpen = viewMode === 'connections'
     && !showFavoritesView
     && connectionsPane === 'explorer'
-    && !!activeSshSession;
+    && activeSshConnected;
 
   const showToolbarExpandAll = activeTab === 'connections'
     || activeTab === 'favorites'
@@ -2971,18 +2983,13 @@ const Sidebar = React.memo(({
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
           {createTabGroupBtn}
-          <span className="sidebar-panel-toolbar-sep" aria-hidden="true" />
-          <span
-            title={activeSshSession
-              ? (remoteExplorerOpen ? t('tooltips.showConnectionTree') : t('tooltips.showRemoteExplorer'))
-              : t('tooltips.remoteExplorerNeedsSsh')}
-            style={{ display: 'inline-flex' }}
-          >
+          {activeSshConnected && (<>
+            <span className="sidebar-panel-toolbar-sep" aria-hidden="true" />
             <button
               type="button"
               className={`sidebar-panel-toolbar-btn${remoteExplorerOpen ? ' is-active' : ''}`}
               onClick={toggleConnectionsPane}
-              disabled={!activeSshSession}
+              title={remoteExplorerOpen ? t('tooltips.showConnectionTree') : t('tooltips.showRemoteExplorer')}
               aria-pressed={remoteExplorerOpen}
             >
               <span style={TB_ICON}>
@@ -2997,7 +3004,7 @@ const Sidebar = React.memo(({
                 )}
               </span>
             </button>
-          </span>
+          </>)}
         </>)}
 
         {/* ── FAVORITOS ── */}
