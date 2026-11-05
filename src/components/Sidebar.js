@@ -3532,8 +3532,23 @@ const Sidebar = React.memo(({
       return;
     }
 
+    if (sectionId === 'connections') {
+      if (!sidebarCollapsed && viewMode === 'connections' && !showFavoritesView) {
+        if (connectionsPane === 'explorer') {
+          explorerDismissedRef.current = true;
+          setConnectionsPane('tree');
+          return;
+        }
+        setSidebarCollapsed(true);
+        return;
+      }
+      setViewMode('connections');
+      setShowFavoritesView(false);
+      setSidebarCollapsed(false);
+      return;
+    }
+
     const sectionToViewMode = {
-      connections: 'connections',
       passwords: 'passwords',
       documents: 'documents',
       tools: 'tools',
@@ -3545,15 +3560,13 @@ const Sidebar = React.memo(({
       !sidebarCollapsed
       && viewMode === targetViewMode
       && sectionId !== 'settings'
-      && (sectionId !== 'connections' || !showFavoritesView)
     ) {
       setSidebarCollapsed(true);
     } else {
       setViewMode(targetViewMode);
-      if (sectionId === 'connections') setShowFavoritesView(false);
       setSidebarCollapsed(false);
     }
-  }, [sidebarCollapsed, viewMode, showFavoritesView, setSidebarCollapsed]);
+  }, [sidebarCollapsed, viewMode, showFavoritesView, connectionsPane, setSidebarCollapsed]);
 
   const handleOpenAIClient = useCallback((clientId) => {
     openAIClientById(clientId);
