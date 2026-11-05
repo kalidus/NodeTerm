@@ -39,7 +39,7 @@ const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplore
 const LazyToolsSidebar = React.lazy(() => import('./ToolsSidebar'));
 const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
-import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
+import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite, removeFavoritesForTreeNode } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import { setSidebarView } from '../utils/sidebarViewBus';
@@ -125,19 +125,25 @@ function favoriteContextNode(node, nodes) {
   if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node) || isFavoriteFolderShortcutNode(node)) {
     return node;
   }
-  if (node.isFavoriteFolderProjection && node.source !== 'connections') {
+  // Carpetas proyectadas: conservar identidad de proyección (menú seguro, sin resolver a carpeta real).
+  if (node.isFavoriteFolderProjection) {
     return node;
   }
   if (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node)) {
     const resolved = resolveFavoriteShortcutNode(node, nodes) || node;
     const shortcutType = String(node.data?.type || resolved.data?.type || '').toLowerCase();
     const isSecretOrDoc = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note', 'library-file'].includes(shortcutType);
+    const isProjection = isFavoriteProjectionNode(node);
     return {
       ...resolved,
       isFavoriteShortcut: true,
-      isFavoriteProjection: isFavoriteProjectionNode(node),
-      favoriteId: isFavoriteProjectionNode(node) ? undefined : node.favoriteId,
+      isFavoriteProjection: isProjection,
+      isFavoriteFolderProjection: !!node.isFavoriteFolderProjection,
+      isFavoriteFolderShortcut: !!node.isFavoriteFolderShortcut,
+      favoriteId: isProjection ? undefined : node.favoriteId,
+      parentFavoriteId: node.parentFavoriteId || resolved.parentFavoriteId,
       sourceKey: node.sourceKey || resolved.key,
+      source: node.source || resolved.source,
       key: isSecretOrDoc ? (node.sourceKey || resolved.key) : (resolved.key || node.key)
     };
   }
@@ -2201,6 +2207,10 @@ const Sidebar = React.memo(({
               // Guardar el nodo completo en la papelera antes de eliminarlo
               const deletedNode = targetNode ? JSON.parse(JSON.stringify(targetNode)) : null;
               moveToTrash(nodeKey, nodeLabel, deletedNode);
+              if (deletedNode) {
+                removeFavoritesForTreeNode(deletedNode);
+                bumpFavoritesRevision();
+              }
 
               const newNodes = removeNodeFromTree(nodes, nodeKey);
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));

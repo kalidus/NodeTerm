@@ -238,6 +238,9 @@ function toSerializable(connection) {
   if (type === SIDEBAR_FOLDER_FAVORITE_TYPE) {
     const source = SIDEBAR_FOLDER_SOURCES.includes(connection.source) ? connection.source : 'connections';
     const nodeKey = String(connection.nodeKey || connection.key || '');
+    const excludedKeys = Array.isArray(connection.excludedKeys)
+      ? [...new Set(connection.excludedKeys.map((k) => String(k)).filter(Boolean))]
+      : [];
     return {
       id: connection.id || sidebarFolderFavoriteId(source, nodeKey),
       type: SIDEBAR_FOLDER_FAVORITE_TYPE,
@@ -247,6 +250,7 @@ function toSerializable(connection) {
       color: connection.color || undefined,
       folderIcon: connection.folderIcon || null,
       vaultId: connection.vaultId || undefined,
+      excludedKeys,
       lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
     };
   }
@@ -527,11 +531,45 @@ export function toggleFavorite(connOrId) {
   if (idx >= 0) {
     list.splice(idx, 1);
     favoriteGroupsStore.clearFavoriteAssignments(id);
-  } else {
-    list.unshift(serial);
+    saveList(FAVORITES_KEY, list);
+    return list;
   }
+
+  list.unshift(serial);
   saveList(FAVORITES_KEY, list);
-  return list;
+
+  // Al volver a marcar un ítem, reaparece dentro de carpetas favoritas que lo habían ocultado.
+  if (serial && serial.type !== SIDEBAR_FOLDER_FAVORITE_TYPE) {
+    clearExcludedKeyFromFolderFavorites([
+      serial.originalKey,
+      serial.connectionId,
+      serial.id,
+      (typeof connOrId === 'object' && connOrId?.key != null) ? connOrId.key : null,
+      (typeof connOrId === 'object' && connOrId?.sourceKey != null) ? connOrId.sourceKey : null,
+      (typeof connOrId === 'object' && connOrId?.nodeKey != null) ? connOrId.nodeKey : null
+    ]);
+  }
+
+  return getFavorites();
+}
+
+/**
+ * Quitar un hijo proyectado de Favoritos: ocultarlo en la carpeta favorita
+ * y eliminar su favorito individual si existía.
+ */
+export function removeProjectedChildFromFavorites(parentFavoriteId, sourceKey, individualConnOrId) {
+  if (parentFavoriteId && sourceKey != null && sourceKey !== '') {
+    excludeFromFolderFavorite(parentFavoriteId, sourceKey);
+  }
+  if (individualConnOrId != null && individualConnOrId !== '') {
+    const individualId = typeof individualConnOrId === 'string'
+      ? individualConnOrId
+      : toSerializable(individualConnOrId).id;
+    if (individualId && isFavorite(individualId)) {
+      removeFavorite(individualId);
+    }
+  }
+  return getFavorites();
 }
 
 // Función específica para grupos
@@ -624,6 +662,62 @@ export function updateFavoriteFields(id, fields) {
   return list;
 }
 
+function normalizeExcludedKeys(keys) {
+  if (!Array.isArray(keys)) return [];
+  return [...new Set(keys.map((k) => String(k)).filter(Boolean))];
+}
+
+/** Oculta un hijo en la proyección de una carpeta favorita. */
+export function excludeFromFolderFavorite(folderFavId, sourceKey) {
+  if (!folderFavId || sourceKey == null || sourceKey === '') return getFavorites();
+  const key = String(sourceKey);
+  const list = [...getFavorites()];
+  const idx = list.findIndex((f) => f.id === folderFavId && f.type === SIDEBAR_FOLDER_FAVORITE_TYPE);
+  if (idx < 0) return list;
+  const prev = normalizeExcludedKeys(list[idx].excludedKeys);
+  if (prev.includes(key)) return list;
+  list[idx] = { ...list[idx], excludedKeys: [...prev, key] };
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
+/** Vuelve a mostrar un hijo en la proyección de una carpeta favorita. */
+export function includeInFolderFavorite(folderFavId, sourceKey) {
+  if (!folderFavId || sourceKey == null || sourceKey === '') return getFavorites();
+  const key = String(sourceKey);
+  const list = [...getFavorites()];
+  const idx = list.findIndex((f) => f.id === folderFavId && f.type === SIDEBAR_FOLDER_FAVORITE_TYPE);
+  if (idx < 0) return list;
+  const prev = normalizeExcludedKeys(list[idx].excludedKeys);
+  if (!prev.includes(key)) return list;
+  list[idx] = { ...list[idx], excludedKeys: prev.filter((k) => k !== key) };
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
+/** Al marcar un ítem otra vez, limpia su key de exclusiones de cualquier carpeta favorita. */
+export function clearExcludedKeyFromFolderFavorites(sourceKeyOrKeys) {
+  const keys = new Set(
+    (Array.isArray(sourceKeyOrKeys) ? sourceKeyOrKeys : [sourceKeyOrKeys])
+      .map((k) => (k == null || k === '' ? null : String(k)))
+      .filter(Boolean)
+  );
+  if (keys.size === 0) return getFavorites();
+  const list = [...getFavorites()];
+  let changed = false;
+  for (let i = 0; i < list.length; i += 1) {
+    const fav = list[i];
+    if (fav.type !== SIDEBAR_FOLDER_FAVORITE_TYPE) continue;
+    const prev = normalizeExcludedKeys(fav.excludedKeys);
+    const next = prev.filter((k) => !keys.has(k));
+    if (next.length === prev.length) continue;
+    list[i] = { ...fav, excludedKeys: next };
+    changed = true;
+  }
+  if (changed) saveList(FAVORITES_KEY, list);
+  return changed ? list : getFavorites();
+}
+
 function collectTreeNodeKeys(node, keys = []) {
   if (!node) return keys;
   if (node.key) keys.push(node.key);
@@ -636,9 +730,21 @@ function collectTreeNodeKeys(node, keys = []) {
 export function removeFavoritesForTreeNode(node) {
   const ids = collectTreeNodeKeys(node);
   if (ids.length === 0) return getFavorites();
-  const idSet = new Set(ids);
-  const list = getFavorites().filter(f => !idSet.has(f.id));
-  ids.forEach((id) => favoriteGroupsStore.clearFavoriteAssignments(id));
+  const idSet = new Set(ids.map((id) => String(id)));
+  const removedIds = [];
+  const list = getFavorites().filter((f) => {
+    if (idSet.has(String(f.id))) {
+      removedIds.push(f.id);
+      return false;
+    }
+    // Carpetas favoritas (sidebar-folder) se guardan con id compuesto; limpiar por nodeKey.
+    if (f.type === SIDEBAR_FOLDER_FAVORITE_TYPE && f.nodeKey != null && idSet.has(String(f.nodeKey))) {
+      removedIds.push(f.id);
+      return false;
+    }
+    return true;
+  });
+  removedIds.forEach((id) => favoriteGroupsStore.clearFavoriteAssignments(id));
   saveList(FAVORITES_KEY, list);
   return list;
 }
@@ -776,6 +882,10 @@ export default {
   isGroupFavorite,
   updateFavoriteOnEdit,
   updateFavoriteFields,
+  excludeFromFolderFavorite,
+  includeInFolderFavorite,
+  clearExcludedKeyFromFolderFavorites,
+  removeProjectedChildFromFavorites,
   removeFavoritesForTreeNode,
   getRecents,
   recordRecent,

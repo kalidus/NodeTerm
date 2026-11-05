@@ -264,10 +264,18 @@ function projectionKey(favorite, sourceNode, groupId) {
   return `${FAVORITE_PROJECTION_PREFIX}${groupId || 'root'}__${favorite.id}__${encodeURIComponent(String(sourceNode.key))}`;
 }
 
+function getFolderFavoriteExcludedKeySet(favorite) {
+  const keys = Array.isArray(favorite?.excludedKeys) ? favorite.excludedKeys : [];
+  return new Set(keys.map((k) => String(k)).filter(Boolean));
+}
+
 function projectFavoriteFolderChildren(sourceNode, favorite, groupId) {
+  const excluded = getFolderFavoriteExcludedKeySet(favorite);
   const children = [];
   for (const child of sourceNode?.children || []) {
     if (!child || isShowMoreTreeNode(child)) continue;
+    const childKey = child.key != null ? String(child.key) : '';
+    if (childKey && excluded.has(childKey)) continue;
     if (isProjectedFolderNode(child)) {
       children.push(projectNestedFavoriteFolder(child, favorite, groupId));
       continue;
@@ -279,6 +287,7 @@ function projectFavoriteFolderChildren(sourceNode, favorite, groupId) {
       droppable: false,
       leaf: true,
       isFavoriteProjection: true,
+      parentFavoriteId: favorite.id,
       sourceKey: child.key,
       source: favorite.source,
       color: child.color,
@@ -302,6 +311,7 @@ function projectNestedFavoriteFolder(sourceNode, favorite, groupId) {
     folderIcon: sourceNode.folderIcon && sourceNode.folderIcon !== 'general' ? sourceNode.folderIcon : null,
     isFavoriteProjection: true,
     isFavoriteFolderProjection: true,
+    parentFavoriteId: favorite.id,
     sourceKey: sourceNode.key,
     source: favorite.source,
     data: { type: sourceNode.data?.type || 'folder' }
@@ -368,6 +378,44 @@ function findSidebarFolderSource(favorite, connectionNodes, docNodes, pwNodes) {
   return findNodeByKey(connectionNodes, nodeKey)
     || findNodeByKey(pwNodes, nodeKey)
     || findNodeByKey(docNodes, nodeKey);
+}
+
+/** Keys/ids de nodos que ya se ven dentro de alguna carpeta favorita (proyección). */
+function collectKeysCoveredByFolderFavorites(folderFavorites, connectionNodes, docNodes, pwNodes) {
+  const covered = new Set();
+
+  const walk = (node, excluded) => {
+    if (!node || isShowMoreTreeNode(node)) return;
+    const nodeKey = node.key != null ? String(node.key) : '';
+    // Excluidos: no están en la proyección, así que pueden seguir como atajo suelto.
+    if (nodeKey && excluded.has(nodeKey)) return;
+    if (nodeKey) covered.add(nodeKey);
+    if (node.data?.id != null && node.data.id !== '') covered.add(String(node.data.id));
+    try {
+      const conn = connHelpers.fromSidebarNode(node);
+      if (conn?.id) covered.add(String(conn.id));
+    } catch (_) {
+      // noop
+    }
+    for (const child of node.children || []) walk(child, excluded);
+  };
+
+  for (const favorite of folderFavorites || []) {
+    const source = findSidebarFolderSource(favorite, connectionNodes, docNodes, pwNodes);
+    if (!source) continue;
+    const excluded = getFolderFavoriteExcludedKeySet(favorite);
+    for (const child of source.children || []) walk(child, excluded);
+  }
+
+  return covered;
+}
+
+function isFavoriteCoveredByFolderProjection(favorite, sourceNode, coveredKeys) {
+  if (!coveredKeys || coveredKeys.size === 0) return false;
+  if (favorite?.id != null && coveredKeys.has(String(favorite.id))) return true;
+  if (sourceNode?.key != null && coveredKeys.has(String(sourceNode.key))) return true;
+  if (favorite?.nodeKey != null && coveredKeys.has(String(favorite.nodeKey))) return true;
+  return false;
 }
 
 function sortNodesByFavoriteOrder(nodes, favoriteOrder) {
@@ -478,6 +526,15 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
   indexNodesByFavoriteId(pwNodes, nodeByFavoriteId);
   const userGroups = (groups || []).filter((group) => !group.isDefault);
   const connectionFavorites = (favorites || []).filter((favorite) => favorite?.type !== 'group');
+  const folderFavorites = connectionFavorites.filter(
+    (favorite) => favorite?.type === SIDEBAR_FOLDER_FAVORITE_TYPE
+  );
+  const coveredByFolderFavorites = collectKeysCoveredByFolderFavorites(
+    folderFavorites,
+    connectionNodes,
+    docNodes,
+    pwNodes
+  );
 
   const memberOrder = favoriteGroupsStore.getFavoriteMemberOrder();
 
@@ -499,16 +556,25 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
   const rootShortcuts = [];
 
   for (const favorite of connectionFavorites) {
-    const sourceNode = favorite.type === SIDEBAR_FOLDER_FAVORITE_TYPE
+    const isFolderFavorite = favorite.type === SIDEBAR_FOLDER_FAVORITE_TYPE;
+    const sourceNode = isFolderFavorite
       ? findSidebarFolderSource(favorite, connectionNodes, docNodes, pwNodes)
       : (nodeByFavoriteId.get(favorite.id) || null);
     if (!isFavoriteVisibleInCurrentVaults(favorite, sourceNode)) {
       continue;
     }
+    // Si el ítem ya aparece bajo una carpeta favorita, no duplicarlo como atajo suelto.
+    if (!isFolderFavorite && isFavoriteCoveredByFolderProjection(favorite, sourceNode, coveredByFolderFavorites)) {
+      continue;
+    }
+    // Carpeta favorita anidada bajo otra carpeta favorita: solo se ve en la proyección.
+    if (isFolderFavorite && isFavoriteCoveredByFolderProjection(favorite, sourceNode, coveredByFolderFavorites)) {
+      continue;
+    }
     const assignedGroupIds = (getFavoriteGroups ? getFavoriteGroups(favorite.id) : [])
       .filter((groupId) => groupFolderById.has(groupId));
 
-    const createNode = favorite.type === SIDEBAR_FOLDER_FAVORITE_TYPE
+    const createNode = isFolderFavorite
       ? createFavoriteFolderNode
       : createShortcutFromFavorite;
 

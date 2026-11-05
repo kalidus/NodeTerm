@@ -543,9 +543,22 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isDocument = nodeType === 'document' || nodeType === 'quick-note' || nodeType === 'library-file';
     const isSSHTunnel = nodeType === 'ssh-tunnel';
     const isFavShortcut = !!(node.isFavoriteShortcut || node.favoriteId);
+    const isProjection = !!node.isFavoriteProjection;
     const items = [];
 
-    if (node.isFavoriteFolderProjection && node.source !== 'connections') {
+    // Carpeta anidada dentro de una carpeta favorita: solo ocultar de esa proyección.
+    if (node.isFavoriteFolderProjection) {
+      const parentFavoriteId = node.parentFavoriteId;
+      const sourceKey = node.sourceKey;
+      if (parentFavoriteId && sourceKey != null) {
+        items.push({
+          label: 'Quitar de favoritos',
+          icon: 'pi pi-star-fill',
+          command: () => {
+            connectionStore.removeProjectedChildFromFavorites(parentFavoriteId, sourceKey);
+          }
+        });
+      }
       return items;
     }
 
@@ -561,7 +574,43 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       return items;
     }
 
-    if (isFavShortcut && (isPassword || isDocument)) {
+    const pushProjectedRemove = (individualPayload) => {
+      items.push({
+        label: 'Quitar de favoritos',
+        icon: 'pi pi-star-fill',
+        command: () => {
+          connectionStore.removeProjectedChildFromFavorites(
+            node.parentFavoriteId,
+            node.sourceKey,
+            individualPayload
+          );
+        }
+      });
+    };
+
+    const pushIndividualFavoriteToggle = (favoritePayload, existingFavId) => {
+      if (isProjection) {
+        pushProjectedRemove(favoritePayload);
+        return;
+      }
+      const isFav = !!(
+        (existingFavId && connectionStore.isFavorite(existingFavId))
+        || (favoritePayload && connectionStore.isFavorite(favoritePayload))
+      );
+      items.push({
+        label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+        icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+        command: () => {
+          if (isFav && existingFavId) {
+            connectionStore.removeFavorite(existingFavId);
+            return;
+          }
+          if (favoritePayload) connectionStore.toggleFavorite(favoritePayload);
+        }
+      });
+    };
+
+    if ((isFavShortcut || isProjection) && (isPassword || isDocument)) {
       const favId = node.favoriteId || node.data?.id;
       const openKey = node.sourceKey || node.favoriteId || node.data?.id;
       const label = node.label || node.name || node.data?.name || '';
@@ -633,20 +682,11 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           name: label,
           vaultId: node.data?.vaultId
         };
-        const secretIsFav = connectionStore.isFavorite(favId) || connectionStore.isFavorite(secretFavorite);
-        items.push({
-          label: secretIsFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
-          icon: secretIsFav ? 'pi pi-star-fill' : 'pi pi-star',
-          command: () => {
-            if (secretIsFav && favId && !node.isFavoriteProjection) {
-              connectionStore.removeFavorite(favId);
-              return;
-            }
-            connectionStore.toggleFavorite(secretFavorite);
-          }
-        });
+        pushIndividualFavoriteToggle(secretFavorite, isProjection ? undefined : favId);
+      } else if (isProjection) {
+        pushProjectedRemove(null);
       }
-      if (!node.isFavoriteProjection) {
+      if (!isProjection) {
         items.push({
           label: 'Eliminar',
           icon: 'pi pi-trash',
@@ -774,26 +814,38 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
 
-      items.push({
-        label: 'Agregar/Quitar de Favoritos',
-        icon: 'pi pi-star',
-        command: () => {
-          try {
-            const connection = {
-              type: 'ssh',
-              name: node.label,
-              host: node.data?.useBastionWallix ? node.data?.targetServer : (node.data?.host || ''),
-              username: node.data?.user || '',
-              port: node.data?.port || 22,
-              password: node.data?.password || ''
-            };
-            // Emitir evento para que el ConnectionHistory muestre el selector de grupos
-            window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
-              detail: { connection }
-            }));
-          } catch (e) { /* noop */ }
+      if (isProjection) {
+        try {
+          const connection = connectionHelpers.fromSidebarNode({
+            ...node,
+            key: node.sourceKey || node.key
+          });
+          pushProjectedRemove(connection || null);
+        } catch (_) {
+          pushProjectedRemove(null);
         }
-      });
+      } else {
+        items.push({
+          label: 'Agregar/Quitar de Favoritos',
+          icon: 'pi pi-star',
+          command: () => {
+            try {
+              const connection = {
+                type: 'ssh',
+                name: node.label,
+                host: node.data?.useBastionWallix ? node.data?.targetServer : (node.data?.host || ''),
+                username: node.data?.user || '',
+                port: node.data?.port || 22,
+                password: node.data?.password || ''
+              };
+              // Emitir evento para que el ConnectionHistory muestre el selector de grupos
+              window.dispatchEvent(new CustomEvent('request-add-favorite-with-groups', {
+                detail: { connection }
+              }));
+            } catch (e) { /* noop */ }
+          }
+        });
+      }
 
 
       // Función helper para contar terminales en árbol
@@ -1430,6 +1482,62 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
     }
+
+    // Proyecciones: conservar abrir/conectar/copiar/estrella; quitar editar/eliminar/duplicar del origen.
+    if (isProjection) {
+      const blockedLabels = new Set([
+        'Eliminar',
+        'Editar',
+        'Duplicar',
+        'Editar Carpeta',
+        'Duplicar Carpeta',
+        'Nueva Conexión',
+        'Nueva Carpeta',
+        'Análisis forense',
+        '📼 Auditoría',
+        'Agregar/Quitar de Favoritos',
+        'Abrir en Split'
+      ]);
+      const safeItems = [];
+      for (const item of items) {
+        if (item?.separator) {
+          if (safeItems.length > 0 && !safeItems[safeItems.length - 1].separator) {
+            safeItems.push(item);
+          }
+          continue;
+        }
+        if (item?.label && blockedLabels.has(item.label)) continue;
+        safeItems.push(item);
+      }
+      while (safeItems.length > 0 && safeItems[safeItems.length - 1].separator) {
+        safeItems.pop();
+      }
+      const hasStar = safeItems.some((item) => item.label === 'Quitar de favoritos');
+      if (!hasStar) {
+        let individualPayload = null;
+        try {
+          individualPayload = connectionHelpers.fromSidebarNode({
+            ...node,
+            key: node.sourceKey || node.key
+          });
+        } catch (_) {
+          individualPayload = null;
+        }
+        safeItems.push({
+          label: 'Quitar de favoritos',
+          icon: 'pi pi-star-fill',
+          command: () => {
+            connectionStore.removeProjectedChildFromFavorites(
+              node.parentFavoriteId,
+              node.sourceKey,
+              individualPayload
+            );
+          }
+        });
+      }
+      return safeItems;
+    }
+
     return items;
   }, [tabManagementProps, nodes]);
 
