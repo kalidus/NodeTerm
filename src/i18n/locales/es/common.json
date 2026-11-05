@@ -353,6 +353,10 @@
     "showHidden": "Mostrar archivos ocultos",
     "hideHidden": "Ocultar archivos ocultos",
     "toolbar": "Acciones del explorador remoto",
-    "pathPlaceholder": "/ruta/remota"
+    "pathPlaceholder": "/ruta/remota",
+    "saveDefaultPath": "Guardar esta ruta como predeterminada",
+    "savedDefaultTitle": "Ruta guardada",
+    "savedDefault": "Se guardó la ruta remota predeterminada.",
+    "saveDefaultNoPath": "No hay una ruta cargada para guardar."
   }
 }

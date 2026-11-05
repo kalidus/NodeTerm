@@ -353,6 +353,10 @@
     "showHidden": "Show hidden files",
     "hideHidden": "Hide hidden files",
     "toolbar": "Remote explorer actions",
-    "pathPlaceholder": "/remote/path"
+    "pathPlaceholder": "/remote/path",
+    "saveDefaultPath": "Save this path as default",
+    "savedDefaultTitle": "Path saved",
+    "savedDefault": "Saved the default remote path.",
+    "saveDefaultNoPath": "There is no loaded path to save."
   }
 }

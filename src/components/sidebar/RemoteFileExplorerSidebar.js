@@ -114,6 +114,37 @@ function readShowHidden() {
   }
 }
 
+/** Misma clave que FileExplorer dual → ruta remota predeterminada compartida. */
+function getDefaultPathsKey(sshConfig, tabId) {
+  if (sshConfig?.host) {
+    return `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}`;
+  }
+  return `ssh_explorer_default_paths_${tabId}`;
+}
+
+function readSavedDefaultPaths(sshConfig, tabId) {
+  try {
+    const raw = localStorage.getItem(getDefaultPathsKey(sshConfig, tabId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function readSavedRemotePath(sshConfig, tabId) {
+  const remotePath = readSavedDefaultPaths(sshConfig, tabId).remotePath;
+  return typeof remotePath === 'string' && remotePath.startsWith('/') ? remotePath : '';
+}
+
+function writeSavedRemotePath(sshConfig, tabId, path) {
+  const key = getDefaultPathsKey(sshConfig, tabId);
+  const existing = readSavedDefaultPaths(sshConfig, tabId);
+  existing.remotePath = path;
+  localStorage.setItem(key, JSON.stringify(existing));
+}
+
 export default function RemoteFileExplorerSidebar({
   tabId,
   sshConfig,
@@ -360,9 +391,12 @@ export default function RemoteFileExplorerSidebar({
         if (cancelled) return;
         const key = String(tabId);
         let target = pathMemory.current.get(key) || '';
-        // Preferir home al abrir si no hay ruta útil o solo quedó la raíz por un fallo.
-        if (!target || (target === '/' && home && home !== '/')) {
-          target = home || target;
+        const savedRemote = readSavedRemotePath(sshConfigRef.current, tabId);
+        // Sesión → ruta predeterminada guardada → home SFTP.
+        if (!target) {
+          target = savedRemote || home || '';
+        } else if (target === '/' && home && home !== '/') {
+          target = home;
         }
         if (!target) {
           setLoading(false);
@@ -630,6 +664,19 @@ export default function RemoteFileExplorerSidebar({
     await listDirectory(home);
   }, [ensureHomePath, listDirectory]);
 
+  const saveDefaultPath = useCallback(() => {
+    if (!currentPath) {
+      notify('warn', t('remoteExplorer.actionFailTitle'), t('remoteExplorer.saveDefaultNoPath'));
+      return;
+    }
+    try {
+      writeSavedRemotePath(sshConfigRef.current, tabId, currentPath);
+      notify('success', t('remoteExplorer.savedDefaultTitle'), t('remoteExplorer.savedDefault', { path: currentPath }));
+    } catch {
+      notify('warn', t('remoteExplorer.actionFailTitle'), t('remoteExplorer.saveDefaultNoPath'));
+    }
+  }, [currentPath, notify, t, tabId]);
+
   const normalizeRemotePathInput = useCallback(async (raw) => {
     let next = String(raw || '').trim();
     if (!next) return '';
@@ -833,6 +880,15 @@ export default function RemoteFileExplorerSidebar({
             onClick={() => uploadViaDialog(currentPath)}
           >
             <i className="pi pi-upload" />
+          </button>
+          <button
+            type="button"
+            className="remote-explorer-icon-btn"
+            title={t('remoteExplorer.saveDefaultPath')}
+            disabled={waiting || !currentPath}
+            onClick={saveDefaultPath}
+          >
+            <i className="pi pi-bookmark" />
           </button>
         </div>
       </div>
