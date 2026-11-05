@@ -25,6 +25,47 @@ function escapeShellPath(path) {
 }
 
 /**
+ * Extrae la primera ruta absoluta útil de salida remota (ANSI / prompts).
+ */
+function sanitizeRemoteHomePath(raw) {
+  const text = String(raw || '')
+    .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '')
+    .replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, '')
+    .replace(/\x1b\[[0-9;]*m/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+  const first = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.startsWith('/'));
+  if (!first) return '';
+  return first.length > 1 && first.endsWith('/') ? first.slice(0, -1) : first;
+}
+
+/**
+ * Home al estilo WinSCP/FileZilla: SFTP realPath('.').
+ */
+async function getHomeViaSftpClient(connectConfig) {
+  const sftp = new SftpClient();
+  try {
+    await sftp.connect(connectConfig);
+    const home = await sftp.realPath('.');
+    return sanitizeRemoteHomePath(home);
+  } finally {
+    try { await sftp.end(); } catch (_) { /* ignore */ }
+  }
+}
+
+/**
+ * Fallback: $HOME canónico (sigue symlinks; típico en ASUSWRT /root -> /tmp/home/root).
+ */
+async function getHomeViaExecCanonical(ssh) {
+  if (!ssh || typeof ssh.exec !== 'function') return '';
+  const cmd = 'h=${HOME:-/}; (readlink -f "$h" 2>/dev/null || realpath "$h" 2>/dev/null || echo "$h")';
+  const out = await ssh.exec(cmd);
+  return sanitizeRemoteHomePath(out);
+}
+
+/**
  * Parsea la salida del comando ls -la en formato de objetos
  * Soporta nombres con espacios, enlaces simbólicos (-> destino),
  * fechas tradicionales, ISO y localizadas, y atributos SELinux/ACL (+/.).
@@ -413,71 +454,79 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
-  // SSH: Obtener directorio home
+  // SSH: Obtener directorio home (como WinSCP/FileZilla: SFTP realPath('.'))
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
     try {
       const secureConfig = await resolveCredentials(tabId, sshConfig);
-
-      // 1. Intentar usar conexión activa existente con .exec (sin contaminar la shell interactiva)
       const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
-      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
-        try {
-          const homeOutput = await existingConn.ssh.exec('echo $HOME');
-          const cleanHome = String(homeOutput || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
-          if (cleanHome && cleanHome.startsWith('/')) {
-            return { success: true, home: cleanHome.split('\n')[0].trim() };
-          }
-        } catch (execErr) {
-          console.warn('[SSH:get-home] exec en conexión activa falló, intentando fallback:', execErr.message);
-        }
-      }
 
-      if (secureConfig.useBastionWallix) {
-        if (existingConn && existingConn.stream && !existingConn.stream.destroyed) {
-          // Fallback al stream interactivo solo como último recurso si exec falla
-          const stream = existingConn.stream;
-          const command = 'echo $HOME\n';
-          let output = '';
-          const onData = (data) => {
-            output += data.toString('utf-8');
-          };
-          stream.on('data', onData);
-          stream.write(command);
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          stream.removeListener('data', onData);
-          const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
-          const cleanedLines = lines.map(line => line
-            .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '') // OSC
-            .replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, '') // CSI/SGR
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Otros controles
-            .trim()
-          );
-          const home = cleanedLines.find(l => l.startsWith('/')) || '/';
-          return { success: true, home };
-        } else {
-          // Nuevo: usar SFTP para obtener el home si no hay stream interactivo
-          const SftpClient = require('ssh2-sftp-client');
-          const sftp = new SftpClient();
-          const connectConfig = {
+      const sftpConnectConfig = secureConfig.useBastionWallix
+        ? {
             host: secureConfig.bastionHost,
             port: secureConfig.port || 22,
             username: secureConfig.bastionUser,
             password: secureConfig.password,
             readyTimeout: 20000,
             algorithms: buildSshAlgorithms(secureConfig)
+          }
+        : {
+            host: secureConfig.host,
+            port: secureConfig.port || 22,
+            username: secureConfig.username,
+            password: secureConfig.password,
+            privateKey: secureConfig.privateKey,
+            passphrase: secureConfig.passphrase,
+            readyTimeout: 20000,
+            algorithms: buildSshAlgorithms(secureConfig)
           };
-          await sftp.connect(connectConfig);
-          // Obtener el home real del usuario conectado
-          const home = await sftp.realPath('.');
-          await sftp.end();
-          return { success: true, home };
+
+      // 1) Preferir SFTP realPath('.') — home de archivos del servidor
+      try {
+        const sftpHome = await getHomeViaSftpClient(sftpConnectConfig);
+        if (sftpHome) return { success: true, home: sftpHome };
+      } catch (sftpErr) {
+        console.warn('[SSH:get-home] SFTP realPath falló, intentando fallback:', sftpErr.message);
+      }
+
+      // 2) Conexión activa: $HOME canónico (readlink/realpath)
+      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
+        try {
+          const execHome = await getHomeViaExecCanonical(existingConn.ssh);
+          if (execHome) return { success: true, home: execHome };
+        } catch (execErr) {
+          console.warn('[SSH:get-home] exec canónico falló, intentando fallback:', execErr.message);
         }
-      } else {
-        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
+      }
+
+      // 3) Bastión Wallix: stream interactivo solo como último recurso
+      if (secureConfig.useBastionWallix && existingConn?.stream && !existingConn.stream.destroyed) {
+        const stream = existingConn.stream;
+        const command = 'h=${HOME:-/}; (readlink -f "$h" 2>/dev/null || realpath "$h" 2>/dev/null || echo "$h")\n';
+        let output = '';
+        const onData = (data) => {
+          output += data.toString('utf-8');
+        };
+        stream.on('data', onData);
+        stream.write(command);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        stream.removeListener('data', onData);
+        const home = sanitizeRemoteHomePath(output) || '/';
+        return { success: true, home };
+      }
+
+      // 4) Conexión efímera + $HOME canónico
+      const ssh = new SSH2Promise({
+        ...secureConfig,
+        reconnect: false,
+        algorithms: buildSshAlgorithms(secureConfig)
+      });
+      try {
         await ssh.connect();
-        const home = await ssh.exec('echo $HOME');
-        await ssh.close();
-        return { success: true, home: (home || '/').trim() };
+        const home = await getHomeViaExecCanonical(ssh);
+        if (home) return { success: true, home };
+        return { success: true, home: '/' };
+      } finally {
+        try { await ssh.close(); } catch (_) { /* ignore */ }
       }
     } catch (err) {
       return { success: false, error: err.message || err };
