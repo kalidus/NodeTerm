@@ -8,6 +8,11 @@ import { statusBarThemeManager } from './statusBarThemeManager';
 import { setVaultEncryptedItem } from '../shared/vault-write';
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
 import { requestLibrarySync } from './LibrarySyncService';
+import { isMultiVaultEnabled } from './multiVaultFlag';
+import {
+  uploadExtraVaultsToCloud,
+  downloadExtraVaultsFromCloud
+} from './nextcloudExtraVaultSync';
 
 /** Claves empaquetadas en JSON en Nextcloud (mismos nombres en localStorage) */
 const NC_BUNDLE_DOCUMENTS = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
@@ -116,17 +121,24 @@ export function prepareTreeJsonForCloudUpload(treeJson) {
   }
 }
 
-function buildSyncManifest({ connectionsVault, passwordsVault, treeSanitized }) {
+function buildSyncManifest({
+  connectionsVault,
+  passwordsVault,
+  treeSanitized,
+  extraVaultIds = []
+}) {
+  const extras = Array.isArray(extraVaultIds) ? extraVaultIds.filter(Boolean) : [];
   return {
-    schemaVersion: 2,
+    schemaVersion: extras.length > 0 ? 3 : 2,
     updatedAt: new Date().toISOString(),
     masterKeyExported: false,
-    requiresMasterKeyForSecrets: !!(connectionsVault || passwordsVault),
+    requiresMasterKeyForSecrets: !!(connectionsVault || passwordsVault || extras.length),
     vaults: {
       connections: !!connectionsVault,
       passwords: !!passwordsVault,
       sessions: false
     },
+    extraVaultIds: extras,
     treeSanitized: !!treeSanitized
   };
 }
@@ -719,11 +731,22 @@ class SyncManager {
         libraryResult = { success: false, error: err.message };
       }
 
+      let extraVaultsResult = null;
+      if (isMultiVaultEnabled()) {
+        try {
+          extraVaultsResult = await uploadExtraVaultsToCloud(this.nextcloudService);
+        } catch (err) {
+          console.warn('[SYNC] Error subiendo vaults extras:', err);
+          extraVaultsResult = { success: false, error: err.message };
+        }
+      }
+
       try {
         const manifest = buildSyncManifest({
           connectionsVault: connectionsVaultUploaded,
           passwordsVault: !!localStorage.getItem('passwords_encrypted'),
-          treeSanitized
+          treeSanitized,
+          extraVaultIds: extraVaultsResult?.extraVaultIds || []
         });
         await this.nextcloudService.uploadFile(
           NC_FILE_SYNC_MANIFEST,
@@ -748,7 +771,8 @@ class SyncManager {
         documents: documentsResult,
         favorites: favoritesResult,
         passwordsMeta: passwordsMetaResult,
-        library: libraryResult
+        library: libraryResult,
+        extraVaults: extraVaultsResult
       };
     } finally {
       this.syncInProgress = false;
@@ -973,6 +997,19 @@ class SyncManager {
       } catch (e) {
         console.warn('[SYNC] nodeterm-passwords-meta.json (descarga):', e.message);
       }
+
+      let extraVaultsResult = null;
+      if (isMultiVaultEnabled()) {
+        try {
+          const manifest = await this.readCloudSyncManifest();
+          extraVaultsResult = await downloadExtraVaultsFromCloud(this.nextcloudService, {
+            extraVaultIds: manifest?.extraVaultIds || []
+          });
+        } catch (e) {
+          console.warn('[SYNC] Error descargando vaults extras:', e.message);
+          extraVaultsResult = { success: false, error: e.message };
+        }
+      }
       
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
@@ -984,7 +1021,8 @@ class SyncManager {
 
       const security = await this.buildDownloadSecuritySummary({
         connectionsVaultApplied,
-        passwordsVaultApplied: passwordsVaultFileApplied
+        passwordsVaultApplied: passwordsVaultFileApplied,
+        extraVaultsApplied: !!(extraVaultsResult?.restored?.length)
       });
 
       if (security.requiresMasterKey && !security.canUnlockSecrets) {
@@ -1003,6 +1041,7 @@ class SyncManager {
         sessions: sessionsResult,
         connections: connectionsResult,
         passwords: passwordsResult,
+        extraVaults: extraVaultsResult,
         security
       };
     } finally {
@@ -1063,7 +1102,11 @@ class SyncManager {
     }
   }
 
-  async buildDownloadSecuritySummary({ connectionsVaultApplied, passwordsVaultApplied }) {
+  async buildDownloadSecuritySummary({
+    connectionsVaultApplied,
+    passwordsVaultApplied,
+    extraVaultsApplied = false
+  }) {
     const manifest = await this.readCloudSyncManifest();
     const hasLocalVaults = !!(
       localStorage.getItem('connections_encrypted') ||
@@ -1072,7 +1115,9 @@ class SyncManager {
     const requiresMasterKey = !!(
       connectionsVaultApplied ||
       passwordsVaultApplied ||
+      extraVaultsApplied ||
       hasLocalVaults ||
+      (manifest?.extraVaultIds || []).length > 0 ||
       manifest?.requiresMasterKeyForSecrets
     );
     const canUnlockSecrets = requiresMasterKey ? await this.canUnlockCloudSecrets() : true;
@@ -1081,7 +1126,8 @@ class SyncManager {
       canUnlockSecrets,
       vaultsDownloaded: {
         connections: connectionsVaultApplied,
-        passwords: passwordsVaultApplied
+        passwords: passwordsVaultApplied,
+        extraVaults: !!extraVaultsApplied
       },
       masterKeyNeverSynced: true,
       legacyPlainTreePossible: manifest ? !manifest.treeSanitized : !connectionsVaultApplied

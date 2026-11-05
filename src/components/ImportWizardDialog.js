@@ -324,7 +324,7 @@ const ImportWizardDialog = ({
     const [nodetermOptions, setNodeTermOptions] = useState({
         connections: true,
         passwords: true,
-        conversations: true,
+        conversations: false,
         config: true,
         documents: true,
         recordings: false
@@ -335,11 +335,12 @@ const ImportWizardDialog = ({
     const [useEncryption, setUseEncryption] = useState(false);
     const [encryptPassword, setEncryptPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [exportVaultId, setExportVaultId] = useState('default');
+    const [exportVaultIds, setExportVaultIds] = useState(['default']);
     const [exportVaultOptions, setExportVaultOptions] = useState([
         { id: 'default', name: 'Vault principal' }
     ]);
     const [importAsNewVault, setImportAsNewVault] = useState(false);
+    const [importIsAllVaultsBackup, setImportIsAllVaultsBackup] = useState(false);
 
     // Ejecutar redirección al abrir/cambiar props iniciales
     useEffect(() => {
@@ -351,8 +352,8 @@ const ImportWizardDialog = ({
                 setSelectedSource(null);
                 setCurrentStep(0);
             }
-            setExportVaultId('default');
             setImportAsNewVault(false);
+            setImportIsAllVaultsBackup(false);
             (async () => {
                 const opts = [{ id: 'default', name: 'Vault principal' }];
                 try {
@@ -369,6 +370,7 @@ const ImportWizardDialog = ({
                     /* noop */
                 }
                 setExportVaultOptions(opts);
+                setExportVaultIds(opts.map((v) => v.id));
             })();
         }
     }, [visible, initialSource, initialStep]);
@@ -419,7 +421,7 @@ const ImportWizardDialog = ({
         setNodeTermOptions({
             connections: true,
             passwords: true,
-            conversations: true,
+            conversations: false,
             config: true,
             documents: true,
             recordings: false
@@ -432,6 +434,9 @@ const ImportWizardDialog = ({
         setImportProgress(0);
         setImportStatus('');
         setImportResult(null);
+        setImportAsNewVault(false);
+        setImportIsAllVaultsBackup(false);
+        setExportVaultIds(['default']);
         setIsDragOver(false);
     }, [defaultTargetFolderKey]);
 
@@ -541,6 +546,24 @@ const ImportWizardDialog = ({
         setSelectedFile(file);
         setPreviewData(null);
         setPreviewError(null);
+        setImportIsAllVaultsBackup(false);
+        setImportAsNewVault(false);
+        if (selectedSource === 'nodeterm' && file) {
+            (async () => {
+                try {
+                    const text = await readFileAsText(file);
+                    const data = JSON.parse(text);
+                    const all =
+                        data?.vault?.scope === 'all-vaults' ||
+                        data?.vault?.scope === 'selected-vaults' ||
+                        data?.version === '1.1' ||
+                        (Array.isArray(data?.data?.extraVaults) && data.data.extraVaults.length > 0);
+                    setImportIsAllVaultsBackup(!!all);
+                } catch (_) {
+                    setImportIsAllVaultsBackup(false);
+                }
+            })();
+        }
     };
 
     const handleChooseFile = () => {
@@ -573,6 +596,7 @@ const ImportWizardDialog = ({
                     const hasSelectedOption = Object.values(nodetermOptions).some(v => v === true);
                     if (!hasSelectedOption) return false;
                     if (!fileName) return false;
+                    if (!exportVaultIds.length) return false;
                     if (useEncryption) {
                         return encryptPassword.length >= 8 && encryptPassword === confirmPassword;
                     }
@@ -589,7 +613,7 @@ const ImportWizardDialog = ({
                 if (selectedSource === 'keepass' && !password && !selectedKeyFile) return false;
                 return true;
             case 2: // Vista previa / Análisis
-                if (selectedSource === 'export_nodeterm') return true;
+                if (selectedSource === 'export_nodeterm') return exportVaultIds.length > 0;
                 return previewData !== null && !previewError;
             case 3: // Importar / Exportar completado
                 return importResult !== null;
@@ -704,11 +728,13 @@ const ImportWizardDialog = ({
                 type: 'nodeterm',
                 summary: preview,
                 data: data,
+                vaultScope: preview.vaultScope || data.vault?.scope || 'primary',
                 stats: {
-                    connections: preview.connections?.count || 0,
-                    passwords: preview.passwords?.count || 0,
-                    conversations: preview.conversations?.count || 0,
-                    config: preview.config ? 1 : 0
+                    connections: preview.stats?.connections || 0,
+                    passwords: preview.stats?.passwords || 0,
+                    documents: preview.stats?.documents || 0,
+                    extraVaults: preview.stats?.extraVaults || 0,
+                    config: preview.stats?.configItems > 0 ? 1 : 0
                 }
             });
         } catch (error) {
@@ -988,18 +1014,29 @@ const ImportWizardDialog = ({
             setImportProgress(40);
             setImportStatus('Empaquetando datos cifrados...');
 
-            const vaultMeta = exportVaultOptions.find((v) => v.id === exportVaultId);
-            const isExtra = exportVaultId && exportVaultId !== 'default';
+            if (!exportVaultIds.length) {
+                throw new Error('Selecciona al menos un vault para exportar');
+            }
+            const includesPrimary = exportVaultIds.includes('default');
+            const onlySingleExtra =
+                !includesPrimary &&
+                exportVaultIds.length === 1 &&
+                exportVaultIds[0] !== 'default';
+            const selectedNames = exportVaultIds.map((id) => {
+                const meta = exportVaultOptions.find((v) => v.id === id);
+                return meta?.name || id;
+            });
             const exportData = await exportImportService.exportAllData({
                 connections: nodetermOptions.connections,
-                passwords: isExtra ? false : nodetermOptions.passwords,
-                conversations: isExtra ? false : nodetermOptions.conversations,
-                config: isExtra ? false : nodetermOptions.config,
-                documents: isExtra ? false : nodetermOptions.documents,
-                recordings: isExtra ? false : nodetermOptions.recordings,
+                passwords: onlySingleExtra ? false : nodetermOptions.passwords,
+                conversations: false,
+                config: onlySingleExtra || !includesPrimary ? false : nodetermOptions.config,
+                documents: onlySingleExtra ? false : nodetermOptions.documents,
+                recordings: onlySingleExtra || !includesPrimary ? false : nodetermOptions.recordings,
                 encryptPassword: useEncryption ? encryptPassword : null,
-                connectionsVaultId: exportVaultId,
-                connectionsVaultName: vaultMeta?.name || exportVaultId
+                connectionsVaultIds: exportVaultIds,
+                connectionsVaultName: selectedNames.join(', '),
+                availableVaults: exportVaultOptions
             });
 
             setImportProgress(70);
@@ -1019,9 +1056,9 @@ const ImportWizardDialog = ({
                 setImportResult({
                     success: true,
                     stats: {
+                        'Vaults': selectedNames.join(', '),
                         'Conexiones': nodetermOptions.connections ? 'Guardado' : 'Omitido',
                         'Contraseñas': nodetermOptions.passwords ? 'Guardado' : 'Omitido',
-                        'Historial IA': nodetermOptions.conversations ? 'Guardado' : 'Omitido',
                         'Configuración': nodetermOptions.config ? 'Guardado' : 'Omitido',
                         'Notas': nodetermOptions.documents ? 'Guardado' : 'Omitido'
                     }
@@ -1073,7 +1110,7 @@ const ImportWizardDialog = ({
                 .filter(([_, enabled]) => enabled)
                 .map(([key]) => key),
             decryptPassword: password || null,
-            importConnectionsAsNewVault: !!importAsNewVault,
+            importConnectionsAsNewVault: !!importAsNewVault && !importIsAllVaultsBackup,
             newVaultName: data?.vault?.name || data?.data?.connections?.vaultName || null
         });
 
@@ -1698,39 +1735,125 @@ const ImportWizardDialog = ({
 
                         {exportVaultOptions.length > 1 && (
                             <div style={{ marginBottom: '12px' }}>
-                                <label
-                                    htmlFor="exp-vault-select"
+                                <div
                                     style={{
-                                        fontSize: '11px',
-                                        color: 'var(--text-color-secondary)',
-                                        marginBottom: '4px',
-                                        display: 'block'
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginBottom: 6,
+                                        gap: 8
                                     }}
                                 >
-                                    Vault de conexiones
-                                </label>
-                                <select
-                                    id="exp-vault-select"
-                                    value={exportVaultId}
-                                    onChange={(e) => setExportVaultId(e.target.value)}
+                                    <label
+                                        style={{
+                                            fontSize: '11px',
+                                            color: 'var(--text-color-secondary)',
+                                            display: 'block'
+                                        }}
+                                    >
+                                        Vaults a exportar
+                                    </label>
+                                    <span style={{ fontSize: 11, display: 'flex', gap: 8 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setExportVaultIds(exportVaultOptions.map((v) => v.id))
+                                            }
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--ui-button-primary, var(--primary-color))',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 11
+                                            }}
+                                        >
+                                            Seleccionar todos
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setExportVaultIds([])}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--text-color-secondary)',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 11
+                                            }}
+                                        >
+                                            Ninguno
+                                        </button>
+                                    </span>
+                                </div>
+                                <div
+                                    className="import-wizard-vault-list"
                                     style={{
-                                        width: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 6,
                                         padding: '8px 10px',
-                                        borderRadius: 6,
-                                        border: '1px solid var(--surface-border)',
-                                        background: 'var(--surface-ground)',
-                                        color: 'var(--text-color)'
+                                        borderRadius: 8,
+                                        border: '1px solid var(--ui-dialog-border, var(--surface-border))',
+                                        background: 'var(--ui-content-bg, rgba(255, 255, 255, 0.02))',
+                                        color: 'var(--ui-dialog-text, var(--text-color))',
+                                        maxHeight: 140,
+                                        overflowY: 'auto'
                                     }}
                                 >
-                                    {exportVaultOptions.map((v) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {exportVaultId !== 'default' && (
+                                    {exportVaultOptions.map((v) => {
+                                        const checked = exportVaultIds.includes(v.id);
+                                        return (
+                                            <div
+                                                key={v.id}
+                                                className="p-field-checkbox"
+                                                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                                            >
+                                                <Checkbox
+                                                    inputId={`exp-vault-${v.id}`}
+                                                    checked={checked}
+                                                    onChange={(e) => {
+                                                        const on = !!e.checked;
+                                                        setExportVaultIds((prev) => {
+                                                            if (on) {
+                                                                return prev.includes(v.id)
+                                                                    ? prev
+                                                                    : [...prev, v.id];
+                                                            }
+                                                            return prev.filter((id) => id !== v.id);
+                                                        });
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor={`exp-vault-${v.id}`}
+                                                    style={{
+                                                        margin: 0,
+                                                        cursor: 'pointer',
+                                                        fontSize: '12.5px',
+                                                        fontWeight: 600,
+                                                        color: 'var(--ui-dialog-text, var(--text-color))'
+                                                    }}
+                                                >
+                                                    {v.name}
+                                                </label>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {!exportVaultIds.includes('default') && exportVaultIds.length > 0 && (
+                                    <small style={{ display: 'block', marginTop: 6, opacity: 0.8 }}>
+                                        Sin vault principal: configuración y grabaciones no se incluyen.
+                                    </small>
+                                )}
+                                {exportVaultIds.length === 1 &&
+                                    exportVaultIds[0] !== 'default' && (
                                     <small style={{ display: 'block', marginTop: 6, opacity: 0.8 }}>
                                         Solo se exportarán las conexiones de este vault.
+                                    </small>
+                                )}
+                                {exportVaultIds.length === 0 && (
+                                    <small style={{ display: 'block', marginTop: 6, color: 'var(--red-400)' }}>
+                                        Selecciona al menos un vault.
                                     </small>
                                 )}
                             </div>
@@ -1740,7 +1863,6 @@ const ImportWizardDialog = ({
                             {[
                                 { key: 'connections', label: 'Conexiones', icon: 'pi pi-desktop', desc: 'Sesiones SSH/RDP/VNC' },
                                 { key: 'passwords', label: 'Contraseñas', icon: 'pi pi-key', desc: 'Credenciales cifradas' },
-                                { key: 'conversations', label: 'Chats de IA', icon: 'pi pi-comments', desc: 'Historial de IA' },
                                 { key: 'config', label: 'Configuración', icon: 'pi pi-cog', desc: 'Temas y preferencias' },
                                 { key: 'documents', label: 'Notas', icon: 'pi pi-file-edit', desc: 'Notas y documentos' },
                                 { key: 'recordings', label: 'Grabaciones', icon: 'pi pi-video', desc: 'Solo metadatos' }
@@ -2119,7 +2241,6 @@ const ImportWizardDialog = ({
                                     {[
                                         { key: 'connections', label: 'Conexiones', icon: 'pi pi-desktop' },
                                         { key: 'passwords', label: 'Contraseñas', icon: 'pi pi-key' },
-                                        { key: 'conversations', label: 'Chats IA', icon: 'pi pi-comments' },
                                         { key: 'config', label: 'Ajustes', icon: 'pi pi-cog' },
                                         { key: 'documents', label: 'Notas', icon: 'pi pi-file-edit' },
                                         { key: 'recordings', label: 'Grabaciones', icon: 'pi pi-video' }
@@ -2138,7 +2259,8 @@ const ImportWizardDialog = ({
                                     ))}
                                 </div>
                                 {localStorage.getItem('nodeterm_experimental_multi_vault') === 'true' &&
-                                    nodetermOptions.connections && (
+                                    nodetermOptions.connections &&
+                                    !importIsAllVaultsBackup && (
                                     <div
                                         className="p-field-checkbox"
                                         style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: 12 }}
@@ -2157,6 +2279,11 @@ const ImportWizardDialog = ({
                                             </span>
                                         </label>
                                     </div>
+                                )}
+                                {importIsAllVaultsBackup && (
+                                    <small style={{ display: 'block', marginTop: 10, opacity: 0.85 }}>
+                                        Este backup incluye varios vaults: se restaurarán todos automáticamente.
+                                    </small>
                                 )}
                             </div>
                         ) : (
@@ -2290,10 +2417,15 @@ const ImportWizardDialog = ({
             let size = 0;
             if (nodetermOptions.connections) size += 100;
             if (nodetermOptions.passwords) size += 50;
-            if (nodetermOptions.conversations) size += 500;
             if (nodetermOptions.config) size += 20;
             if (nodetermOptions.documents) size += 80;
             if (nodetermOptions.recordings) size += 1000;
+            if (exportVaultIds.length > 1) {
+                size += Math.max(0, exportVaultIds.filter((id) => id !== 'default').length) * 80;
+            }
+            const selectedVaultLabels = exportVaultIds
+                .map((id) => exportVaultOptions.find((v) => v.id === id)?.name || id)
+                .join(', ') || '—';
             
             const sizeStr = size < 1024 ? `~${size} KB` : `~${(size / 1024).toFixed(1)} MB`;
 
@@ -2312,6 +2444,7 @@ const ImportWizardDialog = ({
                             </h5>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                                 <div>Nombre: <strong style={{ color: '#fff' }}>{fileName}.nodeterm</strong></div>
+                                <div>Vaults: <strong style={{ color: '#fff' }}>{selectedVaultLabels}</strong></div>
                                 <div>Cifrado AES-256: <strong style={{ color: useEncryption ? 'var(--green-500)' : 'var(--red-500)' }}>{useEncryption ? 'ACTIVO' : 'INACTIVO'}</strong></div>
                                 <div>Tamaño Estimado: <strong style={{ color: 'var(--cyan-400)' }}>{sizeStr}</strong></div>
                                 <div>Destino: <strong style={{ color: 'var(--text-color-secondary)' }}>Diálogo del sistema</strong></div>
@@ -2327,7 +2460,6 @@ const ImportWizardDialog = ({
                                 {[
                                     { key: 'connections', label: 'Conexiones' },
                                     { key: 'passwords', label: 'Contraseñas' },
-                                    { key: 'conversations', label: 'Chats de IA' },
                                     { key: 'config', label: 'Configuración' },
                                     { key: 'documents', label: 'Notas' },
                                     { key: 'recordings', label: 'Grabaciones' }
@@ -2438,7 +2570,11 @@ const ImportWizardDialog = ({
                     <div className="import-wizard-stats-grid">
                         <StatCard icon="pi pi-desktop" label="Conexiones" value={previewData.stats.connections} />
                         <StatCard icon="pi pi-key" label="Contraseñas" value={previewData.stats.passwords} />
-                        <StatCard icon="pi pi-comments" label="Conversaciones" value={previewData.stats.conversations} />
+                        <StatCard
+                            icon="pi pi-lock"
+                            label="Vaults extras"
+                            value={previewData.stats.extraVaults || 0}
+                        />
                         <StatCard icon="pi pi-cog" label="Configuración" value={previewData.stats.config ? 'Sí' : 'No'} />
                     </div>
                 );

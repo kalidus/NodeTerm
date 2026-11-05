@@ -3188,6 +3188,17 @@
   gap: 1.25rem;
 }
 
+/* Lista multi-select de vaults: usar tokens UI de la app, no surface-ground de Prime */
+.import-wizard-vault-list {
+  background: var(--ui-content-bg, rgba(255, 255, 255, 0.02)) !important;
+  border-color: var(--ui-dialog-border, var(--surface-border)) !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+}
+
+.import-wizard-vault-list label {
+  color: var(--ui-dialog-text, var(--text-color));
+}
+
 /* Dropzone */
 .import-wizard-dropzone {
   display: flex;

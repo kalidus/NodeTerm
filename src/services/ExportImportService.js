@@ -14,6 +14,7 @@ import { helpers as connectionHelpers } from '../utils/connectionStore';
 class ExportImportService {
   constructor() {
     this.supportedVersion = '1.0';
+    this.supportedVersions = ['1.0', '1.1'];
     this.fileExtension = '.nodeterm';
   }
 
@@ -92,13 +93,15 @@ class ExportImportService {
     const {
       connections = true,
       passwords = true,
-      conversations = true,
+      conversations = false,
       config = true,
       recordings = false,
       documents = true,
       encryptPassword = null,
-      connectionsVaultId = null, // null/'default' = principal; otro id = vault extra
-      connectionsVaultName = null
+      connectionsVaultId = null, // legacy: null/'default' | 'all' | extraId
+      connectionsVaultIds = null, // preferido: subset de vault ids
+      connectionsVaultName = null,
+      availableVaults = null // opcional: [{id,name}] para normalizar sin IPC
     } = options;
 
     const {
@@ -107,38 +110,114 @@ class ExportImportService {
       documentVaultStorageKey,
       DEFAULT_VAULT_ID
     } = require('../shared/vault-connection-trees');
+    const {
+      ALL_VAULTS_ID,
+      BACKUP_VERSION_ALL_VAULTS,
+      BACKUP_VERSION_SINGLE,
+      packAllExtraVaultEntries,
+      normalizeExportVaultIds,
+      filterExtraVaultMetas
+    } = require('../shared/extra-vaults-backup');
 
-    const vaultId =
-      connectionsVaultId && connectionsVaultId !== DEFAULT_VAULT_ID
-        ? String(connectionsVaultId)
-        : DEFAULT_VAULT_ID;
-    const isExtraVault = vaultId !== DEFAULT_VAULT_ID;
+    let extraVaultMetas = [];
+    try {
+      if (Array.isArray(availableVaults)) {
+        extraVaultMetas = availableVaults.filter(
+          (v) => v && v.id && v.id !== DEFAULT_VAULT_ID && v.id !== ALL_VAULTS_ID
+        );
+      } else if (window.electron?.vaults?.list) {
+        const res = await window.electron.vaults.list();
+        extraVaultMetas = res?.vaults || [];
+      }
+    } catch (e) {
+      console.warn('[ExportImportService] No se pudo listar vaults extras:', e.message);
+    }
+
+    const availableForNormalize = [
+      { id: DEFAULT_VAULT_ID, name: 'Vault principal' },
+      ...extraVaultMetas
+    ];
+    const selectedVaultIds = normalizeExportVaultIds(
+      connectionsVaultIds,
+      connectionsVaultId,
+      availableForNormalize
+    );
+    if (!selectedVaultIds.length) {
+      throw new Error('Debes seleccionar al menos un vault para exportar');
+    }
+
+    const includesPrimary = selectedVaultIds.includes(DEFAULT_VAULT_ID);
+    const selectedExtraMetas = filterExtraVaultMetas(extraVaultMetas, selectedVaultIds);
+    const selectedExtraIds = selectedExtraMetas.map((v) => v.id);
+    const isMultiVaultExport = selectedVaultIds.length > 1;
+    // Un solo vault extra (sin principal): mismo comportamiento v1.0 de siempre
+    const isExtraVault = !includesPrimary && selectedExtraIds.length === 1 && !isMultiVaultExport;
+    const vaultId = isExtraVault
+      ? selectedExtraIds[0]
+      : includesPrimary
+        ? DEFAULT_VAULT_ID
+        : selectedExtraIds[0] || DEFAULT_VAULT_ID;
+
+    const allExtrasSelected =
+      extraVaultMetas.length > 0 &&
+      selectedExtraIds.length === extraVaultMetas.length &&
+      includesPrimary;
+    const vaultScope = isMultiVaultExport
+      ? allExtrasSelected
+        ? 'all-vaults'
+        : 'selected-vaults'
+      : isExtraVault
+        ? 'extra-vault'
+        : 'primary';
+    const skipGlobalCategories = !includesPrimary; // config/recordings solo con principal
+
+    const selectedNames = selectedVaultIds.map((id) => {
+      if (id === DEFAULT_VAULT_ID) return 'Vault principal';
+      const meta = extraVaultMetas.find((v) => v.id === id);
+      return meta?.name || id;
+    });
 
     const exportData = {
-      version: this.supportedVersion,
+      version: isMultiVaultExport ? BACKUP_VERSION_ALL_VAULTS : BACKUP_VERSION_SINGLE,
       exportedAt: new Date().toISOString(),
       appVersion: window.electronAPI?.getVersionInfo ? 
         (await window.electronAPI.getVersionInfo()).appVersion : getVersionInfo().appVersion,
       encrypted: !!encryptPassword,
-      vault: {
-        id: vaultId,
-        name: connectionsVaultName || (isExtraVault ? vaultId : 'default'),
-        scope: isExtraVault ? 'extra-vault' : 'primary'
-      },
+      vault: isMultiVaultExport
+        ? {
+            id: allExtrasSelected ? ALL_VAULTS_ID : 'selected',
+            name:
+              connectionsVaultName ||
+              (allExtrasSelected ? 'Todos los vaults' : selectedNames.join(', ')),
+            scope: vaultScope,
+            selectedIds: selectedVaultIds
+          }
+        : {
+            id: vaultId,
+            name:
+              connectionsVaultName ||
+              (isExtraVault
+                ? selectedExtraMetas[0]?.name || vaultId
+                : 'default'),
+            scope: vaultScope
+          },
       categories: {
         connections: connections,
         passwords: passwords,
-        conversations: isExtraVault ? false : conversations,
-        config: isExtraVault ? false : config,
-        recordings: isExtraVault ? false : recordings,
+        conversations: skipGlobalCategories ? false : conversations,
+        config: skipGlobalCategories ? false : config,
+        recordings: skipGlobalCategories ? false : recordings,
         documents: documents
       },
       data: {}
     };
 
+    // Empaquetar bloques del vault "activo" (principal o un único extra)
+    const packPrimaryLikeBlocks = includesPrimary || isExtraVault;
+
     try {
       // === 1. CONEXIONES ===
-      if (connections) {
+      if (connections && packPrimaryLikeBlocks) {
         const storageKey = connectionVaultStorageKey(vaultId);
         const treeData = isExtraVault ? null : this.safeGetItem('basicapp2_tree_data');
         const encryptedConnections = this.safeGetItem(storageKey);
@@ -156,6 +235,8 @@ class ExportImportService {
         
         console.log('[ExportImportService] Exportando conexiones:', {
           vaultId,
+          selectedVaultIds,
+          isMultiVaultExport,
           storageKey,
           hasTreeData: !!treeData,
           treeDataLength: Array.isArray(treeData) ? treeData.length : 'N/A',
@@ -176,12 +257,16 @@ class ExportImportService {
           filterConfig: filterConfig,
           groupAssignments: groupAssignments,
           vaultId,
-          vaultName: exportData.vault.name
+          vaultName: isExtraVault
+            ? exportData.vault.name
+            : includesPrimary
+              ? 'Vault principal'
+              : exportData.vault.name
         };
       }
 
       // === 2. CONTRASEÑAS ===
-      if (passwords) {
+      if (passwords && packPrimaryLikeBlocks) {
         const pwKey = passwordVaultStorageKey(vaultId);
         const encryptedPasswords = this.safeGetItem(pwKey);
         const passwordNodes = isExtraVault
@@ -209,8 +294,8 @@ class ExportImportService {
         };
       }
 
-      // === 3. CONVERSACIONES DE IA ===
-      if (conversations) {
+      // === 3. CONVERSACIONES DE IA (legacy; desactivado por defecto) ===
+      if (conversations && !skipGlobalCategories) {
         const conversationKeys = this.getKeysWithPrefix('conversation_');
         const conversationData = {};
         conversationKeys.forEach(key => {
@@ -233,7 +318,7 @@ class ExportImportService {
       }
 
       // === 4. CONFIGURACIONES ===
-      if (config) {
+      if (config && !skipGlobalCategories) {
         const configData = {
           // Clientes de IA
           aiClientsEnabled: this.safeGetItem('ai_clients_enabled'),
@@ -347,7 +432,7 @@ class ExportImportService {
       }
 
       // === 5. NOTAS / DOCUMENTOS ===
-      if (documents) {
+      if (documents && packPrimaryLikeBlocks) {
         const docKey = documentVaultStorageKey(vaultId);
         const encryptedDocuments = this.safeGetItem(docKey);
         exportData.data.documents = {
@@ -364,8 +449,19 @@ class ExportImportService {
         };
       }
 
+      // === 5b. VAULTS EXTRAS (multi-select o "all") ===
+      // En export de un único extra, los blobs ya van en data.connections/passwords/documents.
+      if (selectedExtraIds.length > 0 && !isExtraVault) {
+        exportData.data.extraVaults = packAllExtraVaultEntries(
+          selectedExtraMetas,
+          (key) => this.safeGetItem(key),
+          { connections, passwords, documents }
+        );
+        exportData.categories.extraVaults = exportData.data.extraVaults.length;
+      }
+
       // === 6. GRABACIONES (solo metadata) ===
-      if (recordings) {
+      if (recordings && !skipGlobalCategories) {
         const recordingKeys = this.getKeysWithPrefix('recording_');
         const recordingMetadata = {};
         recordingKeys.forEach(key => {
@@ -573,11 +669,12 @@ class ExportImportService {
         return { valid: false, error: 'Estructura de archivo inválida' };
       }
 
-      // Validar versión
-      if (exportData.version !== this.supportedVersion) {
+      // Validar versión (1.0 single-vault, 1.1 all-vaults)
+      const { isSupportedBackupVersion } = require('../shared/extra-vaults-backup');
+      if (!isSupportedBackupVersion(exportData.version)) {
         return { 
           valid: false, 
-          error: `Versión no compatible. Esperada: ${this.supportedVersion}, Recibida: ${exportData.version}` 
+          error: `Versión no compatible. Soportadas: ${(this.supportedVersions || ['1.0']).join(', ')}, Recibida: ${exportData.version}` 
         };
       }
 
@@ -643,12 +740,18 @@ class ExportImportService {
         config: 0,
         recordings: 0,
         documents: 0,
+        extraVaults: 0,
         newVault: null
       };
 
+      const isAllVaultsBackup =
+        exportData.vault?.scope === 'all-vaults' ||
+        exportData.vault?.scope === 'selected-vaults' ||
+        Array.isArray(dataToImport.extraVaults);
+
       // 4. Importar por categorías
       if (categories.includes('connections') && dataToImport.connections) {
-        if (importConnectionsAsNewVault) {
+        if (importConnectionsAsNewVault && !isAllVaultsBackup) {
           const vaultMeta = exportData.vault || {};
           importStats.newVault = await this.importConnectionsAsNewVault(dataToImport.connections, {
             name:
@@ -687,6 +790,21 @@ class ExportImportService {
       if (categories.includes('documents') && dataToImport.documents) {
         await this.importDocuments(dataToImport.documents, { merge, replace });
         importStats.documents = this.countImportedDocuments(dataToImport.documents);
+      }
+
+      if (
+        isAllVaultsBackup &&
+        Array.isArray(dataToImport.extraVaults) &&
+        dataToImport.extraVaults.length > 0 &&
+        (categories.includes('connections') ||
+          categories.includes('passwords') ||
+          categories.includes('documents'))
+      ) {
+        importStats.extraVaults = await this.importExtraVaults(dataToImport.extraVaults, {
+          merge,
+          replace,
+          categories
+        });
       }
 
       return {
@@ -870,6 +988,96 @@ class ExportImportService {
     } catch (error) {
       throw new Error(`Error al restaurar backup: ${error.message}`);
     }
+  }
+
+  /**
+   * Escribe un blob cifrado de vault (principal o extra) vía setVaultEncryptedItem.
+   */
+  writeEncryptedVaultBlob(storageKey, encrypted) {
+    const { setVaultEncryptedItem } = require('../shared/vault-write');
+    const { normalizeEncryptedBlob } = require('../shared/extra-vaults-backup');
+    const enc = normalizeEncryptedBlob(encrypted);
+    if (enc == null) return { ok: false, reason: 'empty' };
+    return setVaultEncryptedItem(storageKey, enc);
+  }
+
+  /**
+   * Restaura vaults extras desde data.extraVaults (backup v1.1).
+   * @returns {number} cantidad de vaults restaurados
+   */
+  async importExtraVaults(extraVaults, options = {}) {
+    const {
+      connectionVaultStorageKey,
+      passwordVaultStorageKey,
+      documentVaultStorageKey
+    } = require('../shared/vault-connection-trees');
+    const categories = options.categories || [
+      'connections',
+      'passwords',
+      'documents'
+    ];
+    const list = Array.isArray(extraVaults) ? extraVaults : [];
+    let restored = 0;
+
+    for (const entry of list) {
+      if (!entry?.id) continue;
+      const vaultId = String(entry.id);
+      const name = String(entry.name || vaultId);
+
+      if (!window.electron?.vaults?.create) {
+        throw new Error('API de vaults no disponible para importar vaults extras');
+      }
+
+      try {
+        const created = await window.electron.vaults.create({ id: vaultId, name });
+        if (!created?.success && !/ya existe/i.test(String(created?.error || ''))) {
+          // Si falla por otro motivo, intentar listar — puede existir
+          const listed = await window.electron.vaults.list?.();
+          const exists = (listed?.vaults || []).some((v) => v.id === vaultId);
+          if (!exists) {
+            throw new Error(created?.error || `No se pudo crear vault ${vaultId}`);
+          }
+        }
+      } catch (e) {
+        if (!/ya existe/i.test(String(e?.message || e))) {
+          const listed = await window.electron.vaults.list?.().catch(() => null);
+          const exists = (listed?.vaults || []).some((v) => v.id === vaultId);
+          if (!exists) throw e;
+        }
+      }
+
+      if (categories.includes('connections') && entry.connections?.encrypted != null) {
+        const key =
+          entry.connections.storageKey || connectionVaultStorageKey(vaultId);
+        const wrote = this.writeEncryptedVaultBlob(key, entry.connections.encrypted);
+        if (!wrote.ok) {
+          throw new Error(`No se pudo guardar conexiones de ${vaultId}: ${wrote.reason}`);
+        }
+      }
+      if (categories.includes('passwords') && entry.passwords?.encrypted != null) {
+        const key = entry.passwords.storageKey || passwordVaultStorageKey(vaultId);
+        const wrote = this.writeEncryptedVaultBlob(key, entry.passwords.encrypted);
+        if (!wrote.ok) {
+          throw new Error(`No se pudo guardar passwords de ${vaultId}: ${wrote.reason}`);
+        }
+      }
+      if (categories.includes('documents') && entry.documents?.encrypted != null) {
+        const key = entry.documents.storageKey || documentVaultStorageKey(vaultId);
+        const wrote = this.writeEncryptedVaultBlob(key, entry.documents.encrypted);
+        if (!wrote.ok) {
+          throw new Error(`No se pudo guardar documentos de ${vaultId}: ${wrote.reason}`);
+        }
+      }
+      restored += 1;
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
+    } catch (_) {
+      /* noop */
+    }
+
+    return restored;
   }
 
   /**
@@ -1338,6 +1546,7 @@ class ExportImportService {
         exportedAt: exportData.exportedAt,
         appVersion: exportData.appVersion,
         dataSize: exportData.dataSize,
+        vaultScope: exportData.vault?.scope || 'primary',
         stats: {
           connections: connectionsCount >= 0 ? connectionsCount : 0, // Si es -1, mostrar 0 pero con nota
           passwords: passwordsCount >= 0 ? passwordsCount : 0,
@@ -1346,6 +1555,9 @@ class ExportImportService {
           recordings: Object.keys(dataToAnalyze.recordings || {}).length,
           documents: documentsCount >= 0 ? documentsCount : 0,
           documentsEncryptedUnknown: documentsCount === -1,
+          extraVaults: Array.isArray(dataToAnalyze.extraVaults)
+            ? dataToAnalyze.extraVaults.length
+            : 0,
           // Flags para indicar si hay datos encriptados
           hasEncryptedConnections: connectionsCount === -1,
           hasEncryptedPasswords: passwordsCount === -1

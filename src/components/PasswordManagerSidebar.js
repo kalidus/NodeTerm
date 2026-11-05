@@ -385,7 +385,7 @@ const PasswordManagerSidebar = ({
     };
   }, [passwordNodes, iconTheme, showToast]);
 
-  // Escuchar sincronización desde Nextcloud (principal; extras no sync)
+  // Escuchar sincronización desde Nextcloud (principal + extras si multi-vault)
   useEffect(() => {
     const handler = async (e) => {
       const { count, silent } = e.detail || {};
