@@ -344,6 +344,15 @@
     "renamedTitle": "Renamed",
     "deletedTitle": "Deleted",
     "downloadedTitle": "Download complete",
-    "actionFailTitle": "Could not complete the action"
+    "actionFailTitle": "Could not complete the action",
+    "upload": "Upload files",
+    "uploadHere": "Upload here",
+    "copyPath": "Copy path",
+    "copiedTitle": "Path copied",
+    "copyFail": "Could not copy the path",
+    "showHidden": "Show hidden files",
+    "hideHidden": "Hide hidden files",
+    "toolbar": "Remote explorer actions",
+    "pathPlaceholder": "/remote/path"
   }
 }

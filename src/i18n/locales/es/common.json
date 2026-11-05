@@ -344,6 +344,15 @@
     "renamedTitle": "Renombrado",
     "deletedTitle": "Eliminado",
     "downloadedTitle": "Descarga completada",
-    "actionFailTitle": "No se pudo completar"
+    "actionFailTitle": "No se pudo completar",
+    "upload": "Subir archivos",
+    "uploadHere": "Subir aquí",
+    "copyPath": "Copiar ruta",
+    "copiedTitle": "Ruta copiada",
+    "copyFail": "No se pudo copiar la ruta",
+    "showHidden": "Mostrar archivos ocultos",
+    "hideHidden": "Ocultar archivos ocultos",
+    "toolbar": "Acciones del explorador remoto",
+    "pathPlaceholder": "/ruta/remota"
   }
 }

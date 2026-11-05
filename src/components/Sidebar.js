@@ -3358,6 +3358,13 @@ const Sidebar = React.memo(({
               status={activeSshSession.status}
               showToast={showToast}
               pathMemoryRef={remotePathMemoryRef}
+              explorerFontSize={explorerFontSize}
+              explorerFontColor={explorerFontColor}
+              treeTheme={activeTreeAppearance.treeTheme}
+              iconTheme={activeTreeAppearance.iconTheme}
+              iconSize={iconSize}
+              folderIconSize={folderIconSize}
+              sessionActionIconTheme={sessionActionIconTheme}
             />
           </div>
         )}
