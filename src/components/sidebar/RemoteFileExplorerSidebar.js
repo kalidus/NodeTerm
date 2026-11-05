@@ -281,25 +281,53 @@ export default function RemoteFileExplorerSidebar({
     }
   }, [pathMemory, t, tabId]);
 
+  const sanitizeHomePath = useCallback((raw) => {
+    const first = String(raw || '')
+      .replace(/\x1b\[[0-9;]*m/g, '')
+      .trim()
+      .split(/\r?\n/)[0]
+      .trim();
+    if (!first.startsWith('/')) return '';
+    return first.length > 1 && first.endsWith('/') ? first.slice(0, -1) : first;
+  }, []);
+
   const ensureHomePath = useCallback(async () => {
-    const cached = homePathRef.current.get(String(tabId));
-    if (cached) {
+    const key = String(tabId);
+    const cached = homePathRef.current.get(key);
+    // No reutilizar '/' en caché: suele ser un fallo anterior al resolver $HOME.
+    if (cached && cached !== '/') {
       setHomePath(cached);
       return cached;
     }
     const fe = window.electron?.fileExplorer;
-    if (!fe || !tabId) return '/';
+    if (!fe || !tabId) return '';
+
+    const commitHome = (path) => {
+      const previous = homePathRef.current.get(key);
+      homePathRef.current.set(key, path);
+      setHomePath(path);
+      // Si solo recordábamos '/' por un resolve fallido, sustituir por el home real.
+      if (path !== '/' && pathMemory.current.get(key) === '/' && (!previous || previous === '/')) {
+        pathMemory.current.set(key, path);
+      }
+      return path;
+    };
+
     try {
       const home = await fe.getHomeDirectory(tabId, sshConfigRef.current);
-      const path = home?.success && home.home ? home.home : '/';
-      homePathRef.current.set(String(tabId), path);
-      setHomePath(path);
-      return path;
+      const path = home?.success ? sanitizeHomePath(home.home) : '';
+      if (path) return commitHome(path);
     } catch {
-      setHomePath('/');
-      return '/';
+      /* seguir con fallback */
     }
-  }, [tabId]);
+
+    const user = String(sshConfigRef.current?.username || '').trim();
+    if (user === 'root') return commitHome('/');
+    if (user) return commitHome(`/home/${user}`);
+
+    setHomePath('');
+    return '';
+  }, [pathMemory, sanitizeHomePath, tabId]);
 
   useEffect(() => {
     setEntries([]);
@@ -323,23 +351,26 @@ export default function RemoteFileExplorerSidebar({
     if (!tabId || !connected) return undefined;
     let cancelled = false;
     const open = async () => {
-      const remembered = pathMemory.current.get(String(tabId));
-      if (remembered) {
-        if (!homePathRef.current.has(String(tabId))) {
-          await ensureHomePath();
-        }
-        if (!cancelled) await listDirectory(remembered);
-        return;
-      }
       const fe = window.electron?.fileExplorer;
       if (!fe) return;
       setLoading(true);
       setError('');
       try {
-        const path = await ensureHomePath();
+        const home = await ensureHomePath();
         if (cancelled) return;
-        pathMemory.current.set(String(tabId), path);
-        await listDirectory(path);
+        const key = String(tabId);
+        let target = pathMemory.current.get(key) || '';
+        // Preferir home al abrir si no hay ruta útil o solo quedó la raíz por un fallo.
+        if (!target || (target === '/' && home && home !== '/')) {
+          target = home || target;
+        }
+        if (!target) {
+          setLoading(false);
+          setError(t('remoteExplorer.listError'));
+          return;
+        }
+        pathMemory.current.set(key, target);
+        await listDirectory(target);
       } catch (err) {
         if (cancelled) return;
         setLoading(false);
