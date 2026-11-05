@@ -43,6 +43,7 @@ import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
 import {
   isVaultRoot,
   getVaultRootId,
+  findVaultIdForNode,
   DEFAULT_VAULT_ID
 } from '../shared/vault-connection-trees';
 import NotesBrowser from './notes/NotesBrowser';
@@ -1330,6 +1331,30 @@ const DocumentsSidebar = ({
     const isFolder = node.droppable || node.data?.type === 'document-folder';
     const items = [];
 
+    const folderFavoriteItem = (target) => {
+      if (!target || target.data?.virtual || isVaultRoot(target)) return null;
+      const folderFav = connectionStore.sidebarFolderFavoriteFromNode(
+        target,
+        'documents',
+        findVaultIdForNode(documentNodes, target.key)
+      );
+      if (!folderFav) return null;
+      const isFav = connectionStore.isFavorite(folderFav);
+      return {
+        label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+        icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+        command: () => {
+          connectionStore.toggleFavorite(folderFav);
+          showToast && showToast({
+            severity: 'success',
+            summary: isFav ? 'Quitado de favoritos' : 'Añadido a favoritos',
+            detail: `"${target.label}" ${isFav ? 'quitado de' : 'añadido a'} favoritos`,
+            life: 3000
+          });
+        }
+      };
+    };
+
     if (node.key === 'quick_note') {
       items.push({
         label: 'Abrir notas rápidas',
@@ -1362,6 +1387,8 @@ const DocumentsSidebar = ({
           }
         );
       }
+      const cloudFavorite = folderFavoriteItem(node);
+      if (cloudFavorite) items.push({ separator: true }, cloudFavorite);
       setContextMenuItems(items);
       contextMenuRef.current?.show(event.originalEvent);
       return;
@@ -1391,6 +1418,8 @@ const DocumentsSidebar = ({
           }
         );
       }
+      const linkedFavorite = folderFavoriteItem(node);
+      if (linkedFavorite) items.push({ separator: true }, linkedFavorite);
       setContextMenuItems(items);
       contextMenuRef.current?.show(event.originalEvent);
       return;
@@ -1495,6 +1524,8 @@ const DocumentsSidebar = ({
         },
         { separator: true }
       );
+      const noteFolderFavorite = folderFavoriteItem(node);
+      if (noteFolderFavorite) items.push(noteFolderFavorite, { separator: true });
     } else {
       const noteConnection = {
         id: node.key,

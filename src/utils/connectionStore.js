@@ -4,6 +4,8 @@
 import favoriteGroupsStore from './favoriteGroupsStore.js';
 
 const SECRET_OR_DOC_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
+export const SIDEBAR_FOLDER_FAVORITE_TYPE = 'sidebar-folder';
+const SIDEBAR_FOLDER_SOURCES = ['connections', 'passwords', 'documents'];
 
 /** Campos que no deben persistirse en historial/favoritos (el vault/árbol cifrado es la fuente de verdad). */
 const SENSITIVE_HISTORY_FIELDS = [
@@ -173,6 +175,38 @@ function saveList(key, list) {
   }
 }
 
+export function sidebarFolderFavoriteId(source, nodeKey) {
+  const safeSource = SIDEBAR_FOLDER_SOURCES.includes(source) ? source : 'connections';
+  return `${SIDEBAR_FOLDER_FAVORITE_TYPE}:${safeSource}:${encodeURIComponent(String(nodeKey ?? ''))}`;
+}
+
+export function canFavoriteSidebarFolder(node) {
+  if (!node || node.key == null || node.key === '') return false;
+  if (node.data?.virtual || node.data?.isShowMoreBtn) return false;
+  if (node.isFavoritesRoot || node.isFavoriteGroupFolder || node.isFavoriteFolderShortcut || node.isFavoriteProjection || node.isFavoriteFolderProjection) return false;
+  const key = String(node.key);
+  if (key === '__favorites_root__' || key.startsWith('__fav_group__') || key.startsWith('__fav_proj__') || key.startsWith('__fav_shortcut__')) return false;
+  const dataType = node.data?.type || node.type;
+  if (dataType === 'vault-root') return false;
+  return true;
+}
+
+export function sidebarFolderFavoriteFromNode(node, source, vaultId) {
+  if (!canFavoriteSidebarFolder(node)) return null;
+  const safeSource = SIDEBAR_FOLDER_SOURCES.includes(source) ? source : 'connections';
+  const nodeKey = String(node.key);
+  return {
+    type: SIDEBAR_FOLDER_FAVORITE_TYPE,
+    source: safeSource,
+    nodeKey,
+    id: sidebarFolderFavoriteId(safeSource, nodeKey),
+    name: node.label || node.name || 'Carpeta',
+    color: node.color || undefined,
+    folderIcon: (node.folderIcon && node.folderIcon !== 'general') ? node.folderIcon : (node.data?.folderIcon || null),
+    vaultId: vaultId || node.vaultId || node.data?.vaultId || undefined
+  };
+}
+
 function normalizePort(type, port) {
   if (port) return parseInt(port, 10);
   if (type === 'ssh' || type === 'explorer' || type === 'sftp' || type === 'scp') return 22;
@@ -197,6 +231,24 @@ function toSerializable(connection) {
   // Mantener tipos de archivos como están (sftp, ftp, scp)
   if (type === 'sftp' || type === 'ftp' || type === 'scp') {
     type = connection.type;
+  }
+
+  // Carpeta de un árbol (conexiones, contraseñas o notas). El id no puede
+  // salir de host/usuario/puerto: todas quedarían colisionando.
+  if (type === SIDEBAR_FOLDER_FAVORITE_TYPE) {
+    const source = SIDEBAR_FOLDER_SOURCES.includes(connection.source) ? connection.source : 'connections';
+    const nodeKey = String(connection.nodeKey || connection.key || '');
+    return {
+      id: connection.id || sidebarFolderFavoriteId(source, nodeKey),
+      type: SIDEBAR_FOLDER_FAVORITE_TYPE,
+      source,
+      nodeKey,
+      name: connection.name || connection.label || 'Carpeta',
+      color: connection.color || undefined,
+      folderIcon: connection.folderIcon || null,
+      vaultId: connection.vaultId || undefined,
+      lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
+    };
   }
 
   // Si es un grupo, usar estructura especial
@@ -698,7 +750,11 @@ export const helpers = {
   fromExplorerConfig,
   buildId,
   redactSensitiveFields,
-  SENSITIVE_HISTORY_FIELDS
+  SENSITIVE_HISTORY_FIELDS,
+  sidebarFolderFavoriteId,
+  sidebarFolderFavoriteFromNode,
+  canFavoriteSidebarFolder,
+  SIDEBAR_FOLDER_FAVORITE_TYPE
 };
 
 export const constants = {
@@ -730,7 +786,11 @@ export default {
   invalidateConnectionStoreCache,
   onUpdate,
   helpers,
-  constants
+  constants,
+  sidebarFolderFavoriteFromNode,
+  canFavoriteSidebarFolder,
+  sidebarFolderFavoriteId,
+  SIDEBAR_FOLDER_FAVORITE_TYPE
 };
 
 

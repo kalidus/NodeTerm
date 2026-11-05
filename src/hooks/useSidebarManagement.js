@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import connectionStore, { helpers as connectionHelpers } from '../utils/connectionStore';
+import connectionStore, { helpers as connectionHelpers, sidebarFolderFavoriteFromNode } from '../utils/connectionStore';
 import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
@@ -7,7 +7,7 @@ import { MAX_SPLIT_PANES } from '../utils/splitTreeLayout';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
 import { setVaultEncryptedItem } from '../shared/vault-write';
-import { findVaultIdForNode } from '../shared/vault-connection-trees';
+import { findVaultIdForNode, isVaultRoot } from '../shared/vault-connection-trees';
 import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
 import { getActiveConnectionVaultId } from '../utils/activeConnectionVault';
 
@@ -540,10 +540,26 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isVNC = nodeType === 'vnc' || nodeType === 'vnc-guacamole' || nodeType === 'web-vnc';
     const isFileConnection = nodeType === 'sftp' || nodeType === 'ftp' || nodeType === 'scp';
     const isPassword = nodeType === 'password' || nodeType === 'crypto_wallet' || nodeType === 'api_key' || nodeType === 'secure_note' || nodeType === 'secret';
-    const isDocument = nodeType === 'document' || nodeType === 'quick-note';
+    const isDocument = nodeType === 'document' || nodeType === 'quick-note' || nodeType === 'library-file';
     const isSSHTunnel = nodeType === 'ssh-tunnel';
     const isFavShortcut = !!(node.isFavoriteShortcut || node.favoriteId);
     const items = [];
+
+    if (node.isFavoriteFolderProjection && node.source !== 'connections') {
+      return items;
+    }
+
+    if (node.isFavoriteFolderShortcut || node.data?.type === 'sidebar-folder') {
+      const favId = node.favoriteId || node.data?.id;
+      items.push({
+        label: 'Quitar de favoritos',
+        icon: 'pi pi-star-fill',
+        command: () => {
+          if (favId) connectionStore.removeFavorite(favId);
+        }
+      });
+      return items;
+    }
 
     if (isFavShortcut && (isPassword || isDocument)) {
       const favId = node.favoriteId || node.data?.id;
@@ -551,9 +567,19 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       const label = node.label || node.name || node.data?.name || '';
 
       items.push({
-        label: isDocument ? 'Abrir nota' : 'Abrir',
+        label: nodeType === 'library-file' ? 'Abrir' : (isDocument ? 'Abrir nota' : 'Abrir'),
         icon: 'pi pi-external-link',
         command: () => {
+          if (nodeType === 'library-file') {
+            window.dispatchEvent(new CustomEvent('open-library-file-tab', {
+              detail: {
+                key: openKey,
+                label,
+                data: node.data || {}
+              }
+            }));
+            return;
+          }
           if (isDocument) {
             window.dispatchEvent(new CustomEvent('open-document-tab', {
               detail: {
@@ -600,26 +626,41 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         });
       }
 
-      items.push({
-        label: 'Quitar de favoritos',
-        icon: 'pi pi-star-fill',
-        command: () => {
-          if (favId) connectionStore.removeFavorite(favId);
-        }
-      });
-      items.push({
-        label: 'Eliminar',
-        icon: 'pi pi-trash',
-        command: () => {
-          if (favId) {
-            connectionStore.removeFavorite(favId);
-            return;
+      if (nodeType !== 'library-file') {
+        const secretFavorite = {
+          id: openKey,
+          type: nodeType || (isDocument ? 'document' : 'password'),
+          name: label,
+          vaultId: node.data?.vaultId
+        };
+        const secretIsFav = connectionStore.isFavorite(favId) || connectionStore.isFavorite(secretFavorite);
+        items.push({
+          label: secretIsFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+          icon: secretIsFav ? 'pi pi-star-fill' : 'pi pi-star',
+          command: () => {
+            if (secretIsFav && favId && !node.isFavoriteProjection) {
+              connectionStore.removeFavorite(favId);
+              return;
+            }
+            connectionStore.toggleFavorite(secretFavorite);
           }
-          if (sidebarCallbacksRef.current?.deleteNode) {
-            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+        });
+      }
+      if (!node.isFavoriteProjection) {
+        items.push({
+          label: 'Eliminar',
+          icon: 'pi pi-trash',
+          command: () => {
+            if (favId) {
+              connectionStore.removeFavorite(favId);
+              return;
+            }
+            if (sidebarCallbacksRef.current?.deleteNode) {
+              sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+            }
           }
-        }
-      });
+        });
+      }
       return items;
     }
 
@@ -1304,6 +1345,24 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
     } else if (isFolder) {
+      if (!isVaultRoot(node)) {
+        const folderFav = sidebarFolderFavoriteFromNode(
+          node,
+          'connections',
+          findVaultIdForNode(nodes, node.key)
+        );
+        if (folderFav) {
+          const isFav = connectionStore.isFavorite(folderFav);
+          items.push({
+            label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+            icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+            command: () => {
+              connectionStore.toggleFavorite(folderFav);
+            }
+          });
+          items.push({ separator: true });
+        }
+      }
       items.push({
         label: 'Nueva Conexión',
         icon: 'pi pi-desktop',

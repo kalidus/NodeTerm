@@ -68,6 +68,7 @@ export function getProtocolBadge(type) {
 		case 'ftp': return 'FTP';
 		case 'scp': return 'SCP';
 		case 'group': return 'GRUPO';
+		case 'sidebar-folder': return 'CARPETA';
 		case 'password':
 		case 'secret': return 'PWD';
 		case 'crypto_wallet': return 'WALLET';
@@ -115,7 +116,7 @@ export function defaultPort(type) {
 
 export function buildHostLabel(conn) {
 	if (!conn) return '-';
-	if (conn.type === 'group') return conn.name || '-';
+	if (conn.type === 'group' || conn.type === 'sidebar-folder') return conn.name || 'Carpeta';
 
 	// Para secretos (passwords, wallets, etc.), mostrar URL o username
 	if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(conn.type)) {
@@ -239,6 +240,7 @@ export const getConnectionTypeColor = (type) => {
 		case 'ftp': return '#4CAF50';
 		case 'scp': return '#9C27B0';
 		case 'group': return '#9c27b0';
+		case 'sidebar-folder': return '#FFC107';
 		case 'password':
 		case 'secret': return '#E91E63';
 		case 'crypto_wallet': return '#FF9800';
@@ -262,6 +264,7 @@ export const getProtocolLabel = (type) => {
 		case 'ftp': return 'FTP';
 		case 'scp': return 'SCP';
 		case 'group': return 'GRUPO';
+		case 'sidebar-folder': return 'CARPETA';
 		case 'password':
 		case 'secret': return 'PWD';
 		case 'crypto_wallet': return 'WALLET';
@@ -286,6 +289,7 @@ export const getConnectionTypeIcon = (type) => {
 		case 'ftp': return 'pi pi-cloud-upload';
 		case 'scp': return 'pi pi-copy';
 		case 'group': return 'pi pi-th-large';
+		case 'sidebar-folder': return 'pi pi-folder';
 		case 'password':
 		case 'secret':
 		case 'crypto_wallet':

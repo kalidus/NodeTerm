@@ -1606,7 +1606,17 @@ const HomeTab = ({
   }, [localLinuxTerminalTheme, localPowerShellTheme]);
 
   const handleConnectToHistory = (connection, options) => {
-    if (connection && (connection.id || connection.connectionId) && !connection.host && !['group', 'password', 'secret'].includes(connection.type)) {
+    if (connection?.type === 'sidebar-folder') {
+      window.dispatchEvent(new CustomEvent('open-sidebar-folder-favorite', {
+        detail: {
+          id: connection.id,
+          source: connection.source,
+          nodeKey: connection.nodeKey
+        }
+      }));
+      return;
+    }
+    if (connection && (connection.id || connection.connectionId) && !connection.host && !['group', 'password', 'secret', 'sidebar-folder'].includes(connection.type)) {
       const wanted = String(connection.connectionId || connection.id);
       const resolved = (getFavorites() || []).find((fav) => String(fav.id || fav.key) === wanted);
       if (resolved) connection = resolved;
@@ -2299,7 +2309,13 @@ const HomeTab = ({
                   onConnectToHistory={handleConnectToHistory}
                   recentConnections={recentConnections}
                   activeIds={activeIds}
-                  onEdit={onEditConnection}
+                  onEdit={(conn) => {
+                    if (conn?.type === 'sidebar-folder') {
+                      handleConnectToHistory(conn);
+                      return;
+                    }
+                    onEditConnection?.(conn);
+                  }}
                   themeColors={themeColors}
                   sidebarNodes={sidebarNodes}
                   masterKey={masterKey}

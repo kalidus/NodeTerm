@@ -1,15 +1,24 @@
-import { helpers as connHelpers } from './connectionStore';
+import { helpers as connHelpers, SIDEBAR_FOLDER_FAVORITE_TYPE } from './connectionStore';
 import favoriteGroupsStore from './favoriteGroupsStore';
 import { extractDragPlacement, isDescendantTreeKey, isShowMoreTreeNode } from './treeDragDrop';
 import { isMultiVaultEnabled } from './multiVaultFlag';
 import { getVisibleConnectionVaultIds } from './activeConnectionVault';
-import { DEFAULT_VAULT_ID } from '../shared/vault-connection-trees';
+import { DEFAULT_VAULT_ID, isVaultRoot } from '../shared/vault-connection-trees';
 import vaultKeyring from '../services/VaultKeyring';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
 const FAVORITE_GROUP_PREFIX = '__fav_group__';
 const FAVORITE_SHORTCUT_PREFIX = '__fav_shortcut__';
+const FAVORITE_PROJECTION_PREFIX = '__fav_proj__';
+const PROJECTED_LEAF_TYPES = new Set([
+  'ssh', 'rdp', 'rdp-guacamole', 'web-rdp',
+  'vnc', 'vnc-guacamole', 'web-vnc',
+  'sftp', 'ftp', 'scp',
+  'password', 'secret', 'crypto_wallet', 'api_key', 'secure_note',
+  'document', 'quick-note', 'library-file',
+  'ssh-tunnel'
+]);
 const SOURCE_TREES_UPDATED_EVENT = 'favorite-source-trees-updated';
 
 let cachedDocumentNodes = [];
@@ -81,6 +90,14 @@ export function isFavoriteGroupFolderKey(key) {
 
 export function isFavoriteShortcutNode(node) {
   return !!(node && node.isFavoriteShortcut);
+}
+
+export function isFavoriteFolderShortcutNode(node) {
+  return !!(node && node.isFavoriteFolderShortcut);
+}
+
+export function isFavoriteProjectionNode(node) {
+  return !!(node && (node.isFavoriteProjection || node.isFavoriteFolderProjection));
 }
 
 export function isFavoriteGroupFolderNode(node) {
@@ -199,7 +216,10 @@ function createShortcutFromFavorite(favorite, sourceNode, groupId = null) {
 }
 
 export function resolveFavoriteShortcutNode(node, nodes) {
-  if (!isFavoriteShortcutNode(node)) return node;
+  if (!node) return node;
+  // La carpeta marcada conserva su identidad: quitarla de favoritos no es borrar el original.
+  if (isFavoriteFolderShortcutNode(node)) return node;
+  if (!isFavoriteShortcutNode(node) && !isFavoriteProjectionNode(node)) return node;
   if (node.sourceKey) {
     const sourceNode = findNodeByKey(nodes, node.sourceKey)
       || findNodeByKey(cachedDocumentNodes, node.sourceKey)
@@ -207,6 +227,147 @@ export function resolveFavoriteShortcutNode(node, nodes) {
     if (sourceNode) return sourceNode;
   }
   return node;
+}
+
+function projectionDisplayData(sourceNode) {
+  const data = sourceNode?.data || {};
+  return {
+    type: data.type || sourceNode?.type,
+    host: data.host || data.hostname || data.server,
+    hostname: data.hostname,
+    user: data.user,
+    username: data.username,
+    port: data.port,
+    protocol: data.protocol,
+    customIcon: data.customIcon || null,
+    icon: data.icon,
+    url: data.url || '',
+    tunnelStatus: data.tunnelStatus,
+    name: sourceNode?.label
+  };
+}
+
+function isProjectedFolderNode(node) {
+  if (!node || isShowMoreTreeNode(node)) return false;
+  if (isVaultRoot(node)) return true;
+  const type = String(node.data?.type || node.type || '').toLowerCase();
+  if (PROJECTED_LEAF_TYPES.has(type)) return false;
+  return node.droppable === true
+    || type === 'password-folder'
+    || type === 'document-folder'
+    || type === 'folder'
+    || type === SIDEBAR_FOLDER_FAVORITE_TYPE
+    || (!type && Array.isArray(node.children));
+}
+
+function projectionKey(favorite, sourceNode, groupId) {
+  return `${FAVORITE_PROJECTION_PREFIX}${groupId || 'root'}__${favorite.id}__${encodeURIComponent(String(sourceNode.key))}`;
+}
+
+function projectFavoriteFolderChildren(sourceNode, favorite, groupId) {
+  const children = [];
+  for (const child of sourceNode?.children || []) {
+    if (!child || isShowMoreTreeNode(child)) continue;
+    if (isProjectedFolderNode(child)) {
+      children.push(projectNestedFavoriteFolder(child, favorite, groupId));
+      continue;
+    }
+    children.push({
+      key: projectionKey(favorite, child, groupId),
+      label: child.label || child.name || 'Elemento',
+      draggable: false,
+      droppable: false,
+      leaf: true,
+      isFavoriteProjection: true,
+      sourceKey: child.key,
+      source: favorite.source,
+      color: child.color,
+      folderIcon: child.folderIcon,
+      data: projectionDisplayData(child)
+    });
+  }
+  return children;
+}
+
+function projectNestedFavoriteFolder(sourceNode, favorite, groupId) {
+  const children = projectFavoriteFolderChildren(sourceNode, favorite, groupId);
+  return {
+    key: projectionKey(favorite, sourceNode, groupId),
+    label: sourceNode.label || 'Carpeta',
+    draggable: false,
+    droppable: true,
+    leaf: false,
+    children,
+    color: sourceNode.color,
+    folderIcon: sourceNode.folderIcon && sourceNode.folderIcon !== 'general' ? sourceNode.folderIcon : null,
+    isFavoriteProjection: true,
+    isFavoriteFolderProjection: true,
+    sourceKey: sourceNode.key,
+    source: favorite.source,
+    data: { type: sourceNode.data?.type || 'folder' }
+  };
+}
+
+function createFavoriteFolderNode(favorite, sourceNode, groupId = null) {
+  const shortcutKey = `${FAVORITE_SHORTCUT_PREFIX}${favorite.id}__${groupId || 'root'}`;
+  if (!sourceNode) {
+    const orphan = favoriteToOrphanNode(favorite, groupId);
+    return {
+      ...orphan,
+      key: shortcutKey,
+      droppable: true,
+      leaf: false,
+      children: [],
+      isFavoriteFolderShortcut: true,
+      source: favorite.source || null,
+      color: favorite.color,
+      folderIcon: favorite.folderIcon || null,
+      data: {
+        ...(orphan.data || {}),
+        type: SIDEBAR_FOLDER_FAVORITE_TYPE,
+        source: favorite.source,
+        nodeKey: favorite.nodeKey,
+        id: favorite.id
+      }
+    };
+  }
+
+  return {
+    key: shortcutKey,
+    label: sourceNode.label || favorite.name || 'Carpeta',
+    draggable: true,
+    droppable: true,
+    leaf: false,
+    children: projectFavoriteFolderChildren(sourceNode, favorite, groupId),
+    color: sourceNode.color || favorite.color,
+    folderIcon: (sourceNode.folderIcon && sourceNode.folderIcon !== 'general')
+      ? sourceNode.folderIcon
+      : (favorite.folderIcon || null),
+    isFavoriteShortcut: true,
+    isFavoriteFolderShortcut: true,
+    isOrphanFavoriteShortcut: false,
+    favoriteId: favorite.id,
+    favoriteGroupId: groupId,
+    sourceKey: sourceNode.key,
+    source: favorite.source,
+    data: {
+      type: SIDEBAR_FOLDER_FAVORITE_TYPE,
+      source: favorite.source,
+      nodeKey: favorite.nodeKey || sourceNode.key,
+      id: favorite.id
+    }
+  };
+}
+
+function findSidebarFolderSource(favorite, connectionNodes, docNodes, pwNodes) {
+  const nodeKey = favorite?.nodeKey;
+  if (!nodeKey) return null;
+  if (favorite.source === 'passwords') return findNodeByKey(pwNodes, nodeKey);
+  if (favorite.source === 'documents') return findNodeByKey(docNodes, nodeKey);
+  if (favorite.source === 'connections') return findNodeByKey(connectionNodes, nodeKey);
+  return findNodeByKey(connectionNodes, nodeKey)
+    || findNodeByKey(pwNodes, nodeKey)
+    || findNodeByKey(docNodes, nodeKey);
 }
 
 function sortNodesByFavoriteOrder(nodes, favoriteOrder) {
@@ -263,6 +424,8 @@ function collectFavoriteShortcutPlacements(nodes, parentGroupId = null, placemen
 
     if (isFavoriteShortcutNode(node) && node.favoriteId) {
       placements.push({ favoriteId: node.favoriteId, groupId: parentGroupId });
+      // El interior de una carpeta favorita es una proyección: no se reasigna.
+      continue;
     }
   }
 
@@ -336,22 +499,28 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
   const rootShortcuts = [];
 
   for (const favorite of connectionFavorites) {
-    const sourceNode = nodeByFavoriteId.get(favorite.id) || null;
+    const sourceNode = favorite.type === SIDEBAR_FOLDER_FAVORITE_TYPE
+      ? findSidebarFolderSource(favorite, connectionNodes, docNodes, pwNodes)
+      : (nodeByFavoriteId.get(favorite.id) || null);
     if (!isFavoriteVisibleInCurrentVaults(favorite, sourceNode)) {
       continue;
     }
     const assignedGroupIds = (getFavoriteGroups ? getFavoriteGroups(favorite.id) : [])
       .filter((groupId) => groupFolderById.has(groupId));
 
+    const createNode = favorite.type === SIDEBAR_FOLDER_FAVORITE_TYPE
+      ? createFavoriteFolderNode
+      : createShortcutFromFavorite;
+
     if (assignedGroupIds.length === 0) {
-      rootShortcuts.push(createShortcutFromFavorite(favorite, sourceNode, null));
+      rootShortcuts.push(createNode(favorite, sourceNode, null));
       continue;
     }
 
     for (const groupId of assignedGroupIds) {
       const folder = groupFolderById.get(groupId);
       if (folder) {
-        folder.children.push(createShortcutFromFavorite(favorite, sourceNode, groupId));
+        folder.children.push(createNode(favorite, sourceNode, groupId));
       }
     }
   }
@@ -430,7 +599,7 @@ function nodeMatchesFilter(node, normalizedQuery) {
   const label = String(node.label || '').toLowerCase();
   if (label.includes(normalizedQuery)) return true;
 
-  if (isFavoriteShortcutNode(node)) {
+  if (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node)) {
     const host = String(node.data?.host || node.data?.hostname || '').toLowerCase();
     const user = String(node.data?.user || node.data?.username || '').toLowerCase();
     return host.includes(normalizedQuery) || user.includes(normalizedQuery);
@@ -499,8 +668,10 @@ export function getDefaultFavoritesExpandedKeys(tree) {
   const expanded = { [root.key]: true };
   const walk = (nodes) => {
     for (const child of nodes || []) {
-      if (child.droppable) {
+      if (child.droppable && !isFavoriteProjectionNode(child)) {
         expanded[child.key] = true;
+      }
+      if (child.droppable || child.children?.length) {
         walk(child.children);
       }
     }
@@ -620,11 +791,22 @@ export function applyFavoritesDragDropFromEvent(event) {
     return false;
   }
 
+  if (isFavoriteProjectionNode(dragNode)) {
+    return false;
+  }
+
   if (!isFavoriteShortcutNode(dragNode) && !isFavoriteGroupFolderNode(dragNode)) {
     return false;
   }
 
   const placement = extractDragPlacement(treeValue, dragNode.key);
+  const parentKey = placement?.parentKey || null;
+  if (parentKey && parentKey !== FAVORITES_ROOT_KEY) {
+    const parent = findNodeByKey(treeValue, parentKey);
+    if (isFavoriteFolderShortcutNode(parent) || isFavoriteProjectionNode(parent)) {
+      return false;
+    }
+  }
   if (isFavoriteGroupFolderNode(dragNode)) {
     if (dropNode?.key && (dropNode.key === dragNode.key || isDescendantTreeKey(dragNode, dropNode.key))) {
       return false;
@@ -658,7 +840,7 @@ export function countFavoriteShortcuts(tree) {
     for (const node of nodes || []) {
       if (isFavoriteShortcutNode(node)) {
         count += 1;
-      } else if (node.children?.length) {
+      } else if (!isFavoriteProjectionNode(node) && node.children?.length) {
         count += walk(node.children);
       }
     }

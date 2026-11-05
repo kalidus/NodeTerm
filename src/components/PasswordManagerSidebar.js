@@ -1689,7 +1689,26 @@ const PasswordManagerSidebar = ({
         contextMenuRef.current.show(event);
       }
     } else if (isFolder) {
+      const folderFav = connectionStore.sidebarFolderFavoriteFromNode(
+        node,
+        'passwords',
+        findVaultIdForNode(passwordNodes, node.key)
+      );
+      const folderIsFav = folderFav ? connectionStore.isFavorite(folderFav) : false;
       const menuItems = [
+        ...(folderFav ? [{
+          label: folderIsFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+          icon: folderIsFav ? 'pi pi-star-fill' : 'pi pi-star',
+          command: () => {
+            connectionStore.toggleFavorite(folderFav);
+            showToast && showToast({
+              severity: 'success',
+              summary: folderIsFav ? 'Quitado de favoritos' : 'Añadido a favoritos',
+              detail: `"${node.label}" ${folderIsFav ? 'quitado de' : 'añadido a'} favoritos`,
+              life: 3000
+            });
+          }
+        }, { separator: true }] : []),
         {
           label: 'Nuevo Secreto',
           icon: 'pi pi-plus',

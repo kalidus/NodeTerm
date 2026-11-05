@@ -56,6 +56,8 @@ import {
   getFavoriteGroupIdFromKey,
   isFavoriteGroupFolderKey,
   isFavoriteGroupFolderNode,
+  isFavoriteFolderShortcutNode,
+  isFavoriteProjectionNode,
   getFavoriteIdFromShortcutKey,
   isFavoriteShortcutKey,
   isFavoriteShortcutNode,
@@ -116,6 +118,30 @@ function safeUnblockForms(showToast) {
   } catch (error) {
     console.warn('Error al desbloquear formularios:', error);
   }
+}
+
+function favoriteContextNode(node, nodes) {
+  if (!node) return node;
+  if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node) || isFavoriteFolderShortcutNode(node)) {
+    return node;
+  }
+  if (node.isFavoriteFolderProjection && node.source !== 'connections') {
+    return node;
+  }
+  if (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node)) {
+    const resolved = resolveFavoriteShortcutNode(node, nodes) || node;
+    const shortcutType = String(node.data?.type || resolved.data?.type || '').toLowerCase();
+    const isSecretOrDoc = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note', 'library-file'].includes(shortcutType);
+    return {
+      ...resolved,
+      isFavoriteShortcut: true,
+      isFavoriteProjection: isFavoriteProjectionNode(node),
+      favoriteId: isFavoriteProjectionNode(node) ? undefined : node.favoriteId,
+      sourceKey: node.sourceKey || resolved.key,
+      key: isSecretOrDoc ? (node.sourceKey || resolved.key) : (resolved.key || node.key)
+    };
+  }
+  return node;
 }
 
 const Sidebar = React.memo(({
@@ -1041,6 +1067,44 @@ const Sidebar = React.memo(({
       ...getDefaultFavoritesExpandedKeys(favoritesTree)
     }));
   }, [showFavoritesView, viewMode, favoritesTree]);
+
+  const pendingFolderFavoriteIdRef = useRef(null);
+
+  useEffect(() => {
+    const onOpenFolderFavorite = (event) => {
+      const id = event?.detail?.id;
+      if (!id) return;
+      pendingFolderFavoriteIdRef.current = id;
+      setViewMode('connections');
+      setShowFavoritesView(true);
+      setSidebarCollapsed(false);
+    };
+    window.addEventListener('open-sidebar-folder-favorite', onOpenFolderFavorite);
+    return () => window.removeEventListener('open-sidebar-folder-favorite', onOpenFolderFavorite);
+  }, [setSidebarCollapsed]);
+
+  useEffect(() => {
+    const id = pendingFolderFavoriteIdRef.current;
+    if (!id || !showFavoritesView || viewMode !== 'connections') return;
+    const keys = [];
+    const walk = (list, ancestors) => {
+      for (const node of list || []) {
+        const trail = [...ancestors, node.key];
+        if (node.isFavoriteFolderShortcut && node.favoriteId === id) {
+          keys.push(...trail);
+        }
+        if (node.children?.length) walk(node.children, trail);
+      }
+    };
+    walk(favoritesTree, []);
+    if (keys.length === 0) return;
+    pendingFolderFavoriteIdRef.current = null;
+    setExpandedKeys((prev) => {
+      const next = { ...(prev || {}) };
+      keys.forEach((key) => { next[key] = true; });
+      return next;
+    });
+  }, [showFavoritesView, viewMode, favoritesTree, setExpandedKeys]);
 
   const toggleFavoritesView = useCallback(() => {
     setViewMode('connections');
@@ -2237,7 +2301,9 @@ const Sidebar = React.memo(({
         </div>
       );
     }
-    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    const actionNode = (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node))
+      ? resolveFavoriteShortcutNode(node, nodes)
+      : node;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const isVaultRootNode = isVaultRoot(node);
     const isFolder = !!(node.droppable || hasChildren) && !isVaultRootNode;
@@ -2366,7 +2432,8 @@ const Sidebar = React.memo(({
       });
     } else if (isFolder) {
       const isFavoritesTreeView = showFavoritesView && viewMode === 'connections';
-      if (isFavoritesTreeView) {
+      const keepOwnFolderIcon = node.isFavoriteFolderShortcut || node.isFavoriteFolderProjection;
+      if (isFavoritesTreeView && !keepOwnFolderIcon) {
         const cacheKey = `fav-folder-${folderIconSize}`;
         icon = getCachedIcon(cacheKey, () => <FolderIconRenderer preset={FolderIconPresets.FAVORITES} pixelSize={folderIconSize} />);
       } else if (node.data?.customIcon && node.data.customIcon !== 'default' && FolderIconPresets[node.data.customIcon.toUpperCase()]) {
@@ -2446,24 +2513,7 @@ const Sidebar = React.memo(({
         onContextMenu={options.onNodeContextMenu ? (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node)) {
-            options.onNodeContextMenu(e, node);
-            return;
-          }
-          if (isFavoriteShortcutNode(node)) {
-            const resolved = resolveFavoriteShortcutNode(node, nodes);
-            const shortcutType = String(node.data?.type || resolved.data?.type || '').toLowerCase();
-            const isSecretOrDoc = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(shortcutType);
-            options.onNodeContextMenu(e, {
-              ...resolved,
-              isFavoriteShortcut: true,
-              favoriteId: node.favoriteId,
-              sourceKey: node.sourceKey || resolved.key,
-              key: isSecretOrDoc ? node.key : (resolved.key || node.key)
-            });
-            return;
-          }
-          options.onNodeContextMenu(e, node);
+          options.onNodeContextMenu(e, favoriteContextNode(node, nodes));
         } : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -2493,6 +2543,15 @@ const Sidebar = React.memo(({
               id: openKey
             };
             window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
+          } else if (actionNode.data && actionNode.data.type === 'library-file') {
+            const openKey = node.sourceKey || actionNode.key;
+            window.dispatchEvent(new CustomEvent('open-library-file-tab', {
+              detail: {
+                key: openKey,
+                label: actionNode.label || actionNode.name,
+                data: actionNode.data
+              }
+            }));
           } else if (actionNode.data && ['document', 'quick-note'].includes(actionNode.data.type)) {
             const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
             window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -2830,12 +2889,16 @@ const Sidebar = React.memo(({
   }, [activeTab, toggleExpandAll]);
 
   const sessionKeyForConnection = useCallback((node) => {
-    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    const actionNode = (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node))
+      ? resolveFavoriteShortcutNode(node, nodes)
+      : node;
     return actionNode?.key || node?.key;
   }, [nodes]);
 
   const isFavoriteConnection = useCallback((node) => {
-    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    const actionNode = (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node))
+      ? resolveFavoriteShortcutNode(node, nodes)
+      : node;
     return isFavorite(actionNode?.key)
       || isFavorite(node?.favoriteId)
       || isFavorite(actionNode?.data?.id)
@@ -2852,7 +2915,9 @@ const Sidebar = React.memo(({
       return;
     }
 
-    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
+    const actionNode = (isFavoriteShortcutNode(node) || isFavoriteProjectionNode(node))
+      ? resolveFavoriteShortcutNode(node, nodes)
+      : node;
     setSelectedNodeKey(node.key);
 
     if (mode === 'preview') {
@@ -2910,6 +2975,15 @@ const Sidebar = React.memo(({
           id: openKey
         }
       }));
+    } else if (type === 'library-file') {
+      const openKey = node.sourceKey || actionNode.data?.id || actionNode.key;
+      window.dispatchEvent(new CustomEvent('open-library-file-tab', {
+        detail: {
+          key: openKey,
+          label: actionNode.label || actionNode.name,
+          data: actionNode.data
+        }
+      }));
     } else if (actionNode?.data && ['document', 'quick-note'].includes(type)) {
       const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
       window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -2923,10 +2997,7 @@ const Sidebar = React.memo(({
   }, [displayNodes, nodes, onOpenSSHConnection, onOpenVncConnection, onSyncActiveEditTab, sidebarCallbacksRef, setSelectedNodeKey]);
 
   const onConnectionsBrowserContextMenu = useCallback((event, node) => {
-    const resolved = (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node))
-      ? node
-      : resolveFavoriteShortcutNode(node, nodes);
-    if (onNodeContextMenu) onNodeContextMenu(event, resolved);
+    if (onNodeContextMenu) onNodeContextMenu(event, favoriteContextNode(node, nodes));
   }, [nodes, onNodeContextMenu]);
 
   const remoteExplorerOpen = viewMode === 'connections'
@@ -3264,6 +3335,10 @@ const Sidebar = React.memo(({
                 }
 
                 const node = selectedKey ? findNode(displayNodes, selectedKey) : null;
+                if (node?.isFavoriteFolderShortcut) {
+                  setSelectedNodeForDetails(null);
+                  return;
+                }
                 const resolvedNode = node ? resolveFavoriteShortcutNode(node, nodes) : null;
 
                 if (resolvedNode) {
@@ -3332,11 +3407,8 @@ const Sidebar = React.memo(({
                 }
                 const targetNode = e?.node;
                 if (!targetNode) return;
-                const resolved = (isFavoritesRootKey(targetNode.key) || isFavoriteGroupFolderNode(targetNode))
-                  ? targetNode
-                  : resolveFavoriteShortcutNode(targetNode, nodes);
                 if (onNodeContextMenu) {
-                  onNodeContextMenu(e.originalEvent || e, resolved);
+                  onNodeContextMenu(e.originalEvent || e, favoriteContextNode(targetNode, nodes));
                 }
               }}
             />
