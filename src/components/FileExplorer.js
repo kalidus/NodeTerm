@@ -1750,7 +1750,12 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
         try {
             for (const file of files) {
-                const localPath = file.path;
+                // Electron 32+ eliminó File.path; webUtils es la vía soportada.
+                let localPath = '';
+                try {
+                    localPath = window.electron?.webUtils?.getPathForFile?.(file) || '';
+                } catch (_) { /* noop */ }
+                if (!localPath) localPath = file.path || '';
                 if (!localPath) continue;
 
                 const fileName = localPath.split(/[/\\]/).pop();

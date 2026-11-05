@@ -45,11 +45,27 @@ function basename(filePath) {
   return parts[parts.length - 1] || '';
 }
 
+/** Electron 32+ quitó File.path; hay que resolverlo con webUtils (ver preload). */
+function resolveDroppedLocalPath(file) {
+  if (!file) return '';
+  try {
+    const viaWebUtils = window.electron?.webUtils?.getPathForFile?.(file);
+    if (typeof viaWebUtils === 'string' && viaWebUtils) return viaWebUtils;
+  } catch {
+    /* webUtils no disponible o File no válido */
+  }
+  if (typeof file.path === 'string' && file.path) return file.path;
+  return '';
+}
+
 function partitionDrop(dataTransfer) {
-  // Copiar files antes de webkitGetAsEntry: getAsFile() pierde File.path en Electron.
+  // Resolver rutas antes de webkitGetAsEntry; getAsFile() no aporta path usable.
   const snapped = Array.from(dataTransfer?.files || []).map((file) => {
-    const localPath = typeof file?.path === 'string' ? file.path : '';
-    return { path: localPath, name: basename(localPath) };
+    const localPath = resolveDroppedLocalPath(file);
+    return {
+      path: localPath,
+      name: basename(localPath) || (typeof file?.name === 'string' ? file.name : '')
+    };
   });
 
   const folderNames = [];
