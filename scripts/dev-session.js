@@ -60,6 +60,8 @@ if (process.platform === 'linux' && !env.__NV_PRIME_RENDER_OFFLOAD) {
       env.__NV_PRIME_RENDER_OFFLOAD = '1';
       env.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
       env.__VK_LAYER_NV_optimus = 'NVIDIA_only';
+      env.NVD_BACKEND = 'direct';
+      env.LIBVA_DRIVER_NAME = 'nvidia';
     }
   } catch (_) {}
 }
@@ -68,7 +70,7 @@ const child = spawn(process.execPath, [
   concurrentlyBin,
   '--kill-others',
   'node node_modules/webpack-cli/bin/cli.js --watch --mode development',
-  'wait-on dist/.webpack-ready -t 180000 && electron . --disable-vulkan --disable-features=Vulkan'
+  'wait-on dist/.webpack-ready -t 180000 && electron . --disable-gpu-sandbox --disable-vulkan --disable-features=Vulkan'
 ], {
   cwd: root,
   stdio: 'inherit',

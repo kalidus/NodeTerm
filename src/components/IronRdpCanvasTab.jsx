@@ -2861,8 +2861,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 display: 'block',
                 backgroundColor: '#000000',
                 outline: 'none',
-                borderRadius: '4px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
                 transform: 'translateZ(0)',
                 backfaceVisibility: 'hidden',
                 willChange: 'transform',

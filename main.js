@@ -242,10 +242,10 @@ const isLowRamMachine = getTotalRamGb() <= 8;
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
 } else if (process.platform === 'linux') {
-  // FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
-  // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
-  app.commandLine.appendSwitch('use-angle', 'gl');
-  // Desactivar Vulkan y WebGPU en Linux (incompatible con wayland surface factory en Chromium)
+  // En Linux con drivers propietarios NVIDIA (Arch/CachyOS), el sandbox de Chromium
+  // bloquea el acceso a /dev/nvidia* y nvidia-drm_gbm.so, forzando caída a software (inProcessGpu).
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  // Desactivar Vulkan y WebGPU en Linux para evitar conflictos de superficie en Wayland
   app.commandLine.appendSwitch('disable-vulkan');
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
   // Desactivar watchdog del GPU process para evitar kills prematuros
@@ -254,14 +254,14 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('force_high_performance_gpu');
   // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
-  // Rasterización HW / zero-copy con OpenGL de escritorio sin saltar blocklist de Vulkan
+  // Rasterización HW / zero-copy con OpenGL de escritorio
   app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks');
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   // Plataforma gráfica Ozone en Linux:
@@ -1629,6 +1629,57 @@ function createWindow() {
       } catch (mcpErr) {
         console.error('❌ [POST-SHOW] Error configurando MCP API Server:', mcpErr);
       }
+
+      // 🎮 DIAGNÓSTICO GPU ACTIVA (tras renderizar la ventana con hardware acceleration)
+      try {
+        const gpuFeatures = app.getGPUFeatureStatus();
+        console.log('🎮 [NodeTerm GPU Compositor]', {
+          canvas_2d: gpuFeatures['2d_canvas'],
+          gpu_compositing: gpuFeatures['gpu_compositing'],
+          rasterization: gpuFeatures['rasterization'],
+          video_decode: gpuFeatures['video_decode'],
+          webgl: gpuFeatures['webgl'],
+          webgl2: gpuFeatures['webgl2'] || gpuFeatures['webgl']
+        });
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const rendererGl = await mainWindow.webContents.executeJavaScript(`
+            (async () => {
+              const cvs = document.createElement('canvas');
+              const gl = cvs.getContext('webgl2') || cvs.getContext('webgl');
+              let glInfo = null;
+              if (gl) {
+                const ext = gl.getExtension('WEBGL_debug_renderer_info');
+                glInfo = {
+                  vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR),
+                  renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+                  webgl2: gl instanceof WebGL2RenderingContext
+                };
+              }
+              let videoDecodeH264 = 'no soportado';
+              if (typeof VideoDecoder !== 'undefined' && typeof VideoDecoder.isConfigSupported === 'function') {
+                try {
+                  const res = await VideoDecoder.isConfigSupported({
+                    codec: 'avc1.42001f',
+                    hardwareAcceleration: 'prefer-hardware'
+                  });
+                  videoDecodeH264 = res.supported ? ('soportado (' + res.config.hardwareAcceleration + ')') : 'no';
+                } catch (e) {
+                  videoDecodeH264 = 'error: ' + e.message;
+                }
+              }
+              return { glInfo, videoDecodeH264 };
+            })()
+          `).catch(() => null);
+
+          if (rendererGl) {
+            console.log('🎮 [NodeTerm GPU Activa]', rendererGl.glInfo || 'Sin WebGL');
+            console.log('🎮 [NodeTerm VideoDecoder H.264]', rendererGl.videoDecodeH264);
+          }
+        }
+      } catch (gpuErr) {
+        console.warn('🎮 [NodeTerm GPU] Error diagnosticando estado post-show:', gpuErr?.message || gpuErr);
+      }
     } catch (error) {
       console.error('❌ [POST-SHOW] Error registrando handlers:', error);
       console.error('❌ Stack:', error.stack);
@@ -1875,6 +1926,12 @@ function createWindow() {
 
 // detect-wsl / cygwin:* / docker:list viven en
 // src/main/handlers/platform-terminal-handlers.js (registerCriticalHandlers)
+
+app.on('child-process-gone', (_event, details) => {
+  if (details.type === 'GPU') {
+    console.error('❌ [GPU PROCESS CRASHED]', details);
+  }
+});
 
 app.on('ready', () => {
   logTiming('app ready event');

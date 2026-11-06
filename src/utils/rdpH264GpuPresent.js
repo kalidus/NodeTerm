@@ -116,12 +116,18 @@ function createH264GpuPresenter(opts) {
       }
     }
     ctx.imageSmoothingEnabled = false;
+    const fw = frame.displayWidth || frame.codedWidth || 0;
+    const fh = frame.displayHeight || frame.codedHeight || 0;
     for (const region of regions) {
-      ctx.drawImage(
-        frame,
-        region.sx, region.sy, region.sw, region.sh,
-        region.dx, region.dy, region.sw, region.sh
-      );
+      if (fw > 0 && fh > 0 && region.sx === 0 && region.sy === 0 && region.sw === fw && region.sh === fh && region.dx === 0 && region.dy === 0) {
+        ctx.drawImage(frame, 0, 0);
+      } else {
+        ctx.drawImage(
+          frame,
+          region.sx, region.sy, region.sw, region.sh,
+          region.dx, region.dy, region.sw, region.sh
+        );
+      }
     }
     closeFrame(frame);
   };
