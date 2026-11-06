@@ -58,6 +58,19 @@ function closeFrame(frame) {
   try { frame.close(); } catch (_) { /* noop */ }
 }
 
+function isPlatformWindows() {
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform === 'win32';
+  }
+  if (typeof window !== 'undefined' && (window.electronAPI?.platform || window.electron?.platform)) {
+    return (window.electronAPI?.platform || window.electron?.platform) === 'win32';
+  }
+  if (typeof navigator !== 'undefined' && navigator.platform) {
+    return navigator.platform.toLowerCase().includes('win');
+  }
+  return false;
+}
+
 function createH264GpuPresenter(opts) {
   const get2dContext = typeof opts?.get2dContext === 'function' ? opts.get2dContext : () => null;
   let gpu = null;
@@ -374,6 +387,16 @@ function createH264GpuPresenter(opts) {
       drainLatest();
       return;
     }
+    const isWindows = isPlatformWindows();
+    // En Linux (y entornos no Windows), no consultar WebGPU (Dawn/Vulkan) porque bajo Wayland
+    // o con Vulkan desactivado provoca el error '--ozone-platform=wayland is not compatible with Vulkan'
+    // y bloquea innecesariamente la inicialización. En Linux, la presentación directa por GPU
+    // mediante ctx.drawImage(VideoFrame) es nativa y zero-copy en OpenGL.
+    if (!isWindows && forced !== 'webgpu') {
+      mode = 'direct';
+      drainLatest();
+      return;
+    }
     try {
       const nav = typeof navigator === 'undefined' ? null : navigator;
       if (!nav?.gpu || typeof OffscreenCanvas !== 'function') throw new Error('sin WebGPU');
@@ -388,7 +411,6 @@ function createH264GpuPresenter(opts) {
       device.lost.then(() => {
         if (gpu?.device !== device) return;
         gpu = null;
-        const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
         mode = isWindows ? 'copy' : 'direct';
       });
       const module = device.createShaderModule({ code: SHADER });
@@ -416,7 +438,6 @@ function createH264GpuPresenter(opts) {
       // En plataformas sin WebGPU (o en Linux donde Vulkan se desactiva para estabilidad de Wayland/ANGLE),
       // usamos presentación directa por GPU mediante ctx.drawImage(VideoFrame) que en Linux/OpenGL es zero-copy.
       // En Windows ese blit crasheaba el driver D3D11 (exit 34), por lo que en win32 solo caemos a copy.
-      const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
       mode = isWindows ? 'copy' : 'direct';
     }
     if (gen !== generation) return;

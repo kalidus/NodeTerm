@@ -8,8 +8,8 @@
   "main": "main.js",
   "desktopName": "nodeterm.desktop",
   "scripts": {
-    "start": "electron . --disable-features=Vulkan",
-    "start:cold": "node -e \"try{require('fs').rmSync('.cold-cache',{recursive:true,force:true})}catch(e){}\" && electron . --disable-features=Vulkan --user-data-dir=.cold-cache",
+    "start": "electron . --disable-vulkan --disable-features=Vulkan",
+    "start:cold": "node -e \"try{require('fs').rmSync('.cold-cache',{recursive:true,force:true})}catch(e){}\" && electron . --disable-vulkan --disable-features=Vulkan --user-data-dir=.cold-cache",
     "download-fonts": "node scripts/download-fonts.js",
     "build": "npm run download-fonts && cross-env NODE_ENV=production webpack --mode production",
     "postinstall": "node scripts/ensure-electron-binary.js && node scripts/rebuild-browser-import-native.js && node scripts/patch-official-ironrdp-cursor.js",

@@ -245,8 +245,9 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   // FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
   // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
   app.commandLine.appendSwitch('use-angle', 'gl');
-  // Desactivar Vulkan en Linux bajo Wayland/X11 (incompatible con wayland surface factory en Chromium)
-  app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
+  // Desactivar Vulkan y WebGPU en Linux (incompatible con wayland surface factory en Chromium)
+  app.commandLine.appendSwitch('disable-vulkan');
+  app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
   // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
@@ -258,11 +259,14 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,WaylandDrmClientBuffer');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL');
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
-  // Wayland nativo: por defecto 'auto' para usar Wayland cuando esté disponible en el entorno
-  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'auto').trim().toLowerCase();
+  // Plataforma gráfica Ozone en Linux:
+  // Por defecto 'x11' (XWayland). En Wayland nativo ('auto'/'wayland') con GPUs híbridas NVIDIA/AMD,
+  // WaylandSurfaceFactory falla con Vulkan y el compositor de Wayland estrangula el refresco del canvas RDP.
+  // Permite 'wayland' o 'auto' si se solicita explícitamente vía NODETERM_OZONE_HINT.
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'x11').trim().toLowerCase();
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }
