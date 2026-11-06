@@ -50,6 +50,20 @@ try {
 } catch (_) {}
 
 const concurrentlyBin = path.join(root, 'node_modules', 'concurrently', 'dist', 'bin', 'concurrently.js');
+const env = { ...process.env, NODE_OPTIONS: '--no-deprecation' };
+
+// Si el sistema dispone de GPU dedicada NVIDIA en Linux, forzar automáticamente
+// PRIME Render Offload para que NodeTerm corra siempre con la máxima potencia de la GPU dedicada.
+if (process.platform === 'linux' && !env.__NV_PRIME_RENDER_OFFLOAD) {
+  try {
+    if (fs.existsSync('/proc/driver/nvidia') || fs.existsSync('/dev/nvidia0')) {
+      env.__NV_PRIME_RENDER_OFFLOAD = '1';
+      env.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
+      env.__VK_LAYER_NV_optimus = 'NVIDIA_only';
+    }
+  } catch (_) {}
+}
+
 const child = spawn(process.execPath, [
   concurrentlyBin,
   '--kill-others',
@@ -58,7 +72,7 @@ const child = spawn(process.execPath, [
 ], {
   cwd: root,
   stdio: 'inherit',
-  env: { ...process.env, NODE_OPTIONS: '--no-deprecation' },
+  env,
   windowsHide: false
 });
 

@@ -800,7 +800,8 @@ function createRdpWebCodecsDecoder(opts = {}) {
     return { frameWidth: frameW, frameHeight: frameH, width: frameW, spans: { u: spanU, v: spanV } };
   };
 
-  let queuedPresent = null;
+  /** @type {{ frame: any, targets: object }[]} */
+  const presentQueue = [];
   let presentRaf = 0;
   let presentGate = Promise.resolve();
   let resolvePresentGate = null;
@@ -808,8 +809,10 @@ function createRdpWebCodecsDecoder(opts = {}) {
   const cancelPresent = () => {
     if (presentRaf) cancelAnimationFrame(presentRaf);
     presentRaf = 0;
-    if (queuedPresent) closeQuiet(queuedPresent.frame);
-    queuedPresent = null;
+    while (presentQueue.length > 0) {
+      const job = presentQueue.shift();
+      closeQuiet(job?.frame);
+    }
     if (resolvePresentGate) {
       const done = resolvePresentGate;
       resolvePresentGate = null;
@@ -837,22 +840,24 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
   const pumpPresent = async () => {
     presentRaf = 0;
-    const job = queuedPresent;
-    queuedPresent = null;
+    // Drenar en bloque todos los trozos pendientes para el refresco de pantalla
+    const batch = presentQueue.splice(0, presentQueue.length);
     const done = resolvePresentGate;
     resolvePresentGate = null;
     try {
-      if (!job) return;
-      const regions = buildPresentRegions(job.targets);
-      if (!regions.length) {
-        closeQuiet(job.frame);
-        return;
-      }
-      try {
-        const result = presentFrame(job.frame, regions);
-        if (result && typeof result.then === 'function') await result;
-      } catch (_) {
-        closeQuiet(job.frame);
+      for (const job of batch) {
+        if (!job) continue;
+        const regions = buildPresentRegions(job.targets);
+        if (!regions.length) {
+          closeQuiet(job.frame);
+          continue;
+        }
+        try {
+          const result = presentFrame(job.frame, regions);
+          if (result && typeof result.then === 'function') await result;
+        } catch (_) {
+          closeQuiet(job.frame);
+        }
       }
     } finally {
       if (done) done();
@@ -860,8 +865,12 @@ function createRdpWebCodecsDecoder(opts = {}) {
   };
 
   const enqueuePresent = (frame, targets) => {
-    if (queuedPresent) closeQuiet(queuedPresent.frame);
-    queuedPresent = { frame, targets };
+    // Protección contra crecimiento ilimitado si la ventana se minimiza o congela
+    while (presentQueue.length >= 24) {
+      const stale = presentQueue.shift();
+      closeQuiet(stale?.frame);
+    }
+    presentQueue.push({ frame, targets });
     if (!resolvePresentGate) {
       presentGate = new Promise((resolve) => {
         resolvePresentGate = resolve;

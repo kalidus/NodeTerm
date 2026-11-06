@@ -250,6 +250,8 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
+  // Forzar uso de GPU dedicada de alto rendimiento en portátiles híbridos
+  app.commandLine.appendSwitch('force_high_performance_gpu');
   // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
   // Rasterización HW / zero-copy con OpenGL de escritorio sin saltar blocklist de Vulkan
