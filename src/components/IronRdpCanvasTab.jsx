@@ -2216,6 +2216,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let cachedRect = null;
     let cachedScaleX = 1;
     let cachedScaleY = 1;
+    let lastKeyRepeatTime = 0;
+    const pressedScancodes = new Set();
 
     const updateCanvasRect = () => {
       if (!canvas) return;
@@ -2228,9 +2230,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     updateCanvasRect();
 
     const getCanvasPos = (e) => {
-      // El CSS y el framebuffer cambian al conectar y en cada DisplayControl.
-      // Una caché tomada al montar manda el clic a otro píxel hasta el siguiente resize.
-      updateCanvasRect();
+      // El CSS y el framebuffer cambian al conectar, en resize, scroll y DisplayControl
+      // (ya suscritos a updateCanvasRect). Solo recalcular si la caché aún no existe para
+      // evitar un reflow síncrono (getBoundingClientRect) en cada mousemove a 120Hz.
+      if (!cachedRect) updateCanvasRect();
       const rawX = Math.floor((e.clientX - cachedRect.left) * cachedScaleX);
       const rawY = Math.floor((e.clientY - cachedRect.top) * cachedScaleY);
       return {
@@ -2242,6 +2245,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let pendingMousePos = null;
     let mouseThrottleTimer = null;
     let lastSentMoveTime = 0;
+    let lastKnownMousePos = null;
+    let lastMouseWakeTime = 0;
     const MOUSE_THROTTLE_MS = 10; // 100 Hz: cursor ultra-reactivo en movimiento libre
     const DRAG_THROTTLE_MS = 10;  // 100 Hz: movimiento de ventanas ultra-fluido e instantáneo
 
@@ -2252,6 +2257,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const sendMouseMove = (x, y) => {
       if (!sessionRef.current) return;
+      lastKnownMousePos = { x, y };
       lastSentMoveTime = performance.now();
       try {
         const transaction = new Backend.InputTransaction();
@@ -2263,6 +2269,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleMouseMove = (e) => {
       if (!sessionRef.current) return;
       const { x, y } = getCanvasPos(e);
+      lastKnownMousePos = { x, y };
 
       // Si el botón está presionado pero no se ha iniciado un arrastre intencionado,
       // filtramos el micro-temblor de la mano (< 4px) para que Windows no cancele el click.
@@ -2314,6 +2321,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       pendingMousePos = null;
 
       const { x, y } = getCanvasPos(e);
+      lastKnownMousePos = { x, y };
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
 
       isMouseDown = true;
@@ -2340,6 +2348,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       pendingMousePos = null;
 
       const { x, y } = getCanvasPos(e);
+      lastKnownMousePos = { x, y };
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
 
       // Si no hubo arrastre intencionado, soltar exactamente en la posición del mouseDown
@@ -2380,6 +2389,32 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
+      // Ignorar si el usuario está interactuando con un elemento de formulario (input, textarea, modal de pegado, etc.)
+      const target = e.target;
+      if (
+        target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.closest?.('.p-dialog, .p-dialog-mask, .p-overlaypanel')
+        )
+      ) {
+        return;
+      }
+
+      // Redirigir el foco del documento al canvas si no lo tiene
+      if (document.activeElement !== canvas) {
+        canvas.focus();
+      }
+
+      // Evitar repetición continua de modificadores solos (Alt, Ctrl, Shift, Meta)
+      const isModifierKey = e.code.startsWith('Control') || e.code.startsWith('Alt') ||
+                            e.code.startsWith('Shift') || e.code.startsWith('Meta');
+      if (e.repeat && isModifierKey) {
+        e.preventDefault();
+        return;
+      }
+
       e.preventDefault();
 
       // Sincronización proactiva de Ctrl+V / Cmd+V:
@@ -2395,10 +2430,40 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }).catch(() => {});
       }
 
+      const transaction = new Backend.InputTransaction();
+
+      // Sincronización atómica de modificadores atascados (Ctrl, Alt, Shift, Meta)
+      // Si el evento indica que el modificador ya no está activo físicamente pero en la sesión
+      // remota sigue registrado, se libera atómicamente antes de aplicar la nueva tecla.
+      if (!e.ctrlKey && (pressedScancodes.has(0x1D) || pressedScancodes.has(0xE01D))) {
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x1D));
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE01D));
+        pressedScancodes.delete(0x1D);
+        pressedScancodes.delete(0xE01D);
+      }
+      if (!e.altKey && (pressedScancodes.has(0x38) || pressedScancodes.has(0xE038))) {
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x38));
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE038));
+        pressedScancodes.delete(0x38);
+        pressedScancodes.delete(0xE038);
+      }
+      if (!e.shiftKey && (pressedScancodes.has(0x2A) || pressedScancodes.has(0x36))) {
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x2A));
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x36));
+        pressedScancodes.delete(0x2A);
+        pressedScancodes.delete(0x36);
+      }
+      if (!e.metaKey && (pressedScancodes.has(0xE05B) || pressedScancodes.has(0xE05C))) {
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05B));
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05C));
+        pressedScancodes.delete(0xE05B);
+        pressedScancodes.delete(0xE05C);
+      }
+
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
-        const transaction = new Backend.InputTransaction();
         if (scancode) {
+          pressedScancodes.add(scancode);
           transaction.addEvent(Backend.DeviceEvent.keyPressed(scancode));
         } else if (e.key && e.key.length === 1) {
           transaction.addEvent(Backend.DeviceEvent.unicodePressed(e.key));
@@ -2411,11 +2476,23 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const handleKeyUp = (e) => {
       if (!sessionRef.current) return;
+      const target = e.target;
+      if (
+        target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.closest?.('.p-dialog, .p-dialog-mask, .p-overlaypanel')
+        )
+      ) {
+        return;
+      }
       e.preventDefault();
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
         const transaction = new Backend.InputTransaction();
         if (scancode) {
+          pressedScancodes.delete(scancode);
           transaction.addEvent(Backend.DeviceEvent.keyReleased(scancode));
         } else if (e.key && e.key.length === 1) {
           transaction.addEvent(Backend.DeviceEvent.unicodeReleased(e.key));
@@ -2424,6 +2501,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (err) {
         console.warn('[IronRDP Keyboard] Error soltando tecla:', err);
       }
+    };
+
+    const releaseAllKeys = () => {
+      if (!sessionRef.current || pressedScancodes.size === 0) return;
+      try {
+        const transaction = new Backend.InputTransaction();
+        for (const scancode of pressedScancodes) {
+          transaction.addEvent(Backend.DeviceEvent.keyReleased(scancode));
+        }
+        sessionRef.current.applyInputs(transaction);
+      } catch (_) {}
+      pressedScancodes.clear();
     };
 
     const handlePaste = async (e) => {
@@ -2462,8 +2551,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     document.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('contextmenu', handleContextMenu);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('keydown', handleKeyDown);
-    canvas.addEventListener('keyup', handleKeyUp);
+    // Captura global en window para no perder pulsaciones si el foco se desplaza al body o contenedor
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keyup', handleKeyUp, { capture: true });
+    window.addEventListener('blur', releaseAllKeys);
+    window.addEventListener('focus', releaseAllKeys);
     canvas.addEventListener('paste', handlePaste);
 
     return () => {
@@ -2485,11 +2577,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       document.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('keydown', handleKeyDown);
-      canvas.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      window.removeEventListener('keyup', handleKeyUp, { capture: true });
+      window.removeEventListener('blur', releaseAllKeys);
+      window.removeEventListener('focus', releaseAllKeys);
       canvas.removeEventListener('paste', handlePaste);
     };
-  }, [connectionState, rdpConfig.redirectClipboard]);
+  }, [connectionState, isActive, rdpConfig.redirectClipboard]);
 
   // Cerrar menú de resolución al hacer clic fuera o pulsar Escape
   useEffect(() => {
@@ -2816,6 +2910,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }}
       >
         <div
+          onMouseDown={() => canvasRef.current?.focus()}
           style={isAutoResize && supportsDisplayControl ? {
             display: 'flex',
             alignItems: 'center',

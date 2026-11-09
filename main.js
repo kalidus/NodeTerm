@@ -280,6 +280,26 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     return 'integrated';
   };
 
+  const findNvidiaRenderNode = () => {
+    try {
+      const fsSync = require('fs');
+      const pathSync = require('path');
+      const drmDir = '/sys/class/drm';
+      if (!fsSync.existsSync(drmDir)) return null;
+      for (const entry of fsSync.readdirSync(drmDir)) {
+        if (/^renderD\d+$/.test(entry)) {
+          try {
+            const v = fsSync.readFileSync(pathSync.join(drmDir, entry, 'device/vendor'), 'utf8').trim().toLowerCase();
+            if (v === '0x10de') {
+              return pathSync.join('/dev/dri', entry);
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
   const gpuEnvPref = (process.env.NODETERM_GPU || 'auto').trim().toLowerCase();
   const detectedGpu = (gpuEnvPref === 'nvidia' || gpuEnvPref === 'integrated')
     ? gpuEnvPref
@@ -290,8 +310,17 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     process.env.__NV_PRIME_RENDER_OFFLOAD = process.env.__NV_PRIME_RENDER_OFFLOAD || '1';
     process.env.__GLX_VENDOR_LIBRARY_NAME = process.env.__GLX_VENDOR_LIBRARY_NAME || 'nvidia';
     process.env.__VK_LAYER_NV_optimus = process.env.__VK_LAYER_NV_optimus || 'NVIDIA_only';
-    process.env.NVD_BACKEND = process.env.NVD_BACKEND || 'direct';
-    process.env.LIBVA_DRIVER_NAME = process.env.LIBVA_DRIVER_NAME || 'nvidia';
+    try {
+      const fsSync = require('fs');
+      if (fsSync.existsSync('/usr/lib/dri/nvidia_drv_video.so') || fsSync.existsSync('/usr/lib64/dri/nvidia_drv_video.so')) {
+        process.env.LIBVA_DRIVER_NAME = 'nvidia';
+        process.env.NVD_BACKEND = 'direct';
+      }
+    } catch (_) {}
+    const nvRenderNode = findNvidiaRenderNode();
+    if (nvRenderNode) {
+      app.commandLine.appendSwitch('render-node-override', nvRenderNode);
+    }
   } else {
     // Evitar que variables NVIDIA heredadas del sistema rompan VA-API o fuercen PRIME Offload
     // cuando la pantalla está conectada a la GPU integrada AMD/Intel.
@@ -308,8 +337,10 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   // En Linux con drivers propietarios NVIDIA (Arch/CachyOS), el sandbox de Chromium
   // bloquea el acceso a /dev/nvidia* y nvidia-drm_gbm.so, forzando caída a software (inProcessGpu).
   app.commandLine.appendSwitch('disable-gpu-sandbox');
-  // Usar Desktop OpenGL en ANGLE para compatibilidad directa con VA-API / ZeroCopyGL
-  app.commandLine.appendSwitch('use-angle', 'gl');
+  if (!useNvidiaPrime) {
+    // Usar Desktop OpenGL en ANGLE para compatibilidad directa con VA-API / ZeroCopyGL en Mesa (AMD/Intel)
+    app.commandLine.appendSwitch('use-angle', 'gl');
+  }
   // Desactivar Vulkan y WebGPU en Linux para evitar conflictos de superficie en Wayland
   app.commandLine.appendSwitch('disable-vulkan');
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
@@ -327,19 +358,34 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch(
-    'enable-features',
-    useNvidiaPrime
-      ? 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks'
-      : 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiIgnoreDriverChecks,WaylandDrmClientBuffer'
-  );
+
+  const linuxFeatures = [
+    'CanvasOopRasterization',
+    'AcceleratedVideoDecodeLinuxGL',
+    'AcceleratedVideoDecodeLinuxZeroCopyGL',
+    'VaapiIgnoreDriverChecks',
+    'WaylandDrmClientBuffer'
+  ];
+  if (useNvidiaPrime) {
+    // Explicit sync (linux_drm_syncobj_v1) en drivers NVIDIA 555+ / 620+: elimina
+    // el lag de entrada del teclado y los tirones de composición en KDE Plasma 6 Wayland.
+    linuxFeatures.push('WaylandLinuxDrmSyncobj', 'WaylandSyncobjReleaseTimeline', 'VaapiOnNvidiaGPUs');
+  } else {
+    linuxFeatures.push('VaapiVideoDecodeLinuxGL');
+  }
+  app.commandLine.appendSwitch('enable-features', linuxFeatures.join(','));
+
+  // Desactivar integración Wayland IME en Linux: evita que el pipeline de texto
+  // intercepte, encole o retrase eventos de teclado físicos en elementos canvas.
+  app.commandLine.appendSwitch('disable-wayland-ime');
+
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   // Plataforma gráfica Ozone en Linux:
-  // Con la GPU integrada (AMD/Intel) usamos 'auto' (Wayland nativo a 120Hz directos).
-  // Con PRIME Offload NVIDIA usamos 'x11' por defecto.
-  const defaultOzone = useNvidiaPrime ? 'x11' : 'auto';
-  const ozoneHint = (process.env.NODETERM_OZONE_HINT || defaultOzone).trim().toLowerCase();
+  // Usar 'auto' (Wayland nativo si está disponible en la sesión) tanto en Intel/AMD como en NVIDIA.
+  // En drivers NVIDIA 555+ / 620+ con explicit sync, Wayland nativo elimina el lag de entrada y
+  // el judder de ratón/teclado que causaba forzar Xwayland ('x11').
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'auto').trim().toLowerCase();
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }
@@ -1298,7 +1344,7 @@ function createWindow() {
   // del proceso main, junto a las del bridge, para ver las dos mitades con el mismo orden.
   mainWindow.webContents.on('console-message', (event, level, message) => {
     const text = typeof message === 'string' ? message : (event && event.message);
-    if (typeof text === 'string' && text.includes('[RDP Timeline renderer')) {
+    if (typeof text === 'string' && (text.includes('[RDP') || text.includes('[IronRDP'))) {
       console.log(text);
     }
   });

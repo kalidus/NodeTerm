@@ -118,14 +118,27 @@ function createH264GpuPresenter(opts) {
     ctx.imageSmoothingEnabled = false;
     const fw = frame.displayWidth || frame.codedWidth || 0;
     const fh = frame.displayHeight || frame.codedHeight || 0;
+    if (fw <= 0 || fh <= 0) {
+      closeFrame(frame);
+      return;
+    }
     for (const region of regions) {
-      if (fw > 0 && fh > 0 && region.sx === 0 && region.sy === 0 && region.sw === fw && region.sh === fh && region.dx === 0 && region.dy === 0) {
+      const sx = Math.max(0, region.sx | 0);
+      const sy = Math.max(0, region.sy | 0);
+      if (sx >= fw || sy >= fh) continue;
+      const sw = Math.min(region.sw | 0, fw - sx);
+      const sh = Math.min(region.sh | 0, fh - sy);
+      if (sw <= 0 || sh <= 0) continue;
+      const dx = region.dx | 0;
+      const dy = region.dy | 0;
+
+      if (sx === 0 && sy === 0 && sw === fw && sh === fh && dx === 0 && dy === 0) {
         ctx.drawImage(frame, 0, 0);
       } else {
         ctx.drawImage(
           frame,
-          region.sx, region.sy, region.sw, region.sh,
-          region.dx, region.dy, region.sw, region.sh
+          sx, sy, sw, sh,
+          dx, dy, sw, sh
         );
       }
     }
@@ -207,11 +220,16 @@ function createH264GpuPresenter(opts) {
         if (typeof job.resolve === 'function') job.resolve();
       } catch (err) {
         if (isRdpDebugEnabled()) {
-          console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+          console.warn('[IronRDP WebCodecs] fallo en directPresent:', err?.message || err);
         }
-        mode = 'copy';
-        copyBusy = true;
-        void runCopy(job.frame, job.regions, job.resolve);
+        if (isPlatformWindows()) {
+          mode = 'copy';
+          copyBusy = true;
+          void runCopy(job.frame, job.regions, job.resolve);
+          return;
+        }
+        closeFrame(job.frame);
+        if (typeof job.resolve === 'function') job.resolve();
       }
       return;
     }
@@ -366,19 +384,24 @@ function createH264GpuPresenter(opts) {
         resolve();
       } catch (err) {
         if (isRdpDebugEnabled()) {
-          console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+          console.warn('[IronRDP WebCodecs] fallo en directPresent:', err?.message || err);
         }
-        mode = 'copy';
-        if (copyBusy) {
-          if (latest) {
-            closeFrame(latest.frame);
-            if (typeof latest.resolve === 'function') latest.resolve();
+        if (isPlatformWindows()) {
+          mode = 'copy';
+          if (copyBusy) {
+            if (latest) {
+              closeFrame(latest.frame);
+              if (typeof latest.resolve === 'function') latest.resolve();
+            }
+            latest = { frame, regions, resolve };
+            return;
           }
-          latest = { frame, regions, resolve };
+          copyBusy = true;
+          void runCopy(frame, regions, resolve);
           return;
         }
-        copyBusy = true;
-        void runCopy(frame, regions, resolve);
+        closeFrame(frame);
+        resolve();
       }
       return;
     }
@@ -475,9 +498,14 @@ function createH264GpuPresenter(opts) {
           return undefined;
         } catch (err) {
           if (isRdpDebugEnabled()) {
-            console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+            console.warn('[IronRDP WebCodecs] fallo en directPresent:', err?.message || err);
           }
-          mode = 'copy';
+          if (isPlatformWindows()) {
+            mode = 'copy';
+          } else {
+            closeFrame(frame);
+            return undefined;
+          }
         }
       }
       if (mode === 'init') {
