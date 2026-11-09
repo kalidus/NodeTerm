@@ -206,6 +206,7 @@
       "autoResize": "Ajuste automático",
       "enableWallpaper": "Mostrar fondo",
       "enableEgfx": "Habilitar EGFX",
+      "enableH264": "Aceleración H.264",
       "bastionLogicalDesktop": "Ajuste HiDPI"
     },
     "advanced": {
@@ -247,6 +248,7 @@
       "ironRdpGraphics": "Elige el pipeline gráfico de IronRDP. Bitmap es estable. EGFX usa RemoteFX Progressive.",
       "ironRdpGraphicsBitmap": "Bitmap RLE clásico: más estable y compatible.",
       "ironRdpGraphicsEgfx": "EGFX: RemoteFX Progressive. H.264 no se anuncia en esta versión.",
+      "enableH264": "WebCodecs H.264 para vídeo/movimiento a 60 FPS. Desactívalo para usar RemoteFX Progressive / ClearCodec sin codificación de vídeo (elimina el lag de teclado en terminales como Konsole).",
       "bastionLogicalDesktop": "Activa el ajuste HiDPI: en directo escala la UI con DisplayControl; en bastión usa píxeles CSS (sin DisplayControl). Desactivado = resolución nativa (× DPR, escala 100 %).",
       "desktopComposition": "Habilita la composición Aero en el escritorio remoto.",
       "fontSmoothing": "Suaviza la renderización de fuentes en el escritorio remoto.",

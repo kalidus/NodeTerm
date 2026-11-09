@@ -1165,13 +1165,8 @@ function createRdpWebCodecsDecoder(opts = {}) {
     }
   };
 
-  const configure = (codec) => {
-    if (decoder) {
-      try { decoder.close(); } catch (_) { /* noop */ }
-    }
-    pending.clear();
-    order.length = 0;
-    decoder = new VideoDecoder({
+  const createDecoderInstance = () => {
+    return new VideoDecoder({
       output: (frame) => {
         let meta = pending.get(frame.timestamp);
         if (meta) {
@@ -1215,7 +1210,6 @@ function createRdpWebCodecsDecoder(opts = {}) {
         deliverChain = run.catch(() => {});
       },
       error: (err) => {
-        // Si el driver GPU no soporta el perfil/config con prefer-hardware, caer a no-preference (software)
         if (acceleration === 'prefer-hardware') {
           acceleration = 'no-preference';
         }
@@ -1234,24 +1228,57 @@ function createRdpWebCodecsDecoder(opts = {}) {
         fail(err);
       }
     });
-    try {
-      decoder.configure({
-        codec,
-        optimizeForLatency: true,
-        hardwareAcceleration: acceleration
-      });
-    } catch (cfgErr) {
-      if (acceleration === 'prefer-hardware') {
-        acceleration = 'no-preference';
-        decoder.configure({
+  };
+
+  const configure = (codec) => {
+    if (decoder) {
+      try { decoder.close(); } catch (_) { /* noop */ }
+      decoder = null;
+    }
+    pending.clear();
+    order.length = 0;
+
+    const attempts = [
+      { accel: acceleration, latency: true },
+      { accel: 'no-preference', latency: true },
+      { accel: 'prefer-software', latency: true },
+      { accel: 'no-preference', latency: false },
+      { accel: 'prefer-software', latency: false }
+    ];
+
+    let lastCfgErr = null;
+    let configuredOk = false;
+
+    for (const attempt of attempts) {
+      let candidate = null;
+      try {
+        candidate = createDecoderInstance();
+        candidate.configure({
           codec,
-          optimizeForLatency: true,
-          hardwareAcceleration: acceleration
+          optimizeForLatency: attempt.latency,
+          hardwareAcceleration: attempt.accel
         });
-      } else {
-        throw cfgErr;
+        decoder = candidate;
+        acceleration = attempt.accel;
+        configuredOk = true;
+        break;
+      } catch (err) {
+        lastCfgErr = err;
+        if (candidate) {
+          try { candidate.close(); } catch (_) {}
+        }
       }
     }
+
+    if (!configuredOk) {
+      configured = false;
+      needsKey = true;
+      activeCodec = '';
+      const finalErr = lastCfgErr || new Error(`VideoDecoder.configure falló para codec ${codec}`);
+      fail(finalErr);
+      throw finalErr;
+    }
+
     activeCodec = codec;
     configured = true;
     needsKey = true;

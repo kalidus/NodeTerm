@@ -28,6 +28,8 @@ const WS_HIGH_WATER_MARK = 128 * 1024; // 128 KB
 const WS_LOW_WATER_MARK = 32 * 1024; // 32 KB
 /** Solo path directo: pausa TLS como ultimo recurso anti-OOM, no al primer pico. */
 const WS_PAUSE_TLS_MARK = 2 * 1024 * 1024; // 2 MB
+/** Reanudar TLS en directo cuando el buffer baje de este umbral (evita oscilación stop-and-go). */
+const WS_RESUME_TLS_MARK = 512 * 1024; // 512 KB
 /** Máx. ms de rewrite RLE por evento TLS en bastión (el resto se shed). */
 const BASTION_REWRITE_BUDGET_MS = 3;
 
@@ -307,6 +309,7 @@ class WsBackpressureController {
     this.highWater = opts.highWater != null ? opts.highWater : WS_HIGH_WATER_MARK;
     this.lowWater = opts.lowWater != null ? opts.lowWater : WS_LOW_WATER_MARK;
     this.pauseTlsMark = opts.pauseTlsMark != null ? opts.pauseTlsMark : WS_PAUSE_TLS_MARK;
+    this.resumeTlsMark = opts.resumeTlsMark != null ? opts.resumeTlsMark : (this.bastion ? this.lowWater : WS_RESUME_TLS_MARK);
     this.rewriteBudgetMs = opts.rewriteBudgetMs != null ? opts.rewriteBudgetMs : BASTION_REWRITE_BUDGET_MS;
     /** @type {Array<{ buf: Buffer, rects: Array<number[]>|null }>} */
     this.pendingBitmaps = [];
@@ -473,7 +476,8 @@ class WsBackpressureController {
   }
 
   shouldResumeTls(bufferedAmount) {
-    return this.isTlsPaused && bufferedAmount <= this.lowWater;
+    const threshold = this.resumeTlsMark != null ? this.resumeTlsMark : this.lowWater;
+    return this.isTlsPaused && bufferedAmount <= threshold;
   }
 }
 
@@ -536,6 +540,7 @@ module.exports = {
   WS_HIGH_WATER_MARK,
   WS_LOW_WATER_MARK,
   WS_PAUSE_TLS_MARK,
+  WS_RESUME_TLS_MARK,
   BASTION_REWRITE_BUDGET_MS,
   gfxBypassesBitmapQueue,
   egfxSkipsSyncBitmapFlush,

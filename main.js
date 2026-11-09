@@ -317,10 +317,6 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
         process.env.NVD_BACKEND = 'direct';
       }
     } catch (_) {}
-    const nvRenderNode = findNvidiaRenderNode();
-    if (nvRenderNode) {
-      app.commandLine.appendSwitch('render-node-override', nvRenderNode);
-    }
   } else {
     // Evitar que variables NVIDIA heredadas del sistema rompan VA-API o fuercen PRIME Offload
     // cuando la pantalla está conectada a la GPU integrada AMD/Intel.
@@ -337,10 +333,8 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   // En Linux con drivers propietarios NVIDIA (Arch/CachyOS), el sandbox de Chromium
   // bloquea el acceso a /dev/nvidia* y nvidia-drm_gbm.so, forzando caída a software (inProcessGpu).
   app.commandLine.appendSwitch('disable-gpu-sandbox');
-  if (!useNvidiaPrime) {
-    // Usar Desktop OpenGL en ANGLE para compatibilidad directa con VA-API / ZeroCopyGL en Mesa (AMD/Intel)
-    app.commandLine.appendSwitch('use-angle', 'gl');
-  }
+  // Usar Desktop OpenGL en ANGLE para compatibilidad directa con VA-API / ZeroCopyGL (tanto en NVIDIA como en AMD/Intel)
+  app.commandLine.appendSwitch('use-angle', 'gl');
   // Desactivar Vulkan y WebGPU en Linux para evitar conflictos de superficie en Wayland
   app.commandLine.appendSwitch('disable-vulkan');
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
@@ -367,8 +361,6 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     'WaylandDrmClientBuffer'
   ];
   if (useNvidiaPrime) {
-    // Explicit sync (linux_drm_syncobj_v1) en drivers NVIDIA 555+ / 620+: elimina
-    // el lag de entrada del teclado y los tirones de composición en KDE Plasma 6 Wayland.
     linuxFeatures.push('WaylandLinuxDrmSyncobj', 'WaylandSyncobjReleaseTimeline', 'VaapiOnNvidiaGPUs');
   } else {
     linuxFeatures.push('VaapiVideoDecodeLinuxGL');

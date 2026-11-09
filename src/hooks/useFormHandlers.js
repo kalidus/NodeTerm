@@ -1383,6 +1383,7 @@ export const useFormHandlers = ({
             guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
             guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
             ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
+            useH264: rdpData.useH264 === true,
             bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
             // Nuevos flags avanzados
             guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
@@ -1445,6 +1446,7 @@ export const useFormHandlers = ({
           guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
           guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
           ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
+          useH264: rdpData.useH264 === true,
           bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
           // Nuevos flags avanzados
           guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
@@ -1515,6 +1517,7 @@ export const useFormHandlers = ({
                 guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
                 guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
                 ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
+                useH264: rdpData.useH264 === true,
                 bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
                 guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
                 guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,

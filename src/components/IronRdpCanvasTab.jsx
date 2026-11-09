@@ -270,6 +270,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
+  const [isH264EnabledState, setIsH264EnabledState] = useState(() => {
+    if (rdpConfig.useH264 === true) return true;
+    if (rdpConfig.useH264 === false) return false;
+    try {
+      return window.localStorage?.getItem('NODETERM_RDP_WEBCODECS') === '1';
+    } catch (_) {
+      return false;
+    }
+  });
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
   const webAudioPlayerRef = useRef(null);
@@ -600,7 +609,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
   const alignDesktop = (n) => {
     const base = Math.max(1, Math.floor(n));
-    return (base + 3) & ~3;
+    // Alinear a 16 px (múltiplo de macrobloque H.264 16x16 y múltiplo de 4 para RDP bitmap).
+    // Evita padding asimétrico en el codificador remoto (ej: 2264 -> 2272 o 1080 -> 1088).
+    return (base + 15) & ~15;
   };
 
   const readDisplayPixelRatio = () => Math.min(
@@ -939,6 +950,24 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     setDisconnectDetails(null);
     setErrorMessage('');
     setReconnectTrigger(prev => prev + 1);
+  };
+
+  const toggleH264Codec = () => {
+    const nextH264 = !isH264EnabledState;
+    setIsH264EnabledState(nextH264);
+    try {
+      window.localStorage?.setItem('NODETERM_RDP_WEBCODECS', nextH264 ? '1' : '0');
+    } catch (_) {}
+    window.__NODETERM_RDP_WEBCODECS__ = nextH264;
+    toastRef.current?.show({
+      severity: 'info',
+      summary: nextH264 ? 'Cambiando a H.264 (Vídeo)' : 'Cambiando a Progressive (Baja latencia)',
+      detail: nextH264
+        ? 'Reconectando con H.264 WebCodecs (optimizado para vídeo y movimiento fluido)...'
+        : 'Reconectando con RemoteFX Progressive / ClearCodec (máxima reactividad en Konsole/terminales)...',
+      life: 3500
+    });
+    handleReconnect();
   };
 
   const handleCloseTab = () => {
@@ -1445,14 +1474,25 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
           }
         } catch (_) { /* noop */ }
+
+        // AVC420/444 en H.264. WebGPU pinta la imagen; el croma 4:4:4 va por putImageData.
+        // Tras 0x112f o si isH264EnabledState === false: sin passthrough AVC → IronRDP filtra caps y usa Progressive/ClearCodec.
+        const useWebCodecs = egfxEnabled
+          && isH264EnabledState
+          && !gfxNoAvcFallbackUsedRef.current
+          && typeof avc420Webcodecs === 'function'
+          && typeof setAvc420WebcodecsCallback === 'function'
+          && typeof applyEgfxRgba === 'function'
+          && isWebCodecsH264Available();
+
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
           egfxDiagRef.current = {
             active: isRdpDebugEnabled(),
-            codec: 'progressive',
+            codec: useWebCodecs ? 'h264' : 'progressive',
             wroteSession: false
           };
-          setNegotiatedCodec('progressive');
+          setNegotiatedCodec(useWebCodecs ? 'h264' : 'progressive');
           if (typeof setEgfxCapsCallback === 'function') {
             setEgfxCapsCallback(gfxSessionId, (version, avc420, avc444) => {
               writeEgfxLine({
@@ -1511,15 +1551,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        // AVC420/444 en H.264. WebGPU pinta la imagen; el croma 4:4:4 va por putImageData.
-        // Tras 0x112f: sin passthrough AVC → IronRDP filtra caps y usa Progressive/ClearCodec.
-        const useWebCodecs = egfxEnabled
-          && !gfxNoAvcFallbackUsedRef.current
-          && typeof avc420Webcodecs === 'function'
-          && typeof setAvc420WebcodecsCallback === 'function'
-          && typeof applyEgfxRgba === 'function'
-          && isWebCodecsH264Enabled()
-          && isWebCodecsH264Available();
         if (egfxEnabled && gfxNoAvcFallbackUsedRef.current) {
           writeEgfxLine({ t: 'codec', chosen: 'no-avc-fallback' });
           if (isRdpDebugEnabled()) {
@@ -1556,6 +1587,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 if (isRdpDebugEnabled()) {
                   console.warn('[IronRDP WebCodecs]', err?.message || err);
                 }
+                gfxNoAvcFallbackUsedRef.current = true;
               }
             });
             // Contadores en el borde WASM→JS (antes de push): si wireChroma=0,
@@ -2216,8 +2248,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let cachedRect = null;
     let cachedScaleX = 1;
     let cachedScaleY = 1;
-    let lastKeyRepeatTime = 0;
-    const pressedScancodes = new Set();
 
     const updateCanvasRect = () => {
       if (!canvas) return;
@@ -2389,7 +2419,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Ignorar si el usuario está interactuando con un elemento de formulario (input, textarea, modal de pegado, etc.)
       const target = e.target;
       if (
         target && (
@@ -2399,19 +2428,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           target.closest?.('.p-dialog, .p-dialog-mask, .p-overlaypanel')
         )
       ) {
-        return;
-      }
-
-      // Redirigir el foco del documento al canvas si no lo tiene
-      if (document.activeElement !== canvas) {
-        canvas.focus();
-      }
-
-      // Evitar repetición continua de modificadores solos (Alt, Ctrl, Shift, Meta)
-      const isModifierKey = e.code.startsWith('Control') || e.code.startsWith('Alt') ||
-                            e.code.startsWith('Shift') || e.code.startsWith('Meta');
-      if (e.repeat && isModifierKey) {
-        e.preventDefault();
         return;
       }
 
@@ -2430,40 +2446,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }).catch(() => {});
       }
 
-      const transaction = new Backend.InputTransaction();
-
-      // Sincronización atómica de modificadores atascados (Ctrl, Alt, Shift, Meta)
-      // Si el evento indica que el modificador ya no está activo físicamente pero en la sesión
-      // remota sigue registrado, se libera atómicamente antes de aplicar la nueva tecla.
-      if (!e.ctrlKey && (pressedScancodes.has(0x1D) || pressedScancodes.has(0xE01D))) {
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x1D));
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE01D));
-        pressedScancodes.delete(0x1D);
-        pressedScancodes.delete(0xE01D);
-      }
-      if (!e.altKey && (pressedScancodes.has(0x38) || pressedScancodes.has(0xE038))) {
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x38));
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE038));
-        pressedScancodes.delete(0x38);
-        pressedScancodes.delete(0xE038);
-      }
-      if (!e.shiftKey && (pressedScancodes.has(0x2A) || pressedScancodes.has(0x36))) {
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x2A));
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x36));
-        pressedScancodes.delete(0x2A);
-        pressedScancodes.delete(0x36);
-      }
-      if (!e.metaKey && (pressedScancodes.has(0xE05B) || pressedScancodes.has(0xE05C))) {
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05B));
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05C));
-        pressedScancodes.delete(0xE05B);
-        pressedScancodes.delete(0xE05C);
-      }
-
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
+        const transaction = new Backend.InputTransaction();
         if (scancode) {
-          pressedScancodes.add(scancode);
           transaction.addEvent(Backend.DeviceEvent.keyPressed(scancode));
         } else if (e.key && e.key.length === 1) {
           transaction.addEvent(Backend.DeviceEvent.unicodePressed(e.key));
@@ -2492,7 +2478,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       try {
         const transaction = new Backend.InputTransaction();
         if (scancode) {
-          pressedScancodes.delete(scancode);
           transaction.addEvent(Backend.DeviceEvent.keyReleased(scancode));
         } else if (e.key && e.key.length === 1) {
           transaction.addEvent(Backend.DeviceEvent.unicodeReleased(e.key));
@@ -2501,18 +2486,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (err) {
         console.warn('[IronRDP Keyboard] Error soltando tecla:', err);
       }
-    };
-
-    const releaseAllKeys = () => {
-      if (!sessionRef.current || pressedScancodes.size === 0) return;
-      try {
-        const transaction = new Backend.InputTransaction();
-        for (const scancode of pressedScancodes) {
-          transaction.addEvent(Backend.DeviceEvent.keyReleased(scancode));
-        }
-        sessionRef.current.applyInputs(transaction);
-      } catch (_) {}
-      pressedScancodes.clear();
     };
 
     const handlePaste = async (e) => {
@@ -2551,11 +2524,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     document.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('contextmenu', handleContextMenu);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    // Captura global en window para no perder pulsaciones si el foco se desplaza al body o contenedor
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    window.addEventListener('keyup', handleKeyUp, { capture: true });
-    window.addEventListener('blur', releaseAllKeys);
-    window.addEventListener('focus', releaseAllKeys);
+    canvas.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('keyup', handleKeyUp);
     canvas.addEventListener('paste', handlePaste);
 
     return () => {
@@ -2577,10 +2547,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       document.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       canvas.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
-      window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      window.removeEventListener('blur', releaseAllKeys);
-      window.removeEventListener('focus', releaseAllKeys);
+      canvas.removeEventListener('keydown', handleKeyDown);
+      canvas.removeEventListener('keyup', handleKeyUp);
       canvas.removeEventListener('paste', handlePaste);
     };
   }, [connectionState, isActive, rdpConfig.redirectClipboard]);
@@ -3400,9 +3368,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
             <span className="ironrdp-cyber-divider" />
 
-            <span className="ironrdp-badge-host" title="Códec negociado con el servidor">
+            <button
+              type="button"
+              className="ironrdp-badge-resolution clickable is-fixed"
+              title="Códec activo. Haz clic para alternar entre H.264 (Vídeo/Fluidez) y Progressive/ClearCodec (Baja latencia/Konsole)"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleH264Codec();
+              }}
+            >
+              <i className={`pi ${negotiatedCodec === 'h264' ? 'pi-video' : 'pi-bolt'}`} style={{ marginRight: '5px' }}></i>
               <span>{negotiatedCodec === 'h264' ? 'EGFX · H.264' : negotiatedCodec === 'clear' ? 'EGFX · ClearCodec' : negotiatedCodec === 'progressive' ? 'EGFX · Progressive' : negotiatedCodec === 'bitmap' ? 'Bitmap' : '—'}</span>
-            </span>
+            </button>
 
             <span className="ironrdp-cyber-divider" />
 
