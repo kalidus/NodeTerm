@@ -242,16 +242,82 @@ const isLowRamMachine = getTotalRamGb() <= 8;
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
 } else if (process.platform === 'linux') {
+  // Detectar en /sys/class/drm qué GPU gobierna realmente las pantallas conectadas:
+  // - En portátil híbrido (AMD/Intel con eDP-1 conectado + NVIDIA secundaria), usar la GPU integrada
+  //   dueña del compositor evita copias DMA-BUF inter-GPU por PCIe y parones de sincronización.
+  // - En PC de escritorio con monitor conectado a NVIDIA (o portátil en modo MUX/dGPU-only),
+  //   detecta 0x10de como GPU titular de la pantalla.
+  const detectLinuxDisplayGpu = () => {
+    try {
+      const fsSync = require('fs');
+      const pathSync = require('path');
+      const drmDir = '/sys/class/drm';
+      if (!fsSync.existsSync(drmDir)) return 'integrated';
+      const entries = fsSync.readdirSync(drmDir);
+      const connectedVendors = new Set();
+      const allCardVendors = new Set();
+      for (const entry of entries) {
+        if (/^card\d+$/.test(entry)) {
+          try {
+            const v = fsSync.readFileSync(pathSync.join(drmDir, entry, 'device/vendor'), 'utf8').trim().toLowerCase();
+            if (v) allCardVendors.add(v);
+          } catch (_) {}
+        } else if (/^card\d+-/.test(entry)) {
+          try {
+            const status = fsSync.readFileSync(pathSync.join(drmDir, entry, 'status'), 'utf8').trim().toLowerCase();
+            if (status === 'connected') {
+              const cardName = entry.split('-')[0];
+              const v = fsSync.readFileSync(pathSync.join(drmDir, cardName, 'device/vendor'), 'utf8').trim().toLowerCase();
+              if (v) connectedVendors.add(v);
+            }
+          } catch (_) {}
+        }
+      }
+      if (connectedVendors.has('0x1002') || connectedVendors.has('0x8086')) return 'integrated';
+      if (connectedVendors.has('0x10de')) return 'nvidia';
+      if (!allCardVendors.has('0x1002') && !allCardVendors.has('0x8086') && allCardVendors.has('0x10de')) return 'nvidia';
+    } catch (_) {}
+    return 'integrated';
+  };
+
+  const gpuEnvPref = (process.env.NODETERM_GPU || 'auto').trim().toLowerCase();
+  const detectedGpu = (gpuEnvPref === 'nvidia' || gpuEnvPref === 'integrated')
+    ? gpuEnvPref
+    : detectLinuxDisplayGpu();
+  const useNvidiaPrime = detectedGpu === 'nvidia';
+
+  if (useNvidiaPrime) {
+    process.env.__NV_PRIME_RENDER_OFFLOAD = process.env.__NV_PRIME_RENDER_OFFLOAD || '1';
+    process.env.__GLX_VENDOR_LIBRARY_NAME = process.env.__GLX_VENDOR_LIBRARY_NAME || 'nvidia';
+    process.env.__VK_LAYER_NV_optimus = process.env.__VK_LAYER_NV_optimus || 'NVIDIA_only';
+    process.env.NVD_BACKEND = process.env.NVD_BACKEND || 'direct';
+    process.env.LIBVA_DRIVER_NAME = process.env.LIBVA_DRIVER_NAME || 'nvidia';
+  } else {
+    // Evitar que variables NVIDIA heredadas del sistema rompan VA-API o fuercen PRIME Offload
+    // cuando la pantalla está conectada a la GPU integrada AMD/Intel.
+    if (process.env.LIBVA_DRIVER_NAME === 'nvidia') {
+      delete process.env.LIBVA_DRIVER_NAME;
+    }
+    delete process.env.NVD_BACKEND;
+    delete process.env.__NV_PRIME_RENDER_OFFLOAD;
+    if (process.env.__GLX_VENDOR_LIBRARY_NAME === 'nvidia') {
+      delete process.env.__GLX_VENDOR_LIBRARY_NAME;
+    }
+    delete process.env.__VK_LAYER_NV_optimus;
+  }
   // En Linux con drivers propietarios NVIDIA (Arch/CachyOS), el sandbox de Chromium
   // bloquea el acceso a /dev/nvidia* y nvidia-drm_gbm.so, forzando caída a software (inProcessGpu).
   app.commandLine.appendSwitch('disable-gpu-sandbox');
+  // Usar Desktop OpenGL en ANGLE para compatibilidad directa con VA-API / ZeroCopyGL
+  app.commandLine.appendSwitch('use-angle', 'gl');
   // Desactivar Vulkan y WebGPU en Linux para evitar conflictos de superficie en Wayland
   app.commandLine.appendSwitch('disable-vulkan');
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag,WebGPU');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
-  // Forzar uso de GPU dedicada de alto rendimiento en portátiles híbridos
-  app.commandLine.appendSwitch('force_high_performance_gpu');
+  if (useNvidiaPrime) {
+    app.commandLine.appendSwitch('force_high_performance_gpu');
+  }
   // Ignorar blocklist de GPU para permitir aceleración completa en OpenGL/Canvas
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
   // Rasterización HW / zero-copy con OpenGL de escritorio
@@ -261,14 +327,19 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks');
+  app.commandLine.appendSwitch(
+    'enable-features',
+    useNvidiaPrime
+      ? 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs,VaapiIgnoreDriverChecks'
+      : 'CanvasOopRasterization,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiIgnoreDriverChecks,WaylandDrmClientBuffer'
+  );
   app.commandLine.appendSwitch('enable-smooth-scrolling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   // Plataforma gráfica Ozone en Linux:
-  // Por defecto 'x11' (XWayland). En Wayland nativo ('auto'/'wayland') con GPUs híbridas NVIDIA/AMD,
-  // WaylandSurfaceFactory falla con Vulkan y el compositor de Wayland estrangula el refresco del canvas RDP.
-  // Permite 'wayland' o 'auto' si se solicita explícitamente vía NODETERM_OZONE_HINT.
-  const ozoneHint = (process.env.NODETERM_OZONE_HINT || 'x11').trim().toLowerCase();
+  // Con la GPU integrada (AMD/Intel) usamos 'auto' (Wayland nativo a 120Hz directos).
+  // Con PRIME Offload NVIDIA usamos 'x11' por defecto.
+  const defaultOzone = useNvidiaPrime ? 'x11' : 'auto';
+  const ozoneHint = (process.env.NODETERM_OZONE_HINT || defaultOzone).trim().toLowerCase();
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }

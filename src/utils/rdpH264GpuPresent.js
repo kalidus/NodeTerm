@@ -338,6 +338,15 @@ function createH264GpuPresenter(opts) {
     return '';
   };
 
+  {
+    const forcedInitial = getForcedMode();
+    if (forcedInitial === 'copy' || forcedInitial === 'direct') {
+      mode = forcedInitial;
+    } else if (!isPlatformWindows() && forcedInitial !== 'webgpu') {
+      mode = 'direct';
+    }
+  }
+
   const kick = (frame, regions) => new Promise((resolve) => {
     if (mode === 'webgpu' && gpu) {
       if (slotsBusyCount() >= 2 || !acquireSlot()) {
@@ -459,6 +468,17 @@ function createH264GpuPresenter(opts) {
       if (!regions?.length) {
         closeFrame(frame);
         return Promise.resolve();
+      }
+      if (mode === 'direct' && !latest) {
+        try {
+          directPresent(frame, regions);
+          return undefined;
+        } catch (err) {
+          if (isRdpDebugEnabled()) {
+            console.warn('[IronRDP WebCodecs] fallo en directPresent, cayendo a copy:', err?.message || err);
+          }
+          mode = 'copy';
+        }
       }
       if (mode === 'init') {
         return new Promise((resolve) => {

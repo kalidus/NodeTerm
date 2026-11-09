@@ -865,21 +865,21 @@ function createRdpWebCodecsDecoder(opts = {}) {
   };
 
   const enqueuePresent = (frame, targets) => {
-    // Protección contra crecimiento ilimitado si la ventana se minimiza o congela
-    while (presentQueue.length >= 24) {
-      const stale = presentQueue.shift();
-      closeQuiet(stale?.frame);
+    const regions = buildPresentRegions(targets);
+    if (!regions.length) {
+      closeQuiet(frame);
+      return;
     }
-    presentQueue.push({ frame, targets });
-    if (!resolvePresentGate) {
-      presentGate = new Promise((resolve) => {
-        resolvePresentGate = resolve;
-      });
+    try {
+      const result = presentFrame(frame, regions);
+      if (result && typeof result.then === 'function') {
+        presentGate = result.catch(() => {
+          closeQuiet(frame);
+        });
+      }
+    } catch (_) {
+      closeQuiet(frame);
     }
-    if (presentRaf) return;
-    presentRaf = requestAnimationFrame(() => {
-      pumpPresent().catch(() => {});
-    });
   };
 
   const paintChromaRgba = (destLeft, destTop, width, height, rgba, meta) => {
@@ -1181,10 +1181,44 @@ function createRdpWebCodecsDecoder(opts = {}) {
         } else {
           meta = order.shift() || null;
         }
+        if (!meta) {
+          closeQuiet(frame);
+          settleFrame(1);
+          return;
+        }
+        if (presentFrame && !isAvc444ChromaMergeEnabled()) {
+          if (meta.display === false) {
+            closeQuiet(frame);
+            settleFrame(1);
+            return;
+          }
+          const frameW = frame.displayWidth || frame.codedWidth;
+          const frameH = frame.displayHeight || frame.codedHeight;
+          const targets = (frameW && frameH) ? paintTargets(meta, frameW, frameH) : null;
+          if (!targets) {
+            closeQuiet(frame);
+            settleFrame(1);
+            return;
+          }
+          if (hold.lumaFrame) {
+            closeQuiet(hold.lumaFrame);
+            hold.lumaFrame = null;
+            hold.meta = null;
+            hold.targets = null;
+          }
+          stats.paint420 += 1;
+          enqueuePresent(frame, targets);
+          settleFrame(1);
+          return;
+        }
         const run = deliverChain.then(() => deliver(frame, meta));
         deliverChain = run.catch(() => {});
       },
       error: (err) => {
+        // Si el driver GPU no soporta el perfil/config con prefer-hardware, caer a no-preference (software)
+        if (acceleration === 'prefer-hardware') {
+          acceleration = 'no-preference';
+        }
         configured = false;
         needsKey = true;
         activeCodec = '';
@@ -1200,11 +1234,24 @@ function createRdpWebCodecsDecoder(opts = {}) {
         fail(err);
       }
     });
-    decoder.configure({
-      codec,
-      optimizeForLatency: true,
-      hardwareAcceleration: acceleration
-    });
+    try {
+      decoder.configure({
+        codec,
+        optimizeForLatency: true,
+        hardwareAcceleration: acceleration
+      });
+    } catch (cfgErr) {
+      if (acceleration === 'prefer-hardware') {
+        acceleration = 'no-preference';
+        decoder.configure({
+          codec,
+          optimizeForLatency: true,
+          hardwareAcceleration: acceleration
+        });
+      } else {
+        throw cfgErr;
+      }
+    }
     activeCodec = codec;
     configured = true;
     needsKey = true;

@@ -52,18 +52,83 @@ try {
 const concurrentlyBin = path.join(root, 'node_modules', 'concurrently', 'dist', 'bin', 'concurrently.js');
 const env = { ...process.env, NODE_OPTIONS: '--no-deprecation' };
 
-// Si el sistema dispone de GPU dedicada NVIDIA en Linux, forzar automáticamente
-// PRIME Render Offload para que NodeTerm corra siempre con la máxima potencia de la GPU dedicada.
-if (process.platform === 'linux' && !env.__NV_PRIME_RENDER_OFFLOAD) {
+// Detección inteligente de GPU en Linux (/sys/class/drm):
+// En portátiles híbridos (Optimus / PRIME), la GPU que tiene conectada físicamente la pantalla
+// (eDP / DP / HDMI con status='connected') es la que ejecuta el compositor Wayland/X11.
+// Usar la GPU titular del display evita copias DMA-BUF entre GPUs por PCIe y parones de sincronización.
+function detectDisplayGpuVendor() {
   try {
-    if (fs.existsSync('/proc/driver/nvidia') || fs.existsSync('/dev/nvidia0')) {
-      env.__NV_PRIME_RENDER_OFFLOAD = '1';
-      env.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
-      env.__VK_LAYER_NV_optimus = 'NVIDIA_only';
-      env.NVD_BACKEND = 'direct';
-      env.LIBVA_DRIVER_NAME = 'nvidia';
+    const drmDir = '/sys/class/drm';
+    if (!fs.existsSync(drmDir)) return null;
+    const entries = fs.readdirSync(drmDir);
+    const connectedVendors = new Set();
+    const allCardVendors = new Set();
+
+    for (const entry of entries) {
+      if (/^card\d+$/.test(entry)) {
+        try {
+          const v = fs.readFileSync(path.join(drmDir, entry, 'device/vendor'), 'utf8').trim().toLowerCase();
+          if (v) allCardVendors.add(v);
+        } catch (_) {}
+      } else if (/^card\d+-/.test(entry)) {
+        try {
+          const status = fs.readFileSync(path.join(drmDir, entry, 'status'), 'utf8').trim().toLowerCase();
+          if (status === 'connected') {
+            const cardName = entry.split('-')[0];
+            const v = fs.readFileSync(path.join(drmDir, cardName, 'device/vendor'), 'utf8').trim().toLowerCase();
+            if (v) connectedVendors.add(v);
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 0x1002 = AMD, 0x8086 = Intel, 0x10de = NVIDIA
+    // Si hay una pantalla conectada a AMD o Intel (portátil en modo híbrido), priorizar esa GPU para cero copia.
+    if (connectedVendors.has('0x1002') || connectedVendors.has('0x8086')) {
+      return 'integrated';
+    }
+    if (connectedVendors.has('0x10de')) {
+      return 'nvidia';
+    }
+    if (!allCardVendors.has('0x1002') && !allCardVendors.has('0x8086') && allCardVendors.has('0x10de')) {
+      return 'nvidia';
     }
   } catch (_) {}
+  return 'integrated';
+}
+
+const gpuPref = (env.NODETERM_GPU || 'auto').trim().toLowerCase();
+if (process.platform === 'linux') {
+  // Si el usuario lanza con `NODETERM_GPU=nvidia` o con `prime-run` (__NV_PRIME_RENDER_OFFLOAD=1),
+  // respetar el uso de la GPU dedicada NVIDIA. En modo 'auto', elegir la GPU conectada a la pantalla.
+  const targetGpu = (gpuPref === 'nvidia' || gpuPref === 'integrated')
+    ? gpuPref
+    : (env.__NV_PRIME_RENDER_OFFLOAD === '1' ? 'nvidia' : detectDisplayGpuVendor());
+
+  if (targetGpu === 'nvidia') {
+    try {
+      if (fs.existsSync('/proc/driver/nvidia') || fs.existsSync('/dev/nvidia0')) {
+        env.NODETERM_GPU = 'nvidia';
+        env.__NV_PRIME_RENDER_OFFLOAD = '1';
+        env.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
+        env.__VK_LAYER_NV_optimus = 'NVIDIA_only';
+        env.NVD_BACKEND = 'direct';
+        env.LIBVA_DRIVER_NAME = 'nvidia';
+      }
+    } catch (_) {}
+  } else {
+    // La pantalla está gobernada por la GPU integrada (AMD/Intel): limpiar variables de NVIDIA
+    // que puedan venir heredadas del perfil del sistema para que VA-API cargue radeonsi/iHD limpiamente.
+    if (env.LIBVA_DRIVER_NAME === 'nvidia') {
+      delete env.LIBVA_DRIVER_NAME;
+    }
+    delete env.NVD_BACKEND;
+    delete env.__NV_PRIME_RENDER_OFFLOAD;
+    if (env.__GLX_VENDOR_LIBRARY_NAME === 'nvidia') {
+      delete env.__GLX_VENDOR_LIBRARY_NAME;
+    }
+    delete env.__VK_LAYER_NV_optimus;
+  }
 }
 
 const child = spawn(process.execPath, [

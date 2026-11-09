@@ -1469,6 +1469,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               const w = Math.round(Number(width) || 0);
               const h = Math.round(Number(height) || 0);
               if (w > 0 && h > 0) {
+                const reqW = lastRequestedDesktopRef.current.width || 0;
+                const reqH = lastRequestedDesktopRef.current.height || 0;
+                const mismatchedRequest = reqW > 0 && reqH > 0
+                  && (Math.abs(w - reqW) > 8 || Math.abs(h - reqH) > 8);
                 currentDesktopSizeRef.current = { width: w, height: h };
                 lastRequestedDesktopRef.current = {
                   width: w,
@@ -1477,6 +1481,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 };
                 setDesktopDimensions({ width: w, height: h });
                 queueMicrotask(() => updateCanvasRectRef.current?.());
+                // Si el servidor (p.ej. KRDP en KDE Wayland) ignora el tamaño solicitado y
+                // emite su monitor físico fijo (p.ej. 3840x2160), sincronizar una sola vez
+                // DisplayControl a (w, h) para alinear el InputHandler del servidor con el
+                // framebuffer real y desactivar futuros resizes automáticos.
+                if (mismatchedRequest && supportsDisplayControlRef.current) {
+                  supportsDisplayControlRef.current = false;
+                  try {
+                    sessionRef.current?.resize?.(w, h, 100);
+                  } catch (_) {}
+                }
               }
               clearResizeAckTimer();
               completeResizeInFlight();
@@ -1975,9 +1989,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const runPromise = currentSession.run();
 
         // El escritorio inicial ya coincide con el medido, así que un resize por
-        // tamaño se descartaría. En HiDPI hay que anunciar la escala igual.
+        // tamaño se descartaría. En HiDPI hay que anunciar la escala igual, salvo que
+        // el servidor (p.ej. KRDP) ya haya impuesto una resolución física distinta via ResetGraphics.
         const usesPhysicalPixels = isFullscreen || rdpConfig.autoResize !== false;
-        if (supportsDisplayControlRef.current && usesPhysicalPixels && readDesktopScaleFactor() !== 100) {
+        const serverAcceptedInitialSize =
+          currentDesktopSizeRef.current.width === width
+          && currentDesktopSizeRef.current.height === height;
+        if (supportsDisplayControlRef.current && usesPhysicalPixels && serverAcceptedInitialSize && readDesktopScaleFactor() !== 100) {
           requestSessionResize(width, height, { force: true });
         }
 
@@ -2802,6 +2820,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            width: '100%',
+            height: '100%',
             lineHeight: 0
           } : isAutoResize ? {
             width: '100%',
@@ -2824,10 +2844,21 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             onMouseDown={() => canvasRef.current?.focus()}
             style={(() => {
               if (isAutoResize && supportsDisplayControl) {
-                // 1:1 lógico: el framebuffer puede ir a DPR>1; el CSS lo muestra sin estirar ejes.
+                // 1:1 lógico cuando el servidor respeta la resolución del visor;
+                // si el servidor (p.ej. KRDP) emite una resolución mayor que el contenedor,
+                // escalar limpiamente a la caja disponible sin object-fit para mantener 100%
+                // de correspondencia exacta entre getBoundingClientRect() y los píxeles del canvas.
                 const dpr = readDisplayPixelRatio();
-                const cssW = Math.max(1, Math.round(desktopDimensions.width / dpr));
-                const cssH = Math.max(1, Math.round(desktopDimensions.height / dpr));
+                let cssW = Math.max(1, Math.round(desktopDimensions.width / dpr));
+                let cssH = Math.max(1, Math.round(desktopDimensions.height / dpr));
+                const el = containerRef.current;
+                const availW = (el && el.clientWidth > 100) ? el.clientWidth : 0;
+                const availH = (el && el.clientHeight > 100) ? el.clientHeight : 0;
+                if (availW > 0 && availH > 0 && (cssW > availW + 4 || cssH > availH + 4)) {
+                  const scale = Math.min(availW / cssW, availH / cssH);
+                  cssW = Math.max(1, Math.floor(cssW * scale));
+                  cssH = Math.max(1, Math.floor(cssH * scale));
+                }
                 return {
                   width: `${cssW}px`,
                   height: `${cssH}px`,
