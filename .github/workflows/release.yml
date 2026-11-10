@@ -112,6 +112,12 @@ jobs:
           cp "$APP" "$WORK/in.AppImage"
           chmod +x "$WORK/in.AppImage"
           (cd "$WORK" && ./in.AppImage --appimage-extract)
+          # appimagetool continuous (build 370+) exige 0755 en el AppDir; el extract
+          # de electron-builder deja squashfs-root en 0700 y aborta el reempaquetado.
+          chmod -R a+rX "$WORK/squashfs-root"
+          if [ -f "$WORK/squashfs-root/AppRun" ]; then
+            chmod a+rx "$WORK/squashfs-root/AppRun"
+          fi
           export APPIMAGE_EXTRACT_AND_RUN=1
           export ARCH=x86_64
           UPDATE_URL="gh-releases-zsync|kalidus|NodeTerm|latest|NodeTerm-*.AppImage.zsync"
