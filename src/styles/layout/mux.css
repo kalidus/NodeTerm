@@ -34,6 +34,15 @@ body.layout-mux .main-splitter > .p-splitter-panel:first-child:has(.sidebar-coll
   padding: 6px 3px 6px 6px !important;
 }
 
+body.layout-mux .main-splitter > .p-splitter-panel:first-child:has(.sidebar-hidden) {
+  display: none !important;
+  flex: 0 0 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+}
+
 /* ---------- Title bar: barra de sesión ---------- */
 html[data-custom-titlebar="true"] body.layout-mux .title-bar {
   background: var(--ui-titlebar-accent) !important;

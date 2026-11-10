@@ -30,6 +30,7 @@ export const AppHeader = ({
   iconTheme,
   expandedKeys,
   sidebarCollapsed = false,
+  sidebarVisible = true,
   tabBarCollapsed = false,
   visibleVaultIds,
   onToggleVault,
@@ -140,6 +141,7 @@ export const AppHeader = ({
       iconTheme={iconTheme}
       expandedKeys={expandedKeys}
       sidebarCollapsed={sidebarCollapsed}
+      sidebarVisible={sidebarVisible}
       isMinimalMode={isMinimalMode}
       tabBarCollapsed={tabBarCollapsed}
       visibleVaultIds={visibleVaultIds}

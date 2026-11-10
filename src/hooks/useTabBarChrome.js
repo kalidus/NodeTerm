@@ -961,7 +961,7 @@ export function useTabBarChrome({
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
 
-    // Cog en barra de pestañas solo si la TitleBar no está visible
+    // Cog (+ restore TitleBar) en barra de pestañas solo si la TitleBar no está visible
     const titleBarHidden = titleBarCollapsed || isMinimalMode;
     if (titleBarHidden) {
       const appearanceButtonWrapper = document.createElement('div');
@@ -972,7 +972,51 @@ export function useTabBarChrome({
         flex-shrink: 0;
         margin-left: auto;
         height: 20px;
+        gap: 2px;
       `;
+
+      // Restaurar TitleBar solo si está colapsada (el modo minimalista sale por su propia UI)
+      if (titleBarCollapsed) {
+        const restoreTitleBarButton = document.createElement('div');
+        restoreTitleBarButton.setAttribute('role', 'button');
+        restoreTitleBarButton.setAttribute('tabIndex', '0');
+        restoreTitleBarButton.title = 'Mostrar barra de título';
+        restoreTitleBarButton.setAttribute('aria-label', 'Mostrar barra de título');
+        restoreTitleBarButton.className = 'tab-titlebar-restore-button';
+        const restoreIcon = document.createElement('i');
+        restoreIcon.className = 'pi pi-window-maximize';
+        restoreIcon.style.cssText = `
+          font-size: 0.9rem;
+          color: var(--ui-tab-text, rgba(255,255,255,0.85));
+          opacity: 0.6;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s;
+        `;
+        restoreTitleBarButton.appendChild(restoreIcon);
+        restoreTitleBarButton.style.cssText = `
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          -webkit-app-region: no-drag !important;
+        `;
+        restoreTitleBarButton.addEventListener('mouseenter', () => { restoreIcon.style.opacity = '1'; });
+        restoreTitleBarButton.addEventListener('mouseleave', () => { restoreIcon.style.opacity = '0.6'; });
+        restoreTitleBarButton.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            restoreTitleBarButton.click();
+          }
+        });
+        restoreTitleBarButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('toggle-titlebar'));
+        });
+        appearanceButtonWrapper.appendChild(restoreTitleBarButton);
+      }
+
       appearanceButtonWrapper.appendChild(appearanceButton);
       navList.appendChild(appearanceButtonWrapper);
     }
@@ -988,8 +1032,9 @@ export function useTabBarChrome({
         const navList = resolveNavList();
         const titleBarHidden = titleBarCollapsed || isMinimalMode;
         const cogMissing = titleBarHidden && navList && !navList.querySelector('.tab-appearance-button-wrapper');
+        const restoreMissing = titleBarCollapsed && navList && !navList.querySelector('.tab-titlebar-restore-button');
         const actionsMissing = navList && !navList.querySelector('.local-terminal-buttons');
-        if (!navList || actionsMissing || cogMissing) {
+        if (!navList || actionsMissing || cogMissing || restoreMissing) {
           injectTabBarButtons();
         }
       }, ms));

@@ -26,9 +26,10 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // ============ EFECTOS PARA EVENTOS GLOBALES ============
 
-  // Escuchar evento para expandir sidebar
+  // Escuchar evento para expandir sidebar (panel + asegurar visible)
   useEffect(() => {
     const handleExpandSidebar = () => {
+      setSidebarVisible(true);
       if (sidebarCollapsed) {
         setSidebarCollapsed(false);
       }
@@ -41,10 +42,10 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     };
   }, [sidebarCollapsed]);
 
-  // Toggle sidebar desde titlebar / atajos
+  // TitleBar: ocultar/mostrar la sidebar por completo (no el pliegue a IconRail)
   useEffect(() => {
     const handleToggleSidebar = () => {
-      setSidebarCollapsed(prev => !prev);
+      setSidebarVisible(prev => !prev);
     };
     window.addEventListener('toggle-sidebar', handleToggleSidebar);
     return () => window.removeEventListener('toggle-sidebar', handleToggleSidebar);

@@ -1682,24 +1682,25 @@ const MainContentArea = ({
     setSidebarCollapsed(newCollapsedState);
   }, [sidebarCollapsed, setSidebarCollapsed, FIXED_EXPANDED_SIZE]);
 
-  // Umbral en píxeles: por debajo de esto la sidebar se replegará sola al soltar
+  // Umbral en píxeles: por debajo de esto la sidebar se repliega al IconRail al soltar
   const SIDEBAR_COLLAPSE_THRESHOLD_PX = 100;
   const SIDEBAR_EXPAND_THRESHOLD_PX = 60;
-  // Ancho fijo cuando está colapsada (IconRail 48px + 8px margen izquierdo)
+  // Ancho fijo cuando está plegada a IconRail (48px + 8px margen)
   const SIDEBAR_COLLAPSED_WIDTH_PX = 56;
+  const sidebarFullyHidden = isMinimalMode || !sidebarVisible;
 
   const handleResizeOnly = () => {
-    // Sin lógica durante el arrastre; el colapso se aplica al soltar en handleResizeEndWithAutoCollapse
+    // Sin lógica durante el arrastre; el pliegue a rail se aplica al soltar
   };
 
-  // Al soltar el mouse: guardar tamaño y replegar/expandir según umbrales
+  // Al soltar: guardar tamaño y plegar/expandir a IconRail según umbrales (nunca ocultar del todo)
   const handleResizeEndWithAutoCollapse = (e) => {
     const hasRealDrag = splitterDragStateRef.current.hasMoved;
     splitterDragStateRef.current.isPointerDown = false;
     splitterDragStateRef.current.hasMoved = false;
 
     const splitterElement = document.querySelector('.main-splitter');
-    if (splitterElement) {
+    if (splitterElement && sidebarVisible) {
       const splitterWidth = splitterElement.offsetWidth;
       const sidebarPercentage = e.sizes[0];
       const sidebarWidthPx = (splitterWidth * sidebarPercentage) / 100;
@@ -1719,7 +1720,7 @@ const MainContentArea = ({
     if (handleResize) handleResize(e);
   };
 
-  // Aplicar ancho actual del sidebar; cuando está colapsada forzar siempre el mismo ancho (como el botón)
+  // Aplicar ancho: oculta (TitleBar) | IconRail (botones sidebar) | expandida
   React.useEffect(() => {
     const splitterElement = document.querySelector('.main-splitter');
     if (!splitterElement) return;
@@ -1728,43 +1729,66 @@ const MainContentArea = ({
 
     const leftPanel = panels[0];
 
+    if (sidebarFullyHidden) {
+      const applyHidden = () => {
+        const panel = document.querySelector('.main-splitter .p-splitter-panel:first-child');
+        if (!panel) return;
+        panel.style.display = 'none';
+        panel.style.flex = '0 0 0';
+        panel.style.flexBasis = '0';
+        panel.style.width = '0';
+        panel.style.minWidth = '0';
+        panel.style.maxWidth = '0';
+        panel.style.padding = '0';
+        panel.style.overflow = 'hidden';
+      };
+      try {
+        applyHidden();
+        const raf = requestAnimationFrame(applyHidden);
+        return () => cancelAnimationFrame(raf);
+      } catch { }
+      return;
+    }
+
     if (!sidebarCollapsed) {
       try {
+        leftPanel.style.display = '';
         leftPanel.style.flex = '';
         leftPanel.style.flexBasis = `${sidebarSizePercent}%`;
         leftPanel.style.width = '';
         leftPanel.style.minWidth = '';
         leftPanel.style.maxWidth = '';
+        leftPanel.style.padding = '';
+        leftPanel.style.overflow = '';
       } catch { }
     } else {
-      // Colapsado: mismo ancho que al colapsar con el botón (evita que quede más estrecha por arrastre)
       const applyCollapsedWidth = () => {
         const panel = document.querySelector('.main-splitter .p-splitter-panel:first-child');
         if (!panel) return;
         const w = `${SIDEBAR_COLLAPSED_WIDTH_PX}px`;
+        panel.style.display = '';
         panel.style.flex = `0 0 ${w}`;
         panel.style.flexBasis = w;
         panel.style.width = w;
         panel.style.minWidth = w;
         panel.style.maxWidth = w;
+        panel.style.padding = '';
+        panel.style.overflow = 'hidden';
       };
       try {
         applyCollapsedWidth();
-        // Reaplicar en el siguiente frame por si el splitter sobrescribe (p. ej. al colapsar por arrastre)
-        const raf = requestAnimationFrame(() => {
-          applyCollapsedWidth();
-        });
+        const raf = requestAnimationFrame(applyCollapsedWidth);
         return () => cancelAnimationFrame(raf);
       } catch { }
     }
-  }, [sidebarCollapsed, sidebarSizePercent]);
+  }, [sidebarFullyHidden, sidebarCollapsed, sidebarSizePercent]);
 
   return (
     <div className="workspace-container">
       <Splitter
         style={{ height: '100%', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}
         onResizeEnd={handleResizeEndWithAutoCollapse}
-        onResize={handleResizeOnly} // Sin colapso durante arrastre
+        onResize={handleResizeOnly}
         disabled={false}
         className={`main-splitter ${isTransitioningSidebar ? 'main-splitter-transitioning' : ''}`}
         pt={{
@@ -1779,11 +1803,11 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel
-          size={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 22)}
-          minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 5)}
-          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 28)}
+          size={sidebarFullyHidden ? 0 : (sidebarCollapsed ? 5 : 22)}
+          minSize={sidebarFullyHidden ? 0 : (sidebarCollapsed ? 5 : 5)}
+          maxSize={sidebarFullyHidden ? 0 : (sidebarCollapsed ? 5 : 28)}
           className="terminal-frame-container"
-          style={isMinimalMode
+          style={sidebarFullyHidden
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
             : sidebarCollapsed
               ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--ui-sidebar-bg, #0a0f1f)' }
@@ -1791,7 +1815,7 @@ const MainContentArea = ({
           }
         >
           <TerminalFrame
-            className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
+            className={`${sidebarCollapsed ? 'sidebar-collapsed' : ''}${!sidebarVisible ? ' sidebar-hidden' : ''}`.trim()}
             showControls={false}
             hideHeader={mainFrameHeaderCollapsed}
           >
@@ -1806,7 +1830,7 @@ const MainContentArea = ({
         </SplitterPanel>
 
         <SplitterPanel
-          size={(isMinimalMode || !sidebarVisible) ? 100 : 85}
+          size={sidebarFullyHidden ? 100 : 85}
           className="terminal-frame-container"
           style={{
             display: 'flex',
@@ -1814,7 +1838,7 @@ const MainContentArea = ({
             minWidth: 0,
             width: '100%',
             height: '100%',
-            padding: isMinimalMode ? '0' : '8px 8px 8px 2px',
+            padding: isMinimalMode ? '0' : (sidebarVisible ? '8px 8px 8px 2px' : '8px'),
             background: 'transparent'
           }}
         >

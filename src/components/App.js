@@ -3148,6 +3148,7 @@ const App = () => {
           iconTheme={iconTheme}
           expandedKeys={expandedKeys}
           sidebarCollapsed={sidebarCollapsed}
+          sidebarVisible={sidebarVisible}
           mainFrameHeaderCollapsed={mainFrameHeaderCollapsed}
           tabBarCollapsed={tabBarCollapsed}
           visibleVaultIds={visibleVaultIds}

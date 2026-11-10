@@ -514,7 +514,7 @@ body.layout-unified-app-rounded.p-splitter.p-splitter-resizing .p-splitter-gutte
   display: block !important;
 }
 
-/* Sidebar overrides */
+/* Sidebar overrides: plegada = IconRail */
 body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed),
 body.layout-unified-app-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
   flex: 0 0 48px !important;
@@ -537,6 +537,23 @@ body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.
 body.layout-unified-rounded .main-splitter .terminal-frame.sidebar-collapsed {
   border-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08)) !important;
   box-shadow: var(--layout-panel-shadow) !important;
+}
+
+/* TitleBar: sidebar ocultada del todo */
+body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-hidden),
+body.layout-unified-app-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-hidden),
+body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-hidden) {
+  display: none !important;
+  flex: 0 0 0 !important;
+  flex-basis: 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+}
+
+body.layout-unified-rounded .main-splitter .terminal-frame.sidebar-hidden {
+  display: none !important;
 }
 
 body.layout-unified .sidebar-container,

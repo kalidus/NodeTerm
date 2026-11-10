@@ -73,6 +73,14 @@ const IconPanelTop = () => (
   </svg>
 );
 
+/** Ocultar titlebar: chevron arriba + panel (sin línea de pestañas). */
+const IconTitleBar = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M5 5.5 L8 2.5 L11 5.5" {...LAYOUT_STROKE} />
+    <rect x="2" y="7" width="12" height="7" rx="1.5" {...LAYOUT_STROKE} />
+  </svg>
+);
+
 const IconLayout = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="1.5" y="1.5" width="5" height="13" rx="1.2" {...LAYOUT_STROKE} />
@@ -102,6 +110,7 @@ const TitleBar = ({
   secureStorage,
   onToggleTitleBar,
   sidebarCollapsed = false,
+  sidebarVisible = true,
   isMinimalMode = false,
   tabBarCollapsed = false,
   sidebarCallbacksRef,
@@ -559,8 +568,8 @@ const TitleBar = ({
       <div className="title-bar-actions">
         <div className="title-bar-action-group">
           <TitleBarIconButton
-            title={sidebarCollapsed ? 'Mostrar sidebar' : 'Ocultar sidebar'}
-            active={!sidebarCollapsed}
+            title={sidebarVisible ? 'Ocultar sidebar' : 'Mostrar sidebar'}
+            active={sidebarVisible}
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
           >
             <IconSidebarLeft />
@@ -571,6 +580,18 @@ const TitleBar = ({
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-tabbar'))}
           >
             <IconPanelTop />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title="Ocultar barra de título"
+            onClick={() => {
+              if (typeof onToggleTitleBar === 'function') {
+                onToggleTitleBar();
+                return;
+              }
+              window.dispatchEvent(new CustomEvent('toggle-titlebar'));
+            }}
+          >
+            <IconTitleBar />
           </TitleBarIconButton>
           <TitleBarIconButton
             title={isMinimalMode ? 'Salir del modo minimalista (Esc / Ctrl+Shift+M)' : 'Modo minimalista (Ctrl+Shift+M)'}
