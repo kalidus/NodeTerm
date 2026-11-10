@@ -2315,6 +2315,8 @@ const MainContentArea = ({
                             {...memoizedContentRendererProps}
                             settingsTabProps={settingsTabProps}
                             isMinimalMode={isMinimalMode}
+                            titleBarCollapsed={titleBarCollapsed}
+                            tabBarCollapsed={tabBarCollapsed}
                             // Terminal props (específicas)
                             getAllTabs={getAllTabs}
                             // Nuevos manejadores para Quick Actions

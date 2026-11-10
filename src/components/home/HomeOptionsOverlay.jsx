@@ -47,6 +47,22 @@ function toggleMinimalMode() {
   }
 }
 
+function toggleTitleBar() {
+  try {
+    window.dispatchEvent(new CustomEvent('toggle-titlebar'));
+  } catch (e) {
+    /* noop */
+  }
+}
+
+function toggleTabBar() {
+  try {
+    window.dispatchEvent(new CustomEvent('toggle-tabbar'));
+  } catch (e) {
+    /* noop */
+  }
+}
+
 export default function HomeOptionsOverlay({
   overlayRef,
   themeColors = {},
@@ -82,6 +98,8 @@ export default function HomeOptionsOverlay({
   onApplyCustomPreset,
   onDeleteCustomPreset,
   onResetLayout,
+  titleBarCollapsed = false,
+  tabBarCollapsed = false,
   isMinimalMode
 }) {
   const [activeTab, setActiveTab] = useState('apariencia');
@@ -234,6 +252,18 @@ export default function HomeOptionsOverlay({
                 label="Ocultar barra superior en paneles"
                 checked={!!hideNonTerminalHeaders}
                 onToggle={onToggleHideNonTerminalHeaders}
+                themeColors={themeColors}
+              />
+              <SwitchRow
+                label="Barra de título"
+                checked={!titleBarCollapsed}
+                onToggle={toggleTitleBar}
+                themeColors={themeColors}
+              />
+              <SwitchRow
+                label="Barra de pestañas"
+                checked={!tabBarCollapsed}
+                onToggle={toggleTabBar}
                 themeColors={themeColors}
               />
               <SwitchRow

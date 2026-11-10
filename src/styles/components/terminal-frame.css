@@ -1862,7 +1862,11 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .groups-pill-bar {
     border: none !important;
 }
 
-body.tab-bar-hidden .terminal-frame.main-content-frame .tab-nav-arrow,
+/* Solo chrome de navegación: el contenido real vive fuera de .p-tabview-panels. */
+body.tab-bar-hidden .terminal-frame.main-content-frame .tab-nav-arrow {
+    display: none !important;
+}
+
 body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view .p-tabview-panels {
     display: none !important;
 }
@@ -2041,12 +2045,18 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view.p-tabview 
     pointer-events: none;
 }
 
-/* Engranaje flotante cuando la TitleBar y la barra de pestañas están ocultas */
-.tab-bar-restore-btn {
+/* Botón de recuperación cuando TitleBar y barra de pestañas están ocultas */
+.tab-bar-restore-root {
     position: fixed;
     top: 10px;
-    left: 10px;
+    right: 10px;
+    left: auto;
     z-index: 20000;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+.tab-bar-restore-btn {
     width: 32px;
     height: 32px;
     display: flex;
@@ -2057,7 +2067,7 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view.p-tabview 
     border-radius: 8px;
     background: rgba(18, 22, 32, 0.72);
     color: rgba(255, 255, 255, 0.88);
-    opacity: 0.45;
+    opacity: 0.72;
     cursor: pointer;
     -webkit-app-region: no-drag;
     app-region: no-drag;
@@ -2068,11 +2078,50 @@ body.tab-bar-hidden .terminal-frame.main-content-frame .main-tab-view.p-tabview 
     opacity: 1;
     background: rgba(28, 34, 48, 0.92);
     border-color: rgba(255, 255, 255, 0.32);
+    outline: none;
 }
 
 .tab-bar-restore-btn i {
     font-size: 13px;
     pointer-events: none;
+}
+
+.tab-bar-restore-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 210px;
+    padding: 4px 0;
+    border: 1px solid var(--ui-context-border, rgba(255, 255, 255, 0.16));
+    border-radius: 8px;
+    background: var(--ui-context-bg, rgba(24, 28, 38, 0.96));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    color: var(--ui-context-text, #fff);
+    font-size: 12px;
+}
+
+.tab-bar-restore-menu-item {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.tab-bar-restore-menu-item:hover,
+.tab-bar-restore-menu-item:focus-visible {
+    background: var(--ui-context-hover, rgba(255, 255, 255, 0.08));
+    outline: none;
+}
+
+.tab-bar-restore-menu-separator {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--ui-context-border, rgba(255, 255, 255, 0.12));
 }
 
 /*
