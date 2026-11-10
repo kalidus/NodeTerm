@@ -8,6 +8,50 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-10
+
+### Vaults independientes
+- **Selector tipo Termius**: Vaults de conexiones independientes y experimentales; varios visibles a la vez con arrastre entre raíces.
+- **Alcance**: Vaults independientes también para contraseñas y documentos; menú temático con lock/rename (incluye Principal).
+- **Favoritos**: Ocultar favoritos de vaults no visibles o bloqueados.
+
+### SSH post-cuántico y explorador remoto
+- **KEX PQC**: Handshake híbrido automático ML-KEM-768/sntrup761 con modo de compatibilidad legacy; corrección Keccak para OpenSSH/Dropbear.
+- **Robustez SSH**: Fallback automático a handshake legacy, prioridad de tipos en known_hosts y chequeo del agent en Windows; evitar corrupción UTF-8 en shells pooled.
+- **tmux**: Sesiones persistentes opcionales en SSH directo.
+- **Explorador remoto**: Toggle en sidebar, ruta editable, iconos del tema, subida por arrastre, home vía SFTP `realPath` (estilo WinSCP) y listado SFTP (evita fish/CachyOS vacío).
+
+### Apariencia, layouts y temas
+- **Unlock**: Temas de pantalla de desbloqueo con previews fotográficos alineados al estilo elegido.
+- **Layouts**: Islas, Dock, Tablero y Studio; picker de layout restaurado en la TitleBar; estilos clásicos primero.
+- **Sidebars**: Layouts alternativos para conexiones, notas y vault; temas de árbol por sección (Circuito, Terminal, packs VS Code / Ghost / Futurist).
+- **Quick Panel**: Pestañas Frames, Presets, Tipografía, General y Seguridad; ocho perfiles de color; marco del terminal aplicable a la title bar.
+- **Tabs**: Estilo Termius con grupos segmentados; grupos integrables en una sola línea de barra.
+- **Chrome**: Ocultar title bar desde chrome; restaurar title/tab bar con un clic cuando el chrome queda oculto; sidebar solo se oculta del todo desde TitleBar.
+
+### Library, Home y herramientas
+- **Library**: Notas convertidas en biblioteca personal on-site; menú unificado de alta y viewers Nextcloud.
+- **Home**: Panel de grabaciones recientes para replay rápido; estilo de marco independiente en paneles; reloj/clima redimensionable.
+- **Búsqueda**: TitleBar indexa conexiones, contraseñas y notas.
+- **DFIR**: Triage forense para Linux, Windows, hosts locales y de red.
+- **Network tools**: Catálogo reorganizado con herramientas agrupadas.
+- **Backup**: Exportar vaults a elección y sincronizar extras en Nextcloud.
+
+### Terminal y splits
+- **Password mode**: Bloquea broadcast y grabación inseguros.
+- **Búsqueda**: Scrollback embebido con Ctrl+F.
+- **Splits**: Hasta 8 paneles, splits de terminal local; broadcast solo entre miembros y controles de foco.
+
+### RDP, GPU y Linux
+- **RDP**: RemoteFX Progressive por defecto, selector dinámico de codec; pipeline GPU/H.264 (FIFO damage, present/ACK, blit directo); menos lag en teclado/terminales.
+- **Linux**: VA-API, buffers DRM/Wayland, selección de GPU discreta/PRIME; Vulkan desactivado en Wayland para evitar errores de surface; arranque sin freeze inicial.
+
+### Seguridad, rendimiento y fixes
+- **PQC vault**: Migración automática de vaults/notas locales a KDF post-cuántico; cifrado de backups `.nodeterm` reforzado; sidecars NTV2 para salt-32.
+- **Telemetría local**: Opción de desactivarla; muestreo Windows sin PowerShell; stats solo con UI visible.
+- **Sidebar**: Carpetas de cualquier árbol como favoritas; ruta remota predeterminada; rail de Conexiones vuelve al árbol al colapsar.
+- **Estabilidad**: Updater IPC antes del renderer; modo minimalista Esc / Ctrl+Shift+M; tipografía de status bar alineada al terminal.
+
 ## [1.7.9] - 2026-10-25
 
 ### Seguridad

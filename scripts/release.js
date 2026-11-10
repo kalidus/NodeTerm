@@ -472,7 +472,15 @@ async function main() {
         if (needsCommit) {
             const doCommit = nonInteractive ? (cli.commitPrep ? 's' : 'n') : await question('\n¿Hacer commit de la preparación de release? (S/n): ');
             if (doCommit.toLowerCase() !== 'n') {
-                await runCommand('git add package.json package-lock.json CHANGELOG.md docs/RELEASE_NOTES.md README.md scripts/release.js', 'Añadiendo archivos de versión');
+                const prepFiles = [
+                    'package.json',
+                    'package-lock.json',
+                    'CHANGELOG.md',
+                    'docs/RELEASE_NOTES.md',
+                    'README.md',
+                    'scripts/release.js'
+                ].filter((file) => fs.existsSync(path.join(REPO_ROOT, file)));
+                await runCommand(`git add ${prepFiles.join(' ')}`, 'Añadiendo archivos de versión');
                 await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
             }
         }
