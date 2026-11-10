@@ -1,5 +1,6 @@
 /**
- * Flag experimental de vaults independientes (conexiones, passwords y notas).
+ * Flag de vaults independientes (conexiones, passwords y notas).
+ * La key de storage conserva el prefijo histórico "experimental" por compatibilidad.
  */
 
 export const MULTI_VAULT_FLAG_KEY = 'nodeterm_experimental_multi_vault';

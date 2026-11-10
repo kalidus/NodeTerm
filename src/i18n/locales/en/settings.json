@@ -46,7 +46,7 @@
   "sidebarDescriptions": {
     "general": "Global behavior preferences",
     "masterKey": "Manage encryption and master key",
-    "vaults": "Experimental connection vaults",
+    "vaults": "Extra vaults for connections, passwords and notes",
     "audit": "Configure logs and auditing",
     "users": "User and access management",
     "interface": "Customize the main interface",

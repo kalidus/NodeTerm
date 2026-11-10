@@ -46,7 +46,7 @@
   "sidebarDescriptions": {
     "general": "Ajustes globales de comportamiento",
     "masterKey": "Gestiona cifrado y clave maestra",
-    "vaults": "Vaults experimentales de conexiones",
+    "vaults": "Vaults adicionales de conexiones, passwords y notas",
     "audit": "Configura registro y auditoría",
     "users": "Gestión de usuarios y accesos",
     "interface": "Personaliza la interfaz principal",

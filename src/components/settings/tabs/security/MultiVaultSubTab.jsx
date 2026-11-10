@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
-import { Checkbox } from 'primereact/checkbox';
+import { Badge } from 'primereact/badge';
+import { InputSwitch } from 'primereact/inputswitch';
 import { InputText } from 'primereact/inputtext';
 import { isMultiVaultEnabled, setMultiVaultEnabled } from '../../../../utils/multiVaultFlag';
 import { DEFAULT_VAULT_ID } from '../../../../utils/activeConnectionVault';
@@ -51,10 +52,10 @@ const MultiVaultSubTab = ({ showToast }) => {
     setEnabled(!!checked);
     showToast?.(
       'info',
-      'Vaults experimentales',
+      'Vaults',
       checked
-        ? 'Activo: puedes crear vaults extra de conexiones.'
-        : 'Desactivado: los vaults extra no se montan en el árbol.'
+        ? 'Activo: puedes crear vaults adicionales.'
+        : 'Desactivado: los vaults adicionales no se montan en el árbol.'
     );
     window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
   };
@@ -118,13 +119,15 @@ const MultiVaultSubTab = ({ showToast }) => {
   };
 
   const renderRenameControls = (vault) => (
-    <div className="flex gap-1">
+    <div className="multi-vault-row-actions">
       {renameId === vault.id ? (
         <Button
           icon="pi pi-check"
           className="p-button-rounded p-button-text"
           onClick={() => handleRename(vault)}
           disabled={loading}
+          tooltip="Guardar"
+          tooltipOptions={{ position: 'top' }}
         />
       ) : (
         <Button
@@ -134,6 +137,8 @@ const MultiVaultSubTab = ({ showToast }) => {
             setRenameId(vault.id);
             setRenameValue(vault.name);
           }}
+          tooltip="Renombrar"
+          tooltipOptions={{ position: 'top' }}
         />
       )}
       {vault.id !== DEFAULT_VAULT_ID ? (
@@ -142,10 +147,54 @@ const MultiVaultSubTab = ({ showToast }) => {
           className="p-button-rounded p-button-text p-button-danger"
           onClick={() => handleDelete(vault)}
           disabled={loading}
+          tooltip="Eliminar"
+          tooltipOptions={{ position: 'top' }}
         />
       ) : null}
     </div>
   );
+
+  const renderVaultRow = ({ vault, icon, subtitle, badgeValue, badgeSeverity }) => {
+    const isRenaming = renameId === vault.id;
+    return (
+      <li
+        key={vault.id}
+        className="multi-vault-row"
+        title={vault.id}
+      >
+        <div className="multi-vault-row-main">
+          <div className={`multi-vault-row-icon ${vault.id === DEFAULT_VAULT_ID ? 'is-principal' : ''}`}>
+            <i className={icon} />
+          </div>
+          {isRenaming ? (
+            <InputText
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              className="multi-vault-rename-input w-full"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRename(vault);
+                if (e.key === 'Escape') setRenameId(null);
+              }}
+            />
+          ) : (
+            <div className="multi-vault-row-info">
+              <div className="multi-vault-row-title-line">
+                <span className="multi-vault-row-name">{vault.name}</span>
+                {badgeValue ? (
+                  <Badge value={badgeValue} severity={badgeSeverity || 'info'} />
+                ) : null}
+              </div>
+              {subtitle ? (
+                <small className="multi-vault-row-subtitle">{subtitle}</small>
+              ) : null}
+            </div>
+          )}
+        </div>
+        {renderRenameControls(vault)}
+      </li>
+    );
+  };
 
   const principalVault = {
     id: DEFAULT_VAULT_ID,
@@ -154,110 +203,157 @@ const MultiVaultSubTab = ({ showToast }) => {
   };
 
   return (
-    <div className="flex flex-column gap-3">
-      <div className="flex align-items-start gap-2">
-        <Checkbox
-          inputId="multi-vault-flag"
-          checked={enabled}
-          onChange={(e) => handleToggle(!!e.checked)}
-        />
-        <div>
-          <label htmlFor="multi-vault-flag" className="font-medium">
-            Vaults experimentales (conexiones, passwords y notas)
-          </label>
-          <p className="m-0 mt-1 text-sm" style={{ opacity: 0.8 }}>
-            Permite crear vaults adicionales con clave maestra propia para conexiones, passwords y notas.
-            Función experimental: haz copia de seguridad antes de usarla.
-          </p>
+    <div className="security-settings-container">
+      <div className="security-settings-content">
+        <div className="security-settings-header-wrapper">
+          <div className="security-header-content">
+            <span className="security-header-icon protocol-dialog-header-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="vaultsHeaderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#11998e" />
+                    <stop offset="100%" stopColor="#38ef7d" />
+                  </linearGradient>
+                  <linearGradient id="vaultsLockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#e8e8f0" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"
+                  fill="url(#vaultsHeaderGradient)"
+                  stroke="rgba(255,255,255,0.35)"
+                  strokeWidth="0.6"
+                />
+                <g transform="translate(12, 11)">
+                  <rect
+                    x="-3.2"
+                    y="-0.2"
+                    width="6.4"
+                    height="5.2"
+                    rx="1.2"
+                    fill="url(#vaultsLockGradient)"
+                    opacity="0.98"
+                  />
+                  <path
+                    d="M-1.6 -0.2 V-1.6 a1.6 1.6 0 0 1 3.2 0 V-0.2"
+                    fill="none"
+                    stroke="url(#vaultsLockGradient)"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="0" cy="2.2" r="0.85" fill="rgba(17, 153, 142, 0.75)" />
+                </g>
+              </svg>
+            </span>
+            <div className="security-header-text">
+              <h3 className="security-header">Vaults</h3>
+              <p className="security-description">
+                Crea vaults adicionales con clave propia para conexiones, passwords y notas.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {enabled && (
-        <>
-          <div>
-            <h4 className="m-0 mb-2">Vault principal</h4>
-            <ul className="list-none p-0 m-0 flex flex-column gap-2">
-              <li
-                className="flex align-items-center justify-content-between gap-2 p-2 border-round"
-                style={{ border: '1px solid var(--surface-border)' }}
-              >
-                <div className="flex align-items-center gap-2 flex-1">
-                  <i className="pi pi-home" />
-                  {renameId === DEFAULT_VAULT_ID ? (
-                    <InputText
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      className="w-full"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleRename(principalVault);
-                        if (e.key === 'Escape') setRenameId(null);
-                      }}
-                    />
-                  ) : (
-                    <div>
-                      <div className="font-medium">{defaultVaultName}</div>
-                      <small style={{ opacity: 0.7 }}>
-                        Usa la clave maestra de la app · {DEFAULT_VAULT_ID}
-                      </small>
-                    </div>
-                  )}
+        <div className="general-settings-section multi-vault-enable-section">
+          <div className="general-settings-options">
+            <div
+              className="general-setting-card"
+              onClick={() => handleToggle(!enabled)}
+            >
+              <div className="general-setting-content">
+                <div className="general-setting-icon lock">
+                  <i className="pi pi-lock" />
                 </div>
-                {renderRenameControls(principalVault)}
-              </li>
-            </ul>
+                <div className="general-setting-info">
+                  <label htmlFor="multi-vault-flag" className="general-setting-label">
+                    Habilitar vaults adicionales
+                  </label>
+                  <p className="general-setting-description">
+                    Monta vaults independientes en el árbol, cada uno con su propia clave maestra.
+                  </p>
+                </div>
+                <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                  <InputSwitch
+                    inputId="multi-vault-flag"
+                    checked={enabled}
+                    onChange={(e) => handleToggle(!!e.value)}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div className="flex justify-content-between align-items-center">
-            <h4 className="m-0">Vaults extra</h4>
-            <Button
-              label="Nuevo vault"
-              icon="pi pi-plus"
-              size="small"
-              onClick={() => setCreateVisible(true)}
-              disabled={loading}
-            />
-          </div>
+        {enabled && (
+          <>
+            <div className="general-settings-section">
+              <div className="general-section-header">
+                <div className="general-section-icon">
+                  <i className="pi pi-home" />
+                </div>
+                <h4 className="general-section-title">Vault principal</h4>
+              </div>
+              <div className="general-settings-options multi-vault-list-wrap">
+                <ul className="multi-vault-list">
+                  {renderVaultRow({
+                    vault: principalVault,
+                    icon: 'pi pi-home',
+                    subtitle: 'Usa la clave maestra de la app',
+                    badgeValue: 'Principal',
+                    badgeSeverity: 'success'
+                  })}
+                </ul>
+              </div>
+            </div>
 
-          {vaults.length === 0 ? (
-            <p className="text-sm m-0" style={{ opacity: 0.75 }}>
-              Todavía no hay vaults extra. Crea uno para agrupar hosts con otra clave.
-            </p>
-          ) : (
-            <ul className="list-none p-0 m-0 flex flex-column gap-2">
-              {vaults.map((vault) => (
-                <li
-                  key={vault.id}
-                  className="flex align-items-center justify-content-between gap-2 p-2 border-round"
-                  style={{ border: '1px solid var(--surface-border)' }}
-                >
-                  <div className="flex align-items-center gap-2 flex-1">
-                    <i className={vault.icon || 'pi pi-lock'} />
-                    {renameId === vault.id ? (
-                      <InputText
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        className="w-full"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleRename(vault);
-                          if (e.key === 'Escape') setRenameId(null);
-                        }}
-                      />
-                    ) : (
-                      <div>
-                        <div className="font-medium">{vault.name}</div>
-                        <small style={{ opacity: 0.7 }}>
-                          {vaultKeyring.isUnlocked(vault.id) ? 'Desbloqueado' : 'Bloqueado'} · {vault.id}
-                        </small>
-                      </div>
-                    )}
+            <div className="general-settings-section">
+              <div className="general-section-header multi-vault-section-header">
+                <div className="multi-vault-section-header-left">
+                  <div className="general-section-icon">
+                    <i className="pi pi-folder" />
                   </div>
-                  {renderRenameControls(vault)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
+                  <h4 className="general-section-title">Vaults adicionales</h4>
+                </div>
+                <Button
+                  label="Nuevo vault"
+                  icon="pi pi-plus"
+                  size="small"
+                  className="multi-vault-new-btn"
+                  onClick={() => setCreateVisible(true)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="general-settings-options multi-vault-list-wrap">
+                {vaults.length === 0 ? (
+                  <div className="multi-vault-empty">
+                    <div className="multi-vault-empty-icon">
+                      <i className="pi pi-inbox" />
+                    </div>
+                    <p className="multi-vault-empty-title">Todavía no hay vaults adicionales</p>
+                    <p className="multi-vault-empty-text">
+                      Crea uno para agrupar hosts, passwords y notas con otra clave.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="multi-vault-list">
+                    {vaults.map((vault) => {
+                      const unlocked = vaultKeyring.isUnlocked(vault.id);
+                      return renderVaultRow({
+                        vault,
+                        icon: vault.icon || 'pi pi-lock',
+                        subtitle: unlocked ? 'Desbloqueado' : 'Bloqueado',
+                        badgeValue: unlocked ? 'Abierto' : 'Bloqueado',
+                        badgeSeverity: unlocked ? 'success' : 'warning'
+                      });
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       <CreateExtraVaultDialog
         visible={createVisible}
