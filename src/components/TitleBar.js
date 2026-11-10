@@ -543,12 +543,6 @@ const TitleBar = ({
           </g>
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
-        <VaultSelector
-          visibleVaultIds={visibleVaultIds}
-          onToggleVault={onToggleVault}
-          onRequestUnlock={onRequestUnlockVault}
-          onRequestCreate={onRequestCreateVault}
-        />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <TitleBarSearch
@@ -566,6 +560,17 @@ const TitleBar = ({
         />
       </div>
       <div className="title-bar-actions">
+        <div className="title-bar-action-group">
+          <VaultSelector
+            visibleVaultIds={visibleVaultIds}
+            onToggleVault={onToggleVault}
+            onRequestUnlock={onRequestUnlockVault}
+            onRequestCreate={onRequestCreateVault}
+          />
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
         <div className="title-bar-action-group">
           <TitleBarIconButton
             title={sidebarVisible ? 'Ocultar sidebar' : 'Mostrar sidebar'}

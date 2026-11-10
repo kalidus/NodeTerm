@@ -362,3 +362,24 @@
     animation: none;
   }
 }
+
+/* Vault selector: same chrome as .title-bar-icon-btn, locked hint only */
+
+.title-bar-vault-selector.is-locked {
+  color: color-mix(in srgb, #f0c674 70%, var(--ui-titlebar-text, #fff));
+  opacity: 0.95;
+}
+
+.title-bar-vault-menu-safe-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.title-bar-vault-menu-safe-icon svg {
+  display: block;
+}

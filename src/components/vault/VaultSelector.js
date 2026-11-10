@@ -11,6 +11,31 @@ import {
 } from '../../utils/extraConnectionVaults';
 import vaultKeyring from '../../services/VaultKeyring';
 
+const SAFE_STROKE = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round'
+};
+
+/** Icono de caja fuerte (cuerpo + dial + asa), estilo title-bar. */
+const VaultSafeIcon = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <rect x="2" y="3" width="12" height="10" rx="1.5" {...SAFE_STROKE} />
+    <circle cx="7.2" cy="8" r="2.55" {...SAFE_STROKE} />
+    <circle cx="7.2" cy="8" r="0.95" fill="currentColor" stroke="none" />
+    <path d="M10.15 8h2.35" {...SAFE_STROKE} />
+    <path d="M12.5 6.55v2.9" {...SAFE_STROKE} />
+  </svg>
+);
+
 /**
  * Selector de vault tipo Termius (checks) para la title bar.
  * Varios visibles → árbol con raíces; uno → árbol plano.
@@ -132,9 +157,13 @@ const VaultSelector = ({
       return;
     }
     const rect = btnRef.current.getBoundingClientRect();
+    const menuWidth = 280;
     setMenuPos({
       top: rect.bottom + 6,
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - 280))
+      left: Math.max(
+        8,
+        Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)
+      )
     });
     setOpen(true);
   };
@@ -242,7 +271,7 @@ const VaultSelector = ({
     flexShrink: 0
   };
 
-  const renderCheckRow = (vaultId, title, iconClass, isLocked, canLock) => {
+  const renderCheckRow = (vaultId, title, icon, isLocked, canLock) => {
     const checked = visibleSet.has(vaultId);
     const isEditing = renameId === vaultId;
 
@@ -259,7 +288,7 @@ const VaultSelector = ({
           cursor: isEditing ? 'default' : 'pointer'
         }}
       >
-        <i className={iconClass} style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }} />
+        {icon}
 
         {isEditing ? (
           <input
@@ -393,53 +422,33 @@ const VaultSelector = ({
     );
   };
 
+  const chipClassName = [
+    'title-bar-icon-btn',
+    'title-bar-vault-selector',
+    open ? 'is-active' : '',
+    anyLocked ? 'is-locked' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <>
-      <div style={{ position: 'relative', marginLeft: 8, ...noDrag }}>
-        <button
-          ref={btnRef}
-          type="button"
-          title="Vaults de conexiones visibles"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={openMenu}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            height: 24,
-            padding: '0 8px',
-            borderRadius: 6,
-            border: '1px solid rgba(255,255,255,0.22)',
-            background: open ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.18)',
-            color: 'var(--ui-titlebar-text, #fff)',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            maxWidth: 180,
-            ...noDrag
-          }}
-        >
-          <i
-            className={anyLocked ? 'pi pi-lock' : 'pi pi-box'}
-            style={{ fontSize: 11 }}
-          />
-          <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: 120
-            }}
-          >
-            {label}
-          </span>
-          <i className="pi pi-chevron-down" style={{ fontSize: 9, opacity: 0.85 }} />
-        </button>
-      </div>
+      <button
+        ref={btnRef}
+        type="button"
+        className={chipClassName}
+        title={`Vaults visibles: ${label}`}
+        aria-label={`Vaults visibles: ${label}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
+        onClick={openMenu}
+        style={noDrag}
+      >
+        <VaultSafeIcon size={16} />
+      </button>
 
       {open &&
         ReactDOM.createPortal(
@@ -480,7 +489,10 @@ const VaultSelector = ({
             {renderCheckRow(
               DEFAULT_VAULT_ID,
               defaultVaultName,
-              'pi pi-home',
+              <i
+                className="pi pi-home"
+                style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }}
+              />,
               false,
               false
             )}
@@ -490,7 +502,16 @@ const VaultSelector = ({
               return renderCheckRow(
                 v.id,
                 v.name,
-                isLocked ? 'pi pi-lock' : 'pi pi-box',
+                isLocked ? (
+                  <i
+                    className="pi pi-lock"
+                    style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }}
+                  />
+                ) : (
+                  <span className="title-bar-vault-menu-safe-icon" aria-hidden>
+                    <VaultSafeIcon size={12} />
+                  </span>
+                ),
                 isLocked,
                 true
               );
