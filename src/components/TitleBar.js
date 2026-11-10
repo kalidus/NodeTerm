@@ -560,16 +560,12 @@ const TitleBar = ({
         />
       </div>
       <div className="title-bar-actions">
-        <div className="title-bar-action-group">
-          <VaultSelector
-            visibleVaultIds={visibleVaultIds}
-            onToggleVault={onToggleVault}
-            onRequestUnlock={onRequestUnlockVault}
-            onRequestCreate={onRequestCreateVault}
-          />
-        </div>
-
-        <div className="title-bar-action-sep" aria-hidden="true" />
+        <VaultSelector
+          visibleVaultIds={visibleVaultIds}
+          onToggleVault={onToggleVault}
+          onRequestUnlock={onRequestUnlockVault}
+          onRequestCreate={onRequestCreateVault}
+        />
 
         <div className="title-bar-action-group">
           <TitleBarIconButton

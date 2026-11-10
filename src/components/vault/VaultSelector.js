@@ -433,22 +433,25 @@ const VaultSelector = ({
 
   return (
     <>
-      <button
-        ref={btnRef}
-        type="button"
-        className={chipClassName}
-        title={`Vaults visibles: ${label}`}
-        aria-label={`Vaults visibles: ${label}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-        }}
-        onClick={openMenu}
-        style={noDrag}
-      >
-        <VaultSafeIcon size={16} />
-      </button>
+      <div className="title-bar-action-group">
+        <button
+          ref={btnRef}
+          type="button"
+          className={chipClassName}
+          title={`Vaults visibles: ${label}`}
+          aria-label={`Vaults visibles: ${label}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onClick={openMenu}
+          style={noDrag}
+        >
+          <VaultSafeIcon size={16} />
+        </button>
+      </div>
+      <div className="title-bar-action-sep" aria-hidden="true" />
 
       {open &&
         ReactDOM.createPortal(
