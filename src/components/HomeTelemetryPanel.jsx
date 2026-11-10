@@ -124,7 +124,8 @@ const CyberSparkline = ({ data = [], color = '#00f2ff', height = 24, max = 100 }
 const HomeTelemetryPanel = ({
   themeColors = {},
   terminalTheme = {},
-  pollingIntervalMs = 2500
+  pollingIntervalMs = 2500,
+  isActiveTab = true
 }) => {
   const rootRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 340, height: 260 });
@@ -165,8 +166,14 @@ const HomeTelemetryPanel = ({
 
   const [telemetryDisabled, setTelemetryDisabled] = useState(() => !systemStatsService.isTelemetryEnabled());
 
-  // Suscripción al servicio centralizado de telemetría (idle: no compite con el primer frame)
+  // Suscripción solo con Home visible: en segundo plano no hay demanda de telemetría.
   useEffect(() => {
+    if (!isActiveTab) {
+      setStats(null);
+      setGpuStats(null);
+      return undefined;
+    }
+
     let stopped = false;
     let lastGpuAt = 0;
     let unsubscribe = () => {};
@@ -266,7 +273,7 @@ const HomeTelemetryPanel = ({
       unsubscribe();
       window.removeEventListener('local-telemetry-enabled-changed', syncTelemetry);
     };
-  }, [pollingIntervalMs]);
+  }, [pollingIntervalMs, isActiveTab]);
 
   const cpuLoad = stats?.cpu || 0;
   const memUsedGb = bytesToGb(stats?.mem?.used);

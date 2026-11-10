@@ -727,6 +727,7 @@ const ConnectionHistory = ({
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
 			statusBarVisible={statusBarVisible}
+			isActiveTab={isActiveTab}
 			fontFamily={localFontFamily}
 			terminalTheme={terminalTheme}
 		>
@@ -1187,6 +1188,7 @@ const ConnectionHistory = ({
 							<HomeTelemetryPanel
 								themeColors={themeColors}
 								terminalTheme={terminalTheme}
+								isActiveTab={isActiveTab}
 							/>
 						</HomePanelWrapper>
 					)}

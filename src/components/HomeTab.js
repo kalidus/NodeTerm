@@ -344,6 +344,8 @@ const HomeTab = ({
   masterKey = null,
   secureStorage = null,
   isMinimalMode = false,
+  titleBarCollapsed = false,
+  tabBarCollapsed = false,
   onContextMenu = null,
   terminalRefs = null
 }) => {
@@ -2197,6 +2199,8 @@ const HomeTab = ({
           onApplyCustomPreset={handleApplyCustomPreset}
           onDeleteCustomPreset={handleDeleteCustomPreset}
           onResetLayout={handleResetLayout}
+          titleBarCollapsed={titleBarCollapsed}
+          tabBarCollapsed={tabBarCollapsed}
           isMinimalMode={isMinimalMode}
         />
         <OverlayPanel
@@ -2425,7 +2429,7 @@ const HomeTab = ({
       ) : null}
       <div
         style={{
-          height: (statusBarVisible && !terminalView) ? 'calc(100% - var(--statusbar-height, 32px))' : '100%',
+          height: (statusBarVisible && !terminalView && isActiveTab) ? 'calc(100% - var(--statusbar-height, 32px))' : '100%',
           width: '100%',
           position: 'relative',
           zIndex: 1,
@@ -2445,7 +2449,7 @@ const HomeTab = ({
           </div>
       </div>
       <div className="home-shell-status" style={{ position: 'relative', zIndex: 1 }}>
-        <StandaloneStatusBar visible={statusBarVisible && !terminalView} fontFamily={localFontFamily} />
+        <StandaloneStatusBar visible={statusBarVisible && !terminalView && isActiveTab} fontFamily={localFontFamily} />
       </div>
     </div>
   );

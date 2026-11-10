@@ -71,6 +71,7 @@ export const HomeTerminalSplitPanel = ({
 	onEdit,
 	handleToggleFavoriteWithGroup,
 	statusBarVisible = false,
+	isActiveTab = true,
 	fontFamily,
 	terminalTheme = {}
 }) => {
@@ -320,7 +321,7 @@ export const HomeTerminalSplitPanel = ({
 				})()}
 			</div>
 
-			{statusBarVisible && (
+			{statusBarVisible && isActiveTab && (
 				<StandaloneStatusBar
 					visible={true}
 					fontFamily={fontFamily}

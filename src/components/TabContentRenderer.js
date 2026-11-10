@@ -121,6 +121,8 @@ const TabContentRendererInner = React.memo(({
   isRecordingTab,
   onToggleBroadcast,
   isMinimalMode,
+  titleBarCollapsed,
+  tabBarCollapsed,
   settingsTabProps,
   // Edit connection tab handlers
   handleSaveSshToSidebar,
@@ -136,6 +138,8 @@ const TabContentRendererInner = React.memo(({
         isActiveTab={isActiveTab}
         activeIds={activeIds}
         isMinimalMode={isMinimalMode}
+        titleBarCollapsed={titleBarCollapsed}
+        tabBarCollapsed={tabBarCollapsed}
         onCreateSSHConnection={onCreateSSHConnection}
         onOpenSSHTunnel={onOpenSSHTunnel}
         onCreateFolder={() => openFolderDialog(null)}
@@ -1377,6 +1381,7 @@ const TabContentRendererInner = React.memo(({
         fontSize={dockerFontSize}
         theme={dockerTheme}
         dockerInfo={tab.distroInfo}
+        active={isActiveTab}
         onBroadcastData={handleBroadcastData}
         isBroadcastActive={tab.isBroadcastActive}
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1399,6 +1404,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          active={isActiveTab}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1418,6 +1424,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={linuxTheme}
+          active={isActiveTab}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1438,6 +1445,7 @@ const TabContentRendererInner = React.memo(({
           fontSize={localFontSize}
           ubuntuInfo={tab.distroInfo}
           theme={linuxTheme}
+          active={isActiveTab}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1456,6 +1464,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={linuxTheme}
+          active={isActiveTab}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
           onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
@@ -1550,6 +1559,7 @@ const TabContentRendererInner = React.memo(({
         fontFamily={localFontFamily}
         fontSize={localFontSize}
         theme={powerShellTheme}
+        active={isActiveTab}
         onBroadcastData={handleBroadcastData}
         isBroadcastActive={tab.isBroadcastActive}
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
