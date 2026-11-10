@@ -21,9 +21,11 @@ let statsWorkerQueue = [];
 let pendingStatsSkips = 0;
 let isShuttingDown = false;
 let demandActive = false;
+let demandSeq = 0;
 let powerPaused = false;
 let baseIntervalMs = 2000;
 let windowActivity = { minimized: false, focused: true };
+let idleDisposeTimer = null;
 
 function clampInterval(ms) {
   const n = Number(ms);
@@ -46,12 +48,45 @@ function sendToWorker(msg) {
   } catch (_) {}
 }
 
+function clearIdleDisposeTimer() {
+  if (idleDisposeTimer) {
+    clearTimeout(idleDisposeTimer);
+    idleDisposeTimer = null;
+  }
+}
+
+function disposeIdleWorker() {
+  if (isShuttingDown || demandActive || powerPaused) return;
+  if (!statsWorker) return;
+  try {
+    statsWorker.removeAllListeners('exit');
+    sendToWorker('pause-stats');
+    statsWorker.kill('SIGKILL');
+  } catch (_) {}
+  statsWorker = null;
+  statsWorkerReady = false;
+  statsWorkerQueue.forEach((entry) => {
+    if (entry && !entry.settled) {
+      entry.settled = true;
+      if (entry.timer) clearTimeout(entry.timer);
+      entry.resolve(getFallbackStats('NoDemand'));
+    }
+  });
+  statsWorkerQueue = [];
+  pendingStatsSkips = 0;
+  console.log('[MEM] Stats worker detenido (sin demanda)');
+}
+
 function syncWorkerRunState() {
   if (isShuttingDown) return;
   if (powerPaused || !demandActive) {
     sendToWorker('pause-stats');
+    clearIdleDisposeTimer();
+    // Cerrar el proceso hijo si nadie consume telemetría (ahorra CPU/RAM)
+    idleDisposeTimer = setTimeout(disposeIdleWorker, 1500);
     return;
   }
+  clearIdleDisposeTimer();
   ensureStatsWorker();
   sendToWorker('resume-stats');
   sendToWorker({ type: 'set-interval', interval: desiredIntervalMs() });
@@ -206,9 +241,17 @@ function setWindowActivity(activity = {}) {
 
 /**
  * Hay (o no) consumidores visibles en el renderer.
- * Sin demanda el worker permanece residente pero sin temporizador.
+ * Sin demanda el worker se pausa y se cierra tras un breve idle.
+ * `seq` evita que una petición antigua reactive el muestreo después de un apagado.
  */
-function setStatsDemand(active, intervalMs) {
+function setStatsDemand(active, intervalMs, seq) {
+  const nextSeq = Number(seq);
+  if (Number.isFinite(nextSeq)) {
+    if (nextSeq < demandSeq) return;
+    demandSeq = nextSeq;
+  } else {
+    demandSeq += 1;
+  }
   if (intervalMs != null && intervalMs !== '') {
     baseIntervalMs = clampInterval(intervalMs);
   }

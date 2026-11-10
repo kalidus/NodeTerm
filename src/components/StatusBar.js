@@ -54,6 +54,7 @@ const StatusBar = ({
   statusBarIconTheme = 'classic',
   layout: layoutProp,
   isLoading = false,
+  telemetryDisabled = false,
   gpuStats = null,
   terminalType = 'ssh',
   fontFamily
@@ -195,6 +196,20 @@ const StatusBar = ({
     onMouseEnter: (e) => openPopover(type, e.currentTarget.getBoundingClientRect(), diskIndex),
     onMouseLeave: closePopover,
   }), [openPopover, closePopover]);
+
+  if (telemetryDisabled) {
+    return (
+      <div className="status-bar" ref={barRef} style={statusBarFontStyle}>
+        <div className="status-group status-bar-metrics" ref={metricsRef}>
+          <div className="status-bar-metrics-fit" style={metricsStyle}>
+            <span className="status-item" title="Ajustes → General → Consultar el equipo local">
+              Consulta del equipo desactivada
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!stats || isLoading) {
     return (

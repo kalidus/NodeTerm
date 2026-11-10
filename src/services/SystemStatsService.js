@@ -1,10 +1,11 @@
 /**
  * SystemStatsService - Centralized reactive service for system statistics.
  * Consolidates all component polling loops into a single singleton with reference counting.
- * When 0 subscribers exist, polling completely stops to save CPU and power.
+ * When 0 subscribers exist, or local telemetry is disabled, polling completely stops.
  */
 
 import { useState, useEffect } from 'react';
+import { STORAGE_KEYS } from '../utils/constants';
 
 function mapSystemStatsToPayload(systemStats) {
   if (!systemStats) return null;
@@ -74,6 +75,16 @@ function readPollIntervalMs() {
   return fallback;
 }
 
+function readTelemetryEnabled() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.LOCAL_TELEMETRY_ENABLED);
+    if (saved === null) return true;
+    return saved === 'true' || saved === '1';
+  } catch (_) {
+    return true;
+  }
+}
+
 class SystemStatsService {
   constructor() {
     this.subscribers = new Set();
@@ -83,6 +94,8 @@ class SystemStatsService {
     this.latestStats = null;
     this.pollIntervalMs = readPollIntervalMs();
     this.isPaused = false;
+    this.telemetryEnabled = readTelemetryEnabled();
+    this.demandSeq = 0;
 
     // Escuchar eventos del sistema para suspender el polling cuando la pantalla se bloquee o entre en reposo
     if (typeof window !== 'undefined' && window.electron?.ipcRenderer) {
@@ -91,6 +104,45 @@ class SystemStatsService {
       window.electron.ipcRenderer.on('system:unlock-screen', () => this.handleSystemResume());
       window.electron.ipcRenderer.on('system:resume', () => this.handleSystemResume());
     }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('local-telemetry-enabled-changed', (e) => {
+        const enabled = e?.detail?.enabled;
+        this.setTelemetryEnabled(enabled !== false);
+      });
+      window.addEventListener('settings-updated', () => {
+        this.setTelemetryEnabled(readTelemetryEnabled());
+      });
+      window.addEventListener('localstorage-sync-ready', () => {
+        this.setTelemetryEnabled(readTelemetryEnabled());
+      });
+    }
+  }
+
+  isTelemetryEnabled() {
+    return this.telemetryEnabled;
+  }
+
+  setTelemetryEnabled(enabled) {
+    const next = !!enabled;
+    if (this.telemetryEnabled === next) return;
+    this.telemetryEnabled = next;
+    if (!next) {
+      this.latestStats = null;
+      this.stopPolling();
+      this.notifyDemand();
+      this.subscribers.forEach((cb) => {
+        try { cb(null); } catch (_) {}
+      });
+      return;
+    }
+    if (this.subscribers.size > 0 && !this.isPaused) {
+      this.beginPollingAfterDemand();
+    }
+  }
+
+  canPoll() {
+    return this.telemetryEnabled && this.subscribers.size > 0 && !this.isPaused;
   }
 
   handleSystemPause() {
@@ -101,7 +153,7 @@ class SystemStatsService {
 
   handleSystemResume() {
     this.isPaused = false;
-    if (this.subscribers.size > 0) {
+    if (this.canPoll()) {
       this.beginPollingAfterDemand();
     }
   }
@@ -110,16 +162,18 @@ class SystemStatsService {
     if (typeof window === 'undefined' || typeof window.electron?.ipcRenderer?.invoke !== 'function') {
       return Promise.resolve();
     }
-    const active = this.subscribers.size > 0 && !this.isPaused;
+    const seq = ++this.demandSeq;
+    const active = this.canPoll();
     return window.electron.ipcRenderer.invoke('stats:set-demand', {
       active,
-      intervalMs: this.pollIntervalMs
+      intervalMs: this.pollIntervalMs,
+      seq
     }).catch(() => {});
   }
 
   beginPollingAfterDemand() {
     const start = () => {
-      if (this.subscribers.size > 0 && !this.isPaused) this.startPolling();
+      if (this.canPoll()) this.startPolling();
     };
     const pending = this.notifyDemand();
     if (pending && typeof pending.finally === 'function') pending.finally(start);
@@ -143,7 +197,7 @@ class SystemStatsService {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
-      if (this.subscribers.size > 0 && !this.isPaused) {
+      if (this.canPoll()) {
         this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
       }
     }
@@ -151,7 +205,7 @@ class SystemStatsService {
 
   /**
    * Subscribes a callback to receive stats updates.
-   * Starts the polling loop when the first subscriber joins.
+   * Starts the polling loop when the first subscriber joins (if telemetry is enabled).
    * Returns an unsubscribe function.
    *
    * @param {(stats: ReturnType<mapSystemStatsToPayload>) => void} callback
@@ -162,16 +216,22 @@ class SystemStatsService {
 
     this.subscribers.add(callback);
 
-    // Si ya tenemos estadísticas cacheadas, entregarlas inmediatamente al nuevo suscriptor
-    if (this.latestStats) {
+    // Si ya tenemos estadísticas cacheadas y la telemetría está activa, entregarlas
+    if (this.telemetryEnabled && this.latestStats) {
       try {
         callback(this.latestStats);
+      } catch (_) {}
+    } else if (!this.telemetryEnabled) {
+      try {
+        callback(null);
       } catch (_) {}
     }
 
     // Iniciar bucle si es el primer suscriptor y no está en pausa
-    if (this.subscribers.size === 1 && !this.isPaused) {
+    if (this.subscribers.size === 1 && this.canPoll()) {
       this.beginPollingAfterDemand();
+    } else if (!this.telemetryEnabled) {
+      this.notifyDemand();
     }
 
     return () => {
@@ -185,11 +245,11 @@ class SystemStatsService {
   }
 
   startPolling() {
-    if (this.timer || this.isPaused || this.pollArmed) return;
+    if (this.timer || !this.canPoll() || this.pollArmed) return;
     this.pollArmed = true;
     this.fetchOnce().finally(() => {
       this.pollArmed = false;
-      if (this.subscribers.size > 0 && !this.isPaused && !this.timer) {
+      if (this.canPoll() && !this.timer) {
         this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
       }
     });
@@ -205,23 +265,23 @@ class SystemStatsService {
 
   async pollLoop() {
     this.timer = null;
-    if (this.subscribers.size === 0 || this.isPaused) return;
+    if (!this.canPoll()) return;
 
     await this.fetchOnce();
 
-    if (this.subscribers.size > 0 && !this.isPaused) {
+    if (this.canPoll()) {
       this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
     }
   }
 
   async fetchOnce() {
-    if (this.isFetching || this.isPaused) return;
+    if (this.isFetching || !this.canPoll()) return;
     if (typeof window === 'undefined' || !window.electronAPI?.getSystemStats) return;
 
     this.isFetching = true;
     try {
       const raw = await window.electronAPI.getSystemStats();
-      if (raw) {
+      if (raw && this.canPoll()) {
         const payload = mapSystemStatsToPayload(raw);
         this.latestStats = payload;
         // Notificar a todos los suscriptores en el mismo tick
@@ -249,16 +309,28 @@ export const systemStatsService = new SystemStatsService();
  */
 export function useSystemStats(options = {}) {
   const enabled = options.enabled !== false;
-  const [stats, setStats] = useState(() => systemStatsService.getLatestStats());
+  const [stats, setStats] = useState(() => (
+    systemStatsService.isTelemetryEnabled() ? systemStatsService.getLatestStats() : null
+  ));
+  const [telemetryEnabled, setTelemetryEnabled] = useState(() => systemStatsService.isTelemetryEnabled());
 
   useEffect(() => {
     if (!enabled) return undefined;
-    return systemStatsService.subscribe((newStats) => {
+    const onToggle = (e) => {
+      setTelemetryEnabled(e?.detail?.enabled !== false);
+    };
+    window.addEventListener('local-telemetry-enabled-changed', onToggle);
+    const unsubscribe = systemStatsService.subscribe((newStats) => {
       setStats(newStats);
+      setTelemetryEnabled(systemStatsService.isTelemetryEnabled());
     });
+    return () => {
+      window.removeEventListener('local-telemetry-enabled-changed', onToggle);
+      unsubscribe();
+    };
   }, [enabled]);
 
-  return stats;
+  return { stats, telemetryEnabled };
 }
 
 export default systemStatsService;

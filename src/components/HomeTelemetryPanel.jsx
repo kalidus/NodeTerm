@@ -163,16 +163,43 @@ const HomeTelemetryPanel = ({
     return () => ro.disconnect();
   }, []);
 
+  const [telemetryDisabled, setTelemetryDisabled] = useState(() => !systemStatsService.isTelemetryEnabled());
+
   // Suscripción al servicio centralizado de telemetría (idle: no compite con el primer frame)
   useEffect(() => {
     let stopped = false;
     let lastGpuAt = 0;
     let unsubscribe = () => {};
 
+    const syncTelemetry = (e) => {
+      const enabled = e?.detail?.enabled !== undefined
+        ? !!e.detail.enabled
+        : systemStatsService.isTelemetryEnabled();
+      setTelemetryDisabled(!enabled);
+      if (!enabled) {
+        setStats(null);
+        setGpuStats(null);
+      }
+    };
+    window.addEventListener('local-telemetry-enabled-changed', syncTelemetry);
+
     const start = () => {
       if (stopped) return;
+      if (!systemStatsService.isTelemetryEnabled()) {
+        setTelemetryDisabled(true);
+      } else {
+        setTelemetryDisabled(false);
+      }
       unsubscribe = systemStatsService.subscribe(async (systemStatsPayload) => {
-      if (!systemStatsPayload || stopped) return;
+      if (stopped) return;
+      if (!systemStatsService.isTelemetryEnabled()) {
+        setTelemetryDisabled(true);
+        setStats(null);
+        setGpuStats(null);
+        return;
+      }
+      if (!systemStatsPayload) return;
+      setTelemetryDisabled(false);
       const cpuUsage = systemStatsPayload.cpu || 0;
       const rxBytes = systemStatsPayload.network?.rx_speed || 0;
       const txBytes = systemStatsPayload.network?.tx_speed || 0;
@@ -237,6 +264,7 @@ const HomeTelemetryPanel = ({
       stopped = true;
       cancelIdle();
       unsubscribe();
+      window.removeEventListener('local-telemetry-enabled-changed', syncTelemetry);
     };
   }, [pollingIntervalMs]);
 
@@ -265,6 +293,28 @@ const HomeTelemetryPanel = ({
     const rect = e.currentTarget.getBoundingClientRect();
     openPopover(type, rect, extraIdx);
   };
+
+  if (telemetryDisabled) {
+    return (
+      <div
+        ref={rootRef}
+        className="cyber-telemetry-root"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          color: '#94a3b8',
+          fontSize: 12,
+          textAlign: 'center'
+        }}
+      >
+        Consulta del equipo desactivada
+        <br />
+        Ajustes → General → Consultar el equipo local
+      </div>
+    );
+  }
 
   return (
     <div

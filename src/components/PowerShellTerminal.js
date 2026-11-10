@@ -70,6 +70,7 @@ const PowerShellTerminal = forwardRef(({
     }, [xtermLib]);
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [telemetryDisabled, setTelemetryDisabled] = useState(() => !systemStatsService.isTelemetryEnabled());
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -99,12 +100,36 @@ const PowerShellTerminal = forwardRef(({
     // Poll local system stats only while this terminal's status bar is on screen.
     useEffect(() => {
         if (!active || hideStatusBar) return undefined;
-        return systemStatsService.subscribe((stats) => {
+        const applyDisabled = () => {
+            setTelemetryDisabled(true);
+            setStatusStats(null);
+            setIsLoadingStats(false);
+        };
+        const syncTelemetry = (e) => {
+            const enabled = e?.detail?.enabled !== undefined
+              ? !!e.detail.enabled
+              : systemStatsService.isTelemetryEnabled();
+            if (!enabled) applyDisabled();
+            else setTelemetryDisabled(false);
+        };
+        window.addEventListener('local-telemetry-enabled-changed', syncTelemetry);
+        if (!systemStatsService.isTelemetryEnabled()) applyDisabled();
+        else setTelemetryDisabled(false);
+        const unsubscribe = systemStatsService.subscribe((stats) => {
+            if (!systemStatsService.isTelemetryEnabled()) {
+                applyDisabled();
+                return;
+            }
             if (stats) {
+                setTelemetryDisabled(false);
                 setStatusStats(stats);
                 setIsLoadingStats(false);
             }
         });
+        return () => {
+            window.removeEventListener('local-telemetry-enabled-changed', syncTelemetry);
+            unsubscribe();
+        };
     }, [active, hideStatusBar]);
 
     // Listen for changes to icon theme and local PS status bar theme via storage updates
@@ -524,6 +549,7 @@ const PowerShellTerminal = forwardRef(({
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
+                    telemetryDisabled={telemetryDisabled}
                     terminalType="powershell"
                     fontFamily={fontFamily}
                 />

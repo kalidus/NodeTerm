@@ -8,7 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
-import { systemStatsService } from '../services/SystemStatsService';
+import { useLocalTelemetrySubscription } from '../hooks/useLocalTelemetrySubscription';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import {
@@ -40,7 +40,10 @@ const DockerTerminal = forwardRef(({
     onContextMenuRef.current = onContextMenu;
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
-    const [statusStats, setStatusStats] = useState(null);
+    const { statusStats, isLoadingStats, telemetryDisabled } = useLocalTelemetrySubscription({
+        active,
+        enabled: !hideStatusBar
+    });
 
     useEffect(() => {
         activeRef.current = active;
@@ -55,7 +58,6 @@ const DockerTerminal = forwardRef(({
         }).catch((err) => console.error('[DockerTerminal] Error cargando xterm:', err));
         return () => { cancelled = true; };
     }, [xtermLib]);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -75,18 +77,6 @@ const DockerTerminal = forwardRef(({
             '--statusbar-badge-fg': colors.badgeFg
         };
     };
-
-    // Poll system stats consolidado
-    useEffect(() => {
-        if (!active || hideStatusBar) return undefined;
-        const unsubscribe = systemStatsService.subscribe((stats) => {
-            if (stats) {
-                setStatusStats(stats);
-                setIsLoadingStats(false);
-            }
-        });
-        return unsubscribe;
-    }, [active, hideStatusBar]);
 
     // Sincronizar scrollback dinámicamente si cambia en Settings
     useEffect(() => {
@@ -385,6 +375,7 @@ const DockerTerminal = forwardRef(({
                 <StatusBar
                     stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                     isLoading={isLoadingStats}
+                    telemetryDisabled={telemetryDisabled}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     terminalType="docker"

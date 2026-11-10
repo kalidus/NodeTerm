@@ -8,7 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
-import { systemStatsService } from '../services/SystemStatsService';
+import { useLocalTelemetrySubscription } from '../hooks/useLocalTelemetrySubscription';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
@@ -70,8 +70,13 @@ const UbuntuTerminal = forwardRef(({
         return () => { cancelled = true; };
     }, [xtermLib]);
     const [distroId, setDistroId] = useState(() => (ubuntuInfo?.category || 'ubuntu').toLowerCase());
-    const [statusStats, setStatusStats] = useState(null);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const { statusStats, isLoadingStats, telemetryDisabled } = useLocalTelemetrySubscription({
+        active,
+        enabled: !hideStatusBar,
+        onStats: (stats) => {
+            if (stats.distro) setDistroId(stats.distro);
+        }
+    });
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -134,22 +139,11 @@ const UbuntuTerminal = forwardRef(({
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
-        const unsubscribe = (active && !hideStatusBar)
-            ? systemStatsService.subscribe((stats) => {
-                if (stats) {
-                    setStatusStats(stats);
-                    setIsLoadingStats(false);
-                    if (stats.distro) setDistroId(stats.distro);
-                }
-            })
-            : () => {};
-
         return () => {
-            unsubscribe();
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [active, hideStatusBar]);
+    }, [active]);
 
     useEffect(() => {
         const onStorage = (e) => {
@@ -567,6 +561,7 @@ const UbuntuTerminal = forwardRef(({
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
+                    telemetryDisabled={telemetryDisabled}
                     terminalType="linux"
                     fontFamily={fontFamily}
                 />

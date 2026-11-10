@@ -265,6 +265,10 @@
           "label": "Hide top frame",
           "description": "Hides the main terminal top frame. The change applies immediately."
         },
+        "localTelemetryEnabled": {
+          "label": "Query local machine",
+          "description": "Updates CPU, memory and disk for the status bar and Hardware panel. Turn it off if you do not need it to save CPU."
+        },
         "connectionSearchShortcut": {
           "label": "Search shortcut",
           "description": "Opens the centered connection search while NodeTerm is focused.",

@@ -370,6 +370,7 @@ class ExportImportService {
           nodeterm_themes_per_row: this.safeGetItem('nodeterm_themes_per_row'),
           connectionDetailsPanelHeight: this.safeGetItem('connectionDetailsPanelHeight'),
           lock_home_button: this.safeGetItem('lock_home_button'),
+          localTelemetryEnabled: this.safeGetItem('localTelemetryEnabled'),
           nodeterm_fav_type: this.safeGetItem('nodeterm_fav_type'),
           
           // === CONFIGURACIONES DE TABS ===
@@ -882,6 +883,7 @@ class ExportImportService {
       'nodeterm_themes_per_row',
       'connectionDetailsPanelHeight',
       'lock_home_button',
+      'localTelemetryEnabled',
       'nodeterm_fav_type',
       'audit_auto_recording',
       'audit_recording_quality',

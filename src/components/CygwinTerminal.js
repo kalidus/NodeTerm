@@ -8,7 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
-import { systemStatsService } from '../services/SystemStatsService';
+import { useLocalTelemetrySubscription } from '../hooks/useLocalTelemetrySubscription';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
@@ -53,7 +53,10 @@ const CygwinTerminal = forwardRef(({
     useResumeTerminalFit(layoutSuspended, fitStable);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
-    const [statusStats, setStatusStats] = useState(null);
+    const { statusStats, isLoadingStats, telemetryDisabled } = useLocalTelemetrySubscription({
+        active,
+        enabled: !hideStatusBar
+    });
 
     useEffect(() => {
         activeRef.current = active;
@@ -68,7 +71,6 @@ const CygwinTerminal = forwardRef(({
         }).catch((err) => console.error('[CygwinTerminal] Error cargando xterm:', err));
         return () => { cancelled = true; };
     }, [xtermLib]);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -88,18 +90,6 @@ const CygwinTerminal = forwardRef(({
             '--statusbar-badge-fg': colors.badgeFg
         };
     };
-
-    // Poll system stats consolidado
-    useEffect(() => {
-        if (!active || hideStatusBar) return undefined;
-        const unsubscribe = systemStatsService.subscribe((stats) => {
-            if (stats) {
-                setStatusStats(stats);
-                setIsLoadingStats(false);
-            }
-        });
-        return unsubscribe;
-    }, [active, hideStatusBar]);
 
     // Listen for storage events
     useEffect(() => {
@@ -481,6 +471,7 @@ const CygwinTerminal = forwardRef(({
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
+                    telemetryDisabled={telemetryDisabled}
                     terminalType="cygwin"
                     fontFamily={fontFamily}
                 />

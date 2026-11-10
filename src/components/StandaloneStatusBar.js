@@ -22,6 +22,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily
     const resolvedFontFamily = fontFamily || getDefaultLocalTerminalFontFamily();
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [telemetryDisabled, setTelemetryDisabled] = useState(() => !systemStatsService.isTelemetryEnabled());
     const [gpuStats, setGpuStats] = useState(null);
     const lastStatsSigRef = useRef('');
     const lastGpuAtRef = useRef(0);
@@ -73,6 +74,22 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily
     }, [pollingInterval]);
 
     useEffect(() => {
+        const syncTelemetry = (e) => {
+            const enabled = e?.detail?.enabled !== undefined
+              ? !!e.detail.enabled
+              : systemStatsService.isTelemetryEnabled();
+            setTelemetryDisabled(!enabled);
+            if (!enabled) {
+                setStatusStats(null);
+                setGpuStats(null);
+                setIsLoadingStats(false);
+            }
+        };
+        window.addEventListener('local-telemetry-enabled-changed', syncTelemetry);
+        return () => window.removeEventListener('local-telemetry-enabled-changed', syncTelemetry);
+    }, []);
+
+    useEffect(() => {
         if (!visible) return;
 
         let unsubscribe = () => {};
@@ -83,8 +100,23 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily
 
         const start = () => {
             if (cancelled) return;
+            if (!systemStatsService.isTelemetryEnabled()) {
+                setTelemetryDisabled(true);
+                setIsLoadingStats(false);
+            } else {
+                setTelemetryDisabled(false);
+            }
             unsubscribe = systemStatsService.subscribe(async (stats) => {
-                if (!stats || cancelled) return;
+                if (cancelled) return;
+                if (!systemStatsService.isTelemetryEnabled()) {
+                    setTelemetryDisabled(true);
+                    setStatusStats(null);
+                    setGpuStats(null);
+                    setIsLoadingStats(false);
+                    return;
+                }
+                if (!stats) return;
+                setTelemetryDisabled(false);
 
                 const sig = statsSignature(stats);
                 if (sig !== lastStatsSigRef.current) {
@@ -166,6 +198,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily
                 active={true}
                 statusBarIconTheme={statusBarIconTheme}
                 isLoading={isLoadingStats}
+                telemetryDisabled={telemetryDisabled}
                 terminalType="linux"
                 fontFamily={resolvedFontFamily}
             />

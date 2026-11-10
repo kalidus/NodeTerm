@@ -188,6 +188,11 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         if (!invoke) return;
         try {
             const isLocal = tab?.type === 'local-terminal';
+            if (isLocal && !systemStatsService.isTelemetryEnabled()) {
+                setProcesses([]);
+                setProcessesLoading(false);
+                return;
+            }
             const handler = isLocal ? 'app:get-local-processes' : 'ssh:get-processes';
             const result = await invoke(handler, { tabId });
             if (result?.success && Array.isArray(result.processes)) {

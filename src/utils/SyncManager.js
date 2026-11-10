@@ -376,7 +376,7 @@ class SyncManager {
       'nodeterm_linux_font_size', 'nodeterm_docker_font_family', 'nodeterm_docker_font_size',
       'custom_titlebar_color', 'titlebar_color_mode', 'use_primary_colors_titlebar',
       'nodeterm_ui_anim_speed', 'nodeterm_ui_reduced_motion', 'nodeterm_ui_lite_effects', 'nodeterm_themes_per_row',
-      'connectionDetailsPanelHeight', 'lock_home_button', 'nodeterm_fav_type',
+      'connectionDetailsPanelHeight', 'lock_home_button', 'localTelemetryEnabled', 'nodeterm_fav_type',
       'audit_auto_recording', 'audit_recording_quality', 'audit_encrypt_recordings',
       'nodeterm_language', 'home_tab_icon', 'statusBarIconTheme', 'statusBarPollingInterval',
       'nodeterm_interactive_icon', 'nodeterm_tab_theme', 'nodeterm_tab_layout', 'nodeterm_groups_inline',

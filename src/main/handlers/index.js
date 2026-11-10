@@ -250,7 +250,8 @@ function registerSystemStatsIpcHandler() {
     const StatsWorkerService = require('../services/StatsWorkerService');
     const active = !!(payload && payload.active);
     const intervalMs = payload ? payload.intervalMs : undefined;
-    StatsWorkerService.setStatsDemand(active, intervalMs);
+    const seq = payload ? payload.seq : undefined;
+    StatsWorkerService.setStatsDemand(active, intervalMs, seq);
     return true;
   });
 

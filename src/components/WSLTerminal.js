@@ -8,7 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
 import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
-import { systemStatsService } from '../services/SystemStatsService';
+import { useLocalTelemetrySubscription } from '../hooks/useLocalTelemetrySubscription';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
@@ -68,8 +68,20 @@ const WSLTerminal = forwardRef(({
         }).catch((err) => console.error('[WSLTerminal] Error cargando xterm:', err));
         return () => { cancelled = true; };
     }, [xtermLib]);
-    const [statusStats, setStatusStats] = useState(null);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [distroId, setDistroId] = useState('ubuntu');
+    const [linuxKernel, setLinuxKernel] = useState('');
+    const [linuxArch, setLinuxArch] = useState('');
+    const [linuxPrettyName, setLinuxPrettyName] = useState('');
+    const { statusStats, isLoadingStats, telemetryDisabled } = useLocalTelemetrySubscription({
+        active,
+        enabled: !hideStatusBar,
+        onStats: (stats) => {
+            if (stats.distro) setDistroId(stats.distro);
+            if (stats.kernel) setLinuxKernel(stats.kernel);
+            if (stats.arch) setLinuxArch(stats.arch);
+            if (stats.osPrettyName) setLinuxPrettyName(stats.osPrettyName);
+        }
+    });
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -77,10 +89,6 @@ const WSLTerminal = forwardRef(({
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
-    const [distroId, setDistroId] = useState('ubuntu');
-    const [linuxKernel, setLinuxKernel] = useState('');
-    const [linuxArch, setLinuxArch] = useState('');
-    const [linuxPrettyName, setLinuxPrettyName] = useState('');
 
     const getScopedStatusBarCssVars = () => {
         const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -156,25 +164,11 @@ const WSLTerminal = forwardRef(({
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
-        const unsubscribe = (active && !hideStatusBar)
-            ? systemStatsService.subscribe((stats) => {
-                if (stats) {
-                    setStatusStats(stats);
-                    setIsLoadingStats(false);
-                    if (stats.distro) setDistroId(stats.distro);
-                    if (stats.kernel) setLinuxKernel(stats.kernel);
-                    if (stats.arch) setLinuxArch(stats.arch);
-                    if (stats.osPrettyName) setLinuxPrettyName(stats.osPrettyName);
-                }
-            })
-            : () => {};
-
         return () => {
-            unsubscribe();
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [active, hideStatusBar]);
+    }, [active]);
 
     useEffect(() => {
         const onStorage = (e) => {
@@ -545,6 +539,7 @@ const WSLTerminal = forwardRef(({
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     isLoading={isLoadingStats}
+                    telemetryDisabled={telemetryDisabled}
                     terminalType="linux"
                     fontFamily={fontFamily}
                 />

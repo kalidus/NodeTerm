@@ -751,7 +751,7 @@ function registerSystemMonitoringHandlers() {
   let cachedGpuStats = null;
   let lastGpuCheck = 0;
   let isGpuQuerying = false; // Bandera para evitar ejecuciones concurrentes
-  const GPU_CACHE_TTL = 15000; // 15 segundos de caché para evitar sobrecargar el sistema
+  const GPU_CACHE_TTL = 60000; // 60s: evita cascadas de PowerShell/wmic en Windows
   let nvidiaDisabledUntil = 0;
   let amdDisabledUntil = 0;
   const PENALTY_DURATION = 30 * 1000; // Penalización reducida a 30 segundos (asíncrono, no bloquea)
@@ -927,8 +927,6 @@ function registerSystemMonitoringHandlers() {
           detectedGpuType = classified.type;
           const label = classified.controller.name || classified.controller.model;
           if (label) detectedGpuName = label;
-        } else {
-          type = await detectGpuTypeOnce();
         }
         
         // Buscar el controlador de GPU que coincida con el tipo detectado (o que tenga estadísticas de memoria)
@@ -958,37 +956,37 @@ function registerSystemMonitoringHandlers() {
 
         const totalMB = controller.memoryTotal || controller.vram || null;
         const usedMB = typeof controller.memoryUsed === 'number' ? controller.memoryUsed : null;
-        
-        if (totalMB && !isNaN(totalMB) && usedMB !== null && !isNaN(usedMB)) {
-          const gpuName = controller.name || controller.model || detectedGpuName || 'Graphics Card';
-          const detectedType = type && type !== 'unknown' ? type : 
-            (String(controller.vendor || '').toLowerCase().includes('nvidia') ? 'nvidia' :
-             String(controller.vendor || '').toLowerCase().includes('amd') ? 'amd' :
-             String(controller.vendor || '').toLowerCase().includes('intel') ? 'intel' : 'unknown');
+        const gpuName = controller.name || controller.model || detectedGpuName || 'Graphics Card';
+        const detectedType = type && type !== 'unknown' ? type : 
+          (String(controller.vendor || '').toLowerCase().includes('nvidia') ? 'nvidia' :
+           String(controller.vendor || '').toLowerCase().includes('amd') ? 'amd' :
+           String(controller.vendor || '').toLowerCase().includes('intel') ? 'intel' : 'unknown');
 
-          if (!gpuDetectionLogged || detectedGpuName !== gpuName) {
-            console.log(`[GPU Handler] ✅ GPU detectada mediante systeminformation: ${gpuName} (${detectedType})`);
-            gpuDetectionLogged = true;
-            detectedGpuName = gpuName;
-          }
-
-          cachedGpuStats = {
-            ok: true,
-            type: detectedType,
-            name: gpuName,
-            totalMB: totalMB,
-            usedMB: usedMB,
-            freeMB: totalMB - usedMB,
-            usagePercent: Math.round((usedMB / totalMB) * 100),
-            gpuUtilization: typeof controller.utilizationGpu === 'number' ? controller.utilizationGpu : (usedMB ? Math.round((usedMB / totalMB) * 100) : 0),
-            temperature: typeof controller.temperatureGpu === 'number' ? controller.temperatureGpu : null,
-            driverVersion: controller.driverVersion || null,
-            note: 'Detectado mediante systeminformation'
-          };
-          lastGpuCheck = now;
-          isGpuQuerying = false;
-          return cachedGpuStats;
+        if (!gpuDetectionLogged || detectedGpuName !== gpuName) {
+          console.log(`[GPU Handler] ✅ GPU detectada mediante systeminformation: ${gpuName} (${detectedType})`);
+          gpuDetectionLogged = true;
+          detectedGpuName = gpuName;
         }
+
+        // Aunque no haya memoria usable, no encadenar wmic: ya tenemos identidad de GPU.
+        cachedGpuStats = {
+          ok: true,
+          type: detectedType,
+          name: gpuName,
+          totalMB: (totalMB && !isNaN(totalMB)) ? totalMB : null,
+          usedMB: (usedMB !== null && !isNaN(usedMB)) ? usedMB : null,
+          freeMB: (totalMB && usedMB !== null && !isNaN(totalMB) && !isNaN(usedMB)) ? (totalMB - usedMB) : null,
+          usagePercent: (totalMB && usedMB !== null && totalMB > 0) ? Math.round((usedMB / totalMB) * 100) : null,
+          gpuUtilization: typeof controller.utilizationGpu === 'number'
+            ? controller.utilizationGpu
+            : ((totalMB && usedMB !== null && totalMB > 0) ? Math.round((usedMB / totalMB) * 100) : null),
+          temperature: typeof controller.temperatureGpu === 'number' ? controller.temperatureGpu : null,
+          driverVersion: controller.driverVersion || null,
+          note: 'Detectado mediante systeminformation'
+        };
+        lastGpuCheck = now;
+        isGpuQuerying = false;
+        return cachedGpuStats;
       }
     } catch (err) {
       console.warn('[GPU Handler] ⚠️ Consulta a systeminformation fallida o sin memoria. Usando fallbacks nativos.', err.message);
@@ -1322,9 +1320,36 @@ function registerSystemMonitoringHandlers() {
       let command = '';
 
       if (platform === 'win32') {
-        // En Windows, systeminformation es más robusto para esto, 
-        // pero para rapidez usaremos un comando nativo si fuera posible.
-        // Por ahora, usamos systeminformation que ya está instalado y es cross-platform.
+        // Preferir tasklist (sin PowerShell/WMI). Fallback a systeminformation.
+        try {
+          const { stdout } = await execAsync('tasklist /FO CSV /NH', { timeout: 4000, windowsHide: true });
+          const processes = String(stdout || '')
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              // "name","pid","session","session#","mem"
+              const cols = line.match(/("([^"]*)"|[^,]+)/g) || [];
+              const clean = cols.map((c) => c.replace(/^"|"$/g, ''));
+              const name = clean[0] || '';
+              const pid = parseInt(clean[1], 10) || 0;
+              const memRaw = String(clean[4] || '').replace(/[^\d]/g, '');
+              const memKb = parseInt(memRaw, 10) || 0;
+              return {
+                pid,
+                user: '',
+                cpu: 0,
+                mem: 0,
+                rss: memKb * 1024,
+                command: name
+              };
+            })
+            .filter((p) => p.pid > 0);
+          if (processes.length > 0) {
+            return { success: true, processes };
+          }
+        } catch (_) {}
+
         const si = require('systeminformation');
         const data = await si.processes();
         return {

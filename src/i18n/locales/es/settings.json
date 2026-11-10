@@ -265,6 +265,10 @@
           "label": "Ocultar marco superior",
           "description": "Oculta el marco superior del terminal principal. El cambio se aplica al instante."
         },
+        "localTelemetryEnabled": {
+          "label": "Consultar el equipo local",
+          "description": "Actualiza CPU, memoria y disco de la barra de estado y del panel Hardware. Desactívalo si no lo necesitas para ahorrar CPU."
+        },
         "connectionSearchShortcut": {
           "label": "Atajo del buscador",
           "description": "Abre el buscador centrado de conexiones mientras NodeTerm está en foco.",

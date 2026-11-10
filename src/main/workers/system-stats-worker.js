@@ -1,17 +1,12 @@
 // system-stats-worker.js
-// ⚠️  SIN SUBPROCESOS EXTERNOS: nvidia-smi, sensors y df se bloquean en estado
-// D (uninterruptible sleep) con drivers NVIDIA en CachyOS/Wayland. SIGKILL no
-// puede interrumpir procesos en estado D. Usamos solo APIs del kernel directamente.
+// ⚠️  SIN SUBPROCESOS EXTERNOS: nvidia-smi, sensors, df, wmic y PowerShell se
+// evitan. En Linux usamos /proc y /sys; en Windows os.cpus() + fs.statfsSync.
 
 const os = require('os');
 const fs = require('fs');
 
-// systeminformation solo para currentLoad() que lee /proc/stat sin subprocesos
-let _si = null;
-function getSI() {
-  if (!_si) _si = require('systeminformation');
-  return _si;
-}
+let lastCpuTimes = null;
+let lastCpuPerCore = null;
 
 let detectedOsPrettyName = '';
 if (process.platform === 'linux') {
@@ -31,7 +26,71 @@ if (process.platform === 'linux') {
 let lastNetStats = null;
 let lastNetTime = null;
 let lastDiskSampleAt = 0;
-const DISK_SAMPLE_INTERVAL_MS = 15000;
+const DISK_SAMPLE_INTERVAL_MS = process.platform === 'win32' ? 60000 : 15000;
+
+function readCpuLoadFromOs() {
+  const cpus = os.cpus() || [];
+  if (!cpus.length) {
+    return { usage: 0, cores: 0, model: 'CPU', perCpuLoad: [] };
+  }
+
+  const totals = cpus.map((cpu) => {
+    const t = cpu.times || {};
+    const idle = Number(t.idle) || 0;
+    const total = Object.values(t).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    return { idle, total, model: cpu.model || 'CPU' };
+  });
+
+  let usage = 0;
+  let perCpuLoad = [];
+  if (lastCpuTimes && lastCpuPerCore && lastCpuPerCore.length === totals.length) {
+    let idleDelta = 0;
+    let totalDelta = 0;
+    perCpuLoad = totals.map((cur, idx) => {
+      const prev = lastCpuPerCore[idx];
+      const dIdle = Math.max(0, cur.idle - prev.idle);
+      const dTotal = Math.max(0, cur.total - prev.total);
+      idleDelta += dIdle;
+      totalDelta += dTotal;
+      if (dTotal <= 0) return 0;
+      return Math.round((1 - dIdle / dTotal) * 1000) / 10;
+    });
+    usage = totalDelta > 0 ? Math.round((1 - idleDelta / totalDelta) * 1000) / 10 : 0;
+  }
+
+  lastCpuTimes = Date.now();
+  lastCpuPerCore = totals;
+
+  return {
+    usage,
+    cores: totals.length,
+    model: totals[0]?.model || 'CPU',
+    perCpuLoad
+  };
+}
+
+function readWindowsSystemDiskSync() {
+  try {
+    if (typeof fs.statfsSync !== 'function') return [];
+    const drive = String(process.env.SystemDrive || 'C:').replace(/\\+$/, '');
+    const root = /:$/.test(drive) ? `${drive}\\` : `${drive}\\`;
+    const stat = fs.statfsSync(root);
+    const total = Number(stat.blocks) * Number(stat.bsize);
+    const free = Number(stat.bfree) * Number(stat.bsize);
+    const used = total - free;
+    if (!(total > 0)) return [];
+    return [{
+      name: drive,
+      mount: root,
+      used: Math.round(used / (1024 ** 3) * 10) / 10,
+      total: Math.round(total / (1024 ** 3) * 10) / 10,
+      percentage: Math.round((used / total) * 100),
+      isNetwork: false
+    }];
+  } catch (_) {
+    return [];
+  }
+}
 let lastValidStats = {
   cpu: { usage: 0, cores: 0, model: 'Iniciando...', perCpuLoad: [] },
   memory: { used: 0, total: 0, free: 0, percentage: 0 },
@@ -181,40 +240,27 @@ async function getSystemStats() {
     }
   } catch (_) {}
 
-  // ── CPU load (systeminformation.currentLoad lee /proc/stat — sin subprocesos) ──
+  // ── CPU load (os.cpus().times — sin subprocesos en Windows/Linux/macOS) ──
   try {
-    const cpuData = await Promise.race([
-      getSI().currentLoad(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('CPU timeout')), 3000))
-    ]);
-    if (cpuData && typeof cpuData.currentLoad === 'number') {
-      stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
-      stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
-      stats.cpu.model = os.cpus()[0]?.model || 'CPU';
-      stats.cpu.perCpuLoad = cpuData.cpus ? cpuData.cpus.map(c => Math.round((c.load || 0) * 10) / 10) : [];
-    }
+    const cpuData = readCpuLoadFromOs();
+    stats.cpu.usage = cpuData.usage;
+    stats.cpu.cores = cpuData.cores;
+    stats.cpu.model = cpuData.model;
+    stats.cpu.perCpuLoad = cpuData.perCpuLoad;
   } catch (_) {}
 
   // ── Discos ──
-  // Throttle de muestreo de discos (15s): evita consultas WMI en Windows
-  // y llamadas frecuentes a statfsSync en Linux sobre posibles montajes lentos o de red.
+  // Windows: solo SystemDrive vía statfsSync (sin PowerShell/WMI).
+  // Linux/macOS: /proc/mounts + statfsSync, throttled.
   const nowDisk = Date.now();
   const needDisk = !lastDiskSampleAt || (nowDisk - lastDiskSampleAt) >= DISK_SAMPLE_INTERVAL_MS;
   if (needDisk) {
     if (process.platform === 'win32') {
-      try {
-        const d = await Promise.race([getSI().fsSize(), new Promise((_, rej) => setTimeout(() => rej(), 3000))]);
-        if (Array.isArray(d) && d.length > 0) {
-          stats.disks = d.map(disk => ({
-            name: String(disk.fs || ''), mount: String(disk.mount || ''),
-            used: Math.round(Number(disk.used || 0) / (1024 ** 3) * 10) / 10,
-            total: Math.round(Number(disk.size || 0) / (1024 ** 3) * 10) / 10,
-            percentage: Number(disk.size) > 0 ? Math.round((Number(disk.used) / Number(disk.size)) * 100) : 0,
-            isNetwork: false
-          }));
-          lastDiskSampleAt = nowDisk;
-        }
-      } catch (_) {}
+      const disks = readWindowsSystemDiskSync();
+      if (disks.length > 0) {
+        stats.disks = disks;
+        lastDiskSampleAt = nowDisk;
+      }
     } else {
       const disks = readDisksSync();
       if (disks.length > 0) {

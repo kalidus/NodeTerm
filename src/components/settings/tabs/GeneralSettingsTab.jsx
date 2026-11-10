@@ -65,6 +65,16 @@ const GeneralSettingsTab = ({
     }
   });
 
+  const [localTelemetryEnabled, setLocalTelemetryEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LOCAL_TELEMETRY_ENABLED);
+      if (saved === null) return true;
+      return saved === 'true' || saved === true || saved === '1';
+    } catch {
+      return true;
+    }
+  });
+
   const sidebarStartCollapsedUserChangeRef = useRef(false);
 
   // Atajo de teclado para buscar conexiones
@@ -135,6 +145,19 @@ const GeneralSettingsTab = ({
     }
   }, [mainFrameHeaderStartCollapsed]);
 
+  // Guardar localTelemetryEnabled
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LOCAL_TELEMETRY_ENABLED, String(localTelemetryEnabled));
+      persistSyncedSetting(STORAGE_KEYS.LOCAL_TELEMETRY_ENABLED, String(localTelemetryEnabled));
+      window.dispatchEvent(new CustomEvent('local-telemetry-enabled-changed', {
+        detail: { enabled: localTelemetryEnabled }
+      }));
+    } catch (e) {
+      console.warn('Error saving localTelemetryEnabled:', e);
+    }
+  }, [localTelemetryEnabled]);
+
   // Guardar iconos seleccionados
   useEffect(() => {
     setHomeTabIcon(selectedHomeIcon);
@@ -162,6 +185,10 @@ const GeneralSettingsTab = ({
         if (sidebar !== null) setSidebarStartCollapsed(JSON.parse(sidebar));
         const header = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
         if (header !== null) setMainFrameHeaderCollapsed(header === 'true');
+        const telemetry = localStorage.getItem(STORAGE_KEYS.LOCAL_TELEMETRY_ENABLED);
+        if (telemetry !== null) {
+          setLocalTelemetryEnabled(telemetry === 'true' || telemetry === true || telemetry === '1');
+        }
         setConnectionSearchShortcutState(getConnectionSearchShortcut());
       } catch {
         /* noop */
@@ -335,6 +362,29 @@ const GeneralSettingsTab = ({
                         id="main-frame-header-start-collapsed"
                         checked={mainFrameHeaderStartCollapsed}
                         onChange={(e) => setMainFrameHeaderCollapsed(e.checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="general-setting-card" onClick={() => setLocalTelemetryEnabled(!localTelemetryEnabled)}>
+                  <div className="general-setting-content">
+                    <div className="general-setting-icon">
+                      <i className="pi pi-chart-bar"></i>
+                    </div>
+                    <div className="general-setting-info">
+                      <label htmlFor="local-telemetry-enabled" className="general-setting-label">
+                        {t('general.sections.behavior.localTelemetryEnabled.label')}
+                      </label>
+                      <p className="general-setting-description">
+                        {t('general.sections.behavior.localTelemetryEnabled.description')}
+                      </p>
+                    </div>
+                    <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        id="local-telemetry-enabled"
+                        checked={localTelemetryEnabled}
+                        onChange={(e) => setLocalTelemetryEnabled(e.checked)}
                       />
                     </div>
                   </div>
