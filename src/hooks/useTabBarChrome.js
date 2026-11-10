@@ -836,11 +836,12 @@ export function useTabBarChrome({
       openPanelFromAnchor(appearanceButton);
     });
 
-    // Botón de apariencia: abre menú con opciones de marco superior y title bar
+    // Restaurar TitleBar con un clic (sin menú)
     const frameToggleButton = document.createElement('div');
     frameToggleButton.setAttribute('role', 'button');
     frameToggleButton.setAttribute('tabIndex', '0');
-    frameToggleButton.title = 'Opciones de barra superior';
+    frameToggleButton.title = 'Mostrar barra de título';
+    frameToggleButton.setAttribute('aria-label', 'Mostrar barra de título');
     frameToggleButton.className = 'tab-frame-toggle-button';
     const frameIcon = document.createElement('i');
     frameIcon.className = 'pi pi-window-maximize';
@@ -872,100 +873,14 @@ export function useTabBarChrome({
     });
     frameToggleButton.addEventListener('click', (e) => {
       e.stopPropagation();
-
-      const existingMenu = document.querySelector('.tab-appearance-toggle-menu');
-      if (existingMenu) {
-        existingMenu.remove();
-        return;
-      }
-
-      const menu = document.createElement('div');
-      menu.className = 'tab-appearance-toggle-menu';
-      menu.style.cssText = `
-        position: fixed;
-        background: var(--ui-context-bg, #2b2f33);
-        border: 1px solid var(--ui-context-border, #444);
-        border-radius: 6px;
-        box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0,0,0,0.3));
-        z-index: 9999;
-        min-width: 200px;
-        padding: 4px 0;
-        font-size: 12px;
-        color: var(--ui-context-text, #fff);
-      `;
-
-      const createMenuAction = (label, onClick) => {
-        const item = document.createElement('div');
-        item.setAttribute('role', 'button');
-        item.setAttribute('tabIndex', '0');
-        item.textContent = label;
-        item.style.cssText = `
-          padding: 8px 12px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          transition: background-color 0.15s ease;
-        `;
-        item.addEventListener('mouseenter', () => { item.style.background = 'var(--ui-context-hover, rgba(255,255,255,0.08))'; });
-        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
-        item.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            item.click();
-          }
-        });
-        item.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          onClick();
-          menu.remove();
-          document.removeEventListener('click', closeOutsideMenu);
-        });
-        return item;
-      };
-
-      const frameLabel = mainFrameHeaderCollapsed
-        ? 'Mostrar marco superior'
-        : 'Ocultar marco superior';
-      const titleBarLabel = titleBarCollapsed
-        ? 'Mostrar barra de titulo'
-        : 'Ocultar barra de titulo';
-      const tabBarLabel = document.body.classList.contains('tab-bar-hidden')
-        ? 'Mostrar barra de pestañas'
-        : 'Ocultar barra de pestañas';
-      const minimalModeLabel = document.body.classList.contains('minimalist-terminal-mode')
-        ? 'Desactivar modo minimalista'
-        : 'Activar modo minimalista';
-      menu.appendChild(createMenuAction(frameLabel, () => setMainFrameHeaderCollapsed(prev => !prev)));
-      menu.appendChild(createMenuAction(titleBarLabel, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
-      menu.appendChild(createMenuAction(tabBarLabel, () => window.dispatchEvent(new CustomEvent('toggle-tabbar'))));
-      menu.appendChild(createMenuAction(minimalModeLabel, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
-
-      document.body.appendChild(menu);
-      const rect = frameToggleButton.getBoundingClientRect();
-      const menuRect = menu.getBoundingClientRect();
-      let left = rect.right - menuRect.width;
-      if (left < 8) left = 8;
-      let top = rect.bottom + 6;
-      if (top + menuRect.height > window.innerHeight - 8) {
-        top = rect.top - menuRect.height - 6;
-      }
-      menu.style.left = `${left}px`;
-      menu.style.top = `${top}px`;
-
-      const closeOutsideMenu = (ev) => {
-        if (!menu.contains(ev.target) && !frameToggleButton.contains(ev.target)) {
-          menu.remove();
-          document.removeEventListener('click', closeOutsideMenu);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closeOutsideMenu), 0);
+      window.dispatchEvent(new CustomEvent('toggle-titlebar'));
     });
 
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
 
-    // Menú chrome + cog en barra de pestañas solo si la TitleBar no está visible
+    // Cog (+ restaurar TitleBar) en barra de pestañas solo si la TitleBar no está visible
     const titleBarHidden = titleBarCollapsed || isMinimalMode;
     if (titleBarHidden) {
       const appearanceButtonWrapper = document.createElement('div');
@@ -979,8 +894,9 @@ export function useTabBarChrome({
         gap: 2px;
       `;
 
-      // Menú de chrome (title bar / tabs / marco / minimalista) + apariencia
-      appearanceButtonWrapper.appendChild(frameToggleButton);
+      if (titleBarCollapsed) {
+        appearanceButtonWrapper.appendChild(frameToggleButton);
+      }
       appearanceButtonWrapper.appendChild(appearanceButton);
       navList.appendChild(appearanceButtonWrapper);
     }
