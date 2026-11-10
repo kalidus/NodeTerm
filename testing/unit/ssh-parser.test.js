@@ -4,6 +4,11 @@ const assert = require('node:assert');
 const {
   parseLsOutput,
   escapeShellPath,
+  wrapInPosixSh,
+  buildPortableLsCommand,
+  filesFromLsOutput,
+  mapSftpListItem,
+  safeExec,
   parseListeningPorts
 } = require('../../src/main/handlers/ssh-handlers');
 
@@ -159,6 +164,90 @@ describe('SSH Parser & Shell Security Unit Tests', () => {
       assert.strictEqual(escapeShellPath(undefined), '');
       assert.strictEqual(escapeShellPath(123), '');
       assert.strictEqual(escapeShellPath({}), '');
+    });
+  });
+
+  describe('wrapInPosixSh y listado portable', () => {
+    it('envuelve el comando en /bin/sh -c con comillas simples', () => {
+      const wrapped = wrapInPosixSh('echo hello && (true || false)');
+      assert.strictEqual(wrapped, `/bin/sh -c 'echo hello && (true || false)'`);
+    });
+
+    it('escapa comillas simples internas al estilo POSIX', () => {
+      const wrapped = wrapInPosixSh("echo 'hi'");
+      assert.strictEqual(wrapped, `/bin/sh -c 'echo '\\''hi'\\'''`);
+    });
+
+    it('buildPortableLsCommand no exige --color=never (BusyBox-safe)', () => {
+      const cmd = buildPortableLsCommand('/home/kalidus');
+      assert.ok(cmd.startsWith('/bin/sh -c '));
+      assert.ok(cmd.includes('ls -la'));
+      assert.ok(cmd.includes('/home/kalidus'));
+      assert.strictEqual(cmd.includes('--color=never'), false);
+    });
+
+    it('filesFromLsOutput parsea ls válido', () => {
+      const files = filesFromLsOutput([
+        'total 8',
+        'drwxr-xr-x 2 user user 4096 Nov 10 07:30 Descargas',
+        '-rw-r--r-- 1 user user 12 Nov 10 07:30 test.td'
+      ].join('\n'));
+      assert.strictEqual(files.length, 2);
+      assert.strictEqual(files[0].name, 'Descargas');
+      assert.strictEqual(files[0].type, 'directory');
+      assert.strictEqual(files[1].name, 'test.td');
+    });
+
+    it('filesFromLsOutput rechaza salida no parseable (no vacío silencioso)', () => {
+      assert.throws(
+        () => filesFromLsOutput('eza: weird columnar output without perms\nfoo bar baz'),
+        /interpretar/
+      );
+    });
+
+    it('filesFromLsOutput permite carpeta realmente vacía (solo total)', () => {
+      assert.deepStrictEqual(filesFromLsOutput('total 0\n'), []);
+    });
+
+    it('mapSftpListItem normaliza directorios y symlinks', () => {
+      const dir = mapSftpListItem({
+        name: 'Proyectos',
+        type: 'd',
+        size: 4096,
+        modifyTime: 0,
+        longname: 'drwxr-xr-x 1 user user 4096'
+      });
+      assert.strictEqual(dir.type, 'directory');
+      assert.strictEqual(dir.name, 'Proyectos');
+      assert.strictEqual(dir.permissions, 'drwxr-xr-x');
+
+      const link = mapSftpListItem({
+        name: 'current',
+        type: 'l',
+        target: '/opt/app',
+        size: 8,
+        modifyTime: null,
+        longname: 'lrwxrwxrwx 1 user user 8'
+      });
+      assert.strictEqual(link.type, 'symlink');
+      assert.strictEqual(link.target, '/opt/app');
+    });
+
+    it('safeExec rechaza resultados no textuales (ssh2.Client mal awaited)', async () => {
+      const fakeClient = {
+        exec() {
+          return this;
+        }
+      };
+      await assert.rejects(() => safeExec(fakeClient, 'ls'), /no textual|no disponible/i);
+    });
+
+    it('safeExec acepta thenables estilo SSH2Promise', async () => {
+      const fakePromiseSsh = {
+        exec: async () => 'total 0\n'
+      };
+      const out = await safeExec(fakePromiseSsh, 'ls');
+      assert.strictEqual(out, 'total 0\n');
     });
   });
 

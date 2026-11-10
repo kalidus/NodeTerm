@@ -25,6 +25,155 @@ function escapeShellPath(path) {
 }
 
 /**
+ * Ejecuta el script vía /bin/sh para no depender del login shell (fish/zsh/etc.).
+ * fish interpreta ()/&& de forma distinta; sh recibe el script intacto.
+ */
+function wrapInPosixSh(command) {
+  return `/bin/sh -c '${String(command).replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * ls portable: BusyBox no siempre acepta --color=never; evita aliases fish/eza.
+ */
+function buildPortableLsCommand(safePath) {
+  const escapedPath = escapeShellPath(safePath);
+  return wrapInPosixSh(
+    `LS_COLORS= command ls -la -- "${escapedPath}" 2>/dev/null || LS_COLORS= ls -la -- "${escapedPath}" 2>/dev/null || ls -la "${escapedPath}"`
+  );
+}
+
+function buildPortableDirCheckCommand(safePath) {
+  const escapedPath = escapeShellPath(safePath);
+  return wrapInPosixSh(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
+}
+
+function stripLsAnsi(output) {
+  return String(output || '').replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+/**
+ * Parsea ls y falla si hay líneas de contenido que no se pudieron interpretar
+ * (evita devolver "carpeta vacía" ante eza/salida corrupta).
+ */
+function filesFromLsOutput(rawOutput) {
+  const cleanOutput = stripLsAnsi(rawOutput).replace(/\r/g, '');
+  const files = parseLsOutput(cleanOutput);
+  const meaningful = cleanOutput
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/^total\b/i.test(line));
+  if (files.length === 0 && meaningful.length > 0) {
+    throw new Error('No se pudo interpretar la salida de ls');
+  }
+  return files;
+}
+
+function mapSftpListItem(item) {
+  return {
+    name: item.name,
+    target: item.target || null,
+    permissions: item.longname?.split(' ')[0] || '',
+    owner: '',
+    group: '',
+    size: item.size,
+    modified: item.modifyTime ? new Date(item.modifyTime * 1000).toLocaleString() : '',
+    type: item.type === 'd' ? 'directory' : (item.type === 'l' ? 'symlink' : 'file'),
+  };
+}
+
+function buildSftpConnectConfig(secureConfig) {
+  if (secureConfig.useBastionWallix) {
+    return {
+      host: secureConfig.bastionHost,
+      port: secureConfig.port || 22,
+      username: secureConfig.bastionUser,
+      password: secureConfig.password,
+      readyTimeout: 20000,
+      algorithms: buildSshAlgorithms(secureConfig)
+    };
+  }
+  return {
+    host: secureConfig.host,
+    port: secureConfig.port || 22,
+    username: secureConfig.username,
+    password: secureConfig.password,
+    privateKey: secureConfig.privateKey,
+    passphrase: secureConfig.passphrase,
+    readyTimeout: 20000,
+    algorithms: buildSshAlgorithms(secureConfig)
+  };
+}
+
+async function listFilesViaSftp(connectConfig, remotePath) {
+  const sftp = new SftpClient();
+  try {
+    await sftp.connect(connectConfig);
+    const sftpList = await sftp.list(remotePath);
+    return (sftpList || []).map(mapSftpListItem);
+  } finally {
+    try { await sftp.end(); } catch (_) { /* ignore */ }
+  }
+}
+
+async function statDirectoryViaSftp(connectConfig, remotePath) {
+  const sftp = new SftpClient();
+  try {
+    await sftp.connect(connectConfig);
+    const st = await sftp.stat(remotePath);
+    if (!st) return false;
+    if (typeof st.isDirectory === 'function') return !!st.isDirectory();
+    if (typeof st.isDirectory === 'boolean') return st.isDirectory;
+    return st.type === 'd' || st.type === 2;
+  } finally {
+    try { await sftp.end(); } catch (_) { /* ignore */ }
+  }
+}
+
+/**
+ * Exec compatible con SSH2Promise (thenable) y ssh2.Client (callback).
+ * Rechaza resultados no textuales (p. ej. await client.exec sin callback → Client).
+ */
+async function safeExec(ssh, command) {
+  if (!ssh || typeof ssh.exec !== 'function') {
+    throw new Error('SSH exec no disponible');
+  }
+
+  let Ssh2Client = null;
+  try {
+    Ssh2Client = require('ssh2').Client;
+  } catch (_) { /* noop */ }
+  const isRaw = !!(Ssh2Client && ssh instanceof Ssh2Client);
+
+  if (isRaw) {
+    return new Promise((resolve, reject) => {
+      ssh.exec(command, (err, stream) => {
+        if (err) return reject(err);
+        let stdout = '';
+        let stderr = '';
+        stream.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
+        if (stream.stderr) {
+          stream.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+        }
+        stream.on('error', reject);
+        stream.on('close', (code) => {
+          if ((!stdout || !stdout.length) && code && code !== 0) {
+            reject(new Error((stderr || '').trim() || `SSH exec exit ${code}`));
+            return;
+          }
+          resolve(stdout);
+        });
+      });
+    });
+  }
+
+  const out = await ssh.exec(command);
+  if (out != null && typeof out !== 'string' && !Buffer.isBuffer(out)) {
+    throw new Error('SSH exec devolvió un resultado no textual');
+  }
+  return String(out || '');
+}
+
+/**
  * Extrae la primera ruta absoluta útil de salida remota (ANSI / prompts).
  */
 function sanitizeRemoteHomePath(raw) {
@@ -60,8 +209,8 @@ async function getHomeViaSftpClient(connectConfig) {
  */
 async function getHomeViaExecCanonical(ssh) {
   if (!ssh || typeof ssh.exec !== 'function') return '';
-  const cmd = 'h=${HOME:-/}; (readlink -f "$h" 2>/dev/null || realpath "$h" 2>/dev/null || echo "$h")';
-  const out = await ssh.exec(cmd);
+  const cmd = wrapInPosixSh('h=${HOME:-/}; (readlink -f "$h" 2>/dev/null || realpath "$h" 2>/dev/null || echo "$h")');
+  const out = await safeExec(ssh, cmd);
   return sanitizeRemoteHomePath(out);
 }
 
@@ -533,11 +682,10 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
-  // SSH: Listar archivos
+  // SSH: Listar archivos (SFTP primero; fallback ls vía /bin/sh — fish/BusyBox/sesiones dedicadas)
   ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
     try {
       const secureConfig = await resolveCredentials(tabId, sshConfig);
-      // Validación robusta de path
       let safePath = '/';
       if (typeof path === 'string') {
         safePath = path;
@@ -545,76 +693,58 @@ function registerSSHHandlers(dependencies = {}) {
         safePath = path.path;
       }
 
-      // 1. Intentar usar conexión activa existente con .exec (aislado de la terminal interactiva del usuario)
       const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      const sftpConnectConfig = buildSftpConnectConfig(secureConfig);
+      const lsCommand = buildPortableLsCommand(safePath);
+
+      // 1) SFTP — independiente del login shell (fish) y de ssh2.Client.exec mal awaited
+      try {
+        const files = await listFilesViaSftp(sftpConnectConfig, safePath);
+        return { success: true, files };
+      } catch (sftpErr) {
+        console.warn('[SSH:list-files] SFTP list falló, intentando fallback:', sftpErr.message);
+      }
+
+      // 2) Conexión activa + exec seguro + ls POSIX
       if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
         try {
-          const escapedPath = escapeShellPath(safePath);
-          const lsOutput = await existingConn.ssh.exec(`ls -la --color=never "${escapedPath}"`);
-          const cleanOutput = String(lsOutput || '').replace(/\x1b\[[0-9;]*m/g, '');
-          return { success: true, files: parseLsOutput(cleanOutput) };
+          const lsOutput = await safeExec(existingConn.ssh, lsCommand);
+          return { success: true, files: filesFromLsOutput(lsOutput) };
         } catch (execErr) {
           console.warn('[SSH:list-files] exec en conexión activa falló, intentando fallback:', execErr.message);
         }
       }
 
+      // 3) Bastión: último recurso por stream interactivo
       if (secureConfig.useBastionWallix) {
-        // Fallback para bastión: intentar SFTP
-        try {
-          const SftpClient = require('ssh2-sftp-client');
-          const sftp = new SftpClient();
-          const connectConfig = {
-            host: secureConfig.bastionHost,
-            port: secureConfig.port || 22,
-            username: secureConfig.bastionUser,
-            password: secureConfig.password,
-            readyTimeout: 20000,
-            algorithms: buildSshAlgorithms(secureConfig)
+        if (existingConn && existingConn.stream && !existingConn.stream.destroyed) {
+          const stream = existingConn.stream;
+          const escapedPath = escapeShellPath(safePath);
+          const command = `ls -la "${escapedPath}"\n`;
+          let output = '';
+          const onData = (data) => {
+            output += data.toString('utf-8');
           };
-          await sftp.connect(connectConfig);
-          const sftpList = await sftp.list(safePath);
-          await sftp.end();
-          const files = sftpList.map(item => ({
-            name: item.name,
-            target: item.target || null,
-            permissions: item.longname?.split(' ')[0] || '',
-            owner: '',
-            group: '',
-            size: item.size,
-            modified: item.modifyTime ? new Date(item.modifyTime * 1000).toLocaleString() : '',
-            type: item.type === 'd' ? 'directory' : (item.type === 'l' ? 'symlink' : 'file'),
-          }));
-          return { success: true, files };
-        } catch (sftpErr) {
-          // Último recurso: stream interactivo si existe
-          if (existingConn && existingConn.stream && !existingConn.stream.destroyed) {
-            const stream = existingConn.stream;
-            const escapedPath = escapeShellPath(safePath);
-            const command = `ls -la --color=never "${escapedPath}"\n`;
-            let output = '';
-            const onData = (data) => {
-              output += data.toString('utf-8');
-            };
-            stream.on('data', onData);
-            stream.write(command);
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            stream.removeListener('data', onData);
-            let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-            cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
-            cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
-            return { success: true, files: parseLsOutput(cleanOutput) };
-          }
-          throw sftpErr;
+          stream.on('data', onData);
+          stream.write(command);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          stream.removeListener('data', onData);
+          let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
+          cleanOutput = stripLsAnsi(cleanOutput);
+          cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
+          return { success: true, files: filesFromLsOutput(cleanOutput) };
         }
-      } else {
-        // SSH directo: si no había conexión activa previa, crear conexión efímera con SSH2Promise
-        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
+        return { success: false, error: 'No se pudo listar por SFTP ni por la sesión bastión activa.' };
+      }
+
+      // 4) SSH directo: conexión efímera
+      const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
+      try {
         await ssh.connect();
-        const escapedPath = escapeShellPath(safePath);
-        const lsOutput = await ssh.exec(`ls -la --color=never "${escapedPath}"`);
-        await ssh.close();
-        const cleanOutput = String(lsOutput || '').replace(/\x1b\[[0-9;]*m/g, '');
-        return { success: true, files: parseLsOutput(cleanOutput) };
+        const lsOutput = await safeExec(ssh, lsCommand);
+        return { success: true, files: filesFromLsOutput(lsOutput) };
+      } finally {
+        try { await ssh.close(); } catch (_) { /* ignore */ }
       }
     } catch (err) {
       return { success: false, error: err.message || err };
@@ -625,13 +755,22 @@ function registerSSHHandlers(dependencies = {}) {
   ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
     try {
       const secureConfig = await resolveCredentials(tabId, sshConfig);
-      const escapedPath = escapeShellPath(path);
-
-      // 1. Intentar usar conexión activa existente con .exec
       const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      const sftpConnectConfig = buildSftpConnectConfig(secureConfig);
+      const checkCommand = buildPortableDirCheckCommand(path);
+
+      // 1) SFTP stat
+      try {
+        const exists = await statDirectoryViaSftp(sftpConnectConfig, path);
+        return { success: true, exists };
+      } catch (sftpErr) {
+        console.warn('[SSH:check-directory] SFTP stat falló, intentando fallback:', sftpErr.message);
+      }
+
+      // 2) Exec seguro vía /bin/sh (evita fish con [ -d ])
       if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
         try {
-          const result = await existingConn.ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
+          const result = await safeExec(existingConn.ssh, checkCommand);
           return { success: true, exists: String(result).includes('exists') };
         } catch (execErr) {
           console.warn('[SSH:check-directory] exec en conexión activa falló, intentando fallback:', execErr.message);
@@ -643,6 +782,7 @@ function registerSSHHandlers(dependencies = {}) {
           return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
         }
         const stream = existingConn.stream;
+        const escapedPath = escapeShellPath(path);
         const command = `[ -d "${escapedPath}" ] && echo exists || echo notfound\n`;
         let output = '';
         const onData = (data) => {
@@ -653,15 +793,17 @@ function registerSSHHandlers(dependencies = {}) {
         await new Promise((resolve) => setTimeout(resolve, 350));
         stream.removeListener('data', onData);
         let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-        cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
+        cleanOutput = stripLsAnsi(cleanOutput);
         return { success: true, exists: cleanOutput.includes('exists') };
-      } else {
-        // SSH directo
-        const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
+      }
+
+      const ssh = new SSH2Promise({ ...secureConfig, reconnect: false, algorithms: buildSshAlgorithms(secureConfig) });
+      try {
         await ssh.connect();
-        const result = await ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
-        await ssh.close();
+        const result = await safeExec(ssh, checkCommand);
         return { success: true, exists: String(result).includes('exists') };
+      } finally {
+        try { await ssh.close(); } catch (_) { /* ignore */ }
       }
     } catch (err) {
       return { success: false, error: err.message || err };
@@ -1254,6 +1396,11 @@ function registerSSHHandlers(dependencies = {}) {
 
 registerSSHHandlers.parseLsOutput = parseLsOutput;
 registerSSHHandlers.escapeShellPath = escapeShellPath;
+registerSSHHandlers.wrapInPosixSh = wrapInPosixSh;
+registerSSHHandlers.buildPortableLsCommand = buildPortableLsCommand;
+registerSSHHandlers.filesFromLsOutput = filesFromLsOutput;
+registerSSHHandlers.mapSftpListItem = mapSftpListItem;
+registerSSHHandlers.safeExec = safeExec;
 registerSSHHandlers.parseListeningPorts = parseListeningPorts;
 registerSSHHandlers.validateKillPid = validateKillPid;
 
