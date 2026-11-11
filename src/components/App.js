@@ -7,6 +7,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { setVaultEncryptedItem } from '../shared/vault-write';
 import { VAULT_ALLOW_SHRINK_KEYS_META } from '../shared/vault-shrink-guard';
+import { consumeNextVaultShrink } from '../utils/vaultAllowShrink';
 import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
@@ -2232,8 +2233,8 @@ const App = () => {
       lastDecryptedResult;
 
     if (masterKey) {
-      // Decrypt LS (incl. blobs "tiny"): árboles pequeños válidos no deben descartarse.
-      // Si el resultado es [] y el disco es mayor, preferir disco (evita wipe confirmado).
+      // LS con nodos es la fuente: un .bin más grande no debe reintroducir borrados.
+      // Disco solo si LS falta, no descifra, o descifra a [].
       let lsNodes = null;
       if (encryptedData) {
         try {
@@ -2264,16 +2265,14 @@ const App = () => {
         }
       }
 
+      if (Array.isArray(lsNodes) && lsNodes.length > 0) {
+        return lsNodes;
+      }
+
       if (window.electron?.appdata?.getVault) {
         try {
           const fromDisk = await window.electron.appdata.getVault('connections_encrypted');
-          const lsEmpty = !Array.isArray(lsNodes) || lsNodes.length === 0;
-          const shouldUseDisk = fromDisk && (
-            !encryptedData
-            || fromDisk.length > encryptedData.length
-            || (lsEmpty && fromDisk.length > 0)
-          );
-          if (shouldUseDisk) {
+          if (fromDisk) {
             const decryptedDisk = await secureStorage.decryptData(
               JSON.parse(fromDisk),
               masterKey
@@ -2283,8 +2282,7 @@ const App = () => {
                 migrateWallixBastionInTree(decryptedDisk)
               );
               const diskNodes = Array.isArray(migratedDisk) ? migratedDisk : [];
-              // Disco con datos gana a LS vacío; disco mayor gana a LS smaller
-              if (diskNodes.length > 0 || !lsNodes || lsNodes.length === 0) {
+              if (diskNodes.length > 0) {
                 const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
                 if (wroteDisk.ok) {
                   lastDecryptedDataStr = fromDisk;
@@ -2473,13 +2471,16 @@ const App = () => {
       };
 
       try {
+        // allowShrink solo si un borrado intencional (Sidebar-Delete / Wallix) lo pidió
+        const allowShrink = consumeNextVaultShrink();
+        const shrinkOpts = allowShrink ? { allowShrink: true } : {};
+
         if (isMultiVaultEnabled()) {
-          // Sin allowShrink global: el guard anti-wipe debe bloquear Principal vacío.
-          // allowShrink solo en borrados masivos intencionales (Wallix / import merge).
           const saved = await savePartitionedConnectionTrees(
             nodes,
             masterKey,
-            secureStorage
+            secureStorage,
+            shrinkOpts
           );
           if (!saved.ok) {
             notifySaveRejected(saved.reason);
@@ -2504,7 +2505,7 @@ const App = () => {
         if (masterKey) {
           const encrypted = await secureStorage.encryptData(flat, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr);
+          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr, shrinkOpts);
           if (!wrote.ok) {
             notifySaveRejected(wrote.reason);
             return;
@@ -2517,11 +2518,14 @@ const App = () => {
           lastMigratedResult = flat;
 
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
-          localStorageSyncService.debouncedSync({
+          const syncPayload = {
             connections_encrypted: encryptedStr,
-            [STORAGE_KEYS.TREE_DATA]: null,
-            [VAULT_ALLOW_SHRINK_KEYS_META]: ['connections_encrypted']
-          });
+            [STORAGE_KEYS.TREE_DATA]: null
+          };
+          if (allowShrink) {
+            syncPayload[VAULT_ALLOW_SHRINK_KEYS_META] = ['connections_encrypted'];
+          }
+          localStorageSyncService.debouncedSync(syncPayload);
         } else {
           localStorage.setItem(STORAGE_KEYS.TREE_DATA, nodesStr);
           localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, nodesStr);

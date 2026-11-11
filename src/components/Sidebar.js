@@ -74,6 +74,7 @@ import {
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import { isVaultRoot } from '../shared/vault-connection-trees';
+import { requestNextVaultShrink } from '../utils/vaultAllowShrink';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
 import SidebarSkeleton from './sidebar/SidebarSkeleton';
@@ -366,9 +367,10 @@ const Sidebar = React.memo(({
     return treeNodes.map(node => {
       const hasChildren = Array.isArray(node.children) && node.children.length > 0;
       if (hasChildren) {
-        // Optimización clave: si la carpeta está colapsada, no procesamos sus hijos en el DOM virtual.
-        // Esto reduce drásticamente el tamaño del árbol en render y diffing de React.
-        const isExpanded = allExpanded || (expandedKeys && expandedKeys[node.key] === true);
+        // vault-root siempre muestra sus hijos: si se vacían al colapsar, el Principal
+        // parece borrado al rearrancar aunque el árbol siga en disco.
+        const isVaultRootNode = isVaultRoot(node);
+        const isExpanded = isVaultRootNode || allExpanded || (expandedKeys && expandedKeys[node.key] === true);
         if (!isExpanded) {
           return {
             ...node,
@@ -2213,6 +2215,8 @@ const Sidebar = React.memo(({
               }
 
               const newNodes = removeNodeFromTree(nodes, nodeKey);
+              // Borrado intencional (p. ej. carpeta Wallix grande): permitir shrink en el próximo save
+              requestNextVaultShrink();
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
 
               showToast && showToast({
