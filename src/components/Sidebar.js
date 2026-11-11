@@ -4,7 +4,6 @@ import LibraryAddMenu from './library/LibraryAddMenu';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import VaultLayoutMenu from './vault/VaultLayoutMenu';
-import VaultSafeIcon from './vault/VaultSafeIcon';
 import { readSavedVaultLayout, isVaultLayout } from './vault/vaultLayoutModes';
 import NotesLayoutMenu from './notes/NotesLayoutMenu';
 import { readSavedNotesLayout, isNotesLayout } from './notes/notesLayoutModes';
@@ -2371,29 +2370,27 @@ const Sidebar = React.memo(({
     };
     if (isVaultRootNode) {
       const locked = !!node.data?.locked;
-      const cacheKey = `vault-root-safe-${locked}-${connectionIconSize}`;
-      icon = getCachedIcon(cacheKey, () =>
-        locked ? (
-          <span
-            className="pi pi-lock"
-            style={{
-              color: '#f38ba8',
-              fontSize: `${connectionIconSize}px`
-            }}
-          />
-        ) : (
-          <span
-            style={{
-              color: '#89b4fa',
-              display: 'inline-flex',
-              flexShrink: 0,
-              lineHeight: 0
-            }}
-          >
-            <VaultSafeIcon size={connectionIconSize} />
-          </span>
-        )
-      );
+      const cacheKey = `vault-root-${themeKey}-${locked}-${connectionIconSize}`;
+      icon = getCachedIcon(cacheKey, () => {
+        if (locked) {
+          return (
+            <span
+              className="pi pi-lock"
+              style={{
+                color: '#f38ba8',
+                fontSize: `${connectionIconSize}px`
+              }}
+            />
+          );
+        }
+        const vaultIcon =
+          themeIcons.vault ||
+          iconThemes.material?.icons?.vault ||
+          iconThemes.nord?.icons?.vault;
+        return vaultIcon
+          ? getNormalizedIcon(vaultIcon, connectionIconSize, themeKey)
+          : null;
+      });
     } else if (isSSH) {
       // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
       if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {

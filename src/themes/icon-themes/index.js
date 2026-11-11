@@ -7,10 +7,14 @@ import { iconThemeMeta, iconThemeIds, iconThemeOptions } from './meta';
 import { futuristCatalog } from './futurist-catalog';
 import { ghostCatalog } from './ghost-catalog';
 import { vscodeCatalog } from './vscode-catalog';
+import { ensureThemeVaultIcon } from './vault-theme-icon';
 
 export { iconThemeMeta, iconThemeIds, iconThemeOptions };
 
 const FALLBACK_ID = 'nord';
+
+ensureThemeVaultIcon(nord, 'nord');
+ensureThemeVaultIcon(material, 'material');
 
 /** @type {Record<string, { name: string, icons: Record<string, unknown> }>} */
 const cache = {
@@ -90,6 +94,7 @@ function resolveKey(id) {
 }
 
 function putTheme(id, theme) {
+  ensureThemeVaultIcon(theme, id);
   cache[id] = theme;
   iconThemes[id] = theme;
   // Compat: Sidebar/Dialogs often lookup with .toLowerCase()
