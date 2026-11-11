@@ -365,6 +365,21 @@
 
 /* Vault selector: same chrome as .title-bar-icon-btn, locked hint only */
 
+.title-bar-vault-selector {
+  opacity: 0.88;
+}
+
+.title-bar-vault-selector:hover,
+.title-bar-vault-selector.is-active {
+  opacity: 1;
+}
+
+.title-bar-vault-selector svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .title-bar-vault-selector.is-locked {
   color: color-mix(in srgb, #f0c674 70%, var(--ui-titlebar-text, #fff));
   opacity: 0.95;

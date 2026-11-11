@@ -10,31 +10,7 @@ import {
   listRegisteredExtraVaults
 } from '../../utils/extraConnectionVaults';
 import vaultKeyring from '../../services/VaultKeyring';
-
-const SAFE_STROKE = {
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round'
-};
-
-/** Icono de caja fuerte (cuerpo + dial + asa), estilo title-bar. */
-const VaultSafeIcon = ({ size = 16 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 16 16"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <rect x="2" y="3" width="12" height="10" rx="1.5" {...SAFE_STROKE} />
-    <circle cx="7.2" cy="8" r="2.55" {...SAFE_STROKE} />
-    <circle cx="7.2" cy="8" r="0.95" fill="currentColor" stroke="none" />
-    <path d="M10.15 8h2.35" {...SAFE_STROKE} />
-    <path d="M12.5 6.55v2.9" {...SAFE_STROKE} />
-  </svg>
-);
+import VaultSafeIcon from './VaultSafeIcon';
 
 /**
  * Selector de vault tipo Termius (checks) para la title bar.
@@ -448,7 +424,7 @@ const VaultSelector = ({
           onClick={openMenu}
           style={noDrag}
         >
-          <VaultSafeIcon size={16} />
+          <VaultSafeIcon size={18} />
         </button>
       </div>
       <div className="title-bar-action-sep" aria-hidden="true" />
