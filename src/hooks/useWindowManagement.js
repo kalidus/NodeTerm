@@ -51,6 +51,15 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     return () => window.removeEventListener('toggle-sidebar', handleToggleSidebar);
   }, []);
 
+  // TitleBar: replegar/expandir sidebar a IconRail (no ocultarla)
+  useEffect(() => {
+    const handleToggleSidebarCollapse = () => {
+      setSidebarCollapsed(prev => !prev);
+    };
+    window.addEventListener('toggle-sidebar-collapse', handleToggleSidebarCollapse);
+    return () => window.removeEventListener('toggle-sidebar-collapse', handleToggleSidebarCollapse);
+  }, []);
+
   // Releer preferencia tras sync desde app-data.json (solo al iniciar / sincronizar)
   useEffect(() => {
     const reloadSidebarCollapsed = () => {
