@@ -28,6 +28,12 @@ import { mapBrowserEntriesToNodes } from '../utils/passwordImportMapper';
 import { parsePasswordCsv } from '../utils/csvPasswordParser';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { isPlatformWindows, resolveRdpClientType } from '../utils/rdpClientType';
+import {
+    getActiveConnectionVaultId,
+    DEFAULT_VAULT_ID
+} from '../utils/activeConnectionVault';
+import vaultKeyring from '../services/VaultKeyring';
+import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
 
 // Definición de fuentes de importación
 const IMPORT_SOURCES = {
@@ -339,6 +345,7 @@ const ImportWizardDialog = ({
     const [exportVaultOptions, setExportVaultOptions] = useState([
         { id: 'default', name: 'Vault principal' }
     ]);
+    const [importTargetVaultId, setImportTargetVaultId] = useState(DEFAULT_VAULT_ID);
     const [importAsNewVault, setImportAsNewVault] = useState(false);
     const [importIsAllVaultsBackup, setImportIsAllVaultsBackup] = useState(false);
 
@@ -354,11 +361,13 @@ const ImportWizardDialog = ({
             }
             setImportAsNewVault(false);
             setImportIsAllVaultsBackup(false);
+            const activeVault = getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
+            setImportTargetVaultId(activeVault);
             (async () => {
                 const opts = [{ id: 'default', name: 'Vault principal' }];
                 try {
                     if (
-                        localStorage.getItem('nodeterm_experimental_multi_vault') === 'true' &&
+                        isMultiVaultEnabled() &&
                         window.electron?.vaults?.list
                     ) {
                         const res = await window.electron.vaults.list();
@@ -371,6 +380,8 @@ const ImportWizardDialog = ({
                 }
                 setExportVaultOptions(opts);
                 setExportVaultIds(opts.map((v) => v.id));
+                const stillValid = opts.some((v) => v.id === activeVault);
+                setImportTargetVaultId(stillValid ? activeVault : DEFAULT_VAULT_ID);
             })();
         }
     }, [visible, initialSource, initialStep]);
@@ -437,6 +448,7 @@ const ImportWizardDialog = ({
         setImportAsNewVault(false);
         setImportIsAllVaultsBackup(false);
         setExportVaultIds(['default']);
+        setImportTargetVaultId(getActiveConnectionVaultId() || DEFAULT_VAULT_ID);
         setIsDragOver(false);
     }, [defaultTargetFolderKey]);
 
@@ -622,11 +634,38 @@ const ImportWizardDialog = ({
         }
     };
 
+    const ensureImportTargetVaultUnlocked = useCallback(() => {
+        if (selectedSource === 'export_nodeterm' || selectedSource === 'nodeterm') {
+            return true;
+        }
+        if (!isMultiVaultEnabled() || exportVaultOptions.length <= 1) {
+            return true;
+        }
+        const vaultId = importTargetVaultId || DEFAULT_VAULT_ID;
+        if (!vaultId || vaultId === DEFAULT_VAULT_ID) {
+            return true;
+        }
+        if (vaultKeyring.isUnlocked(vaultId)) {
+            return true;
+        }
+        const name = exportVaultOptions.find((v) => v.id === vaultId)?.name || vaultId;
+        showToastSafe({
+            severity: 'warn',
+            summary: 'Vault bloqueado',
+            detail: `Desbloquea «${name}» antes de importar en ese vault.`,
+            life: 5000
+        });
+        return false;
+    }, [selectedSource, exportVaultOptions, importTargetVaultId, showToastSafe]);
+
     const handleNext = async () => {
         if (currentStep === 1) {
             if (selectedSource === 'export_nodeterm') {
                 // Para exportar, no necesitamos generar preview remoto
                 setCurrentStep(2);
+                return;
+            }
+            if (!ensureImportTargetVaultUnlocked()) {
                 return;
             }
             // Pasar inmediatamente a Vista Previa para mostrar estado de carga
@@ -953,6 +992,7 @@ const ImportWizardDialog = ({
     // Ejecutar importación
     const handleImport = async () => {
         if (!previewData && selectedSource !== 'export_nodeterm') return;
+        if (!ensureImportTargetVaultUnlocked()) return;
 
         setImporting(true);
         setImportProgress(0);
@@ -1166,7 +1206,8 @@ const ImportWizardDialog = ({
                 overwrite: importMode === 'replace',
                 linkFile: false,
                 targetBaseFolderKey: targetFolder,
-                linkedTargetFolderKey: targetFolder
+                linkedTargetFolderKey: targetFolder,
+                targetVaultId: importTargetVaultId || DEFAULT_VAULT_ID
             });
         } else {
             throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
@@ -1206,7 +1247,8 @@ const ImportWizardDialog = ({
                 overwrite: importMode === 'replace',
                 linkFile: false,
                 targetBaseFolderKey: targetFolder,
-                linkedTargetFolderKey: targetFolder
+                linkedTargetFolderKey: targetFolder,
+                targetVaultId: importTargetVaultId || DEFAULT_VAULT_ID
             });
         } else {
             throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
@@ -1266,7 +1308,8 @@ const ImportWizardDialog = ({
                 overwrite: importMode === 'replace',
                 linkFile: false,
                 targetBaseFolderKey: targetFolder,
-                linkedTargetFolderKey: targetFolder
+                linkedTargetFolderKey: targetFolder,
+                targetVaultId: importTargetVaultId || DEFAULT_VAULT_ID
             });
         } else {
             throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
@@ -1303,7 +1346,8 @@ const ImportWizardDialog = ({
         const payload = {
             nodes,
             createContainerFolder: createContainerFolder,
-            containerFolderName: containerFolderName
+            containerFolderName: containerFolderName,
+            vaultId: importTargetVaultId || DEFAULT_VAULT_ID
         };
 
         if (onImportPasswordsComplete) {
@@ -1343,7 +1387,8 @@ const ImportWizardDialog = ({
         const payload = {
             nodes,
             createContainerFolder: createContainerFolder,
-            containerFolderName: containerFolderName || 'Importados CSV'
+            containerFolderName: containerFolderName || 'Importados CSV',
+            vaultId: importTargetVaultId || DEFAULT_VAULT_ID
         };
 
         if (onImportPasswordsComplete) {
@@ -1385,7 +1430,8 @@ const ImportWizardDialog = ({
         const payload = {
             nodes,
             createContainerFolder: createContainerFolder,
-            containerFolderName: containerFolderName
+            containerFolderName: containerFolderName,
+            vaultId: importTargetVaultId || DEFAULT_VAULT_ID
         };
 
         if (onImportPasswordsComplete) {
@@ -1542,13 +1588,28 @@ const ImportWizardDialog = ({
         return count;
     };
 
-    // Opciones de carpeta destino
+    const showImportVaultSelector =
+        !isExport &&
+        selectedSource !== 'nodeterm' &&
+        isMultiVaultEnabled() &&
+        exportVaultOptions.length > 1;
+
+    // Opciones de carpeta destino (filtradas por vault seleccionado cuando aplica)
+    const rawFolderOptions = selectedSource && IMPORT_SOURCES[selectedSource]?.category === 'documents'
+        ? (documentFolderOptions || [])
+        : (targetFolderOptions || []);
+    const filteredFolderOptions = showImportVaultSelector
+        ? rawFolderOptions.filter((opt) => {
+            if (!opt || opt.value === 'ROOT') return false;
+            if (opt.vaultId == null || opt.vaultId === '') {
+                return importTargetVaultId === DEFAULT_VAULT_ID;
+            }
+            return String(opt.vaultId) === String(importTargetVaultId || DEFAULT_VAULT_ID);
+        })
+        : rawFolderOptions;
     const folderOptions = [
         { label: 'Raíz', value: 'ROOT' },
-        ...(selectedSource && IMPORT_SOURCES[selectedSource]?.category === 'documents'
-            ? (documentFolderOptions || [])
-            : (targetFolderOptions || [])
-        )
+        ...filteredFolderOptions
     ];
 
     // Renderizar contenido según el paso actual
@@ -2288,6 +2349,27 @@ const ImportWizardDialog = ({
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {showImportVaultSelector && (
+                                    <div className="import-wizard-field">
+                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                            <i className="pi pi-lock" /> Vault destino
+                                        </label>
+                                        <Dropdown
+                                            value={importTargetVaultId}
+                                            options={exportVaultOptions.map((v) => ({
+                                                label: v.name || v.id,
+                                                value: v.id
+                                            }))}
+                                            onChange={(e) => {
+                                                setImportTargetVaultId(e.value);
+                                                setTargetFolder('ROOT');
+                                            }}
+                                            placeholder="Seleccionar vault"
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Carpeta destino */}
                                 <div className="import-wizard-field">
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>

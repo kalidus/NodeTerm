@@ -6,6 +6,7 @@ import WallixRefreshDialog from '../WallixRefreshDialog';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
 import BrowserPopupModal from '../BrowserPopupModal';
+import { buildVaultFolderOptions } from '../../utils/importIntoVaultTree';
 
 // Lazy loaded dialogs
 const ImportDialog = lazy(() => import('../ImportDialog'));
@@ -119,20 +120,7 @@ export const AppModals = ({
           }}
           showToast={(message) => toast.current?.show(message)}
           presetOptions={importPreset}
-          targetFolderOptions={(() => {
-            const list = [];
-            const walk = (arr, prefix = '') => {
-              if (!Array.isArray(arr)) return;
-              for (const n of arr) {
-                if (n && n.droppable) {
-                  list.push({ label: `${prefix}${n.label}`, value: n.key });
-                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                }
-              }
-            };
-            walk(nodes || []);
-            return list;
-          })()}
+          targetFolderOptions={buildVaultFolderOptions(nodes)}
           defaultTargetFolderKey={null}
         />
 
@@ -186,20 +174,7 @@ export const AppModals = ({
             window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
           }}
           showToast={(message) => toast.current?.show(message)}
-          targetFolderOptions={(() => {
-            const list = [];
-            const walk = (arr, prefix = '') => {
-              if (!Array.isArray(arr)) return;
-              for (const n of arr) {
-                if (n && n.droppable) {
-                  list.push({ label: `${prefix}${n.label}`, value: n.key });
-                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                }
-              }
-            };
-            walk(nodes || []);
-            return list;
-          })()}
+          targetFolderOptions={buildVaultFolderOptions(nodes)}
           documentFolderOptions={documentFolderOptions}
           defaultTargetFolderKey={null}
         />

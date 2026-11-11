@@ -43,8 +43,19 @@ import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import { loadPasswordTree, savePasswordTree } from '../utils/passwordStore';
-import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
+import {
+  getVisibleConnectionVaultIds,
+  getActiveConnectionVaultId,
+  DEFAULT_VAULT_ID
+} from '../utils/activeConnectionVault';
 import { isVaultRoot, findVaultIdForNode } from '../shared/vault-connection-trees';
+import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
+import {
+  loadVaultDomainTree,
+  saveActiveVaultDomainTree
+} from '../utils/extraDomainVaults';
+import { insertNodesIntoVaultTree } from '../utils/importIntoVaultTree';
+import { stripVaultRootNodes } from '../utils/extraConnectionVaults';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -335,10 +346,16 @@ const PasswordManagerSidebar = ({
 
   // Escuchar importación desde el diálogo unificado (pestaña Passwords)
   useEffect(() => {
-    const handler = (e) => {
-      const { nodes: importedFolders, createContainerFolder, containerFolderName } = e.detail || {};
+    const handler = async (e) => {
+      const {
+        nodes: importedFolders,
+        createContainerFolder,
+        containerFolderName,
+        vaultId: detailVaultId
+      } = e.detail || {};
       try {
-        const newNodes = JSON.parse(JSON.stringify(passwordNodes || []));
+        const targetVaultId = detailVaultId || getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
+        const activeVaultId = getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
         const addAsContainer = (children) => ({
           key: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
           label: containerFolderName || `KeePass imported - ${new Date().toLocaleDateString()}`,
@@ -350,13 +367,68 @@ const PasswordManagerSidebar = ({
           color: getThemeDefaultColor(iconTheme),
           data: { type: 'password-folder' }
         });
-        if (createContainerFolder !== false) newNodes.unshift(addAsContainer(importedFolders || []));
-        else (importedFolders || []).forEach(f => newNodes.unshift(f));
-        setPasswordNodes(newNodes);
+        const incoming = createContainerFolder !== false
+          ? [addAsContainer(importedFolders || [])]
+          : [...(importedFolders || [])];
+
+        const current = Array.isArray(passwordNodes) ? passwordNodes : [];
+        const hasRoots = current.some(isVaultRoot);
+        const vaultRootMissing =
+          hasRoots &&
+          !current.some(
+            (n) => isVaultRoot(n) && String(n.data?.vaultId || n.vaultId) === String(targetVaultId)
+          );
+        const needsOffVault =
+          isMultiVaultEnabled() &&
+          ((!hasRoots && String(targetVaultId) !== String(activeVaultId)) || vaultRootMissing);
+
+        if (needsOffVault) {
+          let baseNodes = [];
+          if (targetVaultId === DEFAULT_VAULT_ID) {
+            const loaded = await loadPasswordTree(secureStorage, masterKey, [DEFAULT_VAULT_ID]);
+            baseNodes = stripVaultRootNodes(loaded.nodes || []);
+          } else {
+            const loaded = await loadVaultDomainTree('passwords', targetVaultId, masterKey, secureStorage);
+            if (loaded.locked) {
+              throw new Error('El vault destino de passwords está bloqueado');
+            }
+            baseNodes = loaded.nodes || [];
+          }
+          const merged = insertNodesIntoVaultTree(baseNodes, incoming, {
+            targetVaultId,
+            targetFolderKey: 'ROOT'
+          });
+          const saved = await saveActiveVaultDomainTree(
+            'passwords',
+            merged.tree,
+            targetVaultId,
+            masterKey,
+            secureStorage
+          );
+          if (!saved.ok) {
+            throw new Error(saved.reason || 'No se pudo guardar passwords en el vault');
+          }
+          window.dispatchEvent(new CustomEvent('passwords-storage-updated'));
+        } else {
+          const inserted = insertNodesIntoVaultTree(current, incoming, {
+            targetVaultId,
+            targetFolderKey: 'ROOT'
+          });
+          if (!inserted.inserted) {
+            throw new Error('No se pudo insertar passwords en el vault seleccionado');
+          }
+          setPasswordNodes(inserted.tree);
+        }
+
         showToast && showToast({ severity: 'success', summary: 'Importado', detail: 'Passwords importados correctamente', life: 3000 });
       } catch (err) {
         console.error('Error aplicando importación de passwords:', err);
-        showToast && showToast({ severity: 'error', summary: 'Error', detail: 'No se pudo aplicar la importación', life: 4000 });
+        showToast && showToast({
+          severity: 'error',
+          summary: 'Error',
+          detail: err?.message || 'No se pudo aplicar la importación',
+          life: 4000
+        });
       }
     };
     window.addEventListener('import-passwords-to-manager', handler);
@@ -383,7 +455,7 @@ const PasswordManagerSidebar = ({
       window.removeEventListener('open-new-secret-dialog', handleOpenNewSecretDialog);
       window.removeEventListener('open-new-password-dialog', handleOpenNewPasswordDialog);
     };
-  }, [passwordNodes, iconTheme, showToast]);
+  }, [passwordNodes, iconTheme, showToast, masterKey, secureStorage]);
 
   // Escuchar sincronización desde Nextcloud (principal + extras si multi-vault)
   useEffect(() => {

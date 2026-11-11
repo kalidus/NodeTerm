@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from 'primereact/card';
 import { useTranslation } from '../../../i18n/hooks/useTranslation';
 import ImportWizardDialog from '../../ImportWizardDialog';
+import { buildVaultFolderOptions } from '../../../utils/importIntoVaultTree';
 
 export const ImportExportSettingsTab = ({
   wizardInitialSource,
@@ -58,20 +59,7 @@ export const ImportExportSettingsTab = ({
               toast.current.show(msg);
             }
           }}
-          targetFolderOptions={(() => {
-            const list = [];
-            const walk = (arr, prefix = '') => {
-              if (!Array.isArray(arr)) return;
-              for (const n of arr) {
-                if (n && n.droppable) {
-                  list.push({ label: `${prefix}${n.label}`, value: n.key });
-                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                }
-              }
-            };
-            walk(nodes || []);
-            return list;
-          })()}
+          targetFolderOptions={buildVaultFolderOptions(nodes)}
           defaultTargetFolderKey="ROOT"
         />
       </Card>

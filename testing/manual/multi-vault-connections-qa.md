@@ -20,6 +20,16 @@ Prerrequisito: Ajustes → Seguridad → Vaults → activar «Vaults experimenta
 
 - [ ] Exportar eligiendo un vault extra; importar «como vault nuevo» y desbloquearlo.
 
+## Importación externa → vault destino
+
+Prerrequisito: flag multi-vault on y al menos un vault extra desbloqueado.
+
+- [ ] Wallix: en CONFIGURAR aparece «Vault destino»; importar a vault extra; las sesiones aparecen ahí (no en el activo si era otro).
+- [ ] mRemoteNG: importar a vault principal con carpeta destino; nodos solo en principal.
+- [ ] KeePass / navegador / CSV: selector de vault; importar a vault extra; passwords visibles al mostrar ese vault.
+- [ ] Joplin: importar notas a vault extra; aparecen en documentos de ese vault.
+- [ ] Vault destino bloqueado: al pulsar Siguiente/Importar, toast de aviso y no avanza.
+
 ## Limpieza
 
 - [ ] Eliminar vault desde Ajustes; si era el activo, vuelve a Principal.

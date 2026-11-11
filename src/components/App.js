@@ -59,12 +59,15 @@ import vaultKeyring from '../services/VaultKeyring';
 import {
   loadVisibleConnectionTrees,
   savePartitionedConnectionTrees,
+  saveActiveVaultConnectionTree,
+  loadVaultConnectionTree,
   stripVaultRootNodes,
   listRegisteredExtraVaults
 } from '../utils/extraConnectionVaults';
 import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
 import {
   getVisibleConnectionVaultIds,
+  getActiveConnectionVaultId,
   setVisibleConnectionVaultIds,
   toggleVisibleConnectionVault,
   DEFAULT_VAULT_ID
@@ -72,7 +75,9 @@ import {
 import { connectionVaultStorageKey, isVaultRoot } from '../shared/vault-connection-trees';
 import {
   seedEmptyDomainVaultBlobs,
-  removeExtraVaultLocalStorageKeys
+  removeExtraVaultLocalStorageKeys,
+  saveActiveVaultDomainTree,
+  loadVaultDomainTree
 } from '../utils/extraDomainVaults';
 import ExtraVaultUnlockDialog from './vault/ExtraVaultUnlockDialog';
 import CreateExtraVaultDialog from './vault/CreateExtraVaultDialog';
@@ -82,10 +87,18 @@ import {
   shouldIgnoreShortcutTarget,
 } from '../utils/keyboardShortcuts';
 import { detectBlockedInputs } from '../utils/formDebugger';
+import {
+  insertNodesIntoVaultTree,
+  buildVaultFolderOptions
+} from '../utils/importIntoVaultTree';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, recordRecentPassword, helpers as connectionHelpers } from '../utils/connectionStore';
-import { loadDocumentTree, saveDocumentTree } from '../utils/documentStore';
+import {
+  loadDocumentTree,
+  loadDocumentTreeVisible,
+  saveDocumentTree
+} from '../utils/documentStore';
 import { terminalAgentBridge } from '../services/TerminalAgentBridge';
 import {
   getTabTypeAndIndex,
@@ -139,18 +152,12 @@ const App = () => {
     if (showImportWizard) {
       const loadDocFolders = async () => {
         try {
-          const docTree = await loadDocumentTree(secureStorage, masterKey);
-          const list = [];
-          const walk = (arr, prefix = '') => {
-            if (!Array.isArray(arr)) return;
-            for (const n of arr) {
-              if (n && n.type === 'document-folder') {
-                list.push({ label: `${prefix}${n.label}`, value: n.key });
-                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-              }
-            }
-          };
-          walk(docTree || []);
+          const loaded = isMultiVaultEnabled()
+            ? await loadDocumentTreeVisible(secureStorage, masterKey)
+            : { nodes: await loadDocumentTree(secureStorage, masterKey) };
+          const list = buildVaultFolderOptions(loaded.nodes || [], {
+            folderPredicate: (n) => n && n.type === 'document-folder'
+          });
           setDocumentFolderOptions(list);
         } catch (error) {
           console.error('Error loading document folders for import wizard:', error);
@@ -937,7 +944,12 @@ const App = () => {
 
       // Soporte específico para importar notas desde Joplin
       if (importResult.metadata?.source === 'Joplin') {
-        const currentTree = await loadDocumentTree(secureStorage, masterKey);
+        const targetVaultId = importResult.targetVaultId || getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
+        const activeVaultId = getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
+        const loaded = isMultiVaultEnabled()
+          ? await loadDocumentTreeVisible(secureStorage, masterKey)
+          : { nodes: await loadDocumentTree(secureStorage, masterKey), multiRoot: false };
+        const currentTree = Array.isArray(loaded.nodes) ? loaded.nodes : [];
         const newNodes = importResult.structure?.nodes || [];
         let targetKey = importResult.targetBaseFolderKey || 'ROOT';
         const createContainer = importResult.createContainerFolder === true && !!importResult.containerFolderName;
@@ -957,47 +969,55 @@ const App = () => {
         });
 
         const finalNodes = createContainer ? [containerize(newNodes)] : newNodes;
+        const hasRoots = currentTree.some(isVaultRoot);
+        const useOffVaultSave =
+          isMultiVaultEnabled() &&
+          ((!hasRoots && String(targetVaultId) !== String(activeVaultId)) ||
+            (hasRoots && !currentTree.some((n) => isVaultRoot(n) && (n.data?.vaultId || n.vaultId) === targetVaultId)));
 
-        // Verificar si la carpeta destino existe en el árbol actual
-        const findNode = (list, key) => {
-          for (const node of list) {
-            if (node.key === key) return node;
-            if (node.children && node.children.length > 0) {
-              const found = findNode(node.children, key);
-              if (found) return found;
+        const mergeDocs = (existing, incoming) =>
+          overwrite ? [...incoming] : [...(existing || []), ...incoming];
+
+        if (useOffVaultSave) {
+          let baseNodes = [];
+          if (targetVaultId === DEFAULT_VAULT_ID) {
+            baseNodes = await loadDocumentTree(secureStorage, masterKey);
+          } else {
+            const vaultTree = await loadVaultDomainTree('documents', targetVaultId, masterKey, secureStorage);
+            if (vaultTree.locked) {
+              throw new Error('El vault destino de documentos está bloqueado');
             }
+            baseNodes = vaultTree.nodes || [];
           }
-          return null;
-        };
-
-        if (targetKey !== 'ROOT' && !findNode(currentTree, targetKey)) {
-          console.warn(`Target folder key "${targetKey}" not found in current tree. Falling back to ROOT.`);
-          targetKey = 'ROOT';
-        }
-
-        let updatedTree;
-        if (targetKey === 'ROOT') {
-          updatedTree = overwrite ? finalNodes : [...currentTree, ...finalNodes];
+          const merged = insertNodesIntoVaultTree(baseNodes, finalNodes, {
+            targetVaultId,
+            targetFolderKey: 'ROOT',
+            overwrite,
+            mergeFn: mergeDocs
+          });
+          await saveActiveVaultDomainTree(
+            'documents',
+            merged.tree,
+            targetVaultId,
+            masterKey,
+            secureStorage
+          );
         } else {
-          const walkAndInsert = (list) => {
-            return list.map(node => {
-              if (node.key === targetKey) {
-                const currentChildren = Array.isArray(node.children) ? node.children : [];
-                return {
-                  ...node,
-                  children: overwrite ? finalNodes : [...currentChildren, ...finalNodes]
-                };
-              }
-              if (node.children && node.children.length > 0) {
-                return {
-                  ...node,
-                  children: walkAndInsert(node.children)
-                };
-              }
-              return node;
-            });
-          };
-          updatedTree = walkAndInsert(currentTree);
+          const inserted = insertNodesIntoVaultTree(currentTree, finalNodes, {
+            targetVaultId,
+            targetFolderKey: targetKey,
+            overwrite,
+            mergeFn: (existing, incoming) =>
+              overwrite
+                ? [...incoming, ...(existing || []).filter((n) =>
+                    !incoming.some((i) => (i.label || '') === (n.label || ''))
+                  )]
+                : [...(existing || []), ...incoming]
+          });
+          if (!inserted.inserted) {
+            throw new Error('No se pudo insertar las notas en el vault seleccionado');
+          }
+          await saveDocumentTree(inserted.tree, secureStorage, masterKey);
         }
 
         // Expandir las carpetas recién importadas y la carpeta destino automáticamente
@@ -1006,8 +1026,8 @@ const App = () => {
           if (targetKey !== 'ROOT') {
             keysToExpand.push(targetKey);
           }
-          const collectFolderKeys = (nodes) => {
-            for (const n of nodes) {
+          const collectFolderKeys = (nodesList) => {
+            for (const n of nodesList) {
               if (n.type === 'document-folder') {
                 keysToExpand.push(n.key);
                 if (n.children) collectFolderKeys(n.children);
@@ -1030,9 +1050,6 @@ const App = () => {
           console.error('Error expanding imported folder keys:', e);
         }
 
-        await saveDocumentTree(updatedTree, secureStorage, masterKey);
-
-        // Disparar evento para que la barra lateral de documentos recargue los datos
         window.dispatchEvent(new CustomEvent('documents-storage-updated'));
 
         return {
@@ -1083,6 +1100,9 @@ const App = () => {
       const baseTargetKey = importResult?.linkFile
         ? (importResult?.linkedTargetFolderKey || ROOT_VALUE)
         : (importResult?.targetBaseFolderKey || ROOT_VALUE);
+      const targetVaultId =
+        importResult?.targetVaultId || getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
+      const activeVaultId = getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
 
       // Opciones específicas según el modo (manual vs vinculado)
       const isLinkedMode = !!importResult?.linkFile;
@@ -1097,106 +1117,31 @@ const App = () => {
         ? (importResult?.linkedOverwrite === true)
         : (importResult?.overwrite === true);
 
+      const containerize = (children) => ({
+        key: `import_container_${Date.now()}`,
+        uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
+        label: finalContainerLabel,
+        droppable: true,
+        children: children,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true,
+        imported: true,
+        importedFrom: importResult?.metadata?.source || 'mRemoteNG',
+        data: importResult?.metadata?.source === 'Wallix' ? {
+            wallixUrl: importResult.metadata.wallixUrl,
+            wallixUsername: importResult.metadata.wallixUsername,
+            wallixRdpClientType: importResult.metadata.wallixRdpClientType || 'web-rdp'
+        } : {}
+      });
 
-      const insertIntoTarget = (nodesToInsert) => {
-
-        // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
-        const containerize = (children) => ({
-          key: `import_container_${Date.now()}`,
-          uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
-          label: finalContainerLabel,
-          droppable: true,
-          children: children,
-          createdAt: new Date().toISOString(),
-          isUserCreated: true,
-          imported: true,
-          importedFrom: importResult?.metadata?.source || 'mRemoteNG',
-          data: importResult?.metadata?.source === 'Wallix' ? {
-              wallixUrl: importResult.metadata.wallixUrl,
-              wallixUsername: importResult.metadata.wallixUsername,
-              wallixRdpClientType: importResult.metadata.wallixRdpClientType || 'web-rdp'
-          } : {}
-        });
-
-        if (baseTargetKey === ROOT_VALUE) {
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            if (finalCreateContainerFolder) {
-              if (finalOverwrite) {
-                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
-              } else {
-                nodesCopy.push(containerize(nodesToInsert));
-                return nodesCopy;
-              }
-            }
-            if (finalOverwrite) {
-              return removeConflictsAndAdd(nodesCopy, nodesToInsert);
-            } else {
-              nodesCopy.push(...nodesToInsert);
-              return nodesCopy;
-            }
-          });
-          return;
-        }
-
-        setNodes(prev => {
-          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
-          if (!targetNode || !targetNode.droppable) {
-            // Fallback a raíz si la carpeta no existe o no es droppable
-            if (finalCreateContainerFolder) {
-              if (finalOverwrite) {
-                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
-              }
-              nodesCopy.push(containerize(nodesToInsert));
-              return nodesCopy;
-            }
-            if (finalOverwrite) return removeConflictsAndAdd(nodesCopy, nodesToInsert);
-            nodesCopy.push(...nodesToInsert);
-            return nodesCopy;
-          }
-          // Inserción dentro de la carpeta seleccionada
-          const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
-          if (finalCreateContainerFolder) {
-            const newChild = containerize(nodesToInsert);
-            if (finalOverwrite) {
-              targetNode.children = removeConflictsAndAdd(currentChildren, [newChild]);
-            } else {
-              targetNode.children = [...currentChildren, newChild];
-            }
-          } else {
-            if (finalOverwrite) {
-              targetNode.children = removeConflictsAndAdd(currentChildren, nodesToInsert);
-            } else {
-              targetNode.children = [...currentChildren, ...nodesToInsert];
-            }
-          }
-          return nodesCopy;
-        });
-      };
-
-      let addedFolders = 0;
-      let addedConnections = 0;
-
-      // Si tenemos estructura con carpetas
-      if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
-        console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
-        let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
-          ...n,
-          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
-          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
-        }));
-
-        // Para importaciones de Wallix: SIEMPRE envolver en un nodo contenedor
-        // para que wallixUrl/wallixUsername queden guardados en el nodo raíz
-        // (el botón de refresco los necesita en node.data)
+      const prepareNodesForInsert = (nodesToInsert) => {
         if (importResult?.metadata?.source === 'Wallix') {
-          const wallixContainer = {
+          return [{
             key: `import_container_${Date.now()}`,
             uid: `import_container_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
             label: finalContainerLabel || `Wallix - ${new Date().toLocaleDateString()}`,
             droppable: true,
-            children: toAdd,
+            children: nodesToInsert,
             createdAt: new Date().toISOString(),
             isUserCreated: true,
             imported: true,
@@ -1206,32 +1151,112 @@ const App = () => {
               wallixUsername: importResult.metadata.wallixUsername,
               wallixRdpClientType: importResult.metadata.wallixRdpClientType || 'web-rdp'
             }
-          };
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            if (baseTargetKey === ROOT_VALUE) {
-              if (finalOverwrite) {
-                return removeConflictsAndAdd(nodesCopy, [wallixContainer]);
-              }
-              nodesCopy.push(wallixContainer);
-              return nodesCopy;
-            }
-            const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
-            if (!targetNode || !targetNode.droppable) {
-              nodesCopy.push(wallixContainer);
-              return nodesCopy;
-            }
-            const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
-            if (finalOverwrite) {
-              targetNode.children = removeConflictsAndAdd(currentChildren, [wallixContainer]);
-            } else {
-              targetNode.children = [...currentChildren, wallixContainer];
-            }
-            return nodesCopy;
-          });
-        } else {
-          insertIntoTarget(toAdd);
+          }];
         }
+        if (finalCreateContainerFolder) {
+          return [containerize(nodesToInsert)];
+        }
+        return nodesToInsert;
+      };
+
+      const loadFlatConnectionVaultNodes = async (vaultId) => {
+        if (vaultId === DEFAULT_VAULT_ID) {
+          if (masterKey && secureStorage) {
+            try {
+              const encryptedData = localStorage.getItem('connections_encrypted');
+              if (encryptedData) {
+                const decrypted = await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+                return stripVaultRootNodes(Array.isArray(decrypted) ? decrypted : []);
+              }
+            } catch (e) {
+              console.warn('[Import] No se pudo leer vault principal:', e?.message || e);
+            }
+          }
+          return stripVaultRootNodes(Array.isArray(nodes) ? nodes : []);
+        }
+        const loaded = await loadVaultConnectionTree(vaultId, masterKey, secureStorage);
+        if (loaded.locked) {
+          throw new Error('El vault destino está bloqueado');
+        }
+        return loaded.nodes || [];
+      };
+
+      const insertIntoTarget = async (nodesToInsert) => {
+        const prepared = prepareNodesForInsert(nodesToInsert);
+        const prevList = Array.isArray(nodes) ? nodes : [];
+        const hasRoots = prevList.some(isVaultRoot);
+        const vaultRootMissing =
+          hasRoots &&
+          !prevList.some(
+            (n) => isVaultRoot(n) && String(n.data?.vaultId || n.vaultId) === String(targetVaultId)
+          );
+        const needsOffVault =
+          isMultiVaultEnabled() &&
+          ((!hasRoots && String(targetVaultId) !== String(activeVaultId)) || vaultRootMissing);
+
+        if (needsOffVault) {
+          const baseNodes = await loadFlatConnectionVaultNodes(targetVaultId);
+          const merged = insertNodesIntoVaultTree(baseNodes, prepared, {
+            targetVaultId,
+            targetFolderKey: 'ROOT',
+            overwrite: finalOverwrite,
+            mergeFn: removeConflictsAndAdd
+          });
+          const saved = await saveActiveVaultConnectionTree(
+            merged.tree,
+            targetVaultId,
+            masterKey,
+            secureStorage,
+            { allowShrink: true }
+          );
+          if (!saved.ok) {
+            throw new Error(saved.reason || 'No se pudo guardar en el vault destino');
+          }
+          return;
+        }
+
+        const inserted = insertNodesIntoVaultTree(prevList, prepared, {
+          targetVaultId,
+          targetFolderKey: baseTargetKey,
+          overwrite: finalOverwrite,
+          mergeFn: removeConflictsAndAdd
+        });
+        if (!inserted.inserted) {
+          const baseNodes = await loadFlatConnectionVaultNodes(targetVaultId);
+          const merged = insertNodesIntoVaultTree(baseNodes, prepared, {
+            targetVaultId,
+            targetFolderKey: 'ROOT',
+            overwrite: finalOverwrite,
+            mergeFn: removeConflictsAndAdd
+          });
+          const saved = await saveActiveVaultConnectionTree(
+            merged.tree,
+            targetVaultId,
+            masterKey,
+            secureStorage,
+            { allowShrink: true }
+          );
+          if (!saved.ok) {
+            throw new Error(saved.reason || 'No se pudo guardar en el vault destino');
+          }
+          return;
+        }
+        setNodes(inserted.tree);
+      };
+
+      let addedFolders = 0;
+      let addedConnections = 0;
+
+      // Si tenemos estructura con carpetas
+      if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
+        console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
+        const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+          ...n,
+          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`,
+          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random() * 1e6)}`
+        }));
+
+        await insertIntoTarget(toAdd);
 
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
@@ -1256,8 +1281,7 @@ const App = () => {
         return;
       }
 
-      // Para lista plana, insertar directamente en target según configuración
-      insertIntoTarget(importedConnections);
+      await insertIntoTarget(importedConnections);
       toast.current?.show({
         severity: 'success',
         summary: 'Importación exitosa',
