@@ -340,10 +340,18 @@ function mergeVaultSidecarsIntoData(data) {
 /**
  * Escribe vault keys a sidecars y las elimina del objeto a persistir en app-data.json.
  * Migra valores embebidos si aún venían en el payload.
+ * Honra data._vaultAllowShrinkKeys (lista) para borrados UI intencionados.
  * @returns {{ settingsData: object, wroteVault: boolean }}
  */
 function extractAndPersistVaultSidecars(data) {
+  const { VAULT_ALLOW_SHRINK_KEYS_META } = require('../../shared/vault-shrink-guard');
   const settingsData = { ...(data || {}) };
+  const allowShrinkKeys = new Set(
+    Array.isArray(settingsData[VAULT_ALLOW_SHRINK_KEYS_META])
+      ? settingsData[VAULT_ALLOW_SHRINK_KEYS_META]
+      : []
+  );
+  delete settingsData[VAULT_ALLOW_SHRINK_KEYS_META];
   let wroteVault = false;
 
   for (const key of listAllVaultSidecarKeys(settingsData)) {
@@ -353,7 +361,9 @@ function extractAndPersistVaultSidecars(data) {
       continue;
     }
     try {
-      const wrote = writeVaultSidecar(key, value);
+      const wrote = writeVaultSidecar(key, value, {
+        allowShrink: allowShrinkKeys.has(key)
+      });
       if (wrote) {
         wroteVault = true;
       }

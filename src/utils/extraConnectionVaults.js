@@ -12,6 +12,7 @@ import {
   DEFAULT_VAULT_ID
 } from '../shared/vault-connection-trees';
 import { setVaultEncryptedItem, isTinyVaultPayload } from '../shared/vault-write';
+import { VAULT_ALLOW_SHRINK_KEYS_META } from '../shared/vault-shrink-guard';
 import { isMultiVaultEnabled } from './multiVaultFlag';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import {
@@ -108,12 +109,20 @@ export async function loadVaultConnectionTree(vaultId, masterKey, secureStorage)
 
 /**
  * Guarda un árbol plano en un vault concreto.
+ * @param {{ allowShrink?: boolean }} [options] - allowShrink para borrados UI (p. ej. carpetas Wallix grandes)
  */
-export async function saveActiveVaultConnectionTree(nodes, vaultId, masterKey, secureStorage) {
+export async function saveActiveVaultConnectionTree(
+  nodes,
+  vaultId,
+  masterKey,
+  secureStorage,
+  options = {}
+) {
   const id = vaultId || getActiveConnectionVaultId() || DEFAULT_VAULT_ID;
   const clean = stripVaultRootNodes(Array.isArray(nodes) ? nodes : []);
   const storageKey = connectionVaultStorageKey(id);
   const result = { ok: false, vaultId: id, storageKey, encryptedStr: null };
+  const allowShrink = !!options.allowShrink;
 
   const password =
     id === DEFAULT_VAULT_ID ? masterKey : vaultKeyring.getKey(id);
@@ -125,13 +134,17 @@ export async function saveActiveVaultConnectionTree(nodes, vaultId, masterKey, s
   try {
     const encrypted = await secureStorage.encryptData(clean, password);
     const encryptedStr = JSON.stringify(encrypted);
-    const wrote = setVaultEncryptedItem(storageKey, encryptedStr);
+    const wrote = setVaultEncryptedItem(storageKey, encryptedStr, { allowShrink });
     if (!wrote.ok) {
       console.error(`[ExtraVaults] Guardado ${id} rechazado:`, wrote.reason);
       return { ...result, reason: wrote.reason };
     }
     localStorageSyncService.updateCache(storageKey, encryptedStr);
-    localStorageSyncService.debouncedSync({ [storageKey]: encryptedStr });
+    const syncPayload = { [storageKey]: encryptedStr };
+    if (allowShrink) {
+      syncPayload[VAULT_ALLOW_SHRINK_KEYS_META] = [storageKey];
+    }
+    localStorageSyncService.debouncedSync(syncPayload);
     return { ok: true, vaultId: id, storageKey, encryptedStr, nodes: clean };
   } catch (e) {
     console.error(`[ExtraVaults] Error guardando ${id}:`, e);
@@ -218,9 +231,15 @@ export async function loadVisibleConnectionTrees(
  * Parte el árbol (plano o multi-root) y cifra cada vault desbloqueado afectado.
  * Vaults bloqueados o no presentes no se reescriben.
  */
-export async function savePartitionedConnectionTrees(nodes, masterKey, secureStorage) {
+export async function savePartitionedConnectionTrees(
+  nodes,
+  masterKey,
+  secureStorage,
+  options = {}
+) {
   const list = Array.isArray(nodes) ? nodes : [];
   const hasRoots = list.some(isVaultRoot);
+  const saveOpts = options.allowShrink ? { allowShrink: true } : {};
 
   if (!hasRoots) {
     const active = getActiveConnectionVaultId();
@@ -228,7 +247,8 @@ export async function savePartitionedConnectionTrees(nodes, masterKey, secureSto
       list,
       active,
       masterKey,
-      secureStorage
+      secureStorage,
+      saveOpts
     );
     return {
       wroteMain: active === DEFAULT_VAULT_ID && saved.ok,
@@ -263,7 +283,8 @@ export async function savePartitionedConnectionTrees(nodes, masterKey, secureSto
       main,
       DEFAULT_VAULT_ID,
       masterKey,
-      secureStorage
+      secureStorage,
+      saveOpts
     );
     wroteMain = savedMain.ok;
     if (savedMain.encryptedStr) {
@@ -285,7 +306,8 @@ export async function savePartitionedConnectionTrees(nodes, masterKey, secureSto
       children,
       vaultId,
       masterKey,
-      secureStorage
+      secureStorage,
+      saveOpts
     );
     if (saved.ok) {
       wroteExtras.push(vaultId);

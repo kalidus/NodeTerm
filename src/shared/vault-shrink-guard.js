@@ -3,6 +3,9 @@
  * respecto al valor local ya persistido (p. ej. encrypt([]) ~100–300 chars).
  */
 
+/** Meta en sync/save-all: keys de vault a las que se permite shrink intencionado */
+const VAULT_ALLOW_SHRINK_KEYS_META = '_vaultAllowShrinkKeys';
+
 /** Alineado con writeVaultSidecar / VAULT_TINY_PAYLOAD_CHARS */
 const VAULT_SHRINK_MIN_EXISTING = 2048;
 
@@ -16,6 +19,7 @@ function isCatastrophicVaultPayloadShrink(existingStr, incomingStr) {
 }
 
 module.exports = {
+  VAULT_ALLOW_SHRINK_KEYS_META,
   VAULT_SHRINK_MIN_EXISTING,
   isCatastrophicVaultPayloadShrink
 };

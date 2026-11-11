@@ -280,6 +280,38 @@ describe('vault-sidecar', () => {
     assert.ok(keys.includes('documents_encrypted__work'));
   });
 
+  it('extractAndPersist allows shrink when _vaultAllowShrinkKeys lists the key', () => {
+    const bigJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(4096),
+        timestamp: 0
+      })
+    );
+    assert.strictEqual(vaultSidecar.writeVaultSidecar('connections_encrypted', bigJson), true);
+    const beforeLen = fs.statSync(vaultSidecar.sidecarPathForKey('connections_encrypted')).size;
+
+    const tinyJson = JSON.stringify(
+      toEncryptedV2({
+        salt: crypto.randomBytes(16),
+        iv: crypto.randomBytes(12),
+        data: crypto.randomBytes(16),
+        timestamp: 0
+      })
+    );
+    const { wroteVault, settingsData } = vaultSidecar.extractAndPersistVaultSidecars({
+      connections_encrypted: tinyJson,
+      _vaultAllowShrinkKeys: ['connections_encrypted']
+    });
+    assert.strictEqual(wroteVault, true);
+    assert.strictEqual(settingsData.connections_encrypted, undefined);
+    assert.strictEqual(settingsData._vaultAllowShrinkKeys, undefined);
+    assert.ok(
+      fs.statSync(vaultSidecar.sidecarPathForKey('connections_encrypted')).size < beforeLen
+    );
+  });
+
   it('writeVaultSidecar refuses catastrophic shrink unless allowShrink', () => {
     const bigData = crypto.randomBytes(4096);
     const bigJson = JSON.stringify(

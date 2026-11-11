@@ -10,7 +10,10 @@ import {
   listVaultStorageKeys
 } from '../shared/vault-local-storage-keys';
 import { vaultPayloadsEquivalent } from '../shared/vault-blob-encoding';
-import { isCatastrophicVaultPayloadShrink } from '../shared/vault-shrink-guard';
+import {
+    isCatastrophicVaultPayloadShrink,
+    VAULT_ALLOW_SHRINK_KEYS_META
+} from '../shared/vault-shrink-guard';
 import { isTinyVaultPayload, VAULT_STAMPS_LS } from '../shared/vault-write';
 import { isConnectionVaultStorageKey } from '../shared/vault-connection-trees';
 
@@ -438,6 +441,11 @@ class LocalStorageSyncService {
 
             // Si el argumento NO es un objeto de overrides (es null o undefined), tratarlo como vacío
             const overrides = explicitOverrides || {};
+            const allowShrinkKeys = new Set(
+                Array.isArray(overrides[VAULT_ALLOW_SHRINK_KEYS_META])
+                    ? overrides[VAULT_ALLOW_SHRINK_KEYS_META]
+                    : []
+            );
 
             // Inicializar caché si no existe
             if (!this._memoryCache) this._memoryCache = {};
@@ -459,6 +467,7 @@ class LocalStorageSyncService {
                     const nextVal = overrides[key];
                     if (
                         isAllowedVaultStorageKey(key) &&
+                        !allowShrinkKeys.has(key) &&
                         isCatastrophicVaultPayloadShrink(
                             localStorage.getItem(key) || this._memoryCache?.[key],
                             nextVal
@@ -508,6 +517,10 @@ class LocalStorageSyncService {
                 return;
             }
 
+            if (allowShrinkKeys.size > 0) {
+                data[VAULT_ALLOW_SHRINK_KEYS_META] = [...allowShrinkKeys];
+            }
+
             // --- DETECCIÓN DE CAMBIOS ---
             const currentDataStr = JSON.stringify(data);
             if (this._lastSyncDataStr === currentDataStr) {
@@ -537,7 +550,19 @@ class LocalStorageSyncService {
     debouncedSync(overrides = {}) {
         // Acumular overrides si se llama varias veces rápido
         if (overrides) {
-            this._pendingOverrides = { ...this._pendingOverrides, ...overrides };
+            const prev = this._pendingOverrides || {};
+            const prevAllow = Array.isArray(prev[VAULT_ALLOW_SHRINK_KEYS_META])
+                ? prev[VAULT_ALLOW_SHRINK_KEYS_META]
+                : [];
+            const nextAllow = Array.isArray(overrides[VAULT_ALLOW_SHRINK_KEYS_META])
+                ? overrides[VAULT_ALLOW_SHRINK_KEYS_META]
+                : [];
+            this._pendingOverrides = { ...prev, ...overrides };
+            if (prevAllow.length || nextAllow.length) {
+                this._pendingOverrides[VAULT_ALLOW_SHRINK_KEYS_META] = [
+                    ...new Set([...prevAllow, ...nextAllow])
+                ];
+            }
         }
 
         if (this._syncTimeout) {

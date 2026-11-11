@@ -47,6 +47,14 @@ describe('vault-write', () => {
     assert.strictEqual(store.get('passwords_encrypted').length, 5000);
   });
 
+  it('setVaultEncryptedItem allows catastrophic shrink when allowShrink', () => {
+    store.set('connections_encrypted', 'B'.repeat(5000));
+    const small = 'S'.repeat(100);
+    const r = setVaultEncryptedItem('connections_encrypted', small, { allowShrink: true });
+    assert.strictEqual(r.ok, true);
+    assert.strictEqual(store.get('connections_encrypted'), small);
+  });
+
   it('setVaultEncryptedItem rejects unknown keys', () => {
     const r = setVaultEncryptedItem('ui_theme', 'dark');
     assert.strictEqual(r.ok, false);

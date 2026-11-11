@@ -6,6 +6,7 @@ import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { setVaultEncryptedItem, isTinyVaultPayload } from '../shared/vault-write';
+import { VAULT_ALLOW_SHRINK_KEYS_META } from '../shared/vault-shrink-guard';
 import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import { publishHomeSessions } from '../utils/homeSessionBus';
 import { setHomeTabActive } from '../utils/homeTabActiveBus';
@@ -2397,6 +2398,8 @@ const App = () => {
   }, [loadNodes, masterKey, visibleVaultIds]);
 
   // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN Y SYNC)
+  // allowShrink: cambios locales de UI (borrados grandes p. ej. Wallix); el guard anti-wipe
+  // sigue activo en sync/hidratación remota.
   useEffect(() => {
     const saveNodes = async () => {
       if (nodes.length === 0) return;
@@ -2412,15 +2415,29 @@ const App = () => {
         return;
       }
 
+      const notifySaveRejected = (reason) => {
+        console.error('[App] Guardado conexiones rechazado:', reason);
+        toast.current?.show({
+          severity: 'error',
+          summary: 'No se pudo guardar',
+          detail:
+            reason === 'catastrophic_shrink'
+              ? 'El cambio no se persistió en el vault. Reinicia o vuelve a intentar el borrado.'
+              : `Error al guardar el árbol de sesiones (${reason || 'desconocido'}).`,
+          life: 6000
+        });
+      };
+
       try {
         if (isMultiVaultEnabled()) {
           const saved = await savePartitionedConnectionTrees(
             nodes,
             masterKey,
-            secureStorage
+            secureStorage,
+            { allowShrink: true }
           );
           if (!saved.ok) {
-            console.error('[App] Guardado vaults particionado rechazado:', saved.reason);
+            notifySaveRejected(saved.reason);
             return;
           }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
@@ -2442,9 +2459,11 @@ const App = () => {
         if (masterKey) {
           const encrypted = await secureStorage.encryptData(flat, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr);
+          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr, {
+            allowShrink: true
+          });
           if (!wrote.ok) {
-            console.error('[App] Guardado conexiones rechazado:', wrote.reason);
+            notifySaveRejected(wrote.reason);
             return;
           }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
@@ -2457,7 +2476,8 @@ const App = () => {
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
           localStorageSyncService.debouncedSync({
             connections_encrypted: encryptedStr,
-            [STORAGE_KEYS.TREE_DATA]: null
+            [STORAGE_KEYS.TREE_DATA]: null,
+            [VAULT_ALLOW_SHRINK_KEYS_META]: ['connections_encrypted']
           });
         } else {
           localStorage.setItem(STORAGE_KEYS.TREE_DATA, nodesStr);
@@ -2468,6 +2488,12 @@ const App = () => {
         if (updateTreeHash) updateTreeHash(nodesStr);
       } catch (error) {
         console.error('Error saving nodes:', error);
+        toast.current?.show({
+          severity: 'error',
+          summary: 'No se pudo guardar',
+          detail: error?.message || 'Error al guardar el árbol de sesiones.',
+          life: 6000
+        });
       }
     };
 

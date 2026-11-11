@@ -42,9 +42,10 @@ function invalidateVaultStamp(key) {
 /**
  * @param {string} key - p. ej. passwords_encrypted
  * @param {string} encStr - JSON.stringify(encrypted blob)
+ * @param {{ allowShrink?: boolean }} [options] - allowShrink: true para borrados/edits UI intencionados
  * @returns {{ ok: boolean, reason?: string }}
  */
-function setVaultEncryptedItem(key, encStr) {
+function setVaultEncryptedItem(key, encStr, options = {}) {
   if (!isAllowedVaultStorageKey(key)) {
     console.error(`[VaultWrite] Clave no permitida: ${key}`);
     return { ok: false, reason: 'invalid_key' };
@@ -57,7 +58,7 @@ function setVaultEncryptedItem(key, encStr) {
   }
 
   const existing = localStorage.getItem(key);
-  if (isCatastrophicVaultPayloadShrink(existing, encStr)) {
+  if (!options.allowShrink && isCatastrophicVaultPayloadShrink(existing, encStr)) {
     console.error(
       `[VaultWrite] setItem rechazado para ${key}: shrink catastrófico ` +
         `(${existing.length} → ${encStr.length})`
