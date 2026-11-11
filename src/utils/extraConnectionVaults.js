@@ -53,7 +53,8 @@ async function readEncryptedBlob(storageKey) {
   if ((!blob || isTinyVaultPayload(blob)) && window.electron?.appdata?.getVault) {
     try {
       const fromDisk = await window.electron.appdata.getVault(storageKey);
-      if (fromDisk && !isTinyVaultPayload(fromDisk)) {
+      // Preferir disco si LS falta/tiny, o si el disco es claramente mayor
+      if (fromDisk && (!blob || fromDisk.length > blob.length)) {
         const wrote = setVaultEncryptedItem(storageKey, fromDisk);
         if (wrote.ok) blob = fromDisk;
       }
@@ -279,20 +280,39 @@ export async function savePartitionedConnectionTrees(
     list.some((n) => !isVaultRoot(n));
 
   if (principalVisible && masterKey && secureStorage) {
-    const savedMain = await saveActiveVaultConnectionTree(
-      main,
-      DEFAULT_VAULT_ID,
-      masterKey,
-      secureStorage,
-      saveOpts
-    );
-    wroteMain = savedMain.ok;
-    if (savedMain.encryptedStr) {
-      syncPayload[savedMain.storageKey] = savedMain.encryptedStr;
-    }
-    if (!savedMain.ok) {
-      ok = false;
-      reason = savedMain.reason;
+    // Blindaje: si main=[] y ya hay blob sustancial, NO escribir el Principal
+    // (se conserva disco/LS). El resto de vaults sí se guarda. Sin error ni toast.
+    const existingPrincipal = localStorage.getItem(connectionVaultStorageKey(DEFAULT_VAULT_ID));
+    const existingSubstantial =
+      typeof existingPrincipal === 'string'
+      && existingPrincipal.length > 0
+      && !isTinyVaultPayload(existingPrincipal);
+    const skipEmptyPrincipal =
+      main.length === 0
+      && existingSubstantial
+      && !options.allowEmptyPrincipal;
+
+    if (skipEmptyPrincipal) {
+      console.warn(
+        '[ExtraVaults] Omitido guardar Principal vacío; se conserva blob existente ' +
+          `(${existingPrincipal.length} chars)`
+      );
+    } else {
+      const savedMain = await saveActiveVaultConnectionTree(
+        main,
+        DEFAULT_VAULT_ID,
+        masterKey,
+        secureStorage,
+        saveOpts
+      );
+      wroteMain = savedMain.ok;
+      if (savedMain.encryptedStr) {
+        syncPayload[savedMain.storageKey] = savedMain.encryptedStr;
+      }
+      if (!savedMain.ok) {
+        ok = false;
+        reason = savedMain.reason;
+      }
     }
   }
 

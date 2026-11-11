@@ -287,6 +287,26 @@ function writeVaultSidecar(storageKey, jsonStr, options = {}) {
         );
         return false;
       }
+      // Shrink permitido: conservar copia de seguridad antes de sobrescribir
+      if (
+        options.allowShrink &&
+        isCatastrophicVaultShrink(existing.length, binary.length)
+      ) {
+        try {
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const backupPath = `${filePath}.pre-shrink-${stamp}`;
+          fs.copyFileSync(filePath, backupPath);
+          console.warn(
+            `[VaultSidecar] Backup pre-shrink de ${storageKey} → ${backupPath} ` +
+              `(${existing.length} → ${binary.length} bytes)`
+          );
+        } catch (bakErr) {
+          console.warn(
+            `[VaultSidecar] No se pudo crear backup pre-shrink de ${storageKey}:`,
+            bakErr?.message || bakErr
+          );
+        }
+      }
     } catch (_) {
       /* reescribir */
     }

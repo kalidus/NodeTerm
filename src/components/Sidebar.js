@@ -2316,7 +2316,8 @@ const Sidebar = React.memo(({
       : node;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const isVaultRootNode = isVaultRoot(node);
-    const isFolder = !!(node.droppable || hasChildren) && !isVaultRootNode;
+    // vault-root también es expandible (click en fila); el icono se resuelve antes en isVaultRootNode
+    const isFolder = !!(node.droppable || hasChildren || isVaultRootNode);
     const isSSH = actionNode.data && actionNode.data.type === 'ssh';
     const isRDP = actionNode.data && actionNode.data.type === 'rdp';
     const isVNC = actionNode.data && (actionNode.data.type === 'vnc' || actionNode.data.type === 'vnc-guacamole');

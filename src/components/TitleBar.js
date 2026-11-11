@@ -615,10 +615,15 @@ const TitleBar = ({
 
         <div className="title-bar-action-group">
           <TitleBarIconButton
-            title={sidebarCollapsed ? 'Expandir sidebar' : 'Replegar sidebar'}
-            active={!sidebarCollapsed}
+            title={sidebarCollapsed || !sidebarVisible ? 'Expandir sidebar' : 'Replegar sidebar'}
+            active={sidebarVisible && !sidebarCollapsed}
             onClick={() => {
               setViewsPopoverOpen(false);
+              // Si está oculta del todo, restaurar visibilidad (no solo el pliegue a IconRail)
+              if (!sidebarVisible) {
+                window.dispatchEvent(new CustomEvent('expand-sidebar'));
+                return;
+              }
               window.dispatchEvent(new CustomEvent('toggle-sidebar-collapse'));
             }}
           >

@@ -5,7 +5,7 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { setVaultEncryptedItem, isTinyVaultPayload } from '../shared/vault-write';
+import { setVaultEncryptedItem } from '../shared/vault-write';
 import { VAULT_ALLOW_SHRINK_KEYS_META } from '../shared/vault-shrink-guard';
 import { waitForVaultSyncIfNeeded } from '../utils/waitForVaultSync';
 import { publishHomeSessions } from '../utils/homeSessionBus';
@@ -2232,49 +2232,67 @@ const App = () => {
       lastDecryptedResult;
 
     if (masterKey) {
-      const hasUsableVault = encryptedData && !isTinyVaultPayload(encryptedData);
-      if (hasUsableVault) {
-        let decrypted;
-        let migrated;
-        if (isCacheHit && lastMigratedResult) {
-          decrypted = lastDecryptedResult;
-          migrated = lastMigratedResult;
-        } else {
-          decrypted = isCacheHit
-            ? lastDecryptedResult
-            : await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
-          if (decrypted) {
-            migrated = stripVaultRootNodes(migrateWallixBastionInTree(decrypted));
-            lastDecryptedDataStr = encryptedData;
-            lastDecryptedKey = masterKey;
-            lastDecryptedResult = decrypted;
-            lastMigratedResult = migrated;
+      // Decrypt LS (incl. blobs "tiny"): árboles pequeños válidos no deben descartarse.
+      // Si el resultado es [] y el disco es mayor, preferir disco (evita wipe confirmado).
+      let lsNodes = null;
+      if (encryptedData) {
+        try {
+          let decrypted;
+          let migrated;
+          if (isCacheHit && lastMigratedResult) {
+            decrypted = lastDecryptedResult;
+            migrated = lastMigratedResult;
+          } else {
+            decrypted = isCacheHit
+              ? lastDecryptedResult
+              : await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+            if (decrypted) {
+              migrated = stripVaultRootNodes(migrateWallixBastionInTree(decrypted));
+              lastDecryptedDataStr = encryptedData;
+              lastDecryptedKey = masterKey;
+              lastDecryptedResult = decrypted;
+              lastMigratedResult = migrated;
+            }
           }
+          if (decrypted) {
+            lsNodes = stripVaultRootNodes(migrated);
+          } else {
+            console.error('[loadNodes] Decryption failed');
+          }
+        } catch (e) {
+          console.error('[loadNodes] Decryption failed:', e?.message || e);
         }
-        if (decrypted) return stripVaultRootNodes(migrated);
-        console.error('[loadNodes] Decryption failed');
-        return getDefaultNodes();
       }
 
       if (window.electron?.appdata?.getVault) {
         try {
           const fromDisk = await window.electron.appdata.getVault('connections_encrypted');
-          if (fromDisk && !isTinyVaultPayload(fromDisk)) {
-            const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
-            if (wroteDisk.ok) {
-              const decryptedDisk = await secureStorage.decryptData(
-                JSON.parse(fromDisk),
-                masterKey
+          const lsEmpty = !Array.isArray(lsNodes) || lsNodes.length === 0;
+          const shouldUseDisk = fromDisk && (
+            !encryptedData
+            || fromDisk.length > encryptedData.length
+            || (lsEmpty && fromDisk.length > 0)
+          );
+          if (shouldUseDisk) {
+            const decryptedDisk = await secureStorage.decryptData(
+              JSON.parse(fromDisk),
+              masterKey
+            );
+            if (decryptedDisk) {
+              const migratedDisk = stripVaultRootNodes(
+                migrateWallixBastionInTree(decryptedDisk)
               );
-              if (decryptedDisk) {
-                const migratedDisk = stripVaultRootNodes(
-                  migrateWallixBastionInTree(decryptedDisk)
-                );
-                lastDecryptedDataStr = fromDisk;
-                lastDecryptedKey = masterKey;
-                lastDecryptedResult = decryptedDisk;
-                lastMigratedResult = migratedDisk;
-                return migratedDisk;
+              const diskNodes = Array.isArray(migratedDisk) ? migratedDisk : [];
+              // Disco con datos gana a LS vacío; disco mayor gana a LS smaller
+              if (diskNodes.length > 0 || !lsNodes || lsNodes.length === 0) {
+                const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
+                if (wroteDisk.ok) {
+                  lastDecryptedDataStr = fromDisk;
+                  lastDecryptedKey = masterKey;
+                  lastDecryptedResult = decryptedDisk;
+                  lastMigratedResult = migratedDisk;
+                }
+                return diskNodes;
               }
             }
           }
@@ -2282,6 +2300,8 @@ const App = () => {
           console.warn('[loadNodes] getVault connections falló:', e?.message || e);
         }
       }
+
+      if (lsNodes) return lsNodes;
 
       const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
       if (savedNodes) {
@@ -2422,8 +2442,8 @@ const App = () => {
   }, [loadNodes, masterKey, visibleVaultIds]);
 
   // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN Y SYNC)
-  // allowShrink: cambios locales de UI (borrados grandes p. ej. Wallix); el guard anti-wipe
-  // sigue activo en sync/hidratación remota.
+  // Sin allowShrink aquí: el guard anti-wipe debe actuar. allowShrink solo en
+  // borrados masivos intencionales (Wallix / import merge).
   useEffect(() => {
     const saveNodes = async () => {
       if (nodes.length === 0) return;
@@ -2454,11 +2474,12 @@ const App = () => {
 
       try {
         if (isMultiVaultEnabled()) {
+          // Sin allowShrink global: el guard anti-wipe debe bloquear Principal vacío.
+          // allowShrink solo en borrados masivos intencionales (Wallix / import merge).
           const saved = await savePartitionedConnectionTrees(
             nodes,
             masterKey,
-            secureStorage,
-            { allowShrink: true }
+            secureStorage
           );
           if (!saved.ok) {
             notifySaveRejected(saved.reason);
@@ -2483,9 +2504,7 @@ const App = () => {
         if (masterKey) {
           const encrypted = await secureStorage.encryptData(flat, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
-          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr, {
-            allowShrink: true
-          });
+          const wrote = setVaultEncryptedItem('connections_encrypted', encryptedStr);
           if (!wrote.ok) {
             notifySaveRejected(wrote.reason);
             return;
