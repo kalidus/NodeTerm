@@ -39,6 +39,8 @@ const SidebarAppearanceMenu = ({
   explorerFontColor,
   setExplorerFontColor,
   tooltip = 'Apariencia del árbol',
+  panelId = 'sidebar_appearance_panel',
+  overlayZIndex = 10001,
 }) => {
   const panelRef = useRef(null);
   const [settingsView, setSettingsView] = useState('choice');
@@ -80,10 +82,10 @@ const SidebarAppearanceMenu = ({
 
       <OverlayPanel
         ref={panelRef}
-        id="sidebar_appearance_panel"
+        id={panelId}
         style={{
           width: '280px',
-          zIndex: 10001,
+          zIndex: overlayZIndex,
           marginTop: '5px'
         }}
         className="app-surface app-surface-lg glass-panel tree-theme-overlay-fix"

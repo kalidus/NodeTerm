@@ -412,7 +412,8 @@ const DocumentsSidebar = ({
   onShowExportDialog,
   onShowImportExportDialog,
   onShowImportWizard,
-  hideHeader = false
+  hideHeader = false,
+  onSessionOpened
 }) => {
   const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
@@ -667,6 +668,7 @@ const DocumentsSidebar = ({
       window.dispatchEvent(new CustomEvent('open-library-file-tab', {
         detail: { key: node.key, label: node.label, data: node.data, mode }
       }));
+      onSessionOpened?.();
       return;
     }
     if (getHomeTabActive() && mode === 'reuse') {
@@ -677,6 +679,7 @@ const DocumentsSidebar = ({
           data: node.data
         }
       }));
+      onSessionOpened?.();
       return;
     }
     window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -687,7 +690,8 @@ const DocumentsSidebar = ({
         mode
       }
     }));
-  }, []);
+    onSessionOpened?.();
+  }, [onSessionOpened]);
 
   const activateNotesItem = useCallback((node, mode = 'reuse') => {
     if (!node) return;
@@ -784,8 +788,9 @@ const DocumentsSidebar = ({
           mode: 'reuse'
         }
       }));
+      onSessionOpened?.();
     }, 50);
-  }, []);
+  }, [onSessionOpened]);
 
   // Elimina una nota del contenedor de notas rápidas y la mueve a la papelera
   const deleteQuickNote = useCallback((noteNode) => {
@@ -2046,10 +2051,11 @@ const DocumentsSidebar = ({
               mode: 'reuse'
             }
           }));
+          onSessionOpened?.();
         }
       }, 50);
     }
-  }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails, createNewQuickNote]);
+  }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails, createNewQuickNote, onSessionOpened]);
 
   const handleDeleteNoteInPanel = useCallback((noteNode) => {
     if (isQuickNoteSelected) {

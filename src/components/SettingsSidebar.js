@@ -107,7 +107,8 @@ const SettingsSidebar = ({
   explorerFont,
   explorerFontSize = 14,
   treeTheme = 'cursorCompact',
-  explorerFontColor
+  explorerFontColor,
+  onSessionOpened
 }) => {
   const { t } = useTranslation('settings');
 
@@ -185,7 +186,8 @@ const SettingsSidebar = ({
     window.dispatchEvent(new CustomEvent('open-settings-tab', {
       detail: { mainTab, subTab }
     }));
-  }, []);
+    onSessionOpened?.();
+  }, [onSessionOpened]);
 
   const resolvedSections = useMemo(() => {
     return SETTINGS_SECTIONS.map((section, index) => ({

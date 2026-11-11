@@ -9,6 +9,9 @@ import {
 import { SiAnthropic, SiDebian, SiDocker, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from '../components/AIClientBrandIcon';
 import LauncherQuickActions from '../components/home/LauncherQuickActions';
+import LauncherEmbeddedSidebar from '../components/home/LauncherEmbeddedSidebar';
+import { STORAGE_KEYS } from '../utils/constants';
+import { LAUNCHER_SESSION_OPENED_EVENT } from '../utils/launcherSidebarBridge';
 import {
   buildDefaultTerminalOptions,
   setDefaultLocalTerminal as persistDefaultLocalTerminal
@@ -18,12 +21,81 @@ import { openAppearanceQuickPanel } from '../utils/appearanceQuickPanel';
 
 const LAUNCHER_PANEL_WIDTH = 820;
 const LAUNCHER_PANEL_MARGIN = 12;
+const LAUNCHER_SIDEBAR_WIDTH = 340;
+
+const LAUNCHER_OVERLAY_SELECTOR = [
+  '.p-dialog',
+  '.p-dialog-mask',
+  '.p-component-overlay',
+  '.p-menu',
+  '.p-contextmenu',
+  '.p-overlaypanel',
+  '.p-dropdown-panel',
+  '.p-connected-overlay',
+  '.p-sidebar',
+  '.p-confirm-dialog',
+  '.p-tooltip',
+  '.p-toast',
+  '.p-colorpicker-panel',
+  '.p-datepicker',
+  '.p-cascadeselect-panel',
+  '.p-multiselect-panel',
+  '.p-autocomplete-panel',
+  '.app-menu-surface',
+  '.app-context-menu-backdrop',
+  '.app-dialog-portal',
+  '.app-dialog-portal-mask',
+  '.folder-dialog',
+  '[role="dialog"]',
+  '[data-pc-section="mask"]'
+].join(',');
+
+const readLauncherSidebarOpen = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN);
+    if (raw === null) return true;
+    return raw === 'true';
+  } catch {
+    return true;
+  }
+};
+
+const writeLauncherSidebarOpen = (open) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN, open ? 'true' : 'false');
+  } catch {
+    /* ignore */
+  }
+};
+
+const launcherPanelWidthFor = (panel) => {
+  const sidebarOpen = panel?.dataset?.sidebarOpen === '1';
+  const preferred = LAUNCHER_PANEL_WIDTH + (sidebarOpen ? LAUNCHER_SIDEBAR_WIDTH : 0);
+  return Math.min(preferred, window.innerWidth - LAUNCHER_PANEL_MARGIN * 2);
+};
+
+const isLauncherOverlayTarget = (target) => {
+  const element = target instanceof Element ? target : target?.parentElement;
+  if (!element || typeof element.closest !== 'function') return false;
+  return Boolean(element.closest(LAUNCHER_OVERLAY_SELECTOR));
+};
+
+const unmountLauncherRoot = (panel, key) => {
+  const root = panel?.[key];
+  if (!root) return;
+  try {
+    root.unmount();
+  } catch {
+    /* noop */
+  }
+  panel[key] = null;
+};
 
 const positionLauncherPanel = (panel, triggerRect) => {
   if (!panel || !triggerRect) return;
 
   const margin = LAUNCHER_PANEL_MARGIN;
-  const maxWidth = Math.min(LAUNCHER_PANEL_WIDTH, window.innerWidth - margin * 2);
+  const maxWidth = launcherPanelWidthFor(panel);
   panel.style.width = `${maxWidth}px`;
 
   const measured = panel.getBoundingClientRect();
@@ -217,14 +289,8 @@ export function useTabBarChrome({
         if (typeof existingPanel._onResize === 'function') {
           window.removeEventListener('resize', existingPanel._onResize);
         }
-        if (existingPanel._actionsRoot) {
-          try {
-            existingPanel._actionsRoot.unmount();
-          } catch {
-            /* noop */
-          }
-          existingPanel._actionsRoot = null;
-        }
+        unmountLauncherRoot(existingPanel, '_actionsRoot');
+        unmountLauncherRoot(existingPanel, '_sidebarRoot');
         const roots = existingPanel._launcherIconRoots;
         if (Array.isArray(roots)) {
           roots.forEach((r) => {
@@ -267,7 +333,11 @@ export function useTabBarChrome({
         });
         panel._launcherIconRoots = [];
       };
+      let disposed = false;
+      let handleLauncherSessionOpened = () => {};
       const disposePanel = () => {
+        if (disposed) return;
+        disposed = true;
         if (panel._positionRaf) {
           cancelAnimationFrame(panel._positionRaf);
           panel._positionRaf = 0;
@@ -276,16 +346,11 @@ export function useTabBarChrome({
           window.removeEventListener('resize', panel._onResize);
           panel._onResize = null;
         }
-        if (panel._actionsRoot) {
-          try {
-            panel._actionsRoot.unmount();
-          } catch {
-            /* noop */
-          }
-          panel._actionsRoot = null;
-        }
+        unmountLauncherRoot(panel, '_actionsRoot');
+        unmountLauncherRoot(panel, '_sidebarRoot');
         unmountLauncherIconRoots();
         document.removeEventListener('click', handleOutsideClick);
+        window.removeEventListener(LAUNCHER_SESSION_OPENED_EVENT, handleLauncherSessionOpened);
         if (panel._launcherStyleEl?.parentNode) {
           panel._launcherStyleEl.parentNode.removeChild(panel._launcherStyleEl);
         }
@@ -345,13 +410,17 @@ export function useTabBarChrome({
       document.head.appendChild(launcherStyleEl);
       panel._launcherStyleEl = launcherStyleEl;
 
-      const launcherPanelWidth = Math.min(LAUNCHER_PANEL_WIDTH, window.innerWidth - LAUNCHER_PANEL_MARGIN * 2);
+      const sidebarStartsOpen = readLauncherSidebarOpen();
+      panel.dataset.sidebarOpen = sidebarStartsOpen ? '1' : '0';
+      const launcherPanelWidth = launcherPanelWidthFor(panel);
       panel.style.cssText = `
         position: fixed;
         z-index: 10020;
         width: ${launcherPanelWidth}px;
         max-height: min(78vh, 860px);
-        overflow: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
         font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
         color: ${theme.ctxText || '#e2f8ff'};
         background: ${theme.ctxBg || 'rgba(6, 8, 18, 0.97)'};
@@ -360,7 +429,7 @@ export function useTabBarChrome({
         border: 1px solid ${theme.ctxBorder || 'rgba(0, 243, 255, 0.45)'};
         border-radius: 8px;
         box-shadow: ${theme.ctxShadow || '0 0 40px rgba(0, 243, 255, 0.12)'};
-        padding: 12px 12px 10px 12px;
+        padding: 0;
       `;
 
       // Añadir scanlines sutiles solo si el fondo es oscuro
@@ -380,6 +449,8 @@ export function useTabBarChrome({
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 10px;
+        padding: 12px 12px 0 12px;
+        flex-shrink: 0;
       `;
 
       const title = document.createElement('div');
@@ -447,13 +518,80 @@ export function useTabBarChrome({
 
       defaultWrap.appendChild(defaultLabel);
       defaultWrap.appendChild(defaultSelect);
-      header.appendChild(title);
+
+      const headerLeft = document.createElement('div');
+      headerLeft.style.cssText = 'display:flex; align-items:center; gap:10px; min-width:0;';
+
+      const sidebarToggle = document.createElement('button');
+      sidebarToggle.type = 'button';
+      sidebarToggle.className = 'launcher-sidebar-toggle';
+      sidebarToggle.title = 'Mostrar u ocultar la sidebar';
+      sidebarToggle.setAttribute('aria-label', 'Mostrar u ocultar la sidebar');
+
+      const sidebarToggleIcon = document.createElement('i');
+      sidebarToggleIcon.className = 'pi pi-bars';
+      sidebarToggleIcon.setAttribute('aria-hidden', 'true');
+      const sidebarToggleLabel = document.createElement('span');
+      sidebarToggleLabel.textContent = 'SIDEBAR';
+      sidebarToggle.appendChild(sidebarToggleIcon);
+      sidebarToggle.appendChild(sidebarToggleLabel);
+
+      headerLeft.appendChild(title);
+      headerLeft.appendChild(sidebarToggle);
+      header.appendChild(headerLeft);
       header.appendChild(defaultWrap);
       panel.appendChild(header);
 
+      const body = document.createElement('div');
+      body.className = 'launcher-panel-body';
+
+      const sidebarColumn = document.createElement('div');
+      sidebarColumn.className = 'launcher-sidebar-column';
+
+      const mainColumn = document.createElement('div');
+      mainColumn.className = 'launcher-main-column';
+
+      body.appendChild(sidebarColumn);
+      body.appendChild(mainColumn);
+      panel.appendChild(body);
+
+      const syncSidebarToggle = (open) => {
+        sidebarToggle.classList.toggle('is-active', open);
+        sidebarToggle.setAttribute('aria-pressed', open ? 'true' : 'false');
+        sidebarColumn.hidden = !open;
+        panel.dataset.sidebarOpen = open ? '1' : '0';
+        panel.classList.toggle('launcher-panel--with-sidebar', open);
+        panel.style.height = open ? 'min(78vh, 860px)' : 'auto';
+      };
+
+      const mountLauncherSidebar = () => {
+        if (panel._sidebarRoot) return;
+        const sidebarRoot = createRoot(sidebarColumn);
+        panel._sidebarRoot = sidebarRoot;
+        sidebarRoot.render(
+          <LauncherEmbeddedSidebar onSessionOpened={() => setTimeout(() => disposePanel(), 0)} />
+        );
+      };
+
+      const setLauncherSidebarOpen = (open, { persist = true } = {}) => {
+        if (persist) writeLauncherSidebarOpen(open);
+        syncSidebarToggle(open);
+        if (open) mountLauncherSidebar();
+        else unmountLauncherRoot(panel, '_sidebarRoot');
+        positionLauncherPanel(panel, dropdownButton.getBoundingClientRect());
+      };
+
+      sidebarToggle.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        setLauncherSidebarOpen(panel.dataset.sidebarOpen !== '1');
+      });
+
+      setLauncherSidebarOpen(sidebarStartsOpen, { persist: false });
+
       const actionsHost = document.createElement('div');
       actionsHost.className = 'launcher-actions-host';
-      panel.appendChild(actionsHost);
+      mainColumn.appendChild(actionsHost);
       const actionsRoot = createRoot(actionsHost);
       panel._actionsRoot = actionsRoot;
       actionsRoot.render(
@@ -464,7 +602,7 @@ export function useTabBarChrome({
       );
 
       const contentHost = document.createElement('div');
-      panel.appendChild(contentHost);
+      mainColumn.appendChild(contentHost);
 
       const getCardMeta = (groupLabel, itemLabel) => {
         const g = (groupLabel || '').toLowerCase();
@@ -773,8 +911,14 @@ export function useTabBarChrome({
 
       renderGroups('');
 
+      handleLauncherSessionOpened = () => {
+        setTimeout(() => disposePanel(), 0);
+      };
+      window.addEventListener(LAUNCHER_SESSION_OPENED_EVENT, handleLauncherSessionOpened);
+
       const handleOutsideClick = (ev) => {
         if (defaultWrap.contains(ev.target) || ev.target === defaultSelect) return;
+        if (isLauncherOverlayTarget(ev.target)) return;
         if (!panel.contains(ev.target) && !dropdownButton.contains(ev.target)) {
           disposePanel();
         }

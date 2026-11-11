@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   HOME_TAB_DOCK_PINS: 'nodeterm_home_dock_pins',
   HOME_TAB_JUMP_PINS: 'nodeterm_home_jump_pins',
   LAUNCHER_ACTION_PINS: 'nodeterm_launcher_action_pins',
+  LAUNCHER_SIDEBAR_OPEN: 'nodeterm_launcher_sidebar_open',
   TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
   HOME_TAB_FRAME_STYLE: 'nodeterm_home_frame_style',
   HOME_TAB_HIDE_NON_TERMINAL_HEADERS: 'homeTab_hideNonTerminalHeaders',

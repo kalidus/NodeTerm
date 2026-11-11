@@ -155,8 +155,8 @@ const Sidebar = React.memo(({
   isLoading = false,
   nodes,
   setNodes,
-  sidebarCollapsed,
-  setSidebarCollapsed,
+  sidebarCollapsed: sidebarCollapsedProp,
+  setSidebarCollapsed: setSidebarCollapsedProp,
   allExpanded,
   toggleExpandAll,
   expandedKeys,
@@ -220,11 +220,16 @@ const Sidebar = React.memo(({
   openSessionNodeKeys = new Set(),
   isTransitioningSidebar = false,
   onSyncActiveEditTab,
-  activeSshSession = null
+  activeSshSession = null,
+  embedded = false,
+  onSessionOpened
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
   const sectionAppearance = useSidebarSectionAppearance({ treeTheme, iconTheme });
+  const noopSetSidebarCollapsed = useCallback(() => {}, []);
+  const sidebarCollapsed = embedded ? false : sidebarCollapsedProp;
+  const setSidebarCollapsed = embedded ? noopSetSidebarCollapsed : setSidebarCollapsedProp;
 
   // Limpiar caché de iconos cuando cambian temas o tamaños de iconos para evitar fugas de memoria o iconos obsoletos
   useEffect(() => {
@@ -660,8 +665,10 @@ const Sidebar = React.memo(({
     }
   }, [nodes, selectedNodeKey]); // Solo depender de nodes y selectedNodeKey, no de selectedNodeForDetails
 
-  // Escuchar evento para cambiar a vista de conexiones
+  // Escuchar evento para cambiar a vista de conexiones.
+  // La copia del launcher no se registra: la sidebar de la app ya reacciona.
   useEffect(() => {
+    if (embedded) return undefined;
     const handleSwitchToConnections = () => {
       setViewMode('connections');
     };
@@ -675,6 +682,7 @@ const Sidebar = React.memo(({
 
   // Mantener el panel de configuración visible al elegir una sección
   useEffect(() => {
+    if (embedded) return undefined;
     const handleOpenSettingsTab = () => {
       setViewMode('settings');
       setSidebarCollapsed(false);
@@ -688,6 +696,7 @@ const Sidebar = React.memo(({
 
   // Listener simple para mostrar explorador local en sidebar
   useEffect(() => {
+    if (embedded) return undefined;
     const handleShowLocalExplorer = (event) => {
       const { path } = event?.detail || {};
       if (!path) return;
@@ -1079,6 +1088,7 @@ const Sidebar = React.memo(({
   const pendingFolderFavoriteIdRef = useRef(null);
 
   useEffect(() => {
+    if (embedded) return undefined;
     const onOpenFolderFavorite = (event) => {
       const id = event?.detail?.id;
       if (!id) return;
@@ -1399,6 +1409,7 @@ const Sidebar = React.memo(({
 
   // Sondeo de cambios en fuentes vinculadas (renderer-only, eficiente con timestamp)
   useEffect(() => {
+    if (embedded) return undefined;
     const KEY = 'IMPORT_SOURCES';
     // Anti-rebote en memoria (no escribe en localStorage en cada tick)
     const notifiedByKey = new Map();
@@ -1786,6 +1797,7 @@ const Sidebar = React.memo(({
 
   // Eventos globales para acciones de acceso rápido desde Home
   useEffect(() => {
+    if (embedded) return undefined;
     const handleOpenPasswords = () => setViewMode('passwords');
     const handleOpenDocuments = () => {
       setViewMode('documents');
@@ -1810,6 +1822,7 @@ const Sidebar = React.memo(({
 
   // Escuchar evento para abrir el diálogo de crear grupo desde la vista de passwords
   useEffect(() => {
+    if (embedded) return undefined;
     const handleOpenCreateGroupDialog = () => {
       setShowCreateGroupDialog(true);
     };
@@ -1819,8 +1832,10 @@ const Sidebar = React.memo(({
     };
   }, [setShowCreateGroupDialog]);
 
-  // Registrar callbacks para el menú contextual
+  // Registrar callbacks para el menú contextual.
+  // La copia del launcher no pisa el ref: los diálogos siguen viviendo en la sidebar de la app.
   useEffect(() => {
+    if (embedded) return undefined;
     if (sidebarCallbacksRef) {
       // Preservar callbacks existentes y agregar/actualizar los del sidebar
       sidebarCallbacksRef.current = {
@@ -2282,6 +2297,10 @@ const Sidebar = React.memo(({
     };
   }, [explorerFont, explorerFontSize]);
 
+  const notifySessionOpened = useCallback(() => {
+    if (typeof onSessionOpened === 'function') onSessionOpened();
+  }, [onSessionOpened]);
+
   // Función interna para el menú contextual del área del árbol
   // const onTreeAreaContextMenu = (event) => {
   //   event.preventDefault();
@@ -2549,14 +2568,19 @@ const Sidebar = React.memo(({
           }
           if (isSSH && onOpenSSHConnection) {
             onOpenSSHConnection(actionNode, nodes);
+            notifySessionOpened();
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(actionNode);
+            notifySessionOpened();
           } else if (isVNC && onOpenVncConnection) {
             onOpenVncConnection(actionNode, nodes);
+            notifySessionOpened();
           } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
             sidebarCallbacksRef.current.openFileConnection(actionNode, nodes);
+            notifySessionOpened();
           } else if (isSSHTunnel && sidebarCallbacksRef?.current?.openSSHTunnel) {
             sidebarCallbacksRef.current.openSSHTunnel(actionNode, nodes);
+            notifySessionOpened();
           } else if (actionNode.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(actionNode.data.type)) {
             const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
             const payload = {
@@ -2569,6 +2593,7 @@ const Sidebar = React.memo(({
               id: openKey
             };
             window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
+            notifySessionOpened();
           } else if (actionNode.data && actionNode.data.type === 'library-file') {
             const openKey = node.sourceKey || actionNode.key;
             window.dispatchEvent(new CustomEvent('open-library-file-tab', {
@@ -2578,6 +2603,7 @@ const Sidebar = React.memo(({
                 data: actionNode.data
               }
             }));
+            notifySessionOpened();
           } else if (actionNode.data && ['document', 'quick-note'].includes(actionNode.data.type)) {
             const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
             window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -2587,6 +2613,7 @@ const Sidebar = React.memo(({
                 data: actionNode.data
               }
             }));
+            notifySessionOpened();
           }
         }}
         style={{
@@ -2978,16 +3005,22 @@ const Sidebar = React.memo(({
     }
 
     const type = String(actionNode?.data?.type || '').toLowerCase();
+    let openedSession = false;
     if (type === 'ssh' && onOpenSSHConnection) {
       onOpenSSHConnection(actionNode, nodes);
+      openedSession = true;
     } else if ((type === 'rdp' || type === 'rdp-guacamole') && sidebarCallbacksRef?.current?.connectRDP) {
       sidebarCallbacksRef.current.connectRDP(actionNode);
+      openedSession = true;
     } else if ((type === 'vnc' || type === 'vnc-guacamole') && onOpenVncConnection) {
       onOpenVncConnection(actionNode, nodes);
+      openedSession = true;
     } else if (['sftp', 'ftp', 'scp'].includes(type) && sidebarCallbacksRef?.current?.openFileConnection) {
       sidebarCallbacksRef.current.openFileConnection(actionNode, nodes);
+      openedSession = true;
     } else if (type === 'ssh-tunnel' && sidebarCallbacksRef?.current?.openSSHTunnel) {
       sidebarCallbacksRef.current.openSSHTunnel(actionNode, nodes);
+      openedSession = true;
     } else if (actionNode?.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(type)) {
       const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
       window.dispatchEvent(new CustomEvent('open-password-tab', {
@@ -3001,6 +3034,7 @@ const Sidebar = React.memo(({
           id: openKey
         }
       }));
+      openedSession = true;
     } else if (type === 'library-file') {
       const openKey = node.sourceKey || actionNode.data?.id || actionNode.key;
       window.dispatchEvent(new CustomEvent('open-library-file-tab', {
@@ -3010,6 +3044,7 @@ const Sidebar = React.memo(({
           data: actionNode.data
         }
       }));
+      openedSession = true;
     } else if (actionNode?.data && ['document', 'quick-note'].includes(type)) {
       const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
       window.dispatchEvent(new CustomEvent('open-document-tab', {
@@ -3019,8 +3054,10 @@ const Sidebar = React.memo(({
           data: actionNode.data
         }
       }));
+      openedSession = true;
     }
-  }, [displayNodes, nodes, onOpenSSHConnection, onOpenVncConnection, onSyncActiveEditTab, sidebarCallbacksRef, setSelectedNodeKey]);
+    if (openedSession) notifySessionOpened();
+  }, [displayNodes, nodes, notifySessionOpened, onOpenSSHConnection, onOpenVncConnection, onSyncActiveEditTab, sidebarCallbacksRef, setSelectedNodeKey]);
 
   const onConnectionsBrowserContextMenu = useCallback((event, node) => {
     if (onNodeContextMenu) onNodeContextMenu(event, favoriteContextNode(node, nodes));
@@ -3247,6 +3284,8 @@ const Sidebar = React.memo(({
               iconSize={iconSize}
               setIconSize={setIconSize}
               tooltip={`Apariencia de ${SIDEBAR_SECTION_LABELS[activeTab] || 'la sección'}`}
+              panelId={embedded ? 'launcher-sidebar-appearance' : 'sidebar_appearance_panel'}
+              overlayZIndex={embedded ? 10050 : 10001}
             />
           )}
         </div>
@@ -3513,6 +3552,7 @@ const Sidebar = React.memo(({
             showFavoritesView={showFavoritesView}
             onToggleFavoritesView={toggleFavoritesView}
             hideHeader={true}
+            onSessionOpened={notifySessionOpened}
           />
         </Suspense>
       </div>
@@ -3545,6 +3585,7 @@ const Sidebar = React.memo(({
             onShowImportExportDialog={onShowImportExportDialog}
             onShowImportWizard={onShowImportWizard}
             hideHeader={true}
+            onSessionOpened={notifySessionOpened}
           />
         </Suspense>
       </div>
@@ -3593,6 +3634,7 @@ const Sidebar = React.memo(({
             explorerFontSize={explorerFontSize}
             treeTheme={toolsAppearance.treeTheme}
             explorerFontColor={explorerFontColor}
+            onSessionOpened={notifySessionOpened}
           />
         </Suspense>
         </div>
@@ -3610,6 +3652,7 @@ const Sidebar = React.memo(({
             explorerFontSize={explorerFontSize}
             treeTheme={settingsAppearance.treeTheme}
             explorerFontColor={explorerFontColor}
+            onSessionOpened={notifySessionOpened}
           />
         </Suspense>
         </div>
@@ -3668,7 +3711,8 @@ const Sidebar = React.memo(({
 
   const handleOpenAIClient = useCallback((clientId) => {
     openAIClientById(clientId);
-  }, []);
+    notifySessionOpened();
+  }, [notifySessionOpened]);
 
   const activeIconRailSection = (() => {
     if (sidebarCollapsed) return null;
@@ -3686,7 +3730,7 @@ const Sidebar = React.memo(({
   return (
     <div
       ref={sidebarRef}
-      className={`sidebar-container sidebar-root${isFirstExpandNoTransition ? ' sidebar-no-transition' : ''}`}
+      className={`sidebar-container sidebar-root${embedded ? ' sidebar-container--launcher' : ''}${isFirstExpandNoTransition ? ' sidebar-no-transition' : ''}`}
       style={{
         padding: 0,
         height: '100%',
@@ -3713,6 +3757,7 @@ const Sidebar = React.memo(({
         sessionActionIconTheme={sessionActionIconTheme}
         aiClientsEnabled={aiClientsEnabled}
         onOpenAIClient={handleOpenAIClient}
+        onIntegratedBrowserOpen={notifySessionOpened}
         viewMode={viewMode}
         onShowImportDialog={onShowImportDialog || setShowImportDialog}
         onShowExportDialog={onShowExportDialog}

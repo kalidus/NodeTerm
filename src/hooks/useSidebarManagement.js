@@ -10,6 +10,7 @@ import { setVaultEncryptedItem } from '../shared/vault-write';
 import { findVaultIdForNode, isVaultRoot } from '../shared/vault-connection-trees';
 import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
 import { getActiveConnectionVaultId } from '../utils/activeConnectionVault';
+import { notifyLauncherSessionOpened } from '../utils/launcherSidebarBridge';
 
 function normalizeTreeNodes(inputNodes) {
   const seenKeys = new Set();
@@ -709,6 +710,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Abrir Terminal',
         icon: 'pi pi-desktop',
         command: () => {
+          notifyLauncherSessionOpened();
           if (activeGroupId !== null) {
             const currentGroupKey = activeGroupId || 'no-group';
             setGroupActiveIndices(prev => ({
@@ -767,7 +769,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       items.push({
         label: 'Abrir Explorador de Archivos',
         icon: 'pi pi-folder-open',
-        command: () => openFileExplorer(node)
+        command: () => {
+          notifyLauncherSessionOpened();
+          openFileExplorer(node);
+        }
       });
 
       // Opción de auditoría de sesiones
@@ -899,7 +904,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               return {
                 label: `${tab.label} (${termCount}/${MAX_SPLIT_PANES})`,
                 icon: 'pi pi-window-maximize',
-                command: () => openInSplit(node, tab, 'vertical')
+                command: () => {
+                  notifyLauncherSessionOpened();
+                  openInSplit(node, tab, 'vertical');
+                }
               };
             }
 
@@ -912,12 +920,18 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
                   {
                     label: 'Dividir vertical',
                     icon: 'pi pi-arrows-v',
-                    command: () => openInSplit(node, tab, 'vertical')
+                    command: () => {
+                      notifyLauncherSessionOpened();
+                      openInSplit(node, tab, 'vertical');
+                    }
                   },
                   {
                     label: 'Dividir horizontal',
                     icon: 'pi pi-arrows-h',
-                    command: () => openInSplit(node, tab, 'horizontal')
+                    command: () => {
+                      notifyLauncherSessionOpened();
+                      openInSplit(node, tab, 'horizontal');
+                    }
                   }
                 ]
               };
@@ -931,12 +945,18 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
                 {
                   label: 'Dividir vertical',
                   icon: 'pi pi-arrows-v',
-                  command: () => openInSplit(node, tab, 'vertical')
+                  command: () => {
+                    notifyLauncherSessionOpened();
+                    openInSplit(node, tab, 'vertical');
+                  }
                 },
                 {
                   label: 'Dividir horizontal',
                   icon: 'pi pi-arrows-h',
-                  command: () => openInSplit(node, tab, 'horizontal')
+                  command: () => {
+                    notifyLauncherSessionOpened();
+                    openInSplit(node, tab, 'horizontal');
+                  }
                 }
               ]
             };
@@ -990,6 +1010,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Análisis forense',
         icon: 'pi pi-search',
         command: () => {
+          notifyLauncherSessionOpened();
           const d = node.data || {};
           // Se envía solo host/puerto/usuario: las credenciales se piden en la herramienta
           window.dispatchEvent(new CustomEvent('open-forensics-tab', {
@@ -1027,7 +1048,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       items.push({
         label: 'Conectar RDP',
         icon: 'pi pi-desktop',
-        command: () => onOpenRdpConnection(node, nodes)
+        command: () => {
+          notifyLauncherSessionOpened();
+          onOpenRdpConnection(node, nodes);
+        }
       });
       items.push({
         label: 'Agregar/Quitar de Favoritos',
@@ -1113,7 +1137,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       items.push({
         label: 'Conectar VNC',
         icon: 'pi pi-desktop',
-        command: () => onOpenVncConnection(node, nodes)
+        command: () => {
+          notifyLauncherSessionOpened();
+          onOpenVncConnection(node, nodes);
+        }
       });
       items.push({
         label: 'Agregar/Quitar de Favoritos',
@@ -1202,6 +1229,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: `Abrir Explorador ${protocolLabel}`,
         icon: 'pi pi-folder-open',
         command: () => {
+          notifyLauncherSessionOpened();
           if (activeGroupId !== null) {
             const currentGroupKey = activeGroupId || 'no-group';
             setGroupActiveIndices(prev => ({
@@ -1301,6 +1329,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Abrir Túnel',
         icon: 'pi pi-share-alt',
         command: () => {
+          notifyLauncherSessionOpened();
           if (sidebarCallbacksRef.current?.openSSHTunnel) {
             sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
           }

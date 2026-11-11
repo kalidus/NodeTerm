@@ -1932,4 +1932,97 @@ body.theme-transitioning .content-main {
   background: color-mix(in srgb, var(--primary-color, #3b82f6) 22%, transparent);
 }
 
+/* Sidebar embebida en el panel // LAUNCHER */
+#terminal-grid-launcher-panel .launcher-panel-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
+  min-width: 0;
+}
+
+#terminal-grid-launcher-panel.launcher-panel--with-sidebar .launcher-panel-body {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+#terminal-grid-launcher-panel .launcher-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  min-width: 200px;
+  max-width: 340px;
+  flex: 0 1 340px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ui-sidebar-bg, #0a0f1f);
+  border-right: 1px solid var(--ui-context-border, rgba(0, 243, 255, 0.28));
+}
+
+#terminal-grid-launcher-panel .launcher-sidebar-column[hidden] {
+  display: none !important;
+}
+
+#terminal-grid-launcher-panel .launcher-main-column {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+  padding: 0 12px 10px 12px;
+}
+
+#terminal-grid-launcher-panel:not(.launcher-panel--with-sidebar) .launcher-main-column {
+  max-height: calc(min(78vh, 860px) - 48px);
+}
+
+#terminal-grid-launcher-panel .sidebar-container--launcher {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  max-width: none;
+  font-family: var(--sidebar-font-family, var(--ui-font-family, inherit));
+}
+
+#terminal-grid-launcher-panel .launcher-sidebar-toggle {
+  appearance: none;
+  border: 1px solid var(--ui-context-border, rgba(0, 243, 255, 0.45));
+  background: transparent;
+  color: var(--ui-button-primary, #00f3ff);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#terminal-grid-launcher-panel .launcher-sidebar-toggle.is-active {
+  background: rgba(0, 243, 255, 0.12);
+  border-color: var(--ui-button-primary, #00f3ff);
+}
+
+#terminal-grid-launcher-panel .launcher-sidebar-toggle i {
+  font-size: 10px;
+}
+
+body:has(#terminal-grid-launcher-panel) .p-dialog-mask,
+body:has(#terminal-grid-launcher-panel) .p-component-overlay,
+body:has(#terminal-grid-launcher-panel) .p-dropdown-panel,
+body:has(#terminal-grid-launcher-panel) .p-overlaypanel,
+body:has(#terminal-grid-launcher-panel) .p-colorpicker-panel,
+body:has(#terminal-grid-launcher-panel) .p-menu,
+body:has(#terminal-grid-launcher-panel) .p-connected-overlay,
+body:has(#terminal-grid-launcher-panel) .p-datepicker {
+  z-index: 10040 !important;
+}
+
 

@@ -39,6 +39,7 @@ import {
   touchMruKeys
 } from '../utils/tabHibernation';
 import { useTabBarChrome } from '../hooks/useTabBarChrome';
+import { setLauncherSidebarProps } from '../utils/launcherSidebarBridge';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
@@ -1206,6 +1207,16 @@ const MainContentArea = ({
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    setLauncherSidebarProps({
+      ...memoizedSidebarProps,
+      onOpenFileExplorer: handleSidebarOpenFileExplorer,
+      isTransitioningSidebar: false
+    });
+  }, [memoizedSidebarProps, handleSidebarOpenFileExplorer]);
+
+  useEffect(() => () => setLauncherSidebarProps(null), []);
 
   useTabBarChrome({
     tabsContainerRef,

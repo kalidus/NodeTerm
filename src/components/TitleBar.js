@@ -616,7 +616,7 @@ const TitleBar = ({
         <div className="title-bar-action-group">
           <TitleBarIconButton
             title={sidebarCollapsed || !sidebarVisible ? 'Expandir sidebar' : 'Replegar sidebar'}
-            active={sidebarVisible && !sidebarCollapsed}
+            active={sidebarVisible && sidebarCollapsed}
             onClick={() => {
               setViewsPopoverOpen(false);
               // Si está oculta del todo, restaurar visibilidad (no solo el pliegue a IconRail)
@@ -631,7 +631,7 @@ const TitleBar = ({
           </TitleBarIconButton>
           <TitleBarIconButton
             title={tabBarCollapsed ? 'Mostrar barra de pestañas' : 'Ocultar barra de pestañas'}
-            active={!tabBarCollapsed}
+            active={tabBarCollapsed}
             onClick={() => {
               setViewsPopoverOpen(false);
               window.dispatchEvent(new CustomEvent('toggle-tabbar'));
@@ -641,7 +641,7 @@ const TitleBar = ({
           </TitleBarIconButton>
           <TitleBarIconButton
             title={sidebarVisible ? 'Ocultar sidebar' : 'Mostrar sidebar'}
-            active={sidebarVisible}
+            active={!sidebarVisible}
             onClick={() => {
               setViewsPopoverOpen(false);
               window.dispatchEvent(new CustomEvent('toggle-sidebar'));

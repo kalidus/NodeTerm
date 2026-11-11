@@ -109,7 +109,8 @@ const PasswordManagerSidebar = ({
   sessionActionIconTheme = 'modern',
   showFavoritesView = false,
   onToggleFavoritesView,
-  hideHeader = false
+  hideHeader = false,
+  onSessionOpened
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -1126,6 +1127,7 @@ const PasswordManagerSidebar = ({
       window.dispatchEvent(new CustomEvent('open-home-vault-secret', {
         detail: { key: node.key }
       }));
+      onSessionOpened?.();
       return;
     }
     const payload = {
@@ -1137,7 +1139,8 @@ const PasswordManagerSidebar = ({
       ...node.data
     };
     window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
-  }, []);
+    onSessionOpened?.();
+  }, [onSessionOpened]);
 
   const activateVaultItem = useCallback((node, mode = 'preview') => {
     if (!node) return;
@@ -1204,6 +1207,7 @@ const PasswordManagerSidebar = ({
       passwords: passwords
     };
     window.dispatchEvent(new CustomEvent('open-password-folder-tab', { detail: payload }));
+    onSessionOpened?.();
   };
 
   // Node template para el árbol de passwords - igual que la sidebar de conexiones
@@ -1612,6 +1616,7 @@ const PasswordManagerSidebar = ({
                         title: node.label
                       }
                     }));
+                    onSessionOpened?.();
                   } else {
                     showToast && showToast({
                       severity: 'warn',

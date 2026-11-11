@@ -44,7 +44,8 @@ const ToolsSidebar = ({
   explorerFont,
   explorerFontSize = 14,
   treeTheme = 'cursorCompact',
-  explorerFontColor
+  explorerFontColor,
+  onSessionOpened
 }) => {
   const [expandedKeys, setExpandedKeys] = useState(
     TOOL_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
@@ -223,10 +224,12 @@ const ToolsSidebar = ({
                   toolIcon: node.toolIcon
                 }
               }));
+              onSessionOpened?.();
               return;
             }
             if (onOpenTool) {
               onOpenTool(node.key, node.label, 'reuse');
+              onSessionOpened?.();
             }
           }, 250);
         }}
@@ -239,6 +242,7 @@ const ToolsSidebar = ({
           setSelectedToolKey(node.key);
           if (onOpenTool) {
             onOpenTool(node.key, node.label, 'new');
+            onSessionOpened?.();
           }
         }}
         className="flex align-items-center"
