@@ -231,44 +231,35 @@ const VaultSelector = ({
     appRegion: 'no-drag'
   };
 
-  const iconBtnStyle = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 22,
-    height: 22,
-    padding: 0,
-    border: 'none',
-    borderRadius: 4,
-    background: 'transparent',
-    color: 'inherit',
-    opacity: 0.7,
-    cursor: 'pointer',
-    flexShrink: 0
-  };
-
-  const renderCheckRow = (vaultId, title, icon, isLocked, canLock) => {
+  const renderCheckRow = (vaultId, title, isLocked, canLock) => {
     const checked = visibleSet.has(vaultId);
     const isEditing = renameId === vaultId;
+    const rowClass = [
+      'title-bar-vault-menu-row',
+      isEditing ? 'is-editing' : '',
+      isLocked ? 'is-locked' : ''
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <div
         key={vaultId}
         role="menuitemcheckbox"
         aria-checked={checked}
+        className={rowClass}
         onClick={() => {
           if (!isEditing) handleToggle(vaultId, checked);
         }}
-        style={{
-          ...itemStyle(checked && !isEditing),
-          cursor: isEditing ? 'default' : 'pointer'
-        }}
       >
-        {icon}
+        <span className="title-bar-vault-menu-glyph" aria-hidden>
+          <VaultSafeIcon size={16} />
+        </span>
 
         {isEditing ? (
           <input
             ref={renameInputRef}
+            className="title-bar-vault-menu-input"
             value={renameValue}
             disabled={renaming}
             onChange={(e) => setRenameValue(e.target.value)}
@@ -278,31 +269,9 @@ const VaultSelector = ({
               if (e.key === 'Enter') commitRename(e, vaultId);
               if (e.key === 'Escape') cancelRename(e);
             }}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              height: 22,
-              padding: '0 6px',
-              borderRadius: 4,
-              border: '1px solid var(--ui-context-border, rgba(255,255,255,0.2))',
-              background: 'var(--ui-dialog-bg, var(--ui-context-bg, #1e1e2e))',
-              color: 'inherit',
-              fontSize: 12,
-              outline: 'none'
-            }}
           />
         ) : (
-          <span
-            style={{
-              flex: 1,
-              textAlign: 'left',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {title}
-          </span>
+          <span className="title-bar-vault-menu-label">{title}</span>
         )}
 
         {isEditing ? (
@@ -313,9 +282,9 @@ const VaultSelector = ({
               aria-label="Guardar nombre"
               disabled={renaming || !String(renameValue || '').trim()}
               onClick={(e) => commitRename(e, vaultId)}
-              style={iconBtnStyle}
+              className="title-bar-vault-menu-icon-btn"
             >
-              <i className="pi pi-check" style={{ fontSize: 11 }} />
+              <i className="pi pi-check" />
             </button>
             <button
               type="button"
@@ -323,76 +292,58 @@ const VaultSelector = ({
               aria-label="Cancelar edición"
               disabled={renaming}
               onClick={cancelRename}
-              style={iconBtnStyle}
+              className="title-bar-vault-menu-icon-btn"
             >
-              <i className="pi pi-times" style={{ fontSize: 11 }} />
+              <i className="pi pi-times" />
             </button>
           </>
         ) : (
           <>
-            {canLock ? (
-              isLocked ? (
-                <button
-                  type="button"
-                  title="Desbloquear"
-                  aria-label={`Desbloquear ${title}`}
-                  onClick={(e) => handleUnlock(e, vaultId)}
-                  style={iconBtnStyle}
-                >
-                  <i className="pi pi-lock" style={{ fontSize: 11 }} />
-                </button>
-              ) : (
+            {canLock && isLocked ? (
+              <button
+                type="button"
+                title="Desbloquear"
+                aria-label={`Desbloquear ${title}`}
+                onClick={(e) => handleUnlock(e, vaultId)}
+                className="title-bar-vault-menu-icon-btn is-lock"
+              >
+                <i className="pi pi-lock" />
+              </button>
+            ) : null}
+            <span className="title-bar-vault-menu-hover-actions">
+              {canLock && !isLocked ? (
                 <button
                   type="button"
                   title="Bloquear"
                   aria-label={`Bloquear ${title}`}
                   onClick={(e) => handleLock(e, vaultId)}
-                  style={iconBtnStyle}
+                  className="title-bar-vault-menu-icon-btn"
                 >
-                  <i className="pi pi-unlock" style={{ fontSize: 11 }} />
+                  <i className="pi pi-unlock" />
                 </button>
-              )
-            ) : null}
-            <button
-              type="button"
-              title="Renombrar"
-              aria-label={`Renombrar ${title}`}
-              onClick={(e) => startRename(e, vaultId, title)}
-              style={iconBtnStyle}
-            >
-              <i className="pi pi-pencil" style={{ fontSize: 11 }} />
-            </button>
+              ) : null}
+              <button
+                type="button"
+                title="Renombrar"
+                aria-label={`Renombrar ${title}`}
+                onClick={(e) => startRename(e, vaultId, title)}
+                className="title-bar-vault-menu-icon-btn"
+              >
+                <i className="pi pi-pencil" />
+              </button>
+            </span>
           </>
         )}
 
         <span
           aria-hidden
-          style={{
-            width: 16,
-            height: 16,
-            borderRadius: 3,
-            border: checked
-              ? '1px solid transparent'
-              : '1px solid color-mix(in srgb, var(--ui-context-text, #cdd6f4) 35%, transparent)',
-            background: checked
-              ? 'var(--primary-color, #89b4fa)'
-              : 'transparent',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginLeft: 2
-          }}
+          className={
+            checked
+              ? 'title-bar-vault-menu-check is-on'
+              : 'title-bar-vault-menu-check'
+          }
         >
-          {checked ? (
-            <i
-              className="pi pi-check"
-              style={{
-                fontSize: 10,
-                color: 'var(--primary-color-text, #111)'
-              }}
-            />
-          ) : null}
+          {checked ? <i className="pi pi-check" /> : null}
         </span>
       </div>
     );
@@ -434,89 +385,36 @@ const VaultSelector = ({
           <div
             ref={menuRef}
             role="menu"
+            className="title-bar-vault-menu"
             style={{
-              position: 'fixed',
               top: menuPos.top,
               left: menuPos.left,
-              minWidth: 260,
-              maxWidth: 320,
-              background:
-                'var(--ui-context-bg, var(--ui-dialog-bg, #1e1e2e))',
-              border:
-                '1px solid var(--ui-context-border, rgba(255,255,255,0.14))',
-              borderRadius: 8,
-              boxShadow:
-                '0 8px 24px var(--ui-context-shadow, rgba(0,0,0,0.45))',
-              zIndex: 100000,
-              padding: 4,
-              color: 'var(--ui-context-text, #cdd6f4)',
               ...noDrag
             }}
           >
-            <div
-              style={{
-                padding: '6px 10px 4px',
-                fontSize: 10,
-                opacity: 0.55,
-                textTransform: 'uppercase',
-                letterSpacing: 0.4
-              }}
-            >
-              Visibles en el árbol
-            </div>
-
-            {renderCheckRow(
-              DEFAULT_VAULT_ID,
-              defaultVaultName,
-              <i
-                className="pi pi-home"
-                style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }}
-              />,
-              false,
-              false
-            )}
+            {renderCheckRow(DEFAULT_VAULT_ID, defaultVaultName, false, false)}
 
             {vaults.map((v) => {
               const isLocked = !vaultKeyring.isUnlocked(v.id);
-              return renderCheckRow(
-                v.id,
-                v.name,
-                isLocked ? (
-                  <i
-                    className="pi pi-lock"
-                    style={{ fontSize: 12, opacity: 0.9, flexShrink: 0 }}
-                  />
-                ) : (
-                  <span className="title-bar-vault-menu-safe-icon" aria-hidden>
-                    <VaultSafeIcon size={12} />
-                  </span>
-                ),
-                isLocked,
-                true
-              );
+              return renderCheckRow(v.id, v.name, isLocked, true);
             })}
 
-            <div
-              style={{
-                height: 1,
-                background: 'var(--ui-context-border, rgba(255,255,255,0.14))',
-                margin: '4px 0'
-              }}
-            />
+            <div className="title-bar-vault-menu-sep" />
             <button
               type="button"
+              className="title-bar-vault-menu-row title-bar-vault-menu-action"
               onClick={() => {
                 setOpen(false);
                 setRenameId(null);
                 onRequestCreate?.();
               }}
-              style={itemStyle(false)}
             >
               <i className="pi pi-plus" />
-              <span style={{ flex: 1, textAlign: 'left' }}>Nuevo vault…</span>
+              <span>Nuevo vault…</span>
             </button>
             <button
               type="button"
+              className="title-bar-vault-menu-row title-bar-vault-menu-action"
               onClick={() => {
                 setOpen(false);
                 setRenameId(null);
@@ -526,10 +424,9 @@ const VaultSelector = ({
                   })
                 );
               }}
-              style={itemStyle(false)}
             >
               <i className="pi pi-cog" />
-              <span style={{ flex: 1, textAlign: 'left' }}>Gestionar vaults…</span>
+              <span>Gestionar vaults…</span>
             </button>
           </div>,
           document.body
@@ -537,24 +434,5 @@ const VaultSelector = ({
     </>
   );
 };
-
-function itemStyle(selected) {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    padding: '8px 10px',
-    border: 'none',
-    borderRadius: 6,
-    background: selected
-      ? 'color-mix(in srgb, var(--primary-color, #89b4fa) 18%, transparent)'
-      : 'transparent',
-    color: 'inherit',
-    cursor: 'pointer',
-    fontSize: 12,
-    boxSizing: 'border-box'
-  };
-}
 
 export default VaultSelector;
