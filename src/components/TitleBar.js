@@ -18,6 +18,7 @@ import {
   getCurrentTerminalFrameStyle,
   setTerminalFrameStyle,
 } from '../utils/terminalFrameStyle';
+import { STORAGE_KEYS } from '../utils/constants';
 import { presetManager } from '../utils/presetManager';
 import TerminalFrameStyleOption from './TerminalFrameStyleOption';
 import UiLayoutStyleOption from './UiLayoutStyleOption';
@@ -44,11 +45,11 @@ const TitleBarIconButton = ({
   </button>
 );
 
-/* Layout Cursor-like: misma forma, trazo fino (sin relleno grueso) */
+/* Layout Cursor-like / VS Code / Antigravity: trazo fino y limpio */
 const LAYOUT_STROKE = {
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 1,
+  strokeWidth: 1.1,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
 };
@@ -56,16 +57,31 @@ const LAYOUT_STROKE = {
 const IconSidebarLeft = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
-    <path d="M6 2v12" {...LAYOUT_STROKE} />
+    <path d="M5.5 2v12" {...LAYOUT_STROKE} />
+    <rect x="2" y="2" width="3.5" height="12" rx="1.5" fill="currentColor" stroke="none" opacity="0.6" />
   </svg>
 );
 
-/** Replegar sidebar: Secondary Side Bar (mitad derecha rellena). */
-const IconSidebarCollapse = () => (
+const IconSidebarRight = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
-    <path d="M10 2v12" {...LAYOUT_STROKE} />
-    <rect x="10" y="2" width="4" height="12" rx="0" fill="currentColor" stroke="none" opacity="0.55" />
+    <path d="M10.5 2v12" {...LAYOUT_STROKE} />
+    <rect x="10.5" y="2" width="3.5" height="12" rx="1.5" fill="currentColor" stroke="none" opacity="0.6" />
+  </svg>
+);
+
+const IconPanel = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M2 10.5h12" {...LAYOUT_STROKE} />
+    <rect x="2" y="10.5" width="12" height="3.5" rx="1.5" fill="currentColor" stroke="none" opacity="0.6" />
+  </svg>
+);
+
+const IconSearch = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="6.5" cy="6.5" r="4.25" />
+    <path d="M9.8 9.8L13.8 13.8" />
   </svg>
 );
 
@@ -75,35 +91,27 @@ const IconMinimal = () => (
   </svg>
 );
 
-const IconPanelTop = () => (
+const IconFrameHeader = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
     <path d="M2 5.5h12" {...LAYOUT_STROKE} />
+    <rect x="2" y="2" width="12" height="3.5" rx="1.5" fill="currentColor" stroke="none" opacity="0.6" />
   </svg>
 );
 
-/** Ocultar titlebar: chevron arriba + panel (sin línea de pestañas). */
+const IconStatusBar = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M2 12.5h12" {...LAYOUT_STROKE} />
+    <rect x="2" y="12.5" width="12" height="1.5" rx="0" fill="currentColor" stroke="none" opacity="0.8" />
+  </svg>
+);
+
+/** Ocultar titlebar: chevron arriba + panel. */
 const IconTitleBar = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <path d="M5 5.5 L8 2.5 L11 5.5" {...LAYOUT_STROKE} />
     <rect x="2" y="7" width="12" height="7" rx="1.5" {...LAYOUT_STROKE} />
-  </svg>
-);
-
-/** Personalizar vistas: layout de paneles (no kebab). */
-const IconCustomizeViews = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
-    <path d="M2 5.5h12" {...LAYOUT_STROKE} />
-    <path d="M6.5 5.5v8.5" {...LAYOUT_STROKE} />
-  </svg>
-);
-
-/** Ojo de visibilidad (menú Customize Layout). */
-const IconEye = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" {...LAYOUT_STROKE} />
-    <circle cx="8" cy="8" r="1.75" {...LAYOUT_STROKE} />
   </svg>
 );
 
@@ -150,14 +158,76 @@ const TitleBar = ({
 
   const [isMaximized, setIsMaximized] = useState(false);
   const layoutBtnRef = useRef(null);
-  const viewsBtnRef = useRef(null);
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
-  const [viewsPopoverOpen, setViewsPopoverOpen] = useState(false);
-  const [layoutPopoverTab, setLayoutPopoverTab] = useState('layout');
+  const [layoutPopoverTab, setLayoutPopoverTab] = useState('views');
   const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
   const [currentFrameStyle, setCurrentFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
   const [activePresetId, setActivePresetId] = useState(() => presetManager.getActivePresetId());
   const [layoutPresets, setLayoutPresets] = useState(() => presetManager.getAllPresets());
+
+  const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [statusBarVisible, setStatusBarVisible] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    const handleHeader = (e) => {
+      if (typeof e.detail?.collapsed === 'boolean') {
+        setMainFrameHeaderCollapsed(e.detail.collapsed);
+      }
+    };
+    window.addEventListener('main-frame-header-visibility-changed', handleHeader);
+    return () => window.removeEventListener('main-frame-header-visibility-changed', handleHeader);
+  }, []);
+
+  useEffect(() => {
+    const handleStatusbar = (e) => {
+      if (typeof e.detail?.visible === 'boolean') {
+        setStatusBarVisible(e.detail.visible);
+      }
+    };
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE) {
+        setStatusBarVisible(e.newValue !== 'false');
+      }
+    };
+    window.addEventListener('statusbar-visibility-changed', handleStatusbar);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('statusbar-visibility-changed', handleStatusbar);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  const handleToggleStatusBar = useCallback(() => {
+    const next = !statusBarVisible;
+    setStatusBarVisible(next);
+    try {
+      localStorage.setItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, String(next));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', { detail: { visible: next } }));
+  }, [statusBarVisible]);
+
+  const handleResetLayout = useCallback(() => {
+    if (!sidebarVisible) window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+    if (sidebarCollapsed) window.dispatchEvent(new CustomEvent('expand-sidebar'));
+    if (tabBarCollapsed) window.dispatchEvent(new CustomEvent('toggle-tabbar'));
+    if (!mainFrameHeaderCollapsed) window.dispatchEvent(new CustomEvent('toggle-main-frame-header'));
+    if (isMinimalMode) window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+    if (!statusBarVisible) handleToggleStatusBar();
+  }, [sidebarVisible, sidebarCollapsed, tabBarCollapsed, mainFrameHeaderCollapsed, isMinimalMode, statusBarVisible, handleToggleStatusBar]);
 
   useEffect(() => {
     const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
@@ -203,24 +273,6 @@ const TitleBar = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [layoutPopoverOpen]);
-
-  useEffect(() => {
-    if (!viewsPopoverOpen) return;
-    const onDown = (e) => {
-      if (viewsBtnRef.current?.contains(e.target)) return;
-      if (e.target?.closest?.('.title-bar-views-popover')) return;
-      setViewsPopoverOpen(false);
-    };
-    const onKey = (e) => {
-      if (e.key === 'Escape') setViewsPopoverOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [viewsPopoverOpen]);
 
   const handleSelectUiLayout = useCallback((layoutId) => {
     setUILayout(layoutId);
@@ -614,12 +666,27 @@ const TitleBar = ({
         />
 
         <div className="title-bar-action-group">
+          <div ref={layoutBtnRef} style={{ display: 'inline-flex' }}>
+            <TitleBarIconButton
+              title="Personalizar diseño (Layout)"
+              active={layoutPopoverOpen}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setLayoutPopoverOpen((open) => {
+                  if (!open) setLayoutPopoverTab('views');
+                  return !open;
+                });
+              }}
+            >
+              <IconLayout />
+            </TitleBarIconButton>
+          </div>
+
           <TitleBarIconButton
-            title={sidebarCollapsed || !sidebarVisible ? 'Expandir sidebar' : 'Replegar sidebar'}
-            active={sidebarVisible && sidebarCollapsed}
+            title={sidebarCollapsed ? 'Expandir barra lateral' : 'Replegar barra lateral (IconRail)'}
+            active={sidebarCollapsed}
             onClick={() => {
-              setViewsPopoverOpen(false);
-              // Si está oculta del todo, restaurar visibilidad (no solo el pliegue a IconRail)
               if (!sidebarVisible) {
                 window.dispatchEvent(new CustomEvent('expand-sidebar'));
                 return;
@@ -627,120 +694,50 @@ const TitleBar = ({
               window.dispatchEvent(new CustomEvent('toggle-sidebar-collapse'));
             }}
           >
-            <IconSidebarCollapse />
+            <IconSidebarLeft />
           </TitleBarIconButton>
+
           <TitleBarIconButton
             title={tabBarCollapsed ? 'Mostrar barra de pestañas' : 'Ocultar barra de pestañas'}
             active={tabBarCollapsed}
             onClick={() => {
-              setViewsPopoverOpen(false);
               window.dispatchEvent(new CustomEvent('toggle-tabbar'));
             }}
           >
-            <IconPanelTop />
+            <IconPanel />
           </TitleBarIconButton>
+
           <TitleBarIconButton
-            title={sidebarVisible ? 'Ocultar sidebar' : 'Mostrar sidebar'}
+            title={!sidebarVisible ? 'Mostrar barra lateral principal' : 'Ocultar barra lateral principal'}
             active={!sidebarVisible}
             onClick={() => {
-              setViewsPopoverOpen(false);
               window.dispatchEvent(new CustomEvent('toggle-sidebar'));
             }}
           >
-            <IconSidebarLeft />
+            <IconSidebarRight />
           </TitleBarIconButton>
-          <div ref={viewsBtnRef} style={{ display: 'inline-flex' }}>
-            <TitleBarIconButton
-              title="Personalizar vistas"
-              active={viewsPopoverOpen}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setViewsPopoverOpen((open) => !open);
-                setLayoutPopoverOpen(false);
-              }}
-            >
-              <IconCustomizeViews />
-            </TitleBarIconButton>
-            {viewsPopoverOpen && viewsBtnRef.current && ReactDOM.createPortal(
-              (() => {
-                const rect = viewsBtnRef.current.getBoundingClientRect();
-                const POPOVER_HEIGHT = 120;
-                const openUp = window.innerHeight - rect.bottom < POPOVER_HEIGHT;
-                return (
-                  <div
-                    className="title-bar-views-popover"
-                    style={{
-                      top: openUp ? Math.max(8, rect.top - POPOVER_HEIGHT - 4) : rect.bottom + 4,
-                      right: Math.max(8, window.innerWidth - rect.right),
-                    }}
-                    role="menu"
-                  >
-                    <div className="title-bar-views-popover-title">Personalizar vistas</div>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className={`title-bar-views-popover-item${isMinimalMode ? ' is-selected' : ''}`}
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-                        setViewsPopoverOpen(false);
-                      }}
-                    >
-                      <IconMinimal />
-                      <span className="title-bar-views-popover-label">Modo minimalista</span>
-                      {isMinimalMode ? <span className="title-bar-views-popover-eye"><IconEye /></span> : null}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="title-bar-views-popover-item"
-                      onClick={() => {
-                        if (typeof onToggleTitleBar === 'function') {
-                          onToggleTitleBar();
-                        } else {
-                          window.dispatchEvent(new CustomEvent('toggle-titlebar'));
-                        }
-                        setViewsPopoverOpen(false);
-                      }}
-                    >
-                      <IconTitleBar />
-                      <span className="title-bar-views-popover-label">Ocultar barra de título</span>
-                    </button>
-                  </div>
-                );
-              })(),
-              document.body
-            )}
-          </div>
-        </div>
 
-        <div className="title-bar-action-sep" aria-hidden="true" />
-
-        <div className="title-bar-action-group" ref={layoutBtnRef}>
           <TitleBarIconButton
-            title="Cambiar layout, marco y presets"
-            active={layoutPopoverOpen}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setLayoutPopoverOpen((open) => {
-                if (!open) setLayoutPopoverTab('layout');
-                return !open;
-              });
+            title="Buscar conexiones y comandos (Ctrl+P)"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-command-palette'));
             }}
           >
-            <IconLayout />
+            <IconSearch />
           </TitleBarIconButton>
+
           {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
             (() => {
               const rect = layoutBtnRef.current.getBoundingClientRect();
               const isFramesTab = layoutPopoverTab === 'frames';
               const isPresetsTab = layoutPopoverTab === 'presets';
-              const POPOVER_HEIGHT = Math.min(window.innerHeight * 0.7, 420) + 44;
+              const isLayoutTab = layoutPopoverTab === 'layout';
+              const isViewsTab = layoutPopoverTab === 'views';
+              const POPOVER_HEIGHT = isViewsTab ? 320 : Math.min(window.innerHeight * 0.7, 420) + 44;
               const openUp = window.innerHeight - rect.bottom < POPOVER_HEIGHT;
               return (
                 <div
-                  className="title-bar-layout-popover is-wide-tab"
+                  className={`title-bar-layout-popover is-wide-tab${isViewsTab ? ' is-views-tab' : ''}`}
                   style={{
                     top: openUp ? Math.max(8, rect.top - POPOVER_HEIGHT - 4) : rect.bottom + 4,
                     right: Math.max(8, window.innerWidth - rect.right),
@@ -751,8 +748,21 @@ const TitleBar = ({
                     <button
                       type="button"
                       role="tab"
-                      aria-selected={layoutPopoverTab === 'layout'}
-                      className={`title-bar-layout-popover-tab${layoutPopoverTab === 'layout' ? ' is-active' : ''}`}
+                      aria-selected={isViewsTab}
+                      className={`title-bar-layout-popover-tab${isViewsTab ? ' is-active' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLayoutPopoverTab('views');
+                      }}
+                    >
+                      Vistas
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={isLayoutTab}
+                      className={`title-bar-layout-popover-tab${isLayoutTab ? ' is-active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -788,36 +798,158 @@ const TitleBar = ({
                       Marcos
                     </button>
                   </div>
-                  <div className="title-bar-layout-popover-list" role="none">
-                    {isPresetsTab ? (
-                      layoutPresets.map((preset) => (
-                        <PresetStyleOption
-                          key={preset.id}
-                          preset={preset}
-                          selected={activePresetId === preset.id}
-                          onSelect={handleSelectPreset}
-                        />
-                      ))
-                    ) : isFramesTab ? (
-                      TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
-                        <TerminalFrameStyleOption
-                          key={style.id}
-                          style={style}
-                          selected={currentFrameStyle === style.id}
-                          onSelect={handleSelectFrameStyle}
-                        />
-                      ))
-                    ) : (
-                      UI_LAYOUT_OPTIONS.map((opt) => (
-                        <UiLayoutStyleOption
-                          key={opt.id}
-                          option={opt}
-                          selected={currentUiLayout === opt.id}
-                          onSelect={handleSelectUiLayout}
-                        />
-                      ))
-                    )}
-                  </div>
+                  {isViewsTab ? (
+                    <div className="title-bar-views-menu" role="none">
+                      <div className="title-bar-views-section-label">Vistas de la interfaz</div>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+                        }}
+                      >
+                        <span className="title-bar-views-check">{sidebarVisible ? '✓' : ''}</span>
+                        <IconSidebarLeft />
+                        <span className="title-bar-views-label">Barra lateral principal</span>
+                        <span className="title-bar-views-shortcut">Ctrl+B</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          if (!sidebarVisible) {
+                            window.dispatchEvent(new CustomEvent('expand-sidebar'));
+                          } else {
+                            window.dispatchEvent(new CustomEvent('toggle-sidebar-collapse'));
+                          }
+                        }}
+                      >
+                        <span className="title-bar-views-check">{sidebarVisible && sidebarCollapsed ? '✓' : ''}</span>
+                        <IconSidebarRight />
+                        <span className="title-bar-views-label">Barra lateral secundaria (IconRail)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toggle-tabbar'));
+                        }}
+                      >
+                        <span className="title-bar-views-check">{!tabBarCollapsed ? '✓' : ''}</span>
+                        <IconPanel />
+                        <span className="title-bar-views-label">Barra de pestañas</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toggle-main-frame-header'));
+                        }}
+                      >
+                        <span className="title-bar-views-check">{!mainFrameHeaderCollapsed ? '✓' : ''}</span>
+                        <IconFrameHeader />
+                        <span className="title-bar-views-label">Cabecera de marco de terminal</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={handleToggleStatusBar}
+                      >
+                        <span className="title-bar-views-check">{statusBarVisible ? '✓' : ''}</span>
+                        <IconStatusBar />
+                        <span className="title-bar-views-label">Barra de estado</span>
+                      </button>
+
+                      <div className="title-bar-views-divider" />
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+                        }}
+                      >
+                        <span className="title-bar-views-check">{isMinimalMode ? '✓' : ''}</span>
+                        <IconMinimal />
+                        <span className="title-bar-views-label">Modo minimalista</span>
+                        <span className="title-bar-views-shortcut">Ctrl+Shift+M</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item"
+                        onClick={() => {
+                          if (typeof onToggleTitleBar === 'function') {
+                            onToggleTitleBar();
+                          } else {
+                            window.dispatchEvent(new CustomEvent('toggle-titlebar'));
+                          }
+                          setLayoutPopoverOpen(false);
+                        }}
+                      >
+                        <span className="title-bar-views-check">✓</span>
+                        <IconTitleBar />
+                        <span className="title-bar-views-label">Barra de título</span>
+                        <span className="title-bar-views-hint">Ocultar</span>
+                      </button>
+
+                      <div className="title-bar-views-divider" />
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="title-bar-views-item title-bar-views-reset"
+                        onClick={handleResetLayout}
+                      >
+                        <span className="title-bar-views-check"></span>
+                        <i className="pi pi-refresh" style={{ fontSize: '12px', width: '16px', textAlign: 'center', opacity: 0.85 }} />
+                        <span className="title-bar-views-label">Restablecer diseño</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="title-bar-layout-popover-list" role="none">
+                      {isPresetsTab ? (
+                        layoutPresets.map((preset) => (
+                          <PresetStyleOption
+                            key={preset.id}
+                            preset={preset}
+                            selected={activePresetId === preset.id}
+                            onSelect={handleSelectPreset}
+                          />
+                        ))
+                      ) : isFramesTab ? (
+                        TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
+                          <TerminalFrameStyleOption
+                            key={style.id}
+                            style={style}
+                            selected={currentFrameStyle === style.id}
+                            onSelect={handleSelectFrameStyle}
+                          />
+                        ))
+                      ) : (
+                        UI_LAYOUT_OPTIONS.map((opt) => (
+                          <UiLayoutStyleOption
+                            key={opt.id}
+                            option={opt}
+                            selected={currentUiLayout === opt.id}
+                            onSelect={handleSelectUiLayout}
+                          />
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })(),
