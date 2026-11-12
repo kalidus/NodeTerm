@@ -21,7 +21,7 @@ import { openAppearanceQuickPanel } from '../utils/appearanceQuickPanel';
 
 const LAUNCHER_PANEL_WIDTH = 820;
 const LAUNCHER_PANEL_MARGIN = 12;
-const LAUNCHER_SIDEBAR_WIDTH = 340;
+const LAUNCHER_SIDEBAR_WIDTH = 280;
 
 const LAUNCHER_OVERLAY_SELECTOR = [
   '.p-dialog',

@@ -21,6 +21,8 @@ const SECTIONS = [
   { id: 'tools',      icon: 'pi pi-wrench',  color: '#06b6d4', labelKey: 'tooltips.tools' },
 ];
 
+const LAUNCHER_SECTION_IDS = new Set(['connections', 'passwords', 'documents', 'favorites']);
+
 const SidebarIconRail = React.memo(({
   activeSection,
   panelOpen,
@@ -36,6 +38,7 @@ const SidebarIconRail = React.memo(({
   onShowImportExportDialog,
   onShowImportWizard,
   onIntegratedBrowserOpen,
+  orientation = 'vertical',
 }) => {
   const { t } = useTranslation('common');
   const browserGradId = `railBrowserGrad-${useId().replace(/:/g, '')}`;
@@ -126,11 +129,19 @@ const SidebarIconRail = React.memo(({
     opennotebook: null,
   };
 
+  const isHorizontal = orientation === 'horizontal';
+  const visibleSections = isHorizontal
+    ? SECTIONS.filter((section) => LAUNCHER_SECTION_IDS.has(section.id))
+    : SECTIONS;
+
   return (
-    <div className="sidebar-icon-rail" style={{ width: RAIL_WIDTH }}>
+    <div
+      className={`sidebar-icon-rail${isHorizontal ? ' sidebar-icon-rail--horizontal' : ''}`}
+      style={isHorizontal ? undefined : { width: RAIL_WIDTH }}
+    >
       {/* Main sections */}
       <div className="sidebar-icon-rail-sections">
-        {SECTIONS.map(section => {
+        {visibleSections.map(section => {
           const isActive = panelOpen && activeSection === section.id;
           const tooltip = section.labelKey ? t(section.labelKey) : section.label;
           const customIcon = railIcons[sessionActionIconTheme]?.[section.id];
@@ -153,8 +164,8 @@ const SidebarIconRail = React.memo(({
           );
         })}
 
-        {/* Navegador Web Integrado (Apps → browser; default ON) */}
-        {browserAppEnabled && (
+        {/* Navegador Web Integrado (Apps → browser; default ON) — no en launcher */}
+        {!isHorizontal && browserAppEnabled && (
           <button
             className="sidebar-icon-rail-item"
             onClick={() => {
@@ -186,85 +197,87 @@ const SidebarIconRail = React.memo(({
         )}
       </div>
 
-      {/* Separator */}
-      <div className="sidebar-icon-rail-separator" />
+      {!isHorizontal && (
+        <>
+          {/* Separator */}
+          <div className="sidebar-icon-rail-separator" />
 
-      {/* AI Clients */}
-      {hasAnyAI && (
-        <div className="sidebar-icon-rail-ai">
-          {cliClients.map(clientId => {
-            if (!aiClientsEnabled[clientId]) return null;
-            const tooltipKey = aiClientTooltips[clientId];
-            const tooltip = tooltipKey ? t(tooltipKey) : clientId;
-            return (
-              <button
-                key={clientId}
-                className="sidebar-icon-rail-item"
-                onClick={() => onOpenAIClient(clientId)}
-                title={tooltip}
-              >
-                <AIClientBrandIcon tabType={aiClientTabTypes[clientId]} size={Math.round(ICON_SIZE * 0.85)} />
-              </button>
-            );
-          })}
+          {/* AI Clients */}
+          {hasAnyAI && (
+            <div className="sidebar-icon-rail-ai">
+              {cliClients.map(clientId => {
+                if (!aiClientsEnabled[clientId]) return null;
+                const tooltipKey = aiClientTooltips[clientId];
+                const tooltip = tooltipKey ? t(tooltipKey) : clientId;
+                return (
+                  <button
+                    key={clientId}
+                    className="sidebar-icon-rail-item"
+                    onClick={() => onOpenAIClient(clientId)}
+                    title={tooltip}
+                  >
+                    <AIClientBrandIcon tabType={aiClientTabTypes[clientId]} size={Math.round(ICON_SIZE * 0.85)} />
+                  </button>
+                );
+              })}
 
-          {hasAnyCli && hasAnyApp && (
-            <div className="sidebar-icon-rail-separator mini" />
+              {hasAnyCli && hasAnyApp && (
+                <div className="sidebar-icon-rail-separator mini" />
+              )}
+
+              {appClients.map(clientId => {
+                if (!aiClientsEnabled[clientId]) return null;
+                const tooltipKey = aiClientTooltips[clientId];
+                const tooltip = tooltipKey ? t(tooltipKey) : clientId;
+
+                return (
+                  <button
+                    key={clientId}
+                    className="sidebar-icon-rail-item"
+                    onClick={() => onOpenAIClient(clientId)}
+                    title={tooltip}
+                  >
+                    <AIClientBrandIcon tabType={aiClientTabTypes[clientId]} size={Math.round(ICON_SIZE * 0.85)} />
+                  </button>
+                );
+              })}
+            </div>
           )}
 
-          {appClients.map(clientId => {
-            if (!aiClientsEnabled[clientId]) return null;
-            const tooltipKey = aiClientTooltips[clientId];
-            const tooltip = tooltipKey ? t(tooltipKey) : clientId;
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
 
-
-
-            return (
-              <button
-                key={clientId}
-                className="sidebar-icon-rail-item"
-                onClick={() => onOpenAIClient(clientId)}
-                title={tooltip}
-              >
-                <AIClientBrandIcon tabType={aiClientTabTypes[clientId]} size={Math.round(ICON_SIZE * 0.85)} />
-              </button>
-            );
-          })}
-        </div>
+          {/* Bottom actions */}
+          <div className="sidebar-icon-rail-bottom">
+            <button
+              className={`sidebar-icon-rail-item${panelOpen && activeSection === 'settings' ? ' active' : ''}`}
+              onClick={() => onSectionClick('settings')}
+              title={t('tooltips.settings')}
+              style={{ '--rail-item-color': '#a78bfa' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
+                {sessionActionIconThemes[sessionActionIconTheme]?.icons.settings || sessionActionIconThemes.modern.icons.settings}
+              </span>
+            </button>
+            <button
+              className="sidebar-icon-rail-item"
+              onClick={handleAppMenuClick}
+              title={t('tooltips.appMenu')}
+              style={{ '--rail-item-color': 'var(--ui-sidebar-text)' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
+                {sessionActionIconThemes[sessionActionIconTheme]?.icons.menu || sessionActionIconThemes.modern?.icons?.menu || (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          </div>
+        </>
       )}
-
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Bottom actions */}
-      <div className="sidebar-icon-rail-bottom">
-        <button
-          className={`sidebar-icon-rail-item${panelOpen && activeSection === 'settings' ? ' active' : ''}`}
-          onClick={() => onSectionClick('settings')}
-          title={t('tooltips.settings')}
-          style={{ '--rail-item-color': '#a78bfa' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
-            {sessionActionIconThemes[sessionActionIconTheme]?.icons.settings || sessionActionIconThemes.modern.icons.settings}
-          </span>
-        </button>
-        <button
-          className="sidebar-icon-rail-item"
-          onClick={handleAppMenuClick}
-          title={t('tooltips.appMenu')}
-          style={{ '--rail-item-color': 'var(--ui-sidebar-text)' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
-            {sessionActionIconThemes[sessionActionIconTheme]?.icons.menu || sessionActionIconThemes.modern?.icons?.menu || (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            )}
-          </span>
-        </button>
-      </div>
     </div>
   );
 });

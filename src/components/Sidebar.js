@@ -300,6 +300,11 @@ const Sidebar = React.memo(({
   const activeSshStatus = activeSshSession?.status || null;
 
   useEffect(() => {
+    // En el launcher embebido nunca se cambia al explorador remoto
+    if (embedded) {
+      setConnectionsPane('tree');
+      return;
+    }
     if (showFavoritesView || viewMode !== 'connections') return;
 
     if (!activeSshTabId) {
@@ -324,7 +329,7 @@ const Sidebar = React.memo(({
     if (!explorerDismissedRef.current) {
       setConnectionsPane('explorer');
     }
-  }, [activeSshConnected, activeSshStatus, activeSshTabId, showFavoritesView, viewMode]);
+  }, [embedded, activeSshConnected, activeSshStatus, activeSshTabId, showFavoritesView, viewMode]);
 
   const toggleConnectionsPane = useCallback(() => {
     if (!activeSshSession?.connected) return;
@@ -3063,7 +3068,8 @@ const Sidebar = React.memo(({
     if (onNodeContextMenu) onNodeContextMenu(event, favoriteContextNode(node, nodes));
   }, [nodes, onNodeContextMenu]);
 
-  const remoteExplorerOpen = viewMode === 'connections'
+  const remoteExplorerOpen = !embedded
+    && viewMode === 'connections'
     && !showFavoritesView
     && connectionsPane === 'explorer'
     && activeSshConnected;
@@ -3296,14 +3302,16 @@ const Sidebar = React.memo(({
   const fullSidebar = (
     // Sidebar completa
     <>
-      {/* Panel toolbar header with contextual actions */}
-      {panelToolbarHeader}
-      <LibraryAddMenu
-        open={Boolean(libraryAddAnchor)}
-        anchorEl={libraryAddAnchor}
-        items={libraryAddMenuModel}
-        onClose={() => setLibraryAddAnchor(null)}
-      />
+      {/* Panel toolbar header with contextual actions (oculto en el launcher embebido) */}
+      {!embedded && panelToolbarHeader}
+      {!embedded && (
+        <LibraryAddMenu
+          open={Boolean(libraryAddAnchor)}
+          anchorEl={libraryAddAnchor}
+          items={libraryAddMenuModel}
+          onClose={() => setLibraryAddAnchor(null)}
+        />
+      )}
 
       {/* Vista de Conexiones (Mantenida montada para evitar flashes) */}
       <div style={{ display: viewMode === 'connections' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -3738,7 +3746,7 @@ const Sidebar = React.memo(({
         overflow: 'hidden',
         position: 'relative',
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: embedded ? 'column' : 'row',
         fontSize: `${explorerFontSize}px`,
         color: explorerFontColor || undefined,
         width: '100%',
@@ -3746,8 +3754,9 @@ const Sidebar = React.memo(({
         ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
 
-      {/* Icon Rail - Always visible */}
+      {/* Icon Rail - vertical en app; horizontal encima del árbol en launcher */}
       <SidebarIconRail
+        orientation={embedded ? 'horizontal' : 'vertical'}
         activeSection={activeIconRailSection}
         panelOpen={!sidebarCollapsed}
         onSectionClick={handleIconRailSectionClick}
@@ -3805,8 +3814,8 @@ const Sidebar = React.memo(({
         <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: stabilizeTreeLayout ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           {fullSidebar}
 
-          {/* ── Botón flotante de papelera (solo en pestaña conexiones) ── */}
-          {!sidebarCollapsed && viewMode === 'connections' && (
+          {/* ── Botón flotante de papelera (solo en pestaña conexiones; no en launcher) ── */}
+          {!embedded && !sidebarCollapsed && viewMode === 'connections' && (
             <button
               id="sidebar-trash-btn"
               onClick={() => setShowTrashModal(true)}

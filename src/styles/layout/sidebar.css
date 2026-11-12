@@ -1950,10 +1950,10 @@ body.theme-transitioning .content-main {
 #terminal-grid-launcher-panel .launcher-sidebar-column {
   display: flex;
   flex-direction: column;
-  width: 340px;
+  width: 280px;
   min-width: 200px;
-  max-width: 340px;
-  flex: 0 1 340px;
+  max-width: 280px;
+  flex: 0 1 280px;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -1982,7 +1982,94 @@ body.theme-transitioning .content-main {
   min-height: 0;
   min-width: 0;
   max-width: none;
+  flex-direction: column !important;
   font-family: var(--sidebar-font-family, var(--ui-font-family, inherit));
+}
+
+#terminal-grid-launcher-panel .sidebar-container--launcher .sidebar-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Rail horizontal encima del árbol (solo launcher embebido) */
+.sidebar-icon-rail.sidebar-icon-rail--horizontal {
+  flex-direction: row;
+  align-items: stretch;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  padding: 0;
+  border-right: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 14%, transparent);
+  overflow: hidden;
+  gap: 0;
+  background: color-mix(in srgb, var(--ui-sidebar-bg, #0a0f1f) 88%, #000) !important;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-sections {
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 100%;
+  border-radius: 0;
+  opacity: 0.62;
+  background: transparent;
+  border-right: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 12%, transparent);
+  transition: background-color 0.18s ease, opacity 0.18s ease, color 0.18s ease;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item:last-child {
+  border-right: none;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--rail-item-color, #fff) 12%, transparent);
+  transform: none;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item.active {
+  opacity: 1;
+  color: var(--rail-item-color, var(--ui-sidebar-text));
+  background: color-mix(in srgb, var(--rail-item-color, #fff) 16%, transparent);
+}
+
+/* Indicador activo abajo (en vertical es a la izquierda) */
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item.active::before {
+  left: 18%;
+  right: 18%;
+  top: auto;
+  bottom: 0;
+  width: auto;
+  height: 2px;
+  transform: none;
+  border-radius: 2px 2px 0 0;
+  background: var(--rail-item-color, #4fc3f7);
+  box-shadow: 0 0 10px var(--rail-item-color, #4fc3f7);
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item i,
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item .sidebar-rail-svg-wrapper {
+  font-size: 15px !important;
+}
+
+.sidebar-icon-rail.sidebar-icon-rail--horizontal .sidebar-icon-rail-item .sidebar-rail-svg-wrapper svg {
+  width: 18px;
+  height: 18px;
 }
 
 #terminal-grid-launcher-panel .launcher-sidebar-toggle {
