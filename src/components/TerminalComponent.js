@@ -15,6 +15,7 @@ import {
     attachVisibleTerminalRenderer,
     createStableTerminalFit,
     getTerminalScrollback,
+    scheduleTerminalActivatePaint,
     syncTerminalRenderer,
     useTerminalMemoryGuards
 } from '../utils/xtermRenderer';
@@ -974,46 +975,54 @@ const TerminalComponent = forwardRef(({
         }
     }, [effectiveTheme, isIntegrated]);
 
-    // Al activar pestaña: re-fit + re-attach GPU + refresh (evita canvas en blanco)
+    // Al activar: 1 rAF; retry solo si el contenedor aún no tiene tamaño o se recreó el renderer
     useEffect(() => {
-        if (!active || !xtermLib || !term.current) return;
+        if (!active || !xtermLib || !term.current) return undefined;
 
-        const repaint = () => {
-            if (!term.current) return;
-            try {
-                if (writeBufferRef.current?.setActive) {
-                    writeBufferRef.current.setActive(true);
-                }
-                if (xtermLib) {
+        return scheduleTerminalActivatePaint(
+            ({ isRetry }) => {
+                if (!term.current) return { needsRetry: true };
+                try {
+                    if (writeBufferRef.current?.setActive) {
+                        writeBufferRef.current.setActive(true);
+                    }
+                    const prevAddon = rendererRef.current?.addon;
+                    const prevType = rendererRef.current?.rendererType;
                     rendererRef.current = syncTerminalRenderer(
                         term.current,
                         { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
                         preferWebgl !== false,
                         rendererRef.current,
-                        { canvasFallback: preferWebgl === false }
+                        { canvasFallback: preferWebgl === false, keepWarm: true }
                     );
+                    const recreated =
+                        rendererRef.current?.addon !== prevAddon ||
+                        rendererRef.current?.rendererType !== prevType;
+                    // fitStable() === false por tamaño igual NO es fallo; solo tamaño ≤0.
+                    const el = terminalRef.current;
+                    const sizeMissing = !el || el.offsetWidth <= 0 || el.offsetHeight <= 0;
+                    fitStable();
+                    if (recreated || isRetry) {
+                        term.current.refresh(0, Math.max(0, term.current.rows - 1));
+                    }
+                    term.current.focus();
+                    return {
+                        recreated,
+                        needsRetry: sizeMissing,
+                        cols: term.current.cols,
+                        rows: term.current.rows
+                    };
+                } catch (_) {
+                    return { needsRetry: true };
                 }
-                fitStable();
-                term.current.refresh(0, Math.max(0, term.current.rows - 1));
-                term.current.focus();
-            } catch (_) { /* noop */ }
-        };
-
-        let raf1 = 0;
-        let raf2 = 0;
-        raf1 = requestAnimationFrame(() => {
-            repaint();
-            raf2 = requestAnimationFrame(repaint);
-        });
-        const t1 = setTimeout(repaint, 50);
-        const t2 = setTimeout(repaint, 160);
-
-        return () => {
-            cancelAnimationFrame(raf1);
-            cancelAnimationFrame(raf2);
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
+            },
+            {
+                getSize: () =>
+                    term.current
+                        ? { cols: term.current.cols, rows: term.current.rows }
+                        : null
+            }
+        );
     }, [active, preferWebgl, xtermLib]);
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)

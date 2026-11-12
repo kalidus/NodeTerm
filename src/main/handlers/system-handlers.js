@@ -34,13 +34,171 @@ function safeStatSync(path) {
  * @param {string} path - Ruta del archivo
  * @returns {string|null} - Hash del archivo o null si hay error
  */
-function hashFileSync(path) {
+function hashFileSync(filePath) {
   try {
-    const data = fs.readFileSync(path);
+    const data = fs.readFileSync(filePath);
     return crypto.createHash('sha256').update(data).digest('hex');
   } catch {
     return null;
   }
+}
+
+function readSysfsTrimmed(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, 'utf8').trim();
+  } catch {
+    return null;
+  }
+}
+
+function readSysfsInt(filePath) {
+  const raw = readSysfsTrimmed(filePath);
+  if (raw == null || raw === '') return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function readHwmonTempC(deviceDir) {
+  try {
+    const hwmonRoot = path.join(deviceDir, 'hwmon');
+    if (!fs.existsSync(hwmonRoot)) return null;
+    for (const hwmon of fs.readdirSync(hwmonRoot)) {
+      const tempPath = path.join(hwmonRoot, hwmon, 'temp1_input');
+      const raw = readSysfsInt(tempPath);
+      if (raw != null) return Math.round(raw / 1000);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function readNvidiaNameFromProc() {
+  try {
+    const root = '/proc/driver/nvidia/gpus';
+    if (!fs.existsSync(root)) return null;
+    for (const entry of fs.readdirSync(root)) {
+      const info = readSysfsTrimmed(path.join(root, entry, 'information'));
+      if (!info) continue;
+      const match = info.match(/Model:\s*(.+)/i);
+      if (match) return match[1].trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function classifyDrmCard(cardDir) {
+  const uevent = readSysfsTrimmed(path.join(cardDir, 'device', 'uevent')) || '';
+  const vendor = (readSysfsTrimmed(path.join(cardDir, 'device', 'vendor')) || '').toLowerCase();
+  if (uevent.includes('DRIVER=nvidia') || uevent.includes('DRIVER=nouveau') || vendor === '0x10de' || /PCI_ID=10de:/i.test(uevent)) {
+    return 'nvidia';
+  }
+  if (uevent.includes('DRIVER=amdgpu') || vendor === '0x1002' || /PCI_ID=1002:/i.test(uevent)) {
+    return 'amd';
+  }
+  if (uevent.includes('DRIVER=i915') || uevent.includes('DRIVER=xe') || vendor === '0x8086' || /PCI_ID=8086:/i.test(uevent)) {
+    return 'intel';
+  }
+  return null;
+}
+
+function drmCardHasConnectedDisplay(cardName) {
+  try {
+    const drmDir = '/sys/class/drm';
+    const prefix = `${cardName}-`;
+    for (const entry of fs.readdirSync(drmDir)) {
+      if (!entry.startsWith(prefix)) continue;
+      const status = readSysfsTrimmed(path.join(drmDir, entry, 'status'));
+      if (status === 'connected') return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+function readDrmVramMb(deviceDir) {
+  const totalBytes = readSysfsInt(path.join(deviceDir, 'mem_info_vram_total'));
+  const usedBytes = readSysfsInt(path.join(deviceDir, 'mem_info_vram_used'));
+  if (totalBytes == null || usedBytes == null || totalBytes <= 0) {
+    return { totalMB: null, usedMB: null, freeMB: null, usagePercent: null };
+  }
+  const totalMB = Math.round(totalBytes / 1024 / 1024);
+  const usedMB = Math.round(usedBytes / 1024 / 1024);
+  return {
+    totalMB,
+    usedMB,
+    freeMB: totalMB - usedMB,
+    usagePercent: Math.round((usedMB / totalMB) * 100)
+  };
+}
+
+/**
+ * Stats GPU en Linux solo vía sysfs/proc (sin nvidia-smi / rocm-smi).
+ * Prefiere la tarjeta con conector connected (GPU del compositor).
+ */
+function readLinuxGpuStatsFromSysfs() {
+  const drmDir = '/sys/class/drm';
+  if (!fs.existsSync(drmDir)) return null;
+
+  const cards = [];
+  try {
+    for (const entry of fs.readdirSync(drmDir)) {
+      if (!/^card\d+$/.test(entry)) continue;
+      const cardDir = path.join(drmDir, entry);
+      const type = classifyDrmCard(cardDir);
+      if (!type) continue;
+      cards.push({
+        name: entry,
+        type,
+        connected: drmCardHasConnectedDisplay(entry),
+        deviceDir: path.join(cardDir, 'device')
+      });
+    }
+  } catch {
+    return null;
+  }
+  if (cards.length === 0) return null;
+
+  const preferredEnv = (process.env.NODETERM_GPU || 'auto').trim().toLowerCase();
+  let preferred = null;
+  if (preferredEnv === 'nvidia') {
+    preferred = cards.find((c) => c.type === 'nvidia') || null;
+  } else if (preferredEnv === 'integrated') {
+    preferred = cards.find((c) => c.type === 'amd' || c.type === 'intel') || null;
+  }
+  if (!preferred) preferred = cards.find((c) => c.connected) || cards[0];
+
+  const { type, deviceDir } = preferred;
+  const vram = readDrmVramMb(deviceDir);
+  const busy = readSysfsInt(path.join(deviceDir, 'gpu_busy_percent'));
+  let temperature = readHwmonTempC(deviceDir);
+  let name = null;
+
+  if (type === 'nvidia') {
+    name = readNvidiaNameFromProc() || 'NVIDIA GPU';
+  } else if (type === 'amd') {
+    name = 'AMD Radeon Graphics';
+  } else if (type === 'intel') {
+    name = 'Intel HD/UHD Graphics';
+  }
+
+  return {
+    ok: true,
+    type,
+    name,
+    totalMB: vram.totalMB,
+    usedMB: vram.usedMB,
+    freeMB: vram.freeMB,
+    usagePercent: vram.usagePercent,
+    gpuUtilization: busy,
+    temperature,
+    driverVersion: null,
+    note: 'Detectado vía kernel sysfs'
+  };
 }
 
 function safeHandle(channel, handler) {
@@ -753,7 +911,6 @@ function registerSystemMonitoringHandlers() {
   let isGpuQuerying = false; // Bandera para evitar ejecuciones concurrentes
   const GPU_CACHE_TTL = 60000; // 60s: evita cascadas de PowerShell/wmic en Windows
   let nvidiaDisabledUntil = 0;
-  let amdDisabledUntil = 0;
   const PENALTY_DURATION = 30 * 1000; // Penalización reducida a 30 segundos (asíncrono, no bloquea)
 
   function classifyControllerGpu(controller) {
@@ -841,25 +998,15 @@ function registerSystemMonitoringHandlers() {
       }
     }
 
-    // Fallbacks rápidos usando execAsync
-    try {
-      const { stdout } = await execAsync('nvidia-smi --query-gpu=name --format=csv,noheader', { timeout: 1500 });
-      if (stdout.trim()) {
-        detectedGpuType = 'nvidia';
-        detectedGpuName = stdout.trim().split('\n')[0] || 'NVIDIA GPU';
-        console.log('[GPU Handler] 🔍 Detectado GPU NVIDIA por nvidia-smi');
-        return detectedGpuType;
-      }
-    } catch (_) {}
-
-    if (platform === 'linux') {
+    // Fallbacks one-shot de detección (no usados en el poll de stats).
+    // En Linux preferimos evitar nvidia-smi/rocm-smi (pueden bloquear en D con Wayland).
+    if (platform === 'win32') {
       try {
-        const { stdout } = await execAsync('rocm-smi --showproductname', { timeout: 1500 });
-        const match = stdout.match(/Product Name:\s*(.+)/);
-        if (match) {
-          detectedGpuType = 'amd';
-          detectedGpuName = match[1].trim();
-          console.log('[GPU Handler] 🔍 Detectado GPU AMD por rocm-smi');
+        const { stdout } = await execAsync('nvidia-smi --query-gpu=name --format=csv,noheader', { timeout: 1500 });
+        if (stdout.trim()) {
+          detectedGpuType = 'nvidia';
+          detectedGpuName = stdout.trim().split('\n')[0] || 'NVIDIA GPU';
+          console.log('[GPU Handler] 🔍 Detectado GPU NVIDIA por nvidia-smi');
           return detectedGpuType;
         }
       } catch (_) {}
@@ -910,7 +1057,63 @@ function registerSystemMonitoringHandlers() {
 
     isGpuQuerying = true;
 
-    // 3. Intentar obtener estadísticas de la GPU mediante la biblioteca systeminformation
+    // Linux: solo sysfs/proc — nunca nvidia-smi/rocm-smi en el poll (estado D en NVIDIA+Wayland).
+    if (process.platform === 'linux') {
+      try {
+        const sysfsStats = readLinuxGpuStatsFromSysfs();
+        if (sysfsStats) {
+          detectedGpuType = sysfsStats.type || detectedGpuType;
+          if (sysfsStats.name) detectedGpuName = sysfsStats.name;
+          if (!gpuDetectionLogged) {
+            console.log(`[GPU Handler] ✅ GPU Linux vía sysfs: ${sysfsStats.name} (${sysfsStats.type})`);
+            gpuDetectionLogged = true;
+          }
+          cachedGpuStats = sysfsStats;
+          lastGpuCheck = now;
+          isGpuQuerying = false;
+          return cachedGpuStats;
+        }
+      } catch (err) {
+        console.warn('[GPU Handler] ⚠️ Lectura sysfs GPU fallida:', err.message);
+      }
+      // Identidad mínima sin subprocesos externos
+      try {
+        const type = await detectGpuTypeOnce();
+        if (type && type !== 'unknown') {
+          cachedGpuStats = {
+            ok: true,
+            type,
+            name: detectedGpuName || type,
+            totalMB: null,
+            usedMB: null,
+            freeMB: null,
+            usagePercent: null,
+            gpuUtilization: null,
+            temperature: null,
+            note: 'Identidad DRM sin métricas'
+          };
+          lastGpuCheck = now;
+          isGpuQuerying = false;
+          return cachedGpuStats;
+        }
+      } catch (_) { /* ignore */ }
+      cachedGpuStats = {
+        ok: false,
+        type: null,
+        name: null,
+        totalMB: null,
+        usedMB: null,
+        freeMB: null,
+        usagePercent: null,
+        gpuUtilization: null,
+        temperature: null
+      };
+      lastGpuCheck = now;
+      isGpuQuerying = false;
+      return cachedGpuStats;
+    }
+
+    // 3. Windows/macOS: systeminformation + fallbacks nativos
     try {
       const si = require('systeminformation');
       const graphicsData = await Promise.race([
@@ -996,12 +1199,12 @@ function registerSystemMonitoringHandlers() {
       const type = await detectGpuTypeOnce();
       const platform = process.platform;
 
-      // NVIDIA CUDA
-      if (type === 'nvidia') {
+      // NVIDIA (Windows): nvidia-smi solo fuera de Linux
+      if (type === 'nvidia' && platform === 'win32') {
         if (now > nvidiaDisabledUntil) {
           try {
             const { stdout } = await execAsync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
-              timeout: 4000 // Mayor timeout para evitar penalizaciones si la GPU está suspendida
+              timeout: 4000
             });
             const output = stdout.trim();
 
@@ -1045,169 +1248,9 @@ function registerSystemMonitoringHandlers() {
         }
       }
 
-      // AMD ROCm (Linux) o sysfs
-      else if (type === 'amd') {
-        if (platform === 'linux') {
-          if (now > amdDisabledUntil) {
-            try {
-              const { stdout } = await execAsync('rocm-smi --showmeminfo --json', { timeout: 4000 });
-              const data = JSON.parse(stdout);
-              if (data && data.gpu_memory_use && data.gpu_memory_use.length > 0) {
-                const used = parseInt(data.gpu_memory_use[0]);
-                const total = parseInt(data.gpu_memory_tot[0]);
-
-                if (total && !isNaN(used) && !isNaN(total)) {
-                  if (!gpuDetectionLogged) {
-                    console.log('[GPU Handler] ✅ GPU AMD activa:', detectedGpuName);
-                    gpuDetectionLogged = true;
-                  }
-                  cachedGpuStats = {
-                    ok: true,
-                    type: 'amd',
-                    name: detectedGpuName || 'AMD GPU',
-                    totalMB: total,
-                    usedMB: used,
-                    freeMB: total - used,
-                    usagePercent: Math.round((used / total) * 100),
-                    gpuUtilization: null,
-                    temperature: null,
-                    driverVersion: null
-                  };
-                  lastGpuCheck = now;
-                  isGpuQuerying = false;
-                  return cachedGpuStats;
-                }
-              }
-            } catch (e) {
-              console.warn('[GPU Handler] ⚠️ Consulta rocm-smi fallida. Usando fallback de sysfs.');
-              amdDisabledUntil = Date.now() + PENALTY_DURATION;
-            }
-          }
-
-          // Fallback Linux (sysfs DRM) — sin subprocesos
-          try {
-            const drmDir = '/sys/class/drm';
-            if (fs.existsSync(drmDir)) {
-              const files = fs.readdirSync(drmDir);
-              const cardDirs = files.filter(f => /^card\d+$/.test(f));
-              for (const card of cardDirs) {
-                const ueventPath = path.join(drmDir, card, 'device', 'uevent');
-                if (fs.existsSync(ueventPath)) {
-                  const content = fs.readFileSync(ueventPath, 'utf8');
-                  if (content.includes('DRIVER=amdgpu') || content.includes('PCI_ID=1002:')) {
-                    let totalMB = null;
-                    let usedMB = null;
-                    let freeMB = null;
-                    let usagePercent = null;
-                    let temperature = null;
-
-                    try {
-                      const vramTotalPath = path.join(drmDir, card, 'device', 'mem_info_vram_total');
-                      const vramUsedPath = path.join(drmDir, card, 'device', 'mem_info_vram_used');
-                      if (fs.existsSync(vramTotalPath) && fs.existsSync(vramUsedPath)) {
-                        const totalBytes = parseInt(fs.readFileSync(vramTotalPath, 'utf8').trim(), 10);
-                        const usedBytes = parseInt(fs.readFileSync(vramUsedPath, 'utf8').trim(), 10);
-                        if (!isNaN(totalBytes) && !isNaN(usedBytes) && totalBytes > 0) {
-                          totalMB = Math.round(totalBytes / 1024 / 1024);
-                          usedMB = Math.round(usedBytes / 1024 / 1024);
-                          freeMB = totalMB - usedMB;
-                          usagePercent = Math.round((usedMB / totalMB) * 100);
-                        }
-                      }
-                    } catch (_) {}
-
-                    try {
-                      const hwmonDir = path.join(drmDir, card, 'device', 'hwmon');
-                      if (fs.existsSync(hwmonDir)) {
-                        const hwmons = fs.readdirSync(hwmonDir);
-                        for (const hwmon of hwmons) {
-                          const tempPath = path.join(hwmonDir, hwmon, 'temp1_input');
-                          if (fs.existsSync(tempPath)) {
-                            const rawTemp = parseInt(fs.readFileSync(tempPath, 'utf8').trim(), 10);
-                            if (!isNaN(rawTemp)) {
-                              temperature = Math.round(rawTemp / 1000);
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    } catch (_) {}
-
-                    cachedGpuStats = {
-                      ok: true,
-                      type: 'amd',
-                      name: detectedGpuName || 'AMD Radeon Graphics',
-                      totalMB,
-                      usedMB,
-                      freeMB,
-                      usagePercent,
-                      gpuUtilization: null,
-                      temperature,
-                      note: 'Detectado vía kernel sysfs'
-                    };
-                    lastGpuCheck = now;
-                    isGpuQuerying = false;
-                    return cachedGpuStats;
-                  }
-                }
-              }
-            }
-          } catch (_) {}
-        }
-      }
-
-      // Intel (Linux)
-      else if (type === 'intel') {
-        if (platform === 'linux') {
-          try {
-            const drmDir = '/sys/class/drm';
-            if (fs.existsSync(drmDir)) {
-              const files = fs.readdirSync(drmDir);
-              const cardDirs = files.filter(f => /^card\d+$/.test(f));
-              for (const card of cardDirs) {
-                const ueventPath = path.join(drmDir, card, 'device', 'uevent');
-                if (fs.existsSync(ueventPath)) {
-                  const content = fs.readFileSync(ueventPath, 'utf8');
-                  if (content.includes('DRIVER=i915') || content.includes('DRIVER=xe') || content.includes('PCI_ID=8086:')) {
-                    let temperature = null;
-                    try {
-                      const hwmonDir = path.join(drmDir, card, 'device', 'hwmon');
-                      if (fs.existsSync(hwmonDir)) {
-                        const hwmons = fs.readdirSync(hwmonDir);
-                        for (const hwmon of hwmons) {
-                          const tempPath = path.join(hwmonDir, hwmon, 'temp1_input');
-                          if (fs.existsSync(tempPath)) {
-                            const rawTemp = parseInt(fs.readFileSync(tempPath, 'utf8').trim(), 10);
-                            if (!isNaN(rawTemp)) {
-                              temperature = Math.round(rawTemp / 1000);
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    } catch (_) {}
-
-                    cachedGpuStats = {
-                      ok: true,
-                      type: 'intel',
-                      name: detectedGpuName || 'Intel HD/UHD Graphics',
-                      totalMB: null,
-                      usedMB: null,
-                      freeMB: null,
-                      usagePercent: null,
-                      gpuUtilization: null,
-                      temperature,
-                      note: 'Detectado vía kernel sysfs'
-                    };
-                    lastGpuCheck = now;
-                    isGpuQuerying = false;
-                    return cachedGpuStats;
-                  }
-                }
-              }
-            }
-          } catch (_) {}
-        }
+      // AMD (Windows): sin rocm-smi en poll Linux
+      else if (type === 'amd' && platform === 'win32') {
+        // Continuar a fallback genérico más abajo
       }
 
       // Apple Metal

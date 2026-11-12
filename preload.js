@@ -65,6 +65,12 @@ contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   windowsBuildNumber: readWindowsBuildNumber(),
   isSecondaryInstance: process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true',
+  /** Perfil de rendimiento Linux (y flag low-RAM multiplataforma). */
+  linuxPerf: {
+    isLowRam: process.env.NODETERM_IS_LOW_RAM === '1',
+    displayGpu: process.env.NODETERM_DISPLAY_GPU || 'auto',
+    ozoneHint: process.env.NODETERM_OZONE_HINT_RESOLVED || process.env.NODETERM_OZONE_HINT || 'auto'
+  },
   openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),

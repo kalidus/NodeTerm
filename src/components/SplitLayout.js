@@ -207,7 +207,15 @@ const SplitLayout = ({
   const isArraySystem = terminals && terminals.length > 0;
   const isLegacySystem = leftTerminal && rightTerminal;
 
-  const MAX_WEBGL_PANES = 4;
+  // Linux + low-RAM: menos contextos WebGL concurrentes (ANGLE/compositor).
+  const MAX_WEBGL_PANES = React.useMemo(() => {
+    try {
+      const isLinux = window.electron?.platform === 'linux';
+      const isLowRam = !!window.electron?.linuxPerf?.isLowRam;
+      if (isLinux && isLowRam) return 2;
+    } catch (_) { /* ignore */ }
+    return 4;
+  }, []);
 
   const resolvedWebglByKey = React.useMemo(() => {
     if (webglByKey) return webglByKey;
@@ -243,7 +251,7 @@ const SplitLayout = ({
       if (rightTerminal?.key && map.size < MAX_WEBGL_PANES) map.set(rightTerminal.key, true);
     }
     return map;
-  }, [webglByKey, active, isNestedSystem, isArraySystem, isLegacySystem, first, second, terminals, leftTerminal, rightTerminal]);
+  }, [webglByKey, active, isNestedSystem, isArraySystem, isLegacySystem, first, second, terminals, leftTerminal, rightTerminal, MAX_WEBGL_PANES]);
 
   const panePreferWebgl = (key) => {
     if (!active) return false;

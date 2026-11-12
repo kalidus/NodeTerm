@@ -94,7 +94,7 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {}, fontFamily
 
         let unsubscribe = () => {};
         let cancelled = false;
-        // GPU stats: en Linux espaciar más (nvidia-smi / DRM)
+        // GPU stats: en Linux espaciar más (sysfs/DRM; sin nvidia-smi)
         const isLinux = window.electron?.platform === 'linux';
         const gpuMinInterval = Math.max(isLinux ? 15000 : 5000, pollingInterval * (isLinux ? 3 : 2));
 

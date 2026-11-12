@@ -34,7 +34,7 @@ import { presetManager } from '../utils/presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
 import { openAppearanceQuickPanel } from '../utils/appearanceQuickPanel';
 import {
-  HIBERNATION_MRU_EXTRA,
+  getHibernationMruExtra,
   shouldKeepTabMounted,
   touchMruKeys
 } from '../utils/tabHibernation';
@@ -288,12 +288,12 @@ const MainContentArea = ({
   const handleShowFileExplorer = useCallback((tabKey) => setSshFileExplorerTabId(tabKey), []);
   const handleCloseFileExplorer = useCallback(() => setSshFileExplorerTabId(null), []);
 
-  // MRU de pestañas montadas (activa + N): hibernación SSH sin matar sesión
+  // MRU de pestañas montadas (activa + N): hibernación SSH/locales sin matar sesión/PTY
   const [mruTabKeys, setMruTabKeys] = useState([]);
   useEffect(() => {
     const active = filteredTabs?.[activeTabIndex];
     if (!active?.key) return;
-    setMruTabKeys((prev) => touchMruKeys(prev, active.key, HIBERNATION_MRU_EXTRA + 1));
+    setMruTabKeys((prev) => touchMruKeys(prev, active.key, getHibernationMruExtra() + 1));
   }, [activeTabIndex, filteredTabs]);
 
   // Función para obtener el terminal por defecto desde configuración
@@ -2281,7 +2281,7 @@ const MainContentArea = ({
                     </div>
                   )}
 
-                  {/* Montar pestañas activas/MRU; SSH fuera del MRU hibernan (sesión viva en main) */}
+                  {/* Montar pestañas activas/MRU; SSH/locales fuera del MRU hibernan (sesión/PTY viva en main) */}
                   {(() => {
                     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
                       if (tab.embedInHome) return null;
@@ -2313,7 +2313,6 @@ const MainContentArea = ({
                             bottom: 0,
                             visibility: isActiveTab ? 'visible' : 'hidden',
                             contentVisibility: isActiveTab ? 'visible' : 'hidden',
-                            opacity: isActiveTab ? 1 : 0,
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
                             background: ((tab.type === TAB_TYPES.HOME || tab.type === 'edit-connection' || tab.type === TAB_TYPES.NETWORK_TOOL || tab.type === 'network-tool' || tab.type === TAB_TYPES.FORENSICS || tab.type === 'forensics' || tab.type === TAB_TYPES.SETTINGS || tab.type === 'settings') && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'

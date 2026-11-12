@@ -13,6 +13,18 @@ export const generateAdvancedCSS = (themeName, styles) => {
       transform: translateZ(0);
       will-change: transform;
     }
+
+    /* Lite-effects: anular blur/glow/will-change del tema (especificidad >= reglas de arriba) */
+    html[data-ui-lite-effects="true"] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+    html[data-ui-lite-effects="true"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::before,
+    html[data-ui-lite-effects="true"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::after {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      will-change: auto !important;
+      animation: none !important;
+      filter: none !important;
+      box-shadow: none !important;
+    }
     
     /* Estilos para el botón de cerrar en pestañas */
     .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {

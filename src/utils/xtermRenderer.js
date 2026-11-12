@@ -69,8 +69,9 @@ export function attachTerminalRenderer(termInstance, customAddons = {}, options 
 }
 
 /**
- * Renderer de una pestaña visible. Si está oculta no monta WebGL ni Canvas:
- * xterm se queda en el renderer DOM y el bitmap de GPU se libera.
+ * Renderer de una pestaña visible. Si está oculta y aún no hay addon,
+ * no monta GPU (el mount real ocurre al activar / attach inicial).
+ * Las pestañas montadas inactivas mantienen el addon vía useTerminalMemoryGuards.
  */
 export function attachVisibleTerminalRenderer(termInstance, customAddons, active) {
   if (!active) return { rendererType: 'suspended', addon: null };
@@ -78,17 +79,19 @@ export function attachVisibleTerminalRenderer(termInstance, customAddons, active
 }
 
 /**
- * Activa WebGL al mostrar la pestaña y lo suelta al ocultarla, sin recrear el terminal.
- */
-/**
+ * Sincroniza el renderer preferido (WebGL o Canvas) sin recrear el Terminal.
  * @param {boolean} preferWebgl
- * @param {{ canvasFallback?: boolean }} [opts] - Si preferWebgl=false y canvasFallback,
- *   monta Canvas en lugar de suspender (splits con muchos paneles).
+ * @param {{ canvasFallback?: boolean, keepWarm?: boolean }} [opts]
+ *   - canvasFallback: si preferWebgl=false, monta Canvas (splits densos).
+ *   - keepWarm: si preferWebgl=false y hay addon GPU, no lo dispose (tabs montadas inactivas).
  */
 export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, current, opts = {}) {
   if (!termInstance) return current || { rendererType: 'suspended', addon: null };
 
   if (!preferWebgl) {
+    if (opts.keepWarm && current?.addon && (current.rendererType === 'webgl' || current.rendererType === 'canvas')) {
+      return current;
+    }
     if (opts.canvasFallback) {
       if (current?.rendererType === 'canvas' && current.addon) return current;
       try {
@@ -104,7 +107,6 @@ export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, cu
   }
 
   if (current?.rendererType === 'webgl' && current.addon) {
-    // Re-fit implícito: el caller debe llamar fit/refresh tras volver a visible
     return current;
   }
 
@@ -321,6 +323,66 @@ export function createStableFitBinding(termRef, fitAddonRef, containerRef) {
   return { fitStable, beginMount, endMount, isFitting, invalidate, stableFitRef };
 }
 
+/**
+ * Activación barata: 1 rAF + retry diferido solo si el renderer se recreó,
+ * el contenedor aún no tiene tamaño o el geom cambió tras el primer paint.
+ *
+ * @param {(ctx: { isRetry: boolean }) => ({ recreated?: boolean, needsRetry?: boolean, cols?: number, rows?: number } | void)} paint
+ * @param {{ getSize?: () => ({ cols: number, rows: number } | null), retryMs?: number }} [opts]
+ * @returns {() => void} cleanup
+ */
+export function scheduleTerminalActivatePaint(paint, opts = {}) {
+  const retryMs = typeof opts.retryMs === 'number' ? opts.retryMs : 80;
+  let rafId = 0;
+  let timerId = 0;
+  let cancelled = false;
+
+  rafId = requestAnimationFrame(() => {
+    if (cancelled) return;
+    const sizeBefore = typeof opts.getSize === 'function' ? opts.getSize() : null;
+    let result = {};
+    try {
+      result = paint({ isRetry: false }) || {};
+    } catch (_) {
+      result = { needsRetry: true };
+    }
+    const sizeAfter = typeof opts.getSize === 'function' ? opts.getSize() : null;
+    const recreated = !!result.recreated;
+    const needsRetry = !!result.needsRetry;
+    const sizeChangedDuringPaint = !!(
+      sizeBefore &&
+      sizeAfter &&
+      (sizeBefore.cols !== sizeAfter.cols || sizeBefore.rows !== sizeAfter.rows)
+    );
+
+    // Sin recreate ni fallo real: no programar el timeout de 80ms (switch warm instantáneo).
+    if (!recreated && !needsRetry && !sizeChangedDuringPaint) {
+      return;
+    }
+
+    timerId = setTimeout(() => {
+      if (cancelled) return;
+      const sizeNow = typeof opts.getSize === 'function' ? opts.getSize() : null;
+      const sizeDrifted = !!(
+        sizeAfter &&
+        sizeNow &&
+        (sizeAfter.cols !== sizeNow.cols || sizeAfter.rows !== sizeNow.rows)
+      );
+      if (recreated || needsRetry || sizeChangedDuringPaint || sizeDrifted) {
+        try {
+          paint({ isRetry: true });
+        } catch (_) { /* noop */ }
+      }
+    }, retryMs);
+  });
+
+  return () => {
+    cancelled = true;
+    if (rafId) cancelAnimationFrame(rafId);
+    if (timerId) clearTimeout(timerId);
+  };
+}
+
 /** Agrupa ráfagas de resize (observer, ventana) en una sola llamada. */
 export function createDebouncedFn(fn, ms = 50) {
   let timer = null;
@@ -358,14 +420,12 @@ export function createTimerBag() {
 }
 
 /**
- * Ajusta renderer y write-buffer cuando la pestana pasa a segundo plano.
- * El attach inicial debe guardar el estado en el ref devuelto.
- * @param {boolean} [preferWebgl] - Si se omite, sigue a `active`. En splits densos
- *   se puede pasar false con active=true para usar Canvas y liberar contextos WebGL.
+ * Write-buffer on/off al cambiar active. El renderer GPU se mantiene caliente
+ * mientras la pestaña sigue montada; solo se dispose en unmount (hibernación SSH / cierre).
+ * @param {boolean} [preferWebgl] - En splits densos false + active → Canvas (presupuesto WebGL).
  */
 export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRef, preferWebgl) {
   const rendererRef = useRef(null);
-  const wantWebgl = active && (preferWebgl !== false);
 
   useEffect(() => {
     if (writeBufferRef?.current && typeof writeBufferRef.current.setActive === 'function') {
@@ -375,14 +435,25 @@ export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRe
 
   useEffect(() => {
     if (!termRef?.current || !xtermLib || !rendererRef.current) return;
+    // Inactiva montada: no dispose (keepWarm). Activa: asegurar WebGL o Canvas de presupuesto.
+    if (!active) {
+      return;
+    }
     rendererRef.current = syncTerminalRenderer(
       termRef.current,
       { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
-      !!wantWebgl,
+      preferWebgl !== false,
       rendererRef.current,
-      { canvasFallback: !!active && !wantWebgl }
+      { canvasFallback: preferWebgl === false }
     );
-  }, [active, wantWebgl, xtermLib, termRef]);
+  }, [active, preferWebgl, xtermLib, termRef]);
+
+  useEffect(() => () => {
+    try {
+      rendererRef.current?.addon?.dispose();
+    } catch (_) { /* noop */ }
+    rendererRef.current = { rendererType: 'suspended', addon: null };
+  }, []);
 
   return rendererRef;
 }

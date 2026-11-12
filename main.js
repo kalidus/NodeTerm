@@ -237,6 +237,10 @@ function getTotalRamGb() {
 }
 
 const isLowRamMachine = getTotalRamGb() <= 8;
+process.env.NODETERM_IS_LOW_RAM = isLowRamMachine ? '1' : '0';
+if (!process.env.NODETERM_DISPLAY_GPU) {
+  process.env.NODETERM_DISPLAY_GPU = process.platform === 'linux' ? 'auto' : process.platform;
+}
 
 // Configuracion de GPU por plataforma
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
@@ -305,11 +309,16 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     ? gpuEnvPref
     : detectLinuxDisplayGpu();
   const useNvidiaPrime = detectedGpu === 'nvidia';
+  const nvidiaRenderNode = useNvidiaPrime ? findNvidiaRenderNode() : null;
 
   if (useNvidiaPrime) {
     process.env.__NV_PRIME_RENDER_OFFLOAD = process.env.__NV_PRIME_RENDER_OFFLOAD || '1';
     process.env.__GLX_VENDOR_LIBRARY_NAME = process.env.__GLX_VENDOR_LIBRARY_NAME || 'nvidia';
     process.env.__VK_LAYER_NV_optimus = process.env.__VK_LAYER_NV_optimus || 'NVIDIA_only';
+    // GBM nativo NVIDIA bajo Wayland (evita fallback genérico / software).
+    if (!process.env.GBM_BACKEND) {
+      process.env.GBM_BACKEND = 'nvidia-drm';
+    }
     try {
       const fsSync = require('fs');
       if (fsSync.existsSync('/usr/lib/dri/nvidia_drv_video.so') || fsSync.existsSync('/usr/lib64/dri/nvidia_drv_video.so')) {
@@ -317,6 +326,11 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
         process.env.NVD_BACKEND = 'direct';
       }
     } catch (_) {}
+    if (nvidiaRenderNode) {
+      console.log(`[GPU] NVIDIA display GPU; render node ${nvidiaRenderNode}; GBM_BACKEND=${process.env.GBM_BACKEND}`);
+    } else {
+      console.log(`[GPU] NVIDIA display GPU; GBM_BACKEND=${process.env.GBM_BACKEND}`);
+    }
   } else {
     // Evitar que variables NVIDIA heredadas del sistema rompan VA-API o fuercen PRIME Offload
     // cuando la pantalla está conectada a la GPU integrada AMD/Intel.
@@ -329,6 +343,10 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
       delete process.env.__GLX_VENDOR_LIBRARY_NAME;
     }
     delete process.env.__VK_LAYER_NV_optimus;
+    if (process.env.GBM_BACKEND === 'nvidia-drm') {
+      delete process.env.GBM_BACKEND;
+    }
+    console.log(`[GPU] Display GPU integrada (${detectedGpu}); env NVIDIA limpiado`);
   }
   // En Linux con drivers propietarios NVIDIA (Arch/CachyOS), el sandbox de Chromium
   // bloquea el acceso a /dev/nvidia* y nvidia-drm_gbm.so, forzando caída a software (inProcessGpu).
@@ -353,15 +371,18 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
 
+  // Explicit sync para AMD/Mesa e NVIDIA (Wayland). Evita tearing/stutter sin forzar X11.
   const linuxFeatures = [
     'CanvasOopRasterization',
     'AcceleratedVideoDecodeLinuxGL',
     'AcceleratedVideoDecodeLinuxZeroCopyGL',
     'VaapiIgnoreDriverChecks',
-    'WaylandDrmClientBuffer'
+    'WaylandDrmClientBuffer',
+    'WaylandLinuxDrmSyncobj',
+    'WaylandSyncobjReleaseTimeline'
   ];
   if (useNvidiaPrime) {
-    linuxFeatures.push('WaylandLinuxDrmSyncobj', 'WaylandSyncobjReleaseTimeline', 'VaapiOnNvidiaGPUs');
+    linuxFeatures.push('VaapiOnNvidiaGPUs');
   } else {
     linuxFeatures.push('VaapiVideoDecodeLinuxGL');
   }
@@ -381,6 +402,11 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   if (ozoneHint === 'auto' || ozoneHint === 'wayland' || ozoneHint === 'x11') {
     app.commandLine.appendSwitch('ozone-platform-hint', ozoneHint);
   }
+
+  // Diagnóstico para el renderer (preload → window.electron.linuxPerf)
+  process.env.NODETERM_DISPLAY_GPU = detectedGpu;
+  process.env.NODETERM_IS_LOW_RAM = isLowRamMachine ? '1' : '0';
+  process.env.NODETERM_OZONE_HINT_RESOLVED = ozoneHint;
 } else {
   // Aceleración GPU completa por hardware (Windows/macOS)
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
@@ -1315,6 +1341,7 @@ function createWindow() {
     icon: path.join(__dirname, 'src/assets/app-icon.png'),
     frame: false,
     show: false,
+    paintWhenInitiallyHidden: true,
     transparent: false,
     backgroundColor: '#0a0f1f',
     icon: path.join(__dirname, 'src/assets/app-icon.png'),

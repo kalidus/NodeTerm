@@ -18,6 +18,7 @@ import {
 } from '../utils/defaultLocalTerminal';
 import { themeManager } from '../utils/themeManager';
 import { openAppearanceQuickPanel } from '../utils/appearanceQuickPanel';
+import { isLiteEffectsEnabled } from '../utils/uiLiteEffects';
 
 const LAUNCHER_PANEL_WIDTH = 820;
 const LAUNCHER_PANEL_MARGIN = 12;
@@ -413,6 +414,7 @@ export function useTabBarChrome({
       const sidebarStartsOpen = readLauncherSidebarOpen();
       panel.dataset.sidebarOpen = sidebarStartsOpen ? '1' : '0';
       const launcherPanelWidth = launcherPanelWidthFor(panel);
+      const liteEffects = isLiteEffectsEnabled();
       panel.style.cssText = `
         position: fixed;
         z-index: 10020;
@@ -424,11 +426,11 @@ export function useTabBarChrome({
         font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
         color: ${theme.ctxText || '#e2f8ff'};
         background: ${theme.ctxBg || 'rgba(6, 8, 18, 0.97)'};
-        backdrop-filter: blur(14px) saturate(160%);
-        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        backdrop-filter: ${liteEffects ? 'none' : 'blur(14px) saturate(160%)'};
+        -webkit-backdrop-filter: ${liteEffects ? 'none' : 'blur(14px) saturate(160%)'};
         border: 1px solid ${theme.ctxBorder || 'rgba(0, 243, 255, 0.45)'};
         border-radius: 8px;
-        box-shadow: ${theme.ctxShadow || '0 0 40px rgba(0, 243, 255, 0.12)'};
+        box-shadow: ${liteEffects ? 'none' : (theme.ctxShadow || '0 0 40px rgba(0, 243, 255, 0.12)')};
         padding: 0;
       `;
 
@@ -696,16 +698,18 @@ export function useTabBarChrome({
           border-radius: 0;
         `;
 
-        const glow = document.createElement('div');
-        glow.style.cssText = `
-          pointer-events: none;
-          position: absolute;
-          inset: -50% -30% auto -30%;
-          height: 85%;
-          background: radial-gradient(ellipse at 50% 0%, rgba(0, 243, 255, 0.15) 0%, transparent 60%);
-          opacity: 0.65;
-        `;
-        button.appendChild(glow);
+        if (!liteEffects) {
+          const glow = document.createElement('div');
+          glow.style.cssText = `
+            pointer-events: none;
+            position: absolute;
+            inset: -50% -30% auto -30%;
+            height: 85%;
+            background: radial-gradient(ellipse at 50% 0%, rgba(0, 243, 255, 0.15) 0%, transparent 60%);
+            opacity: 0.65;
+          `;
+          button.appendChild(glow);
+        }
 
         const iconBadge = document.createElement('div');
         iconBadge.style.cssText = `

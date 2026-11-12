@@ -7,7 +7,7 @@ import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalSearch } from '../utils/terminalSearch';
 import TerminalSearchBar from './TerminalSearchBar';
-import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachUnicode11, attachVisibleTerminalRenderer, createStableFitBinding, getTerminalScrollback, registerScrollbackSync, scheduleTerminalActivatePaint, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -461,34 +461,30 @@ const PowerShellTerminal = forwardRef(({
         return () => clearTimeout(id);
     });
 
-    // Fit tras montaje / cambio de tab (sin ráfaga de resize al PTY)
+    // Fit/focus al activar o montar: 1 rAF; retry solo si el contenedor aún no tiene tamaño
     useEffect(() => {
-        if (layoutSuspendedRef.current) return undefined;
-        fitStable();
-        const t1 = setTimeout(fitStable, 50);
-        const t2 = setTimeout(fitStable, 150);
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
-    }, [tabId]);
-
-    // Efecto para asegurar el focus automático al estar activa la pestaña
-    useEffect(() => {
-        if (!active) return;
-        const ensureFocus = () => {
-            if (term.current) {
+        if (!active || layoutSuspendedRef.current) return undefined;
+        return scheduleTerminalActivatePaint(
+            () => {
+                const el = terminalRef.current;
+                const sizeMissing = !el || el.offsetWidth <= 0 || el.offsetHeight <= 0;
+                fitStable();
                 try {
-                    term.current.focus();
-                } catch (e) {
-                    // Silently handle
-                }
+                    term.current?.focus();
+                } catch (_) { /* noop */ }
+                return {
+                    needsRetry: sizeMissing,
+                    cols: term.current?.cols,
+                    rows: term.current?.rows
+                };
+            },
+            {
+                getSize: () =>
+                    term.current
+                        ? { cols: term.current.cols, rows: term.current.rows }
+                        : null
             }
-        };
-
-        ensureFocus();
-        const timer = setTimeout(ensureFocus, 50);
-        return () => clearTimeout(timer);
+        );
     }, [active, tabId]);
 
     return (

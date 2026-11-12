@@ -1,50 +1,93 @@
 # Optimización de Rendimiento y Gestión de Memoria
 
-Este documento resume las directrices y arquitecturas de optimización aplicadas en NodeTerm para garantizar bajo consumo de RAM y CPU en sesiones prolongadas.
+Este documento resume las directrices y arquitecturas de optimización aplicadas en NodeTerm para bajo consumo de RAM/CPU y fluidez en sesiones prolongadas (especialmente Linux/Wayland).
 
 ---
 
 ## 1. Gestión de Memoria en Terminales (XTerm.js)
 
-### Scrollback Dinámico
-- **Límites Adaptativos**:
-  - Pestañas en segundo plano / inactivas: scrollback acotado a 1.000 líneas.
-  - Pestaña activa: hasta 5.000 - 10.000 líneas según configuración de usuario.
-- **Limpieza de Buffers Ocultos**:
-  - Al minimizar o cambiar de pestaña, se invoca `terminal.clear()` del renderizador visual manteniendo el buffer crudo mínimo en backend pty para evitar fugas de texturas WebGL/Canvas.
+### Scrollback
+- El scrollback lo define la configuración de usuario (`getTerminalScrollback()`; default ~2 000 líneas).
+- Al ocultar una pestaña se **desacopla el renderer GPU** (WebGL/Canvas dispose); el buffer de texto de xterm y el PTY/SSH en main siguen vivos.
 
 ### Renderers (WebGL vs Canvas vs DOM)
-- Por defecto se usa **WebGL** con fallback automático a **Canvas** si falla el contexto GPU.
-- Si una pestaña permanece inactiva por más de 10 minutos, el addon WebGL se pausa o desacopla temporalmente liberando VRAM hasta que la pestaña vuelve a enfocarse.
+- Por defecto **WebGL**, con fallback automático a **Canvas** y luego DOM.
+- Pestaña/pane inactivo: se suspende el addon GPU (no se mantiene un timer de 10 min; el desacople es al pasar a segundo plano).
+- En splits hay un **presupuesto de paneles WebGL** (`MAX_WEBGL_PANES`: 4, o **2** en Linux con ≤8 GB RAM). El resto usa Canvas.
+- Salida masiva: write-buffer con batching por `requestAnimationFrame` + backpressure SSH.
+
+### Activación de pestaña
+- Un solo `requestAnimationFrame`; retry (~80 ms) **solo** si el renderer se recreó, el contenedor aún no tiene tamaño o el geom cambió (`scheduleTerminalActivatePaint`).
+- `fitStable() === false` por tamaño igual **no** fuerza retry (switch warm instantáneo).
 
 ---
 
 ## 2. Optimizaciones en React y Renderizado
 
-- **Virtualización de Árboles y Listas**:
-  - El panel lateral (conexiones, historial, grabaciones) utiliza renderizado virtualizado o carga paginada para listas de más de 100 elementos.
-- **Memoización de Componentes**:
-  - `React.memo` en `TabHeader`, terminal containers y elementos de alta frecuencia de eventos.
-- **Debounce de Redibujado**:
-  - Eventos de redimensión (`fitAddon.fit()`) agrupados con `requestAnimationFrame` o debounce de 50ms para evitar múltiples cálculos de geometría por frame.
+- **Listas**: historial/cyber usa `VirtualScroller`; el árbol de conexiones poda nodos colapsados y pagina (“mostrar más”).
+- **Memoización**: `React.memo` en cabeceras de pestaña y contenedores de terminal de alta frecuencia.
+- **Fit / resize**: `createStableTerminalFit` + debounce/`rAF`; durante drag de splits se apaga blur (`nodeterm-ui-dragging`).
+- **Lite-effects** (`data-ui-lite-effects`): apaga `backdrop-filter`, glow y `will-change` permanente de temas de tabs. En Linux está **ON por defecto** (el usuario puede desactivarlo).
+
+### Hibernación de pestañas (MRU)
+- Terminales **SSH simples** fuera del MRU se **desmontan en el renderer**; la sesión sigue viva en main (preserve + ring).
+- MRU: activa + 3 (o +1 si low-RAM).
+- **No hibernan** (esta versión): locales/docker (unmount mataría el PTY), splits, RDP, Guacamole, Home, explorers.
+- Pestañas **montadas inactivas** mantienen WebGL/Canvas caliente (solo se pause el write-buffer); dispose GPU al unmount.
 
 ---
 
-## 3. Optimizaciones de Procesos en Backend (Electron / Main)
+## 3. Backend (Electron / Main)
 
-- **Handlers de Arranque Lazy**:
-  - Los módulos pesados (KeePass, importadores de sesiones externas, crypto helpers avanzados) no se importan en el arranque principal; se cargan mediante `require()` diferido al invocarse su primer comando IPC.
-- **Limpieza de Procesos Huérfanos**:
-  - Al cerrar pestañas de terminales locales o SSH, el proceso PTY o socket SSH correspondiente es terminado inmediatamente (`pty.kill()`, `sshClient.end()`).
-  - Verificación periódica al cierre de ventana para evitar procesos Node/PTY en segundo plano.
+- Módulos pesados con `require()` diferido al primer IPC.
+- Al cerrar pestaña: `pty.kill()` / `sshClient.end()` inmediato; barrido de workers huérfanos al arranque.
+- IPC de stdout: batcher en main (ventana corta / tope de bytes).
+- Heap V8 acotado según RAM del equipo (`--max-old-space-size`, override `NODETERM_MAX_OLD_SPACE_SIZE`).
+- `BrowserWindow` principal: `paintWhenInitiallyHidden: true`, `show: false` hasta ready.
 
 ---
 
 ## 4. Particularidades por Sistema Operativo
 
-- **Windows**:
-  - Optimización de ConPTY vs winpty según la versión del build de Windows 10/11.
-- **macOS**:
-  - Desactivación de aceleraciones de GPU redundantes si se detecta perfil de ahorro de energía.
-  - Corrección de listeners de focus en ventanas minimizadas de macOS para detener el polling de estado de terminales.
+### Windows
+- ConPTY vs winpty según build; `DirectComposition` en flags GPU.
+- RDP H.264 puede usar WebGPU cuando el entorno lo permite.
 
+### macOS
+- Listeners de focus en ventanas minimizadas para no seguir haciendo polling de terminales.
+
+### Linux (Wayland / X11) — NVIDIA y AMD
+
+Stack Chromium/Ozone en `main.js`:
+
+| Pieza | Comportamiento |
+|--------|----------------|
+| Detección GPU | DRM: GPU con conector `connected` (`0x10de` NVIDIA, `0x1002` AMD, `0x8086` Intel). Override: `NODETERM_GPU=auto\|nvidia\|integrated`. |
+| ANGLE | `use-angle=gl` (Desktop GL). Vulkan y WebGPU **desactivados** (conflicto con Ozone Wayland). |
+| Explicit sync | `WaylandLinuxDrmSyncobj` + `WaylandSyncobjReleaseTimeline` en **AMD/Mesa e NVIDIA**. |
+| NVIDIA display | PRIME env + `GBM_BACKEND=nvidia-drm`; log del render node DRM. |
+| iGPU display (híbrido) | Limpia env NVIDIA heredado para no forzar offload. |
+| Ozone | `ozone-platform-hint` = `NODETERM_OZONE_HINT` o `auto` (Wayland nativo si la sesión lo es). |
+| IME | `disable-wayland-ime` (menos latencia de teclado en canvas). |
+| UI | Lite-effects default ON; blur Home capped; polling de stats más lento. |
+| GPU stats | Solo **sysfs/proc** (sin `nvidia-smi`/`rocm-smi` en el poll — pueden bloquear en D con NVIDIA+Wayland). |
+| RDP present | Modo `direct` / `drawImage` (sin WebGPU). |
+| Diagnóstico renderer | `window.electron.linuxPerf` → `{ isLowRam, displayGpu, ozoneHint }`. |
+
+Variables útiles:
+
+```bash
+NODETERM_GPU=auto|nvidia|integrated
+NODETERM_OZONE_HINT=auto|wayland|x11
+NODETERM_DISABLE_GPU=true          # desactiva aceleración HW
+NODETERM_MAX_OLD_SPACE_SIZE=2048   # MB heap V8
+```
+
+---
+
+## 5. Criterios prácticos de suavidad
+
+- Preferir lite-effects en Linux; no reactivar Vulkan/WebGPU bajo Wayland.
+- Con muchas pestañas: confiar en hibernación MRU + presupuesto WebGL.
+- Si NVIDIA+Wayland sigue irregular: probar `NODETERM_OZONE_HINT=wayland` explícito (drivers 555+/620+ con syncobj) o, como diagnóstico, `x11`.
+- Telemetría GPU en status bar/Home puede mostrar nombre sin utilization/VRAM en NVIDIA híbrida apagada; eso es esperado sin `nvidia-smi`.

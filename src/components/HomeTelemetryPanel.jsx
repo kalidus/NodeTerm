@@ -212,10 +212,13 @@ const HomeTelemetryPanel = ({
       const txBytes = systemStatsPayload.network?.tx_speed || 0;
 
       const now = Date.now();
-      if (now - lastGpuAt >= Math.max(1500, pollingIntervalMs)) {
+      const isLinux = typeof window !== 'undefined' && window.electron?.platform === 'linux';
+      const gpuMinInterval = Math.max(isLinux ? 15000 : 1500, pollingIntervalMs * (isLinux ? 3 : 1));
+      if (now - lastGpuAt >= gpuMinInterval) {
         lastGpuAt = now;
         try {
           const gpuData = await window.electron?.system?.getGPUStats();
+          // Linux sysfs puede devolver ok sin utilization/VRAM (p.ej. NVIDIA híbrida apagada).
           if (!stopped) setGpuStats(gpuData?.ok ? gpuData : null);
         } catch {
           if (!stopped) setGpuStats(null);
