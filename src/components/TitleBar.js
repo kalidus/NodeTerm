@@ -8,20 +8,9 @@ import { appConfirm } from './ui/AppConfirm';
 import TitleBarUpdateButton from './TitleBarUpdateButton';
 import TitleBarSearch from './TitleBarSearch';
 import VaultSelector from './vault/VaultSelector';
-import {
-  UI_LAYOUT_OPTIONS,
-  getCurrentUILayoutId,
-  setUILayout,
-} from '../utils/appearanceLayout';
-import {
-  TERMINAL_FRAME_STYLE_OPTIONS,
-  getCurrentTerminalFrameStyle,
-  setTerminalFrameStyle,
-} from '../utils/terminalFrameStyle';
+import { getCurrentTerminalFrameStyle } from '../utils/terminalFrameStyle';
 import { STORAGE_KEYS } from '../utils/constants';
 import { presetManager } from '../utils/presetManager';
-import TerminalFrameStyleOption from './TerminalFrameStyleOption';
-import UiLayoutStyleOption from './UiLayoutStyleOption';
 import PresetStyleOption from './PresetStyleOption';
 import '../styles/components/terminal-frame.css';
 
@@ -88,6 +77,7 @@ const IconSearch = () => (
 const IconMinimal = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <rect x="4.5" y="4.5" width="7" height="7" rx="1" fill="currentColor" stroke="none" opacity="0.55" />
   </svg>
 );
 
@@ -107,11 +97,11 @@ const IconStatusBar = () => (
   </svg>
 );
 
-/** Ocultar titlebar: chevron arriba + panel. */
 const IconTitleBar = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M5 5.5 L8 2.5 L11 5.5" {...LAYOUT_STROKE} />
-    <rect x="2" y="7" width="12" height="7" rx="1.5" {...LAYOUT_STROKE} />
+    <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
+    <path d="M2 5h12" {...LAYOUT_STROKE} />
+    <rect x="2" y="2" width="12" height="3" rx="1.5" fill="currentColor" stroke="none" opacity="0.6" />
   </svg>
 );
 
@@ -121,6 +111,33 @@ const IconLayout = () => (
     <rect x="8.5" y="1.5" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
     <rect x="8.5" y="9" width="6" height="5.5" rx="1.2" {...LAYOUT_STROKE} />
   </svg>
+);
+
+const IconEye = ({ off = false }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M1.6 8s2.3-3.6 6.4-3.6S14.4 8 14.4 8s-2.3 3.6-6.4 3.6S1.6 8 1.6 8z" {...LAYOUT_STROKE} />
+    <circle cx="8" cy="8" r="1.6" {...LAYOUT_STROKE} />
+    {off ? <path d="M3.2 12.8 L12.8 3.2" {...LAYOUT_STROKE} /> : null}
+  </svg>
+);
+
+const LayoutViewRow = ({ icon, label, shortcut, visible, onClick }) => (
+  <button
+    type="button"
+    role="menuitemcheckbox"
+    aria-checked={visible}
+    className={`title-bar-views-item${visible ? '' : ' is-off'}`}
+    onClick={onClick}
+  >
+    <span className="title-bar-views-leading">
+      {icon}
+      <span className="title-bar-views-label">{label}</span>
+    </span>
+    <span className="title-bar-views-shortcut">{shortcut || ''}</span>
+    <span className={`title-bar-views-eye${visible ? '' : ' is-off'}`} aria-hidden="true">
+      <IconEye off={!visible} />
+    </span>
+  </button>
 );
 
 const TitleBar = ({
@@ -160,7 +177,6 @@ const TitleBar = ({
   const layoutBtnRef = useRef(null);
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
   const [layoutPopoverTab, setLayoutPopoverTab] = useState('views');
-  const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
   const [currentFrameStyle, setCurrentFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
   const [activePresetId, setActivePresetId] = useState(() => presetManager.getActivePresetId());
   const [layoutPresets, setLayoutPresets] = useState(() => presetManager.getAllPresets());
@@ -220,21 +236,6 @@ const TitleBar = ({
     window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', { detail: { visible: next } }));
   }, [statusBarVisible]);
 
-  const handleResetLayout = useCallback(() => {
-    if (!sidebarVisible) window.dispatchEvent(new CustomEvent('toggle-sidebar'));
-    if (sidebarCollapsed) window.dispatchEvent(new CustomEvent('expand-sidebar'));
-    if (tabBarCollapsed) window.dispatchEvent(new CustomEvent('toggle-tabbar'));
-    if (!mainFrameHeaderCollapsed) window.dispatchEvent(new CustomEvent('toggle-main-frame-header'));
-    if (isMinimalMode) window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-    if (!statusBarVisible) handleToggleStatusBar();
-  }, [sidebarVisible, sidebarCollapsed, tabBarCollapsed, mainFrameHeaderCollapsed, isMinimalMode, statusBarVisible, handleToggleStatusBar]);
-
-  useEffect(() => {
-    const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
-    window.addEventListener('layout-changed', syncLayout);
-    return () => window.removeEventListener('layout-changed', syncLayout);
-  }, []);
-
   useEffect(() => {
     const syncFrame = (e) => {
       const style = e?.detail?.style || getCurrentTerminalFrameStyle();
@@ -273,18 +274,6 @@ const TitleBar = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [layoutPopoverOpen]);
-
-  const handleSelectUiLayout = useCallback((layoutId) => {
-    setUILayout(layoutId);
-    setCurrentUiLayout(layoutId);
-    setLayoutPopoverOpen(false);
-  }, []);
-
-  const handleSelectFrameStyle = useCallback((styleId) => {
-    const applied = setTerminalFrameStyle(styleId);
-    setCurrentFrameStyle(applied);
-    setLayoutPopoverOpen(false);
-  }, []);
 
   const handleSelectPreset = useCallback((preset) => {
     presetManager.applyPreset(preset);
@@ -729,15 +718,12 @@ const TitleBar = ({
           {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
             (() => {
               const rect = layoutBtnRef.current.getBoundingClientRect();
-              const isFramesTab = layoutPopoverTab === 'frames';
               const isPresetsTab = layoutPopoverTab === 'presets';
-              const isLayoutTab = layoutPopoverTab === 'layout';
-              const isViewsTab = layoutPopoverTab === 'views';
-              const POPOVER_HEIGHT = isViewsTab ? 320 : Math.min(window.innerHeight * 0.7, 420) + 44;
+              const POPOVER_HEIGHT = isPresetsTab ? Math.min(window.innerHeight * 0.7, 420) + 44 : 420;
               const openUp = window.innerHeight - rect.bottom < POPOVER_HEIGHT;
               return (
                 <div
-                  className={`title-bar-layout-popover is-wide-tab${isViewsTab ? ' is-views-tab' : ''}`}
+                  className={`title-bar-layout-popover${isPresetsTab ? ' is-presets' : ' is-views'}`}
                   style={{
                     top: openUp ? Math.max(8, rect.top - POPOVER_HEIGHT - 4) : rect.bottom + 4,
                     right: Math.max(8, window.innerWidth - rect.right),
@@ -748,8 +734,8 @@ const TitleBar = ({
                     <button
                       type="button"
                       role="tab"
-                      aria-selected={isViewsTab}
-                      className={`title-bar-layout-popover-tab${isViewsTab ? ' is-active' : ''}`}
+                      aria-selected={!isPresetsTab}
+                      className={`title-bar-layout-popover-tab${!isPresetsTab ? ' is-active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -757,19 +743,6 @@ const TitleBar = ({
                       }}
                     >
                       Vistas
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={isLayoutTab}
-                      className={`title-bar-layout-popover-tab${isLayoutTab ? ' is-active' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLayoutPopoverTab('layout');
-                      }}
-                    >
-                      Estilos
                     </button>
                     <button
                       type="button"
@@ -784,42 +757,34 @@ const TitleBar = ({
                     >
                       Presets
                     </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={isFramesTab}
-                      className={`title-bar-layout-popover-tab${isFramesTab ? ' is-active' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLayoutPopoverTab('frames');
-                      }}
-                    >
-                      Marcos
-                    </button>
                   </div>
-                  {isViewsTab ? (
+                  {isPresetsTab ? (
+                    <div className="title-bar-layout-popover-list" role="none">
+                      {layoutPresets.map((preset) => (
+                        <PresetStyleOption
+                          key={preset.id}
+                          preset={preset}
+                          selected={activePresetId === preset.id}
+                          onSelect={handleSelectPreset}
+                        />
+                      ))}
+                    </div>
+                  ) : (
                     <div className="title-bar-views-menu" role="none">
-                      <div className="title-bar-views-section-label">Vistas de la interfaz</div>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      <div className="title-bar-views-section-label">Visibilidad</div>
+                      <LayoutViewRow
+                        icon={<IconSidebarLeft />}
+                        label="Barra lateral principal"
+                        shortcut="Ctrl+B"
+                        visible={sidebarVisible}
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('toggle-sidebar'));
                         }}
-                      >
-                        <span className="title-bar-views-check">{sidebarVisible ? '✓' : ''}</span>
-                        <IconSidebarLeft />
-                        <span className="title-bar-views-label">Barra lateral principal</span>
-                        <span className="title-bar-views-shortcut">Ctrl+B</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      />
+                      <LayoutViewRow
+                        icon={<IconSidebarRight />}
+                        label="Barra lateral solo iconos"
+                        visible={sidebarVisible && sidebarCollapsed}
                         onClick={() => {
                           if (!sidebarVisible) {
                             window.dispatchEvent(new CustomEvent('expand-sidebar'));
@@ -827,69 +792,33 @@ const TitleBar = ({
                             window.dispatchEvent(new CustomEvent('toggle-sidebar-collapse'));
                           }
                         }}
-                      >
-                        <span className="title-bar-views-check">{sidebarVisible && sidebarCollapsed ? '✓' : ''}</span>
-                        <IconSidebarRight />
-                        <span className="title-bar-views-label">Barra lateral secundaria (IconRail)</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      />
+                      <LayoutViewRow
+                        icon={<IconPanel />}
+                        label="Barra de pestañas"
+                        visible={!tabBarCollapsed}
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('toggle-tabbar'));
                         }}
-                      >
-                        <span className="title-bar-views-check">{!tabBarCollapsed ? '✓' : ''}</span>
-                        <IconPanel />
-                        <span className="title-bar-views-label">Barra de pestañas</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      />
+                      <LayoutViewRow
+                        icon={<IconFrameHeader />}
+                        label="Cabecera de marco de terminal"
+                        visible={!mainFrameHeaderCollapsed}
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('toggle-main-frame-header'));
                         }}
-                      >
-                        <span className="title-bar-views-check">{!mainFrameHeaderCollapsed ? '✓' : ''}</span>
-                        <IconFrameHeader />
-                        <span className="title-bar-views-label">Cabecera de marco de terminal</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      />
+                      <LayoutViewRow
+                        icon={<IconStatusBar />}
+                        label="Barra de estado"
+                        visible={statusBarVisible}
                         onClick={handleToggleStatusBar}
-                      >
-                        <span className="title-bar-views-check">{statusBarVisible ? '✓' : ''}</span>
-                        <IconStatusBar />
-                        <span className="title-bar-views-label">Barra de estado</span>
-                      </button>
-
-                      <div className="title-bar-views-divider" />
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-                        }}
-                      >
-                        <span className="title-bar-views-check">{isMinimalMode ? '✓' : ''}</span>
-                        <IconMinimal />
-                        <span className="title-bar-views-label">Modo minimalista</span>
-                        <span className="title-bar-views-shortcut">Ctrl+Shift+M</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item"
+                      />
+                      <LayoutViewRow
+                        icon={<IconTitleBar />}
+                        label="Barra de título"
+                        visible
                         onClick={() => {
                           if (typeof onToggleTitleBar === 'function') {
                             onToggleTitleBar();
@@ -898,56 +827,16 @@ const TitleBar = ({
                           }
                           setLayoutPopoverOpen(false);
                         }}
-                      >
-                        <span className="title-bar-views-check">✓</span>
-                        <IconTitleBar />
-                        <span className="title-bar-views-label">Barra de título</span>
-                        <span className="title-bar-views-hint">Ocultar</span>
-                      </button>
-
-                      <div className="title-bar-views-divider" />
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="title-bar-views-item title-bar-views-reset"
-                        onClick={handleResetLayout}
-                      >
-                        <span className="title-bar-views-check"></span>
-                        <i className="pi pi-refresh" style={{ fontSize: '12px', width: '16px', textAlign: 'center', opacity: 0.85 }} />
-                        <span className="title-bar-views-label">Restablecer diseño</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="title-bar-layout-popover-list" role="none">
-                      {isPresetsTab ? (
-                        layoutPresets.map((preset) => (
-                          <PresetStyleOption
-                            key={preset.id}
-                            preset={preset}
-                            selected={activePresetId === preset.id}
-                            onSelect={handleSelectPreset}
-                          />
-                        ))
-                      ) : isFramesTab ? (
-                        TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
-                          <TerminalFrameStyleOption
-                            key={style.id}
-                            style={style}
-                            selected={currentFrameStyle === style.id}
-                            onSelect={handleSelectFrameStyle}
-                          />
-                        ))
-                      ) : (
-                        UI_LAYOUT_OPTIONS.map((opt) => (
-                          <UiLayoutStyleOption
-                            key={opt.id}
-                            option={opt}
-                            selected={currentUiLayout === opt.id}
-                            onSelect={handleSelectUiLayout}
-                          />
-                        ))
-                      )}
+                      />
+                      <LayoutViewRow
+                        icon={<IconMinimal />}
+                        label="Modo minimalista"
+                        shortcut="Ctrl+Shift+M"
+                        visible={isMinimalMode}
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+                        }}
+                      />
                     </div>
                   )}
                 </div>
