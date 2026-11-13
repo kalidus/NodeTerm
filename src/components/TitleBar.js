@@ -698,13 +698,13 @@ const TitleBar = ({
           </TitleBarIconButton>
 
           <TitleBarIconButton
-            title={tabBarCollapsed ? 'Mostrar barra de pestañas' : 'Ocultar barra de pestañas'}
-            active={tabBarCollapsed}
+            title={mainFrameHeaderCollapsed ? 'Mostrar cabecera de marco' : 'Ocultar cabecera de marco'}
+            active={mainFrameHeaderCollapsed}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('toggle-tabbar'));
+              window.dispatchEvent(new CustomEvent('toggle-main-frame-header'));
             }}
           >
-            <IconPanel />
+            <IconFrameHeader />
           </TitleBarIconButton>
 
           <TitleBarIconButton
