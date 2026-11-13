@@ -3,14 +3,12 @@ import { Tree } from 'primereact/tree';
 import LibraryAddMenu from './library/LibraryAddMenu';
 import SidebarUpdateIndicator from './SidebarUpdateIndicator';
 import SidebarAppearanceMenu from './SidebarAppearanceMenu';
-import VaultLayoutMenu from './vault/VaultLayoutMenu';
-import { readSavedVaultLayout, isVaultLayout } from './vault/vaultLayoutModes';
-import NotesLayoutMenu from './notes/NotesLayoutMenu';
-import { readSavedNotesLayout, isNotesLayout } from './notes/notesLayoutModes';
-import ConnectionsLayoutMenu from './connections/ConnectionsLayoutMenu';
+import { readSavedVaultLayout, isVaultLayout, VAULT_LAYOUTS } from './vault/vaultLayoutModes';
+import { readSavedNotesLayout, isNotesLayout, NOTES_LAYOUTS } from './notes/notesLayoutModes';
 import ConnectionsBrowser from './connections/ConnectionsBrowser';
 import {
   CONNECTIONS_LAYOUT_STORAGE_KEY,
+  CONNECTIONS_LAYOUTS,
   isConnectionsLayout,
   readSavedConnectionsLayout
 } from './connections/connectionsLayoutModes';
@@ -3095,6 +3093,33 @@ const Sidebar = React.memo(({
   // ── Panel Toolbar Header (acciones fijas por sección) ─────────────────
   const newNoteIcon = sessionIcons?.newDocument ?? newDocumentToolbarIcon;
 
+  let appearanceLayouts = null;
+  let appearanceLayout = null;
+  let onSelectAppearanceLayout = null;
+  if ((activeTab === 'connections' || activeTab === 'favorites') && !remoteExplorerOpen) {
+    appearanceLayouts = CONNECTIONS_LAYOUTS;
+    appearanceLayout = connectionsLayout;
+    onSelectAppearanceLayout = (id) => {
+      if (isConnectionsLayout(id)) setConnectionsLayout(id);
+    };
+  } else if (activeTab === 'documents') {
+    appearanceLayouts = NOTES_LAYOUTS;
+    appearanceLayout = documentsNotesLayout;
+    onSelectAppearanceLayout = (id) => {
+      if (!isNotesLayout(id)) return;
+      setDocumentsNotesLayout(id);
+      window.dispatchEvent(new CustomEvent('documents-sidebar:set-layout', { detail: { layout: id } }));
+    };
+  } else if (activeTab === 'passwords') {
+    appearanceLayouts = VAULT_LAYOUTS;
+    appearanceLayout = passwordsVaultLayout;
+    onSelectAppearanceLayout = (id) => {
+      if (!isVaultLayout(id)) return;
+      setPasswordsVaultLayout(id);
+      window.dispatchEvent(new CustomEvent('passwords-sidebar:set-layout', { detail: { layout: id } }));
+    };
+  }
+
   const panelToolbarHeader = (activeTab !== null) && (
     <div className="sidebar-panel-toolbar">
       <div className="sidebar-panel-toolbar-left">
@@ -3228,32 +3253,6 @@ const Sidebar = React.memo(({
         )}
         <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
         <div className="sidebar-panel-toolbar-right-end">
-          {(activeTab === 'connections' || activeTab === 'favorites') && !remoteExplorerOpen && (
-            <ConnectionsLayoutMenu
-              layout={connectionsLayout}
-              onSelect={(layout) => {
-                if (isConnectionsLayout(layout)) setConnectionsLayout(layout);
-              }}
-            />
-          )}
-          {activeTab === 'documents' && (
-            <NotesLayoutMenu
-              layout={documentsNotesLayout}
-              onSelect={(layout) => {
-                setDocumentsNotesLayout(layout);
-                window.dispatchEvent(new CustomEvent('documents-sidebar:set-layout', { detail: { layout } }));
-              }}
-            />
-          )}
-          {activeTab === 'passwords' && (
-            <VaultLayoutMenu
-              layout={passwordsVaultLayout}
-              onSelect={(layout) => {
-                setPasswordsVaultLayout(layout);
-                window.dispatchEvent(new CustomEvent('passwords-sidebar:set-layout', { detail: { layout } }));
-              }}
-            />
-          )}
           {showToolbarExpandAll && !remoteExplorerOpen && !(
             (activeTab === 'passwords' && passwordsVaultLayout !== 'tree')
             || (activeTab === 'documents' && documentsNotesLayout !== 'tree')
@@ -3289,6 +3288,9 @@ const Sidebar = React.memo(({
               setExplorerFontColor={setExplorerFontColor}
               iconSize={iconSize}
               setIconSize={setIconSize}
+              layouts={appearanceLayouts}
+              layout={appearanceLayout}
+              onSelectLayout={onSelectAppearanceLayout}
               tooltip={`Apariencia de ${SIDEBAR_SECTION_LABELS[activeTab] || 'la sección'}`}
               panelId={embedded ? 'launcher-sidebar-appearance' : 'sidebar_appearance_panel'}
               overlayZIndex={embedded ? 10050 : 10001}

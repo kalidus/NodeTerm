@@ -26,6 +26,13 @@ const TB_ICON = {
   height: '16px'
 };
 
+const APPEARANCE_ROWS = [
+  { id: 'tree', label: 'Temas del Árbol', hint: 'Estilo de líneas y conectores', icon: 'pi pi-sitemap', color: '#2196f3' },
+  { id: 'treeIcons', label: 'Iconos del Árbol', hint: 'Carpetas y conexiones', icon: 'pi pi-folder', color: '#4caf50' },
+  { id: 'actionIcons', label: 'Iconos de Acción', hint: 'Botones de la barra superior', icon: 'pi pi-th-large', color: '#9c27b0' },
+  { id: 'typography', label: 'Color del árbol', hint: 'Color del texto de las sesiones', icon: 'pi pi-sliders-h', color: '#e91e63' },
+];
+
 const SidebarAppearanceMenu = ({
   treeTheme,
   setTreeTheme,
@@ -38,6 +45,9 @@ const SidebarAppearanceMenu = ({
   setSessionActionIconTheme,
   explorerFontColor,
   setExplorerFontColor,
+  layouts = null,
+  layout = null,
+  onSelectLayout,
   tooltip = 'Apariencia del árbol',
   panelId = 'sidebar_appearance_panel',
   overlayZIndex = 10001,
@@ -94,118 +104,76 @@ const SidebarAppearanceMenu = ({
       >
         <div style={{ padding: '8px' }}>
           {settingsView === 'choice' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', padding: '0 8px' }}>
-                <i className="pi pi-palette" style={{ color: 'var(--primary-color)', fontSize: '1rem' }} />
-                <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--ui-sidebar-text)', letterSpacing: '0.5px' }}>
+            <div className="sidebar-appearance-choice">
+              <div className="sidebar-appearance-head">
+                <i className="pi pi-palette" aria-hidden="true" />
+                <span className="sidebar-appearance-title">
                   {sectionLabel ? `Apariencia · ${sectionLabel}` : 'Apariencia Sidebar'}
                 </span>
               </div>
               {sectionLabel && (
-                <div style={{ fontSize: '0.7rem', opacity: 0.55, color: 'var(--ui-sidebar-text)', padding: '0 8px', marginBottom: '8px' }}>
+                <div className="sidebar-appearance-subtitle">
                   Tema del árbol e iconos de esta sección
                 </div>
               )}
               {hasSectionOverride && onResetSection && (
                 <button
                   type="button"
+                  className="sidebar-appearance-reset"
                   onClick={onResetSection}
-                  style={{
-                    width: '100%',
-                    margin: '0 0 8px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--ui-dialog-border)',
-                    background: 'transparent',
-                    color: 'var(--ui-sidebar-text)',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
                 >
                   Usar tema general
                 </button>
               )}
-              <div
-                onClick={() => setSettingsView('tree')}
-                className="theme-item"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('tree'); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
-                }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(33, 150, 243, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="pi pi-sitemap" style={{ color: '#2196f3' }} />
+              {Array.isArray(layouts) && layouts.length > 0 && (
+                <div className="sidebar-appearance-section">
+                  <div className="sidebar-appearance-group-label">Vista</div>
+                  <div className="sidebar-appearance-group" role="radiogroup" aria-label="Vista">
+                    {layouts.map((item) => {
+                      const active = layout === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          className={`sidebar-appearance-row${active ? ' is-active' : ''}`}
+                          onClick={() => onSelectLayout?.(item.id)}
+                        >
+                          <span className="sidebar-appearance-row-text">
+                            <span className="sidebar-appearance-row-name">{item.name}</span>
+                            {item.description && (
+                              <span className="sidebar-appearance-row-desc">{item.description}</span>
+                            )}
+                          </span>
+                          {active && <i className="pi pi-check" aria-hidden="true" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Temas del Árbol</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Estilo de líneas y conectores</div>
+              )}
+              <div className="sidebar-appearance-section">
+                <div className="sidebar-appearance-group-label">Apariencia</div>
+                <div className="sidebar-appearance-group">
+                  {APPEARANCE_ROWS.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      className="sidebar-appearance-row"
+                      onClick={() => setSettingsView(row.id)}
+                    >
+                      <span className="sidebar-appearance-row-icon" style={{ color: row.color }} aria-hidden="true">
+                        <i className={row.icon} />
+                      </span>
+                      <span className="sidebar-appearance-row-text">
+                        <span className="sidebar-appearance-row-name">{row.label}</span>
+                        <span className="sidebar-appearance-row-desc">{row.hint}</span>
+                      </span>
+                      <i className="pi pi-chevron-right sidebar-appearance-row-chevron" aria-hidden="true" />
+                    </button>
+                  ))}
                 </div>
-                <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
-              </div>
-              <div
-                onClick={() => setSettingsView('treeIcons')}
-                className="theme-item"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('treeIcons'); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
-                }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(76, 175, 80, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="pi pi-folder" style={{ color: '#4caf50' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Iconos del Árbol</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Carpetas y conexiones</div>
-                </div>
-                <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
-              </div>
-              <div
-                onClick={() => setSettingsView('actionIcons')}
-                className="theme-item"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('actionIcons'); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
-                }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(156, 39, 176, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="pi pi-th-large" style={{ color: '#9c27b0' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Iconos de Acción</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Botones de la barra superior</div>
-                </div>
-                <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
-              </div>
-              <div
-                onClick={() => setSettingsView('typography')}
-                className="theme-item"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('typography'); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
-                }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(233, 30, 99, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="pi pi-sliders-h" style={{ color: '#e91e63' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Color del árbol</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Color del texto de las sesiones</div>
-                </div>
-                <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
               </div>
             </div>
           )}
