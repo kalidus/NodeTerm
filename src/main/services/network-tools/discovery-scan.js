@@ -10,6 +10,7 @@ const os = require('os');
 const path = require('path');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const sslCertAnalyzer = require('../ssl/sslCertAnalyzer');
 
 const methods = {};
@@ -1759,7 +1760,7 @@ methods._getNmapPath = async function() {
     }
 
     try {
-      const { stdout } = await execAsync('where nmap', { timeout: 3000, shell: true });
+      const { stdout } = await execFileAsync('where', ['nmap'], { timeout: 3000, windowsHide: true });
       const line = stdout?.split(/\r?\n/).find(l => l.trim().toLowerCase().endsWith('nmap.exe'));
       if (line) {
         this._nmapPathCache = line.trim();
@@ -1913,7 +1914,7 @@ methods._resolveHostnameNslookup = async function(ip) {
     if (!this._isValidIp(cleanIp)) return null;
 
     try {
-      const { stdout } = await execAsync(`nslookup ${cleanIp}`, { timeout: 6000, shell: true });
+      const { stdout } = await execFileAsync('nslookup', [cleanIp], { timeout: 6000, windowsHide: true });
       const nameMatch = stdout.match(/^\s*Nombre:\s*(.+)$/im) || stdout.match(/^\s*Name:\s*(.+)$/im);
       if (!nameMatch) return null;
       const name = nameMatch[1].trim().replace(/\.$/, '');
@@ -1936,27 +1937,26 @@ methods._nmapEnrichHost = async function(ip) {
     const nmap = await this._getNmapPath();
     if (!nmap) return null;
 
-    const quoted = nmap.includes(' ') ? `"${nmap}"` : nmap;
-    const cmd = [
-      quoted,
+    const nmapArgs = [
       '-sn', '-PR', '-Pn', '-n',
       '-O', '--osscan-guess', '--max-os-tries', '1',
       '-F', '--host-timeout', '12s',
       cleanIp
-    ].join(' ');
+    ];
 
     try {
-      const { stdout } = await execAsync(cmd, {
+      const { stdout } = await execFileAsync(nmap, nmapArgs, {
         timeout: 20000,
-        shell: true,
+        windowsHide: true,
         maxBuffer: 2 * 1024 * 1024
       });
       return this._parseNmapHostOutput(stdout, ip);
     } catch {
       try {
-        const { stdout } = await execAsync(
-          `${quoted} -sn -PR -Pn -n ${ip}`,
-          { timeout: 10000, shell: true }
+        const { stdout } = await execFileAsync(
+          nmap,
+          ['-sn', '-PR', '-Pn', '-n', cleanIp],
+          { timeout: 10000, windowsHide: true }
         );
         return this._parseNmapHostOutput(stdout, ip);
       } catch {

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import connectionStore, { helpers as connectionHelpers, sidebarFolderFavoriteFromNode } from '../utils/connectionStore';
-import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
 import { MAX_SPLIT_PANES } from '../utils/splitTreeLayout';

@@ -875,6 +875,15 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Store active SSH connections and their shells
 const sshConnections = {};
+const { createSshStatsSession } = require('./src/main/services/ssh-stats-session');
+const sshStatsSession = createSshStatsSession({
+  sshConnections,
+  getMainWindow: () => mainWindow,
+  sshStatsService
+});
+const findSSHConnection = sshStatsSession.findSSHConnection;
+const statsLoop = sshStatsSession.statsLoop;
+sshStatsSession.register(ipcMain);
 // Estado persistente para stats de bastión (CPU, red, etc.) por tabId
 const bastionStatsState = {};
 
@@ -886,19 +895,18 @@ const motdCache = {};
 // 🚀 OPTIMIZACIÓN: RDP Manager movido a src/main/handlers/rdp-handlers.js
 // Se maneja completamente con lazy loading en ese módulo
 
-// Guacamole services - guacdService ahora usa lazy loading via getGuacdService()
-let guacamoleServer = null;
-let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
-// Track active guacamole client connections
-const activeGuacamoleConnections = new Set();
-// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado.
-// Por defecto 2h (120 min) = sincronizado con el Umbral de actividad de sesión del frontend
-let guacdInactivityTimeoutMs = 7200000;
-// Flag para evitar inicialización múltiple
-let guacamoleInitializing = false;
-let guacamoleInitialized = false;
-// Logs detallados (debug) para Guacamole/guacd
-const DEBUG_GUACAMOLE = process.env.NODETERM_DEBUG_GUACAMOLE === '1';
+// Ciclo de vida de Guacamole (clave, init, stop, disconnect) en guacamole-lifecycle.js
+const { createGuacamoleLifecycle } = require('./src/main/services/guacamole-lifecycle');
+const guacamoleLifecycle = createGuacamoleLifecycle({
+  getGuacdService,
+  peekGuacdService,
+  getGuacamoleLite,
+  ensureGuacdClientPatched
+});
+const getOrCreateGuacamoleSecretKey = () => guacamoleLifecycle.getOrCreateSecretKey();
+const initializeGuacamoleServices = () => guacamoleLifecycle.initialize();
+const stopGuacamoleServices = () => guacamoleLifecycle.stop();
+const disconnectAllGuacamoleConnections = () => guacamoleLifecycle.disconnectAll();
 
 // Sistema de throttling para conexiones SSH (ahora en módulo separado)
 const connectionThrottle = require('./src/main/utils/connection-throttle');
@@ -908,338 +916,6 @@ const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner
 
 // Helper function to parse 'df -P' command output
 // Funciones de parsing movidas a main/utils/parsing-utils.js
-
-/**
- * Obtiene o crea una clave secreta única para Guacamole
- * La clave se genera una vez por instalación y se guarda de forma segura
- */
-async function getOrCreateGuacamoleSecretKey() {
-  const crypto = require('crypto');
-  const fs = require('fs').promises;
-  const os = require('os');
-
-  // Usar path persistente centralizado en AppData para compartir clave entre instancias
-  // (app.getPath('userData') cambia en instancias secundarias)
-  const configDir = getNodeTermDataDir();
-
-  // Asegurar que el directorio existe
-  try {
-    await fs.mkdir(configDir, { recursive: true });
-  } catch (e) { }
-
-  const keyPath = path.join(configDir, 'guacamole-secret.key');
-
-  try {
-    // Intentar cargar clave existente
-    const existingKey = await fs.readFile(keyPath);
-    if (existingKey.length === 32) {
-      console.log('🔐 [Guacamole] Clave secreta cargada desde archivo');
-      return existingKey;
-    } else {
-      console.warn('⚠️ [Guacamole] Clave existente tiene tamaño incorrecto, generando nueva');
-    }
-  } catch (error) {
-    // Archivo no existe o error al leerlo, generar nueva clave
-    console.log('🔐 [Guacamole] Generando nueva clave secreta única...');
-  }
-
-  // Generar nueva clave aleatoria de 32 bytes (256 bits) para AES-256-CBC
-  const newKey = crypto.randomBytes(32);
-
-  try {
-    // Guardar clave con permisos restrictivos (solo lectura para el usuario)
-    await fs.writeFile(keyPath, newKey, { mode: 0o600 });
-    console.log('✅ [Guacamole] Clave secreta única generada y guardada de forma segura');
-  } catch (writeError) {
-    console.error('❌ [Guacamole] Error guardando clave secreta:', writeError);
-    // Continuar con la clave en memoria aunque no se haya guardado
-  }
-
-  return newKey;
-}
-
-// ✅ BUG FIX: Promise para sincronizar inicializaciones concurrentes
-let guacamoleInitPromise = null;
-
-/**
- * Inicializa servicios de Guacamole de forma asíncrona
- * ✅ OPTIMIZACIÓN: Refactorizada usando GuacamoleConfigService
- */
-async function initializeGuacamoleServices() {
-  // ✅ BUG FIX: Si ya hay una inicialización en curso, esperar a que termine
-  if (guacamoleInitPromise) {
-    console.log('✅ Servicios Guacamole ya inicializándose, esperando...');
-    return await guacamoleInitPromise;
-  }
-
-  // Si ya está inicializado, retornar inmediatamente
-  if (guacamoleInitialized) {
-    console.log('✅ Servicios Guacamole ya inicializados, omitiendo...');
-    return;
-  }
-
-  // Importar servicio de configuración
-  const GuacamoleConfigService = require('./src/main/services/GuacamoleConfigService');
-
-  // Importar utilidad de puertos
-  const { findFreePort } = require('./src/main/utils/net-utils');
-
-  // Crear nueva promesa de inicialización
-  guacamoleInitPromise = (async () => {
-    try {
-      guacamoleInitializing = true;
-
-      // 🚀 OPTIMIZACIÓN: Aplicar parche de GuacdClient justo antes de inicializar
-      ensureGuacdClientPatched();
-      console.log('🚀 Inicializando servicios Guacamole...');
-
-      // Cargar método preferido persistido antes de inicializar
-      try {
-        const pref = await loadPreferredGuacdMethod();
-        if (pref) {
-          getGuacdService().setPreferredMethod(pref);
-        }
-      } catch { }
-
-      // Inicializar GuacdService
-      const guacdReady = await getGuacdService().initialize();
-
-      if (!guacdReady) {
-        console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
-        guacamoleInitializing = false;
-        return;
-      }
-
-      // Esperar a que guacd esté realmente accesible
-      const guacdStatus = getGuacdService().getStatus();
-      await GuacamoleConfigService.waitForGuacdReady(getGuacdService(), guacdStatus);
-
-      // Encontrar puerto libre con reintentos robustos
-      // Intentar vincular directamente el servidor Guacamole a puertos sucesivos
-      let websocketPort = 8081;
-      let serverCreated = false;
-      const MAX_RETRIES = 20;
-
-      const guacdOptions = getGuacdService().getGuacdOptions();
-      // ✅ SEGURIDAD: Obtener o crear clave secreta única por instalación
-      const SECRET_KEY = await getOrCreateGuacamoleSecretKey();
-
-      // Desactivar watchdogs de inactividad para evitar cierres falsos
-      process.env.DISABLE_GUACD_WATCHDOG = '1';
-
-      const clientOptions = {
-        crypt: {
-          cypher: 'AES-256-CBC',
-          key: SECRET_KEY
-        },
-        log: {
-          // ⚡ PERF FIX: 'DEBUG' logs every Guacamole instruction (every mousemove, every draw rect),
-          // blocking the Node.js event loop on each frame and adding noticeable latency.
-          // Use NODETERM_DEBUG_GUACAMOLE=1 env var if guacamole-lite protocol debugging is needed.
-          level: 'ERRORS'
-        },
-        maxInactivityTime: 0,
-        // ⚡ PERF: Override connectionDefaultSettings from guacamole-lite defaults.
-        // Verified: guacd 1.3.0 on WSL has libwebp.so.7 linked (guac_client_supports_webp present).
-        // WebP negotiated first → guacd will use it, reducing frame size 30-40% vs JPEG.
-        // Empty audio array → guacd won't allocate audio channel, reducing overhead.
-        // DeepExtend replaces arrays, so this fully overrides the default ['image/png','image/jpeg'].
-        connectionDefaultSettings: {
-          rdp: {
-            'port': '3389',
-            'width': 1024,
-            'height': 768,
-            'dpi': 96,
-            'audio': [],
-            'video': null,
-            'image': ['image/webp', 'image/jpeg', 'image/png'],
-            'timezone': null,
-          },
-          vnc: {
-            'port': '5900',
-            'width': 1024,
-            'height': 768,
-            'dpi': 96,
-            'audio': [],
-            'video': null,
-            'image': ['image/webp', 'image/jpeg', 'image/png'],
-            'timezone': null,
-          },
-          ssh: {
-            'port': 22,
-            'width': 1024,
-            'height': 768,
-            'dpi': 96,
-            'audio': [],
-            'video': null,
-            'image': ['image/webp', 'image/jpeg', 'image/png'],
-            'timezone': null,
-          },
-          telnet: {
-            'port': 23,
-            'width': 1024,
-            'height': 768,
-            'dpi': 96,
-            'audio': [],
-            'video': null,
-            'image': ['image/webp', 'image/jpeg', 'image/png'],
-            'timezone': null,
-          },
-          join: {
-            'width': 1024,
-            'height': 768,
-            'dpi': 96,
-            'audio': [],
-            'video': null,
-            'image': ['image/webp', 'image/jpeg', 'image/png'],
-            'timezone': null,
-          }
-        }
-      };
-
-      // Configurar timeout de inactividad
-      guacdInactivityTimeoutMs = await GuacamoleConfigService.getConfiguredInactivityTimeout(
-        loadGuacdInactivityTimeout,
-        guacdInactivityTimeoutMs
-      );
-
-      // Bucle de reintentos para encontrar puerto libre
-      const GuacamoleLite = getGuacamoleLite();
-      for (let i = 0; i < MAX_RETRIES; i++) {
-        try {
-          websocketPort = 8081 + i;
-          // ⚡ PERF: perMessageDeflate:false — Guacamole sends one WS message per protocol
-          // instruction. Per-message deflate has significant CPU overhead for many small
-          // messages. Over localhost/LAN, bandwidth is not the bottleneck; CPU is.
-          // Verified: wsOptions passes directly to WebSocketServer constructor in guacamole-lite.
-          // ✅ SEGURIDAD: bind solo a loopback (no exponer tokens Guacamole en la LAN)
-          const websocketOptions = { host: '127.0.0.1', port: websocketPort, perMessageDeflate: false };
-
-          if (DEBUG_GUACAMOLE) console.log(`🔄 Intentando iniciar WebSocket en puerto ${websocketPort} (intento ${i + 1}/${MAX_RETRIES})`);
-
-          guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
-
-          // Verificar si se vinculó correctamente añadiendo un handler de error temporal
-          // (GuacamoleLite puede emitir errores asíncronos en el socket)
-          await new Promise((resolve, reject) => {
-            const errorHandler = (err) => {
-              if (err.code === 'EADDRINUSE') {
-                reject(err);
-              }
-            };
-
-            // Hack: Acceder al WebSocketServer interno si es posible, o esperar un tick
-            // Como GuacamoleLite no expone evento 'listening' fácil, confiamos en que si no falla en 100ms, está bien.
-            // O mejor, intentamos capturar el error del servidor interno.
-            if (guacamoleServer && guacamoleServer.webSocketServer) {
-              guacamoleServer.webSocketServer.on('error', errorHandler);
-            }
-            // Si el constructor lanza error sincrónico, ya estaría en catch.
-            // Esperamos un momento para ver si hay error asíncrono de binding.
-            setTimeout(() => {
-              if (guacamoleServer && guacamoleServer.webSocketServer) {
-                guacamoleServer.webSocketServer.removeListener('error', errorHandler);
-              }
-              resolve();
-            }, 100);
-          });
-
-          serverCreated = true;
-          console.log(`✅ Servidor Guacamole-lite iniciado en puerto ${websocketPort}`);
-          break; // Éxito
-        } catch (error) {
-          if (error.code === 'EADDRINUSE') {
-            console.log(`⚠️ Puerto ${websocketPort} ocupado, probando siguiente...`);
-            guacamoleServer = null; // Limpiar para el GC
-            continue;
-          } else {
-            console.error('❌ Error no relacionado con puerto:', error);
-            throw error; // Re-lanzar si no es puerto ocupado
-          }
-        }
-      }
-
-      if (!serverCreated) {
-        throw new Error(`No se pudo encontrar un puerto libre entre 8081 y ${8081 + MAX_RETRIES}`);
-      }
-
-      // Reconstituyendo websocketOptions para el resto del código
-      const websocketOptions = { host: '127.0.0.1', port: websocketPort };
-
-      if (DEBUG_GUACAMOLE) {
-        console.log('🌐 [initializeGuacamoleServices] Servidor Guacamole-lite creado:', !!guacamoleServer);
-        console.log('🌐 [initializeGuacamoleServices] Servidor tiene port:', guacamoleServer.port || 'no definido');
-      }
-
-      // Configurar eventos del servidor usando el servicio
-      GuacamoleConfigService.setupGuacamoleServerEvents(
-        guacamoleServer,
-        activeGuacamoleConnections,
-        guacdInactivityTimeoutMs
-      );
-
-      guacamoleServerReadyAt = Date.now();
-      guacamoleInitialized = true;
-      guacamoleInitializing = false;
-
-      console.log('✅ Servicios Guacamole inicializados correctamente');
-      console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
-      console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
-
-      if (DEBUG_GUACAMOLE) {
-        console.log(`📊 [initializeGuacamoleServices] guacamoleServer asignado:`, !!guacamoleServer);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('❌ Error inicializando servicios Guacamole:', error);
-      guacamoleInitializing = false;
-      throw error;
-    } finally {
-      guacamoleInitPromise = null;
-    }
-  })();
-
-  return await guacamoleInitPromise;
-}
-
-/**
- * Detiene los servicios de Guacamole (desconecta clientes, cierra WS y para guacd)
- */
-async function stopGuacamoleServices() {
-  console.log('🛑 [main] Deteniendo servicios de Guacamole...');
-  try {
-    await disconnectAllGuacamoleConnections();
-  } catch (e) {
-    console.warn('⚠️ Error desconectando sesiones de Guacamole:', e?.message || e);
-  }
-
-  if (guacamoleServer) {
-    try {
-      if (guacamoleServer.webSocketServer && typeof guacamoleServer.webSocketServer.close === 'function') {
-        guacamoleServer.webSocketServer.close();
-      }
-    } catch (e) {
-      console.warn('⚠️ Error cerrando websocket de Guacamole:', e?.message || e);
-    }
-    guacamoleServer = null;
-  }
-
-  try {
-    if (typeof _guacdService !== 'undefined' && _guacdService) {
-      await getGuacdService().stop();
-    }
-  } catch (e) {
-    console.warn('⚠️ Error deteniendo guacdService:', e?.message || e);
-  }
-
-  guacamoleInitialized = false;
-  guacamoleInitializing = false;
-  guacamoleInitPromise = null;
-  guacamoleServerReadyAt = 0;
-  console.log('✅ Servicios de Guacamole detenidos.');
-  return true;
-}
 
 // === Preferencias Guacd (persistencia en userData) ===
 // Funciones movidas a src/main/utils/file-utils.js
@@ -1443,7 +1119,7 @@ function createWindow() {
   mainWindow.on('move', scheduleSaveBounds);
 
   const hasActiveGraphicalSessions = () => {
-    if (activeGuacamoleConnections.size > 0) return true;
+    if (guacamoleLifecycle.getConnections().size > 0) return true;
     try {
       const rdp = require('./src/main/services/RdpNativeBridgeService');
       if (rdp.activeConnections && rdp.activeConnections.size > 0) return true;
@@ -1537,16 +1213,16 @@ function createWindow() {
       // Guacamole dependencies for critical phase registration (no instanciar si esta off)
       getGuacdService,
       peekGuacdService,
-      guacamoleServer,
-      guacamoleServerReadyAt,
+      guacamoleServer: guacamoleLifecycle.getServer(),
+      guacamoleServerReadyAt: guacamoleLifecycle.getServerReadyAt(),
       sendToRenderer,
-      guacdInactivityTimeoutMs,
-      getGuacamoleServer: () => guacamoleServer,
-      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+      guacdInactivityTimeoutMs: guacamoleLifecycle.getInactivityTimeoutMs(),
+      getGuacamoleServer: () => guacamoleLifecycle.getServer(),
+      getGuacamoleServerReadyAt: () => guacamoleLifecycle.getServerReadyAt(),
       getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
-      isGuacamoleInitializing: () => guacamoleInitializing,
-      isGuacamoleInitialized: () => guacamoleInitialized,
-      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
+      isGuacamoleInitializing: () => guacamoleLifecycle.isInitializing(),
+      isGuacamoleInitialized: () => guacamoleLifecycle.isInitialized(),
+      getGuacamoleWebSocketPort: () => guacamoleLifecycle.getWebSocketPort(),
       initializeGuacamoleServices,
       stopGuacamoleServices,
       getUpdateService: getUpdateServiceLazy
@@ -1717,10 +1393,10 @@ function createWindow() {
         disconnectAllGuacamoleConnections,
         getGuacdService,
         peekGuacdService,
-        guacamoleServer,
-        guacamoleServerReadyAt,
+        guacamoleServer: guacamoleLifecycle.getServer(),
+        guacamoleServerReadyAt: guacamoleLifecycle.getServerReadyAt(),
         sendToRenderer,
-        guacdInactivityTimeoutMs,
+        guacdInactivityTimeoutMs: guacamoleLifecycle.getInactivityTimeoutMs(),
         anythingLLMService: createServiceProxy(getAnythingLLMService),
         openWebUIService: createServiceProxy(getOpenWebUIService),
         libreChatService: createServiceProxy(getLibreChatService),
@@ -1733,12 +1409,12 @@ function createWindow() {
         cleanupOrphanedConnections,
         isAppQuitting,
         getUpdateService: getUpdateServiceLazy,
-        getGuacamoleServer: () => guacamoleServer,
-        getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+        getGuacamoleServer: () => guacamoleLifecycle.getServer(),
+        getGuacamoleServerReadyAt: () => guacamoleLifecycle.getServerReadyAt(),
         getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
-        isGuacamoleInitializing: () => guacamoleInitializing,
-        isGuacamoleInitialized: () => guacamoleInitialized,
-        getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
+        isGuacamoleInitializing: () => guacamoleLifecycle.isInitializing(),
+        isGuacamoleInitialized: () => guacamoleLifecycle.isInitialized(),
+        getGuacamoleWebSocketPort: () => guacamoleLifecycle.getWebSocketPort(),
         initializeGuacamoleServices,
         stopGuacamoleServices
       };
@@ -2019,10 +1695,10 @@ function createWindow() {
       disconnectAllGuacamoleConnections,
       getGuacdService,
       peekGuacdService,
-      guacamoleServer,
-      guacamoleServerReadyAt,
+      guacamoleServer: guacamoleLifecycle.getServer(),
+      guacamoleServerReadyAt: guacamoleLifecycle.getServerReadyAt(),
       sendToRenderer,
-      guacdInactivityTimeoutMs,
+      guacdInactivityTimeoutMs: guacamoleLifecycle.getInactivityTimeoutMs(),
       anythingLLMService: getAnythingLLMService(),
       openWebUIService: getOpenWebUIService(),
       libreChatService: getLibreChatService(),
@@ -2034,12 +1710,12 @@ function createWindow() {
       sshConnectionPool,
       cleanupOrphanedConnections,
       isAppQuitting,
-      getGuacamoleServer: () => guacamoleServer,
-      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
-      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
+      getGuacamoleServer: () => guacamoleLifecycle.getServer(),
+      getGuacamoleServerReadyAt: () => guacamoleLifecycle.getServerReadyAt(),
+      getGuacamoleWebSocketPort: () => guacamoleLifecycle.getWebSocketPort(),
       getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
-      isGuacamoleInitializing: () => guacamoleInitializing,
-      isGuacamoleInitialized: () => guacamoleInitialized
+      isGuacamoleInitializing: () => guacamoleLifecycle.isInitializing(),
+      isGuacamoleInitialized: () => guacamoleLifecycle.isInitialized()
     });
 
     // 🔒 NOTA: Los handlers CRÍTICOS ya se registran al inicio de createWindow() (línea 879)
@@ -2420,7 +2096,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           }
           // Lanzar bucle de stats SOLO cuando el stream está listo
           // Solo iniciar stats si esta pestaña está activa
-          if (activeStatsTabId === tabId) {
+          if (sshStatsService.getActiveStatsTab() === tabId) {
             wallixStatsLoop();
           }
         }
@@ -3095,7 +2771,7 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
                 conn.wallixStatsLoop = sshStatsService.createBastionStatsLoop(tabId, newConfig, bastionStatsState, sshConnections, event.sender);
               }
 
-              if (activeStatsTabId === tabId) {
+              if (sshStatsService.getActiveStatsTab() === tabId) {
                 conn.wallixStatsLoop();
               }
             }
@@ -3438,119 +3114,7 @@ app.on('before-quit', async (event) => {
 // Funciones sendToRenderer y cleanupOrphanedConnections movidas a main/utils/connection-utils.js
 
 // Limpieza SSH: solo ConnectionPoolCleaner (system-services-handlers). No duplicar el intervalo aqui.
-
-// Helper function to find SSH connection by host/username or by tabId
-async function findSSHConnection(tabId, sshConfig = null) {
-  // Primero intentar por tabId (para conexiones directas de terminal)
-  if (sshConnections[tabId]) {
-    return sshConnections[tabId];
-  }
-
-  // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
-  if (sshConfig && sshConfig.host && sshConfig.username) {
-    // Para bastiones: buscar cualquier conexión activa al mismo destino via bastión
-    if (sshConfig.useBastionWallix) {
-      // Buscar en conexiones activas cualquier conexión que vaya al mismo destino via bastión
-      for (const conn of Object.values(sshConnections)) {
-        if (conn.config &&
-          conn.config.useBastionWallix &&
-          conn.config.bastionHost === sshConfig.bastionHost &&
-          conn.config.bastionUser === sshConfig.bastionUser &&
-          conn.config.host === sshConfig.host &&
-          conn.config.username === sshConfig.username &&
-          (conn.config.port || 22) === (sshConfig.port || 22)) {
-          return conn;
-        }
-      }
-    } else {
-      // Buscar en conexiones activas cualquier conexión estándar al mismo destino
-      for (const conn of Object.values(sshConnections)) {
-        if (conn.config &&
-          !conn.config.useBastionWallix &&
-          conn.config.host === sshConfig.host &&
-          conn.config.username === sshConfig.username &&
-          (conn.config.port || 22) === (sshConfig.port || 22)) {
-          return conn;
-        }
-      }
-    }
-  }
-  // Si no se encuentra, retornar null
-  return null;
-}
-
-// Los handlers se registrarán después de crear la ventana principal
-
-// --- INICIO BLOQUE RESTAURACIÓN STATS ---
-// ✅ REFACTORIZADO: Función de statsLoop ahora usa SSHStatsService
-async function statsLoop(tabId, realHostname, finalDistroId, host) {
-  return sshStatsService.startStatsLoop(tabId, sshConnections[tabId], realHostname, finalDistroId, host, mainWindow, sshConnections);
-}
-// --- FIN BLOQUE RESTAURACIÓN STATS ---
-
-// ✅ REFACTORIZADO: activeStatsTabId ahora se maneja en SSHStatsService
-// Variable local mantenida para compatibilidad con código existente
-let activeStatsTabId = null;
-
-function startStatsLoopIfIdle(tabId) {
-  const conn = sshConnections[tabId];
-  if (!conn || conn.statsTimeout || conn.statsLoopRunning) return;
-  if (conn.config && conn.config.useBastionWallix) {
-    if (typeof conn.wallixStatsLoop === 'function') {
-      conn.wallixStatsLoop();
-    }
-    return;
-  }
-  statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config && conn.config.host);
-}
-
-ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
-  activeStatsTabId = tabId;
-  sshStatsService.setActiveStatsTab(tabId);
-
-  // Detener loops inactivos (las sesiones pinneadas de la Home siguen)
-  sshStatsService.stopInactiveStatsLoops(sshConnections, tabId);
-
-  startStatsLoopIfIdle(tabId);
-});
-
-// Sesiones SSH abiertas dentro de la Home: sondear todas las que estén visibles.
-ipcMain.on('ssh:set-pinned-stats-tabs', (event, tabIds) => {
-  const { next, removed } = sshStatsService.setPinnedStatsTabs(tabIds);
-  removed.forEach((tabId) => {
-    if (sshStatsService.shouldPollStats(tabId)) return;
-    sshStatsService.stopStatsLoop(tabId, sshConnections);
-  });
-  next.forEach((tabId) => startStatsLoopIfIdle(tabId));
-});
-
-function syncSshStatsDemand(tabId) {
-  if (sshStatsService.shouldPollStats(tabId)) startStatsLoopIfIdle(tabId);
-  else sshStatsService.stopStatsLoop(tabId, sshConnections);
-}
-
-// La barra de esa sesión está oculta: no ejecutar el script remoto
-// salvo monitor abierto o sesión anclada en la Home.
-ipcMain.on('ssh:set-statusbar-visible', (event, tabId, visible) => {
-  sshStatsService.setStatusBarVisible(tabId, visible);
-  syncSshStatsDemand(tabId);
-});
-
-ipcMain.on('ssh:set-monitor-stats', (event, tabId, active) => {
-  sshStatsService.setMonitorStatsConsumer(tabId, !!active);
-  syncSshStatsDemand(tabId);
-});
-
-// Intervalo de la barra: SSH remoto y base del worker local.
-// El foco/minimizado no pausa: lo aplica setWindowActivity (handlers/index.js).
-ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
-  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 3));
-  const intervalMs = sec * 1000;
-  sshStatsService.setPollingInterval(intervalMs);
-  try {
-    require('./src/main/services/StatsWorkerService').setStatsBaseInterval(intervalMs);
-  } catch (_) { }
-});
+// findSSHConnection, statsLoop y el IPC de sondeo viven en src/main/services/ssh-stats-session.js
 
 // window:minimize|maximize|unmaximize|isMaximized|close|set-corners
 // y applyWindowCorners* viven en src/main/handlers/window-handlers.js
@@ -3565,33 +3129,6 @@ ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
-
-// Helper to disconnect all active guacamole connections
-async function disconnectAllGuacamoleConnections() {
-  try {
-    if (activeGuacamoleConnections.size === 0 && !guacamoleInitialized) {
-      return;
-    }
-    console.log(`🧹 Cerrando ${activeGuacamoleConnections.size} conexiones Guacamole activas...`);
-    for (const conn of Array.from(activeGuacamoleConnections)) {
-      try {
-        // guacamole-lite clientConnection may expose close() or ws property
-        if (typeof conn.close === 'function') {
-          conn.close();
-        } else if (conn.ws && typeof conn.ws.close === 'function') {
-          conn.ws.close();
-        }
-      } catch (e) {
-        // swallow per-connection errors
-      } finally {
-        activeGuacamoleConnections.delete(conn);
-      }
-    }
-    // Conexiones Guacamole cerradas
-  } catch (e) {
-    console.warn('⚠️ Error cerrando conexiones Guacamole:', e?.message || e);
-  }
-}
 
 // Handler guacamole:disconnect-all movido a src/main/handlers/guacamole-handlers.js
 

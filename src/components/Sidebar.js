@@ -36,7 +36,6 @@ const LazyDocumentsSidebar = React.lazy(() => import('./DocumentsSidebar'));
 const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplorerSidebar'));
 const LazyToolsSidebar = React.lazy(() => import('./ToolsSidebar'));
 const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
-import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite, removeFavoritesForTreeNode } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
@@ -88,6 +87,7 @@ import SidebarTrashModal from './sidebar/SidebarTrashModal';
 import RemoteFileExplorerSidebar from './sidebar/RemoteFileExplorerSidebar';
 import { useSidebarSectionAppearance } from '../hooks/useSidebarSectionAppearance';
 import { useTreeDragHoverExpand } from '../hooks/useTreeDragHoverExpand';
+import { useTreeDragAutoScroll } from '../hooks/useTreeDragAutoScroll';
 import {
   SIDEBAR_APPEARANCE_SECTIONS,
   SIDEBAR_SECTION_LABELS
@@ -98,25 +98,6 @@ function logSetNodes(source, nodes) {
   // Log de debug removido para limpiar la consola
   // Log de trace removido para limpiar la consola
   return nodes;
-}
-
-// Helper para desbloquear formularios de forma segura
-function safeUnblockForms(showToast) {
-  try {
-    const blockedInputs = detectBlockedInputs();
-    unblockAllInputs();
-
-    if (blockedInputs.length > 0 && showToast) {
-      showToast({
-        severity: 'info',
-        summary: 'Formularios desbloqueados',
-        detail: `Se han desbloqueado ${blockedInputs.length} campos de formulario`,
-        life: 2000
-      });
-    }
-  } catch (error) {
-    console.warn('Error al desbloquear formularios:', error);
-  }
 }
 
 function favoriteContextNode(node, nodes) {
@@ -474,10 +455,6 @@ const Sidebar = React.memo(({
   const sidebarResizeRafRef = useRef(null);
   const sidebarResizeWidthRef = useRef(null);
   const expandedContentRef = useRef(null);
-  const treeContainerRef = useRef(null);
-  const dragAutoScrollRafRef = useRef(null);
-  const dragAutoScrollSpeedRef = useRef(0);
-  const dragAutoScrollActiveRef = useRef(false);
 
   const {
     noteDragStartKey,
@@ -485,6 +462,18 @@ const Sidebar = React.memo(({
     handleDragHoverExpandLeave,
     clearDragHoverExpand
   } = useTreeDragHoverExpand({ expandedKeys, setExpandedKeys });
+
+  const {
+    treeContainerRef,
+    handleTreeContainerDragOver,
+    handleTreeContainerDragLeave,
+    stopTreeDragInteraction,
+    stopTreeDragAutoScroll
+  } = useTreeDragAutoScroll({
+    handleDragHoverExpandOver,
+    handleDragHoverExpandLeave,
+    clearDragHoverExpand
+  });
 
   const hasWarmedUpRef = useRef(false);
   const hasEverExpandedRef = useRef(!sidebarCollapsed);
@@ -1394,11 +1383,6 @@ const Sidebar = React.memo(({
         detail: `Se importaron ${importedConnections.length} conexiones`,
         life: 5000
       });
-      // Desbloquear formularios por si alguna máscara quedó activa
-      setTimeout(() => {
-        safeUnblockForms(showToast);
-      }, 0);
-
     } catch (error) {
       console.error('Error al procesar importación:', error);
       showToast && showToast({
@@ -1548,9 +1532,6 @@ const Sidebar = React.memo(({
       setFolderIcon(null);
       setParentNodeKey(null);
       setEditingNode(null);
-      setTimeout(() => {
-        try { unblockAllInputs(); } catch { }
-      }, 0);
       return;
     }
 
@@ -1609,11 +1590,6 @@ const Sidebar = React.memo(({
     setFolderColor(getThemeDefaultColor((activeTreeAppearance.iconTheme || 'nord').toLowerCase()));
     setParentNodeKey(null);
     setEditingNode(null);
-
-    // Desbloquear formularios por si alguna máscara quedó activa
-    setTimeout(() => {
-      try { unblockAllInputs(); } catch { }
-    }, 0);
   };
 
 
@@ -1699,104 +1675,6 @@ const Sidebar = React.memo(({
       return result?.nodes ?? prevNodes;
     });
   };
-
-  const stopTreeDragAutoScroll = useCallback(() => {
-    dragAutoScrollSpeedRef.current = 0;
-    if (treeContainerRef.current) {
-      treeContainerRef.current.classList.remove('drag-autoscroll-active');
-    }
-    if (dragAutoScrollRafRef.current) {
-      cancelAnimationFrame(dragAutoScrollRafRef.current);
-      dragAutoScrollRafRef.current = null;
-    }
-    dragAutoScrollActiveRef.current = false;
-  }, []);
-
-  const stopTreeDragInteraction = useCallback(() => {
-    stopTreeDragAutoScroll();
-    clearDragHoverExpand();
-  }, [clearDragHoverExpand, stopTreeDragAutoScroll]);
-
-  const runTreeDragAutoScroll = useCallback(() => {
-    const container = treeContainerRef.current;
-    if (!container) {
-      stopTreeDragAutoScroll();
-      return;
-    }
-
-    const speed = dragAutoScrollSpeedRef.current;
-    if (!speed) {
-      stopTreeDragAutoScroll();
-      return;
-    }
-
-    const maxScrollTop = container.scrollHeight - container.clientHeight;
-    if (maxScrollTop <= 0) {
-      stopTreeDragAutoScroll();
-      return;
-    }
-
-    const nextScrollTop = Math.max(0, Math.min(maxScrollTop, container.scrollTop + speed));
-    container.scrollTop = nextScrollTop;
-
-    if ((nextScrollTop <= 0 && speed < 0) || (nextScrollTop >= maxScrollTop && speed > 0)) {
-      stopTreeDragAutoScroll();
-      return;
-    }
-
-    dragAutoScrollRafRef.current = requestAnimationFrame(runTreeDragAutoScroll);
-  }, [stopTreeDragAutoScroll]);
-
-  const handleTreeContainerDragOver = useCallback((e) => {
-    const container = treeContainerRef.current;
-    if (!container) return;
-
-    e.preventDefault();
-    handleDragHoverExpandOver(e);
-
-    const rect = container.getBoundingClientRect();
-    const threshold = 72;
-    const maxSpeed = 14;
-    const pointerY = e.clientY;
-    const distanceTop = pointerY - rect.top;
-    const distanceBottom = rect.bottom - pointerY;
-
-    let nextSpeed = 0;
-    if (distanceTop >= 0 && distanceTop < threshold) {
-      const ratio = (threshold - distanceTop) / threshold;
-      nextSpeed = -Math.max(1, ratio * maxSpeed);
-    } else if (distanceBottom >= 0 && distanceBottom < threshold) {
-      const ratio = (threshold - distanceBottom) / threshold;
-      nextSpeed = Math.max(1, ratio * maxSpeed);
-    }
-
-    dragAutoScrollSpeedRef.current = nextSpeed;
-
-    if (nextSpeed !== 0) {
-      container.classList.add('drag-autoscroll-active');
-      if (!dragAutoScrollActiveRef.current) {
-        dragAutoScrollActiveRef.current = true;
-        dragAutoScrollRafRef.current = requestAnimationFrame(runTreeDragAutoScroll);
-      }
-    } else {
-      stopTreeDragAutoScroll();
-    }
-  }, [handleDragHoverExpandOver, runTreeDragAutoScroll, stopTreeDragAutoScroll]);
-
-  const handleTreeContainerDragLeave = useCallback((e) => {
-    const container = treeContainerRef.current;
-    if (!container) return;
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    handleDragHoverExpandLeave(e);
-    stopTreeDragInteraction();
-  }, [handleDragHoverExpandLeave, stopTreeDragInteraction]);
-
-  useEffect(() => {
-    return () => {
-      stopTreeDragInteraction();
-    };
-  }, [stopTreeDragInteraction]);
-
 
   // Eventos globales para acciones de acceso rápido desde Home
   useEffect(() => {
@@ -1925,10 +1803,6 @@ const Sidebar = React.memo(({
               detail: `Conexión SSH "${node.label}" duplicada`,
               life: 3000
             });
-            // Desbloquear formularios por si alguna máscara quedó activa
-            setTimeout(() => {
-              safeUnblockForms(showToast);
-            }, 0);
           }
         },
 
@@ -1976,10 +1850,6 @@ const Sidebar = React.memo(({
               detail: `Conexión RDP "${node.label}" duplicada`,
               life: 3000
             });
-            // Desbloquear formularios por si alguna máscara quedó activa
-            setTimeout(() => {
-              safeUnblockForms(showToast);
-            }, 0);
           }
         },
 
@@ -2027,10 +1897,6 @@ const Sidebar = React.memo(({
               detail: `Conexión VNC "${node.label}" duplicada`,
               life: 3000
             });
-            // Desbloquear formularios por si alguna máscara quedó activa
-            setTimeout(() => {
-              safeUnblockForms(showToast);
-            }, 0);
           }
         },
 
@@ -2086,10 +1952,6 @@ const Sidebar = React.memo(({
               detail: `Carpeta "${node.label}" y su contenido duplicados`,
               life: 3000
             });
-            // Desbloquear formularios por si alguna máscara quedó activa
-            setTimeout(() => {
-              safeUnblockForms(showToast);
-            }, 0);
           }
         },
 
@@ -2248,15 +2110,6 @@ const Sidebar = React.memo(({
               if (hideContextMenu) {
                 hideContextMenu();
               }
-
-              // Desbloquear formularios después de un breve delay
-              setTimeout(() => {
-                try {
-                  unblockAllInputs();
-                } catch (error) {
-                  console.error('Error al desbloquear formularios:', error);
-                }
-              }, 100);
 
             } catch (error) {
               console.error('❌ Error en deleteNode:', error);

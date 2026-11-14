@@ -51,11 +51,11 @@ import { AppHeader, AppModals } from './app/index';
 import MinimalModeExitButton from './MinimalModeExitButton';
 import TabBarRestoreButton from './TabBarRestoreButton';
 import { useMcpAgentBridge } from '../hooks/useMcpAgentBridge';
+import { useVaultSession, readConnectionDecryptCache, writeConnectionDecryptCache } from '../hooks/useVaultSession';
 import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 import { useAppChromeLayout } from '../hooks/useAppChromeLayout';
 
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
-import SecureStorage from '../services/SecureStorage';
 import vaultKeyring from '../services/VaultKeyring';
 import {
   loadVisibleConnectionTrees,
@@ -67,7 +67,6 @@ import {
 } from '../utils/extraConnectionVaults';
 import { isMultiVaultEnabled } from '../utils/multiVaultFlag';
 import {
-  getVisibleConnectionVaultIds,
   getActiveConnectionVaultId,
   setVisibleConnectionVaultIds,
   toggleVisibleConnectionVault,
@@ -127,15 +126,7 @@ import { LazyDialogsManager, TabChunkFallback, preloadHeavyTabChunks } from './t
 import { loadXtermModules } from '../utils/xtermLoader';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 
-// Caché en memoria para evitar desencriptar / parsear la base de datos de conexiones repetidamente
-let lastDecryptedDataStr = null;
-let lastDecryptedKey = null;
-let lastDecryptedResult = null;
-// Árbol ya migrado (Wallix) del último descifrado: misma referencia en cache hit evita recorrer/clonar 5000 nodos y re-render
-let lastMigratedResult = null;
-
 const App = () => {
-  const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = React.useState(false);
@@ -148,6 +139,27 @@ const App = () => {
   const hasLoadedNodesRef = useRef(false);
   const [importPreset, setImportPreset] = React.useState(null);
   const [documentFolderOptions, setDocumentFolderOptions] = React.useState([]);
+  const toast = useRef(null);
+
+  const {
+    secureStorage,
+    needsUnlock,
+    masterKey,
+    showCloudRestoreMasterKey,
+    setShowCloudRestoreMasterKey,
+    cloudRestoreVaults,
+    extraVaultUnlock,
+    setExtraVaultUnlock,
+    showCreateExtraVault,
+    setShowCreateExtraVault,
+    visibleVaultIds,
+    setVisibleVaultIds,
+    visibleVaultIdsRef,
+    handleUnlockSuccess,
+    handleCloudRestoreMasterKeySuccess,
+    handleMasterPasswordConfigured,
+    handleMasterPasswordChanged
+  } = useVaultSession({ setIsAppReady, toast });
 
   React.useEffect(() => {
     if (showImportWizard) {
@@ -176,18 +188,6 @@ const App = () => {
     setMainFrameHeaderCollapsed,
     isMinimalMode,
   } = useAppChromeLayout();
-
-  // === SISTEMA DE ENCRIPTACIÓN ===
-  const [secureStorage] = useState(() => new SecureStorage());
-  const [needsUnlock, setNeedsUnlock] = useState(false);
-  const [masterKey, setMasterKey] = useState(null);
-  const [showCloudRestoreMasterKey, setShowCloudRestoreMasterKey] = useState(false);
-  const [cloudRestoreVaults, setCloudRestoreVaults] = useState(null);
-  const [extraVaultUnlock, setExtraVaultUnlock] = useState(null); // { vault, mode }
-  const [showCreateExtraVault, setShowCreateExtraVault] = useState(false);
-  const [visibleVaultIds, setVisibleVaultIds] = useState(() => getVisibleConnectionVaultIds());
-  const visibleVaultIdsRef = useRef(visibleVaultIds);
-  visibleVaultIdsRef.current = visibleVaultIds;
 
   // 🚀 OPTIMIZACIÓN: Cargar tema de pestañas de forma diferida para no bloquear el render inicial
   useEffect(() => {
@@ -259,78 +259,6 @@ const App = () => {
       console.error('[App] Error inicializando i18n:', err);
     });
   }, []);
-
-  // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado).
-  // IMPORTANTE: no esperar a sync de app-data.json (~17MB) — la master key vive en security.json.
-  useEffect(() => {
-    const waitForSyncReady = (timeoutMs = 12000) => new Promise((resolve) => {
-      if (localStorageSyncService.isSyncReady()) {
-        resolve(true);
-        return;
-      }
-      let settled = false;
-      const finish = (ok) => {
-        if (settled) return;
-        settled = true;
-        window.removeEventListener('localstorage-sync-ready', onReady);
-        clearTimeout(timer);
-        resolve(ok);
-      };
-      const onReady = () => finish(true);
-      window.addEventListener('localstorage-sync-ready', onReady);
-      const timer = setTimeout(() => {
-        console.warn(`[App] localstorage-sync-ready timeout (${timeoutMs}ms); continúo sin sync completo`);
-        finish(false);
-      }, timeoutMs);
-    });
-
-    const initializeApp = async () => {
-      try {
-        // SIEMPRE intentar cargar clave cifrada de security.json (no depender del flag
-        // remember ni del sync de app-data: ese flag en localStorage llega tarde o falta).
-        let savedMasterKey = null;
-        try {
-          savedMasterKey = await secureStorage.loadMasterKey();
-        } catch (err) {
-          console.error('[App] Error en auto-unlock:', err);
-        }
-
-        if (savedMasterKey) {
-          setMasterKey(savedMasterKey);
-          setNeedsUnlock(false);
-          setIsAppReady(true);
-          waitForSyncReady().then(async () => {
-            try {
-              await secureStorage.migrateVaultSecurityIfNeeded();
-            } catch (e) {
-              console.warn('[App] migrateVaultSecurityIfNeeded:', e);
-            }
-          });
-          return;
-        }
-
-        const hasKey = await secureStorage.checkHasSavedMasterKey();
-        if (hasKey) {
-          setNeedsUnlock(true);
-        }
-      } catch (err) {
-        console.error('[App] Error inicializando unlock:', err);
-        setNeedsUnlock(true);
-      }
-
-      setIsAppReady(true);
-
-      waitForSyncReady().then(async () => {
-        try {
-          await secureStorage.migrateVaultSecurityIfNeeded();
-        } catch (e) {
-          console.warn('[App] migrateVaultSecurityIfNeeded:', e);
-        }
-      });
-    };
-
-    initializeApp();
-  }, [secureStorage]);
 
   const rendererReadySentRef = useRef(false);
 
@@ -437,16 +365,6 @@ const App = () => {
 
 
 
-  // Handler para unlock exitoso
-  const handleUnlockSuccess = useCallback(async (key) => {
-    if (!localStorage.getItem('connections_encrypted')) {
-      await localStorageSyncService.reloadFromSharedFile();
-    }
-    setMasterKey(key);
-    setNeedsUnlock(false);
-    window.dispatchEvent(new CustomEvent('encryption-data-synced'));
-  }, []);
-
   // Inicializar window.toast para acceso global
   useEffect(() => {
     const updateToast = () => {
@@ -510,82 +428,6 @@ const App = () => {
 
     updatePasswordsCount();
   }, [masterKey, secureStorage, visibleVaultIds]);
-
-  // Tras descarga de Nextcloud: pedir clave maestra si hay vaults cifrados y no está configurada
-  useEffect(() => {
-    const onCloudRestoreNeedsKey = (e) => {
-      const { vaultsDownloaded } = e.detail || {};
-      const hasVault =
-        localStorage.getItem('connections_encrypted') ||
-        localStorage.getItem('passwords_encrypted');
-      if (!hasVault) return;
-      setCloudRestoreVaults(vaultsDownloaded || {
-        connections: !!localStorage.getItem('connections_encrypted'),
-        passwords: !!localStorage.getItem('passwords_encrypted')
-      });
-      setShowCloudRestoreMasterKey(true);
-    };
-    window.addEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
-    return () => window.removeEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
-  }, []);
-
-  const handleCloudRestoreMasterKeySuccess = useCallback((key) => {
-    setMasterKey(key);
-    setNeedsUnlock(false);
-    setShowCloudRestoreMasterKey(false);
-    window.dispatchEvent(new CustomEvent('connections-synced-from-cloud', { detail: { unlocked: true } }));
-    window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', { detail: { silent: false } }));
-    if (toast.current) {
-      toast.current.show({
-        severity: 'success',
-        summary: 'Backup desbloqueado',
-        detail: 'Conexiones y contraseñas restauradas con tu clave maestra.',
-        life: 4000
-      });
-    }
-  }, []);
-
-  // Handler cuando se configura master password desde Settings
-  const handleMasterPasswordConfigured = useCallback((key) => {
-    setMasterKey(key);
-    // Ahora los datos se empezarán a guardar encriptados
-  }, []);
-
-  useEffect(() => {
-    const onMasterKeyUpdated = (event) => {
-      const key = event.detail?.key;
-      if (typeof key === 'string' && key) setMasterKey(key);
-    };
-    window.addEventListener('master-key-updated', onMasterKeyUpdated);
-    return () => window.removeEventListener('master-key-updated', onMasterKeyUpdated);
-  }, []);
-
-  // 📚 Biblioteca: el proceso principal necesita la clave derivada en memoria para
-  // descifrar al vuelo los blobs de las carpetas marcadas como cifradas.
-  useEffect(() => {
-    const library = window.electron?.library;
-    if (!library) return;
-    const announce = (unlocked) => {
-      window.dispatchEvent(new CustomEvent('library-vault-state', { detail: { unlocked } }));
-    };
-    if (masterKey) {
-      library.unlock(masterKey)
-        .then((result) => announce(Boolean(result?.success)))
-        .catch((err) => {
-          console.warn('[Library] No se pudo desbloquear el almacén:', err?.message || err);
-          announce(false);
-        });
-    } else {
-      library.lock().catch(() => {});
-      announce(false);
-    }
-  }, [masterKey]);
-
-  // Handler cuando se cambia master password desde Settings
-  const handleMasterPasswordChanged = useCallback((key) => {
-    setMasterKey(key);
-    // Actualizar el estado con la nueva clave después del cambio
-  }, []);
 
   // Handler para actualizar la contraseña de un usuario en todas sus conexiones
   const handleUpdateUserPassword = useCallback((username, newPassword, nodeIds = null) => {
@@ -2226,11 +2068,12 @@ const App = () => {
     await waitForVaultSyncIfNeeded('connections_encrypted', 5000);
 
     const encryptedData = localStorage.getItem('connections_encrypted');
+    const cache = readConnectionDecryptCache();
     const isCacheHit =
       encryptedData &&
-      encryptedData === lastDecryptedDataStr &&
-      masterKey === lastDecryptedKey &&
-      lastDecryptedResult;
+      encryptedData === cache.dataStr &&
+      masterKey === cache.key &&
+      cache.result;
 
     if (masterKey) {
       // LS con nodos es la fuente: un .bin más grande no debe reintroducir borrados.
@@ -2240,19 +2083,21 @@ const App = () => {
         try {
           let decrypted;
           let migrated;
-          if (isCacheHit && lastMigratedResult) {
-            decrypted = lastDecryptedResult;
-            migrated = lastMigratedResult;
+          if (isCacheHit && cache.migrated) {
+            decrypted = cache.result;
+            migrated = cache.migrated;
           } else {
             decrypted = isCacheHit
-              ? lastDecryptedResult
+              ? cache.result
               : await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
             if (decrypted) {
               migrated = stripVaultRootNodes(migrateWallixBastionInTree(decrypted));
-              lastDecryptedDataStr = encryptedData;
-              lastDecryptedKey = masterKey;
-              lastDecryptedResult = decrypted;
-              lastMigratedResult = migrated;
+              writeConnectionDecryptCache({
+                dataStr: encryptedData,
+                key: masterKey,
+                result: decrypted,
+                migrated
+              });
             }
           }
           if (decrypted) {
@@ -2285,10 +2130,12 @@ const App = () => {
               if (diskNodes.length > 0) {
                 const wroteDisk = setVaultEncryptedItem('connections_encrypted', fromDisk);
                 if (wroteDisk.ok) {
-                  lastDecryptedDataStr = fromDisk;
-                  lastDecryptedKey = masterKey;
-                  lastDecryptedResult = decryptedDisk;
-                  lastMigratedResult = migratedDisk;
+                  writeConnectionDecryptCache({
+                    dataStr: fromDisk,
+                    key: masterKey,
+                    result: decryptedDisk,
+                    migrated: migratedDisk
+                  });
                 }
                 return diskNodes;
               }
@@ -2488,10 +2335,12 @@ const App = () => {
           }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
           if (saved.wroteMain && saved.syncPayload?.connections_encrypted) {
-            lastDecryptedDataStr = saved.syncPayload.connections_encrypted;
-            lastDecryptedKey = masterKey;
-            lastDecryptedResult = saved.mainNodes;
-            lastMigratedResult = saved.mainNodes;
+            writeConnectionDecryptCache({
+              dataStr: saved.syncPayload.connections_encrypted,
+              key: masterKey,
+              result: saved.mainNodes,
+              migrated: saved.mainNodes
+            });
           }
           if (updateTreeHash) {
             updateTreeHash(JSON.stringify(saved.mainNodes || nodes));
@@ -2512,10 +2361,12 @@ const App = () => {
           }
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
 
-          lastDecryptedDataStr = encryptedStr;
-          lastDecryptedKey = masterKey;
-          lastDecryptedResult = flat;
-          lastMigratedResult = flat;
+          writeConnectionDecryptCache({
+            dataStr: encryptedStr,
+            key: masterKey,
+            result: flat,
+            migrated: flat
+          });
 
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
           const syncPayload = {

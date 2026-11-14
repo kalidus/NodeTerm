@@ -1,4 +1,5 @@
 const { spawn, exec, execFile } = require('child_process');
+const { promisify } = require('util');
 const net = require('net');
 const fs = require('fs');
 const path = require('path');
@@ -11,6 +12,15 @@ try {
 } catch (_) {}
 const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
+const execFileAsync = promisify(execFile);
+
+function runDocker(command, args, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = undefined;
+  }
+  return execFile(command, args, { windowsHide: true, ...(options || {}) }, callback);
+}
 function fileExistsSync(p) {
   try {
     return fs.existsSync(p);
@@ -977,12 +987,12 @@ class GuacdService {
 
       // Verificando Docker
 
-      exec(`${dockerCommand} --version`, (error) => {
+      runDocker(dockerCommand, ['--version'], (error) => {
         if (error) {
           console.log('❌ Docker no está disponible:', error.message);
           // Intentar con docker sin ruta completa
           if (dockerCommand !== 'docker') {
-            exec('docker --version', (error2) => {
+            runDocker('docker', ['--version'], (error2) => {
               if (error2) {
                 resolve(false);
                 return;
@@ -1003,7 +1013,7 @@ class GuacdService {
 
   _checkDockerRunning(resolve, dockerCommand = 'docker') {
     // Verificar si Docker Desktop está corriendo
-    exec(`${dockerCommand} ps`, async (dockerError) => {
+    runDocker(dockerCommand, ['ps'], async (dockerError) => {
       if (dockerError) {
         console.log('❌ Docker Desktop no está corriendo');
         resolve(false);
@@ -1024,7 +1034,7 @@ class GuacdService {
       }
 
       // Limpiar contenedor previo por si quedó en estado inconsistente
-      exec(`${dockerCommand} rm -f nodeterm-guacd`, () => {
+      runDocker(dockerCommand, ['rm', '-f', 'nodeterm-guacd'], () => {
         // Iniciar contenedor guacd
         const dockerArgs = [
           'run',
@@ -1093,19 +1103,15 @@ class GuacdService {
         console.log('[GuacdService] Deteniendo contenedor Docker existente...');
 
         // Detener y eliminar el contenedor existente
-        const { exec } = require('child_process');
-        const util = require('util');
-        const execAsync = util.promisify(exec);
-
         try {
-          await execAsync('docker stop nodeterm-guacd');
+          await execFileAsync('docker', ['stop', 'nodeterm-guacd'], { windowsHide: true });
           console.log('[GuacdService] Contenedor detenido exitosamente');
         } catch (error) {
           console.log('[GuacdService] Contenedor no estaba corriendo o ya fue eliminado');
         }
 
         try {
-          await execAsync('docker rm nodeterm-guacd');
+          await execFileAsync('docker', ['rm', 'nodeterm-guacd'], { windowsHide: true });
           console.log('[GuacdService] Contenedor eliminado exitosamente');
         } catch (error) {
           console.log('[GuacdService] Contenedor no existía o ya fue eliminado');
@@ -1573,12 +1579,8 @@ class GuacdService {
             'docker.exe' :
             'docker';
 
-        const { exec } = require('child_process');
-        const util = require('util');
-        const execAsync = util.promisify(exec);
-
         try {
-          await execAsync(`${dockerCommand} stop nodeterm-guacd`, { stdio: 'ignore', timeout: 2000 });
+          await execFileAsync(dockerCommand, ['stop', 'nodeterm-guacd'], { windowsHide: true, timeout: 2000 });
         } catch (error) {
           if (error?.message?.includes('No such container') || error?.message?.includes('not running')) {
             console.log('[GuacdService] Contenedor Docker no estaba corriendo o ya fue eliminado');
@@ -1587,7 +1589,7 @@ class GuacdService {
             // Intentar con comando genérico si falla
             if (dockerCommand !== 'docker') {
               try {
-                await execAsync('docker stop nodeterm-guacd', { stdio: 'ignore', timeout: 2000 });
+                await execFileAsync('docker', ['stop', 'nodeterm-guacd'], { windowsHide: true, timeout: 2000 });
               } catch (error2) {
                 if (error2?.message?.includes('No such container') || error2?.message?.includes('not running')) {
                   console.log('[GuacdService] Contenedor Docker (genérico) no estaba corriendo o ya fue eliminado');
@@ -1661,7 +1663,8 @@ class GuacdService {
           'docker.exe' :
           'docker';
 
-      exec(`${dockerCommand} ps --filter "name=nodeterm-guacd" --format "{{.Names}}"`, (dockerErr, dockerOut) => {
+      const dockerPsArgs = ['ps', '--filter', 'name=nodeterm-guacd', '--format', '{{.Names}}'];
+      runDocker(dockerCommand, dockerPsArgs, (dockerErr, dockerOut) => {
         if (!dockerErr && dockerOut.trim() === 'nodeterm-guacd') {
           console.log('🐳 Detectado: guacd corriendo en Docker');
           this.detectedMethod = 'docker';
@@ -1671,7 +1674,7 @@ class GuacdService {
 
         // Si falla con ruta completa, intentar con comando genérico
         if (dockerCommand !== 'docker') {
-          exec('docker ps --filter "name=nodeterm-guacd" --format "{{.Names}}"', (dockerErr2, dockerOut2) => {
+          runDocker('docker', dockerPsArgs, (dockerErr2, dockerOut2) => {
             if (!dockerErr2 && dockerOut2.trim() === 'nodeterm-guacd') {
               console.log('🐳 Detectado: guacd corriendo en Docker');
               this.detectedMethod = 'docker';
