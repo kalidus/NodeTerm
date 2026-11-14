@@ -4,37 +4,44 @@ export const NOTES_LAYOUTS = [
   {
     id: 'tree',
     name: 'Árbol',
-    description: 'Jerarquía con carpetas anidadas'
+    description: 'Jerarquía con carpetas anidadas',
+    preview: 'tree'
   },
   {
     id: 'shelf',
     name: 'Estantería',
-    description: 'Carpetas como lomos en una estantería'
+    description: 'Carpetas como lomos en una estantería',
+    preview: 'shelf'
   },
   {
     id: 'index',
     name: 'Índice',
-    description: 'Tabla de contenidos numerada, estilo manual'
+    description: 'Tabla de contenidos numerada, estilo manual',
+    preview: 'index'
   },
   {
     id: 'cards',
     name: 'Fichas',
-    description: 'Título, preview y fecha'
+    description: 'Título, preview y fecha',
+    preview: 'cards'
   },
   {
     id: 'timeline',
     name: 'Línea temporal',
-    description: 'Hoy, esta semana y anteriores'
+    description: 'Hoy, esta semana y anteriores',
+    preview: 'timeline'
   },
   {
     id: 'tags',
     name: 'Etiquetas',
-    description: 'Agrupa las notas por tag'
+    description: 'Agrupa las notas por tag',
+    preview: 'tags'
   },
   {
     id: 'list',
     name: 'Lista',
-    description: 'Filas compactas con título y fecha'
+    description: 'Filas compactas con título y fecha',
+    preview: 'list'
   }
 ];
 

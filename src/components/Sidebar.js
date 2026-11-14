@@ -3280,14 +3280,8 @@ const Sidebar = React.memo(({
               onResetSection={() => sectionAppearance.resetSection(activeTab)}
               sessionActionIconTheme={sessionActionIconTheme}
               setSessionActionIconTheme={setSessionActionIconTheme}
-              explorerFont={explorerFont}
-              setExplorerFont={setExplorerFont}
-              explorerFontSize={explorerFontSize}
-              setExplorerFontSize={setExplorerFontSize}
               explorerFontColor={explorerFontColor}
               setExplorerFontColor={setExplorerFontColor}
-              iconSize={iconSize}
-              setIconSize={setIconSize}
               layouts={appearanceLayouts}
               layout={appearanceLayout}
               onSelectLayout={onSelectAppearanceLayout}

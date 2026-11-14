@@ -4,32 +4,38 @@ export const VAULT_LAYOUTS = [
   {
     id: 'tree',
     name: 'Árbol',
-    description: 'Jerarquía con carpetas anidadas'
+    description: 'Jerarquía con carpetas anidadas',
+    preview: 'tree'
   },
   {
     id: 'icons',
     name: 'Iconos grandes',
-    description: 'Rejilla de dos columnas, como el Finder'
+    description: 'Rejilla de dos columnas, como el Finder',
+    preview: 'grid'
   },
   {
     id: 'list',
     name: 'Lista',
-    description: 'Filas con icono y nombre, sin sangría'
+    description: 'Filas con icono y nombre, sin sangría',
+    preview: 'list'
   },
   {
     id: 'detail',
     name: 'Detalle',
-    description: 'Nombre y, debajo, usuario o tipo'
+    description: 'Nombre y, debajo, usuario o tipo',
+    preview: 'detail'
   },
   {
     id: 'cards',
     name: 'Tarjetas',
-    description: 'Ficha con icono, nombre y tipo'
+    description: 'Ficha con icono, nombre y tipo',
+    preview: 'cards'
   },
   {
     id: 'sections',
     name: 'Secciones',
-    description: 'Agrupa carpetas y secretos por tipo'
+    description: 'Agrupa carpetas y secretos por tipo',
+    preview: 'sections'
   }
 ];
 

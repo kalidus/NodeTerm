@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Button } from 'primereact/button';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
 import {
@@ -16,7 +15,10 @@ import {
   preloadSessionActionIconThemes,
   onSessionActionIconThemeLoaded
 } from '../themes/session-action-icons';
+import SidebarLayoutMiniPreview from './sidebar/SidebarLayoutMiniPreview';
+import SidebarTreeLivePreview from './sidebar/SidebarTreeLivePreview';
 import '../styles/components/tree-themes.css';
+import '../styles/components/sidebar-appearance-panel.css';
 
 const TB_ICON = {
   display: 'flex',
@@ -26,12 +28,37 @@ const TB_ICON = {
   height: '16px'
 };
 
-const APPEARANCE_ROWS = [
-  { id: 'tree', label: 'Temas del Árbol', hint: 'Estilo de líneas y conectores', icon: 'pi pi-sitemap', color: '#2196f3' },
-  { id: 'treeIcons', label: 'Iconos del Árbol', hint: 'Carpetas y conexiones', icon: 'pi pi-folder', color: '#4caf50' },
-  { id: 'actionIcons', label: 'Iconos de Acción', hint: 'Botones de la barra superior', icon: 'pi pi-th-large', color: '#9c27b0' },
-  { id: 'typography', label: 'Color del árbol', hint: 'Color del texto de las sesiones', icon: 'pi pi-sliders-h', color: '#e91e63' },
-];
+const TREE_THEME_ICON = {
+  default: 'pi pi-folder',
+  minimal: 'pi pi-minus',
+  connected: 'pi pi-share-alt',
+  compact: 'pi pi-align-justify',
+  neon: 'pi pi-bolt',
+  cyber: 'pi pi-code',
+  circuit: 'pi pi-share-alt',
+  terminal: 'pi pi-desktop',
+  modern: 'pi pi-objects-column',
+  dotted: 'pi pi-ellipsis-v',
+  matrix: 'pi pi-microsoft',
+  cursor: 'pi pi-folder',
+  cursorCompact: 'pi pi-folder'
+};
+
+function uniqueGroups(meta) {
+  const seen = new Set();
+  const groups = [];
+  meta.forEach((item) => {
+    if (!item.group || seen.has(item.group)) return;
+    seen.add(item.group);
+    groups.push(item.group);
+  });
+  return groups;
+}
+
+function matchesQuery(text, query) {
+  if (!query) return true;
+  return String(text || '').toLowerCase().includes(query);
+}
 
 const SidebarAppearanceMenu = ({
   treeTheme,
@@ -53,7 +80,11 @@ const SidebarAppearanceMenu = ({
   overlayZIndex = 10001,
 }) => {
   const panelRef = useRef(null);
-  const [settingsView, setSettingsView] = useState('choice');
+  const hasLayouts = Array.isArray(layouts) && layouts.length > 0;
+  const [mainTab, setMainTab] = useState(() => (hasLayouts ? 'vista' : 'estilo'));
+  const [picker, setPicker] = useState(null); // 'tree' | 'treeIcons' | 'actionIcons' | null
+  const [search, setSearch] = useState('');
+  const [groupFilter, setGroupFilter] = useState('all');
   const [iconPackTick, setIconPackTick] = useState(0);
   const [actionPackTick, setActionPackTick] = useState(0);
   const themeIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
@@ -63,18 +94,162 @@ const SidebarAppearanceMenu = ({
   }, [sessionActionIconTheme]);
 
   useEffect(() => {
-    if (settingsView !== 'treeIcons') return undefined;
+    ensureIconTheme(iconTheme);
+  }, [iconTheme]);
+
+  useEffect(() => {
+    if (picker !== 'treeIcons') return undefined;
     preloadIconThemes();
     return onIconThemeLoaded(() => setIconPackTick((v) => v + 1));
-  }, [settingsView]);
+  }, [picker]);
   void iconPackTick;
 
   useEffect(() => {
-    if (settingsView !== 'actionIcons') return undefined;
+    if (picker !== 'actionIcons') return undefined;
     preloadSessionActionIconThemes();
     return onSessionActionIconThemeLoaded(() => setActionPackTick((v) => v + 1));
-  }, [settingsView]);
+  }, [picker]);
   void actionPackTick;
+
+  useEffect(() => {
+    if (!hasLayouts && mainTab === 'vista') setMainTab('estilo');
+  }, [hasLayouts, mainTab]);
+
+  const openPicker = (id) => {
+    setSearch('');
+    setGroupFilter('all');
+    setPicker(id);
+  };
+
+  const closePicker = () => {
+    setPicker(null);
+    setSearch('');
+    setGroupFilter('all');
+  };
+
+  const treeThemeLabel = treeThemes[treeTheme]?.name || treeTheme || '—';
+  const iconMeta = iconThemeMeta.find((m) => m.id.toLowerCase() === String(iconTheme || '').toLowerCase());
+  const iconThemeLabel = iconMeta?.name || iconTheme || '—';
+  const actionMeta = sessionActionIconThemeMeta.find((m) => m.id === sessionActionIconTheme);
+  const actionThemeLabel = actionMeta?.name || sessionActionIconTheme || '—';
+  const folderThumb = iconThemes[iconTheme]?.icons?.folder;
+  const actionThumb = sessionActionIconThemes[sessionActionIconTheme]?.icons?.newConnection;
+
+  const iconGroups = useMemo(() => uniqueGroups(iconThemeMeta), []);
+  const actionGroups = useMemo(() => uniqueGroups(sessionActionIconThemeMeta), []);
+
+  const filteredTreeThemes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return treeThemeOptions.filter((opt) => {
+      const theme = treeThemes[opt.value] || {};
+      return matchesQuery(opt.label, q) || matchesQuery(theme.description, q);
+    });
+  }, [search]);
+
+  const filteredIconThemes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return iconThemeMeta.filter((item) => {
+      if (groupFilter !== 'all' && item.group !== groupFilter) return false;
+      return matchesQuery(item.name, q) || matchesQuery(item.group, q);
+    });
+  }, [search, groupFilter]);
+
+  const filteredActionThemes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sessionActionIconThemeMeta.filter((item) => {
+      if (groupFilter !== 'all' && item.group !== groupFilter) return false;
+      return matchesQuery(item.name, q) || matchesQuery(item.description, q) || matchesQuery(item.group, q);
+    });
+  }, [search, groupFilter]);
+
+  const pickerTitle = picker === 'tree'
+    ? 'Tema del árbol'
+    : picker === 'treeIcons'
+      ? 'Iconos del árbol'
+      : picker === 'actionIcons'
+        ? 'Iconos de barra'
+        : '';
+
+  const pickerGroups = picker === 'treeIcons' ? iconGroups : picker === 'actionIcons' ? actionGroups : [];
+
+  const renderPickerList = () => {
+    if (picker === 'tree') {
+      return filteredTreeThemes.map((opt) => {
+        const theme = treeThemes[opt.value] || {};
+        const isActive = treeTheme === opt.value;
+        const iconClass = TREE_THEME_ICON[opt.value]
+          || (String(opt.value).includes('Compact') ? 'pi pi-compress' : 'pi pi-folder');
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            className={`sap-picker-row${isActive ? ' is-active' : ''}`}
+            title={theme.description || opt.label}
+            onClick={() => setTreeTheme?.(opt.value)}
+          >
+            <span className="sap-picker-thumb">
+              <i className={iconClass} />
+            </span>
+            <span className="sap-picker-name">{opt.label}</span>
+            {isActive && <i className="pi pi-check sap-picker-check" aria-hidden="true" />}
+          </button>
+        );
+      });
+    }
+
+    if (picker === 'treeIcons') {
+      return filteredIconThemes.map(({ id, name }) => {
+        const theme = iconThemes[id];
+        const isActive = (iconTheme || 'nord').toLowerCase() === id.toLowerCase();
+        const previewIcon = theme?.icons?.folder;
+        return (
+          <button
+            key={id}
+            type="button"
+            className={`sap-picker-row${isActive ? ' is-active' : ''}`}
+            title={name}
+            onClick={() => {
+              ensureIconTheme(id);
+              setIconTheme?.(id);
+            }}
+          >
+            <span className="sap-picker-thumb">
+              {previewIcon || <i className="pi pi-folder" />}
+            </span>
+            <span className="sap-picker-name">{name}</span>
+            {isActive && <i className="pi pi-check sap-picker-check" aria-hidden="true" />}
+          </button>
+        );
+      });
+    }
+
+    if (picker === 'actionIcons') {
+      return filteredActionThemes.map(({ id, name, description }) => {
+        const theme = sessionActionIconThemes[id];
+        const isActive = sessionActionIconTheme === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            className={`sap-picker-row${isActive ? ' is-active' : ''}`}
+            title={description || name}
+            onClick={() => {
+              ensureSessionActionIconTheme(id);
+              setSessionActionIconTheme?.(id);
+            }}
+          >
+            <span className="sap-picker-thumb">
+              {theme?.icons?.newConnection || <i className="pi pi-plus-circle" />}
+            </span>
+            <span className="sap-picker-name">{name}</span>
+            {isActive && <i className="pi pi-check sap-picker-check" aria-hidden="true" />}
+          </button>
+        );
+      });
+    }
+
+    return null;
+  };
 
   return (
     <>
@@ -94,41 +269,140 @@ const SidebarAppearanceMenu = ({
         ref={panelRef}
         id={panelId}
         style={{
-          width: '280px',
+          width: '320px',
           zIndex: overlayZIndex,
           marginTop: '5px'
         }}
-        className="app-surface app-surface-lg glass-panel tree-theme-overlay-fix"
+        className="app-surface app-surface-lg glass-panel tree-theme-overlay-fix sap-overlay"
         appendTo={document.body}
-        onHide={() => setSettingsView('choice')}
+        onHide={() => {
+          // Mantener tab Vista/Estilo; solo salir del picker
+          closePicker();
+        }}
       >
-        <div style={{ padding: '8px' }}>
-          {settingsView === 'choice' && (
-            <div className="sidebar-appearance-choice">
-              <div className="sidebar-appearance-head">
-                <i className="pi pi-palette" aria-hidden="true" />
-                <span className="sidebar-appearance-title">
-                  {sectionLabel ? `Apariencia · ${sectionLabel}` : 'Apariencia Sidebar'}
-                </span>
-              </div>
-              {sectionLabel && (
-                <div className="sidebar-appearance-subtitle">
-                  Tema del árbol e iconos de esta sección
-                </div>
-              )}
-              {hasSectionOverride && onResetSection && (
+        <div className="sap-panel">
+          {picker ? (
+            <div className="sap-picker">
+              <div className="sap-picker-head">
                 <button
                   type="button"
-                  className="sidebar-appearance-reset"
-                  onClick={onResetSection}
+                  className="sap-icon-btn"
+                  onClick={closePicker}
+                  title="Volver"
+                  aria-label="Volver"
                 >
-                  Usar tema general
+                  <i className="pi pi-arrow-left" />
                 </button>
+                <span className="sap-picker-title">{pickerTitle}</span>
+              </div>
+              <div className="sap-search-wrap">
+                <i className="pi pi-search" aria-hidden="true" />
+                <input
+                  type="search"
+                  className="sap-search"
+                  placeholder="Buscar…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                />
+                {search && (
+                  <button
+                    type="button"
+                    className="sap-icon-btn sap-icon-btn--tiny"
+                    onClick={() => setSearch('')}
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <i className="pi pi-times" />
+                  </button>
+                )}
+              </div>
+              {pickerGroups.length > 0 && (
+                <div className="sap-chips" role="tablist" aria-label="Grupo">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={groupFilter === 'all'}
+                    className={`sap-chip${groupFilter === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setGroupFilter('all')}
+                  >
+                    Todos
+                  </button>
+                  {pickerGroups.map((group) => (
+                    <button
+                      key={group}
+                      type="button"
+                      role="tab"
+                      aria-selected={groupFilter === group}
+                      className={`sap-chip${groupFilter === group ? ' is-active' : ''}`}
+                      onClick={() => setGroupFilter(group)}
+                    >
+                      {group}
+                    </button>
+                  ))}
+                </div>
               )}
-              {Array.isArray(layouts) && layouts.length > 0 && (
-                <div className="sidebar-appearance-section">
-                  <div className="sidebar-appearance-group-label">Vista</div>
-                  <div className="sidebar-appearance-group" role="radiogroup" aria-label="Vista">
+              {picker === 'tree' && (
+                <SidebarTreeLivePreview
+                  treeTheme={treeTheme}
+                  iconTheme={iconTheme}
+                  fontColor={explorerFontColor}
+                />
+              )}
+              <div className="sap-picker-list">
+                {renderPickerList()}
+                {(picker === 'tree' ? filteredTreeThemes
+                  : picker === 'treeIcons' ? filteredIconThemes
+                    : filteredActionThemes).length === 0 && (
+                  <div className="sap-empty">Sin resultados</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="sap-head">
+                <div className="sap-head-left">
+                  <i className="pi pi-palette" aria-hidden="true" />
+                  <span className="sap-title">{sectionLabel || 'Sidebar'}</span>
+                </div>
+                {hasSectionOverride && onResetSection && (
+                  <button
+                    type="button"
+                    className="sap-reset"
+                    onClick={onResetSection}
+                    title="Usar tema general"
+                  >
+                    <i className="pi pi-refresh" aria-hidden="true" />
+                    General
+                  </button>
+                )}
+              </div>
+
+              {hasLayouts && (
+                <div className="sap-tabs" role="tablist" aria-label="Sección">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mainTab === 'vista'}
+                    className={`sap-tab${mainTab === 'vista' ? ' is-active' : ''}`}
+                    onClick={() => setMainTab('vista')}
+                  >
+                    Vista
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mainTab === 'estilo'}
+                    className={`sap-tab${mainTab === 'estilo' ? ' is-active' : ''}`}
+                    onClick={() => setMainTab('estilo')}
+                  >
+                    Estilo
+                  </button>
+                </div>
+              )}
+
+              {(!hasLayouts || mainTab === 'vista') && hasLayouts && (
+                <div className="sap-vista" role="radiogroup" aria-label="Vista">
+                  <div className="sap-layout-grid">
                     {layouts.map((item) => {
                       const active = layout === item.id;
                       return (
@@ -137,335 +411,99 @@ const SidebarAppearanceMenu = ({
                           type="button"
                           role="radio"
                           aria-checked={active}
-                          className={`sidebar-appearance-row${active ? ' is-active' : ''}`}
+                          className={`sap-layout-cell${active ? ' is-active' : ''}`}
+                          title={item.description || item.name}
                           onClick={() => onSelectLayout?.(item.id)}
                         >
-                          <span className="sidebar-appearance-row-text">
-                            <span className="sidebar-appearance-row-name">{item.name}</span>
-                            {item.description && (
-                              <span className="sidebar-appearance-row-desc">{item.description}</span>
-                            )}
-                          </span>
-                          {active && <i className="pi pi-check" aria-hidden="true" />}
+                          <SidebarLayoutMiniPreview variant={item.preview || item.id} />
+                          <span className="sap-layout-name">{item.name}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
               )}
-              <div className="sidebar-appearance-section">
-                <div className="sidebar-appearance-group-label">Apariencia</div>
-                <div className="sidebar-appearance-group">
-                  {APPEARANCE_ROWS.map((row) => (
-                    <button
-                      key={row.id}
-                      type="button"
-                      className="sidebar-appearance-row"
-                      onClick={() => setSettingsView(row.id)}
-                    >
-                      <span className="sidebar-appearance-row-icon" style={{ color: row.color }} aria-hidden="true">
-                        <i className={row.icon} />
-                      </span>
-                      <span className="sidebar-appearance-row-text">
-                        <span className="sidebar-appearance-row-name">{row.label}</span>
-                        <span className="sidebar-appearance-row-desc">{row.hint}</span>
-                      </span>
-                      <i className="pi pi-chevron-right sidebar-appearance-row-chevron" aria-hidden="true" />
+
+              {(!hasLayouts || mainTab === 'estilo') && (
+                <div className="sap-estilo">
+                  <SidebarTreeLivePreview
+                    treeTheme={treeTheme}
+                    iconTheme={iconTheme}
+                    fontColor={explorerFontColor}
+                  />
+
+                  <div className="sap-value-group">
+                    <button type="button" className="sap-value-row" onClick={() => openPicker('tree')}>
+                      <span className="sap-value-label">Tema del árbol</span>
+                      <span className="sap-value-current">{treeThemeLabel}</span>
+                      <i className="pi pi-chevron-right sap-value-chevron" aria-hidden="true" />
                     </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {settingsView === 'tree' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Button icon="pi pi-arrow-left" className="p-button-text p-button-sm" style={{ padding: '4px', width: '24px', height: '24px' }} onClick={() => setSettingsView('choice')} />
-                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Temas del Árbol</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {treeThemeOptions.map((opt) => {
-                  const theme = treeThemes[opt.value] || {};
-                  const isActive = treeTheme === opt.value;
-                  return (
-                    <div
-                      key={opt.value}
-                      onClick={() => setTreeTheme?.(opt.value)}
-                      className="theme-item"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setTreeTheme?.(opt.value); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px',
-                        cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
-                        border: '1px solid', borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', fontSize: '1.1rem', flexShrink: 0 }}>
-                        {opt.value === 'default' && <i className="pi pi-folder" style={{ color: '#64b5f6' }} />}
-                        {opt.value === 'minimal' && <i className="pi pi-minus" style={{ color: '#90a4ae' }} />}
-                        {opt.value === 'connected' && <i className="pi pi-share-alt" style={{ color: '#81c784' }} />}
-                        {opt.value === 'compact' && <i className="pi pi-align-justify" style={{ color: '#ce93d8' }} />}
-                        {opt.value === 'neon' && <i className="pi pi-bolt" style={{ color: '#ff4081' }} />}
-                        {opt.value === 'cyber' && <i className="pi pi-code" style={{ color: '#00e5ff' }} />}
-                        {opt.value === 'circuit' && <i className="pi pi-share-alt" style={{ color: '#38bdf8' }} />}
-                        {opt.value === 'terminal' && <i className="pi pi-desktop" style={{ color: '#39ff9c' }} />}
-                        {opt.value === 'modern' && <i className="pi pi-objects-column" style={{ color: '#ffb74d' }} />}
-                        {opt.value === 'dotted' && <i className="pi pi-ellipsis-v" style={{ color: '#fff176' }} />}
-                        {opt.value === 'matrix' && <i className="pi pi-microsoft" style={{ color: '#4caf50' }} />}
-                        {opt.value === 'cursor' && <i className="pi pi-folder" style={{ color: '#2196f3' }} />}
-                        {opt.value === 'cursorCompact' && <i className="pi pi-folder" style={{ color: '#64b5f6' }} />}
-                        {opt.value.includes('Compact') && opt.value !== 'cursorCompact' && <i className="pi pi-compress" style={{ color: '#90caf9' }} />}
-                        {!['default', 'minimal', 'connected', 'compact', 'neon', 'cyber', 'circuit', 'terminal', 'modern', 'dotted', 'matrix', 'cursor'].includes(opt.value) && !opt.value.includes('Compact') && <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{opt.label}</div>
-                        <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{theme.description || ''}</div>
-                      </div>
-                      {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
+                    <button type="button" className="sap-value-row" onClick={() => openPicker('treeIcons')}>
+                      <span className="sap-value-label">Iconos del árbol</span>
+                      <span className="sap-value-current">
+                        <span className="sap-value-thumb">{folderThumb || <i className="pi pi-folder" />}</span>
+                        {iconThemeLabel}
+                      </span>
+                      <i className="pi pi-chevron-right sap-value-chevron" aria-hidden="true" />
+                    </button>
+                    <button type="button" className="sap-value-row" onClick={() => openPicker('actionIcons')}>
+                      <span className="sap-value-label">Barra (global)</span>
+                      <span className="sap-value-current">
+                        <span className="sap-value-thumb">{actionThumb || <i className="pi pi-plus-circle" />}</span>
+                        {actionThemeLabel}
+                      </span>
+                      <i className="pi pi-chevron-right sap-value-chevron" aria-hidden="true" />
+                    </button>
+                    <div className="sap-value-row sap-value-row--static">
+                      <span className="sap-value-label">Color</span>
+                      <span className="sap-color-controls">
+                        <label
+                          className="sap-swatch"
+                          title="Color del texto"
+                          style={{ background: explorerFontColor || '#a9b1d6' }}
+                        >
+                          <input
+                            type="color"
+                            value={explorerFontColor || '#a9b1d6'}
+                            onChange={(e) => setExplorerFontColor?.(e.target.value)}
+                          />
+                        </label>
+                        <input
+                          type="text"
+                          className="sap-hex"
+                          value={explorerFontColor || ''}
+                          placeholder="Auto"
+                          onChange={(e) => setExplorerFontColor?.(e.target.value)}
+                        />
+                        {explorerFontColor && (
+                          <button
+                            type="button"
+                            className="sap-icon-btn sap-icon-btn--tiny"
+                            onClick={() => setExplorerFontColor?.('')}
+                            title="Restablecer color"
+                            aria-label="Restablecer color"
+                          >
+                            <i className="pi pi-times" />
+                          </button>
+                        )}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {settingsView === 'treeIcons' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Button icon="pi pi-arrow-left" className="p-button-text p-button-sm" style={{ padding: '4px', width: '24px', height: '24px' }} onClick={() => setSettingsView('choice')} />
-                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Iconos del Árbol</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {iconThemeMeta.map(({ id, name, group }, index) => {
-                  const theme = iconThemes[id];
-                  const isActive = (iconTheme || 'nord').toLowerCase() === id.toLowerCase();
-                  const previewIcon = theme?.icons?.folder;
-                  const prevGroup = iconThemeMeta[index - 1]?.group;
-                  const showHeader = Boolean(group) && group !== prevGroup;
-                  return (
-                    <React.Fragment key={id}>
-                    {showHeader && (
-                      <div style={{
-                        margin: '10px 4px 2px',
-                        padding: '6px 8px 0',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: 'var(--ui-sidebar-text)',
-                        opacity: 0.45
-                      }}
-                      >
-                        {group}
-                      </div>
-                    )}
-                    <div
-                      onClick={() => {
-                        ensureIconTheme(id);
-                        setIconTheme?.(id);
-                      }}
-                      className="theme-item"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          ensureIconTheme(id);
-                          setIconTheme?.(id);
-                        }
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
-                        cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
-                        border: '1px solid', borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', flexShrink: 0 }}>
-                        <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {previewIcon || <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{name}</div>
-                      </div>
-                      {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
-                    </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {settingsView === 'actionIcons' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Button icon="pi pi-arrow-left" className="p-button-text p-button-sm" style={{ padding: '4px', width: '24px', height: '24px' }} onClick={() => setSettingsView('choice')} />
-                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Iconos de Acción</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                {sessionActionIconThemeMeta.map(({ id, name, description, group }, index) => {
-                  const theme = sessionActionIconThemes[id];
-                  const isActive = sessionActionIconTheme === id;
-                  const prevGroup = sessionActionIconThemeMeta[index - 1]?.group;
-                  const showHeader = Boolean(group) && group !== prevGroup;
-                  return (
-                    <React.Fragment key={id}>
-                    {showHeader && (
-                      <div style={{
-                        margin: '10px 4px 2px',
-                        padding: '6px 8px 0',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: 'var(--ui-sidebar-text)',
-                        opacity: 0.45
-                      }}
-                      >
-                        {group}
-                      </div>
-                    )}
-                    <div
-                      onClick={() => {
-                        ensureSessionActionIconTheme(id);
-                        setSessionActionIconTheme?.(id);
-                      }}
-                      className="theme-item"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          ensureSessionActionIconTheme(id);
-                          setSessionActionIconTheme?.(id);
-                        }
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
-                        cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
-                        border: '1px solid', borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', flexShrink: 0 }}>
-                        <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {theme?.icons?.newConnection || <i className="pi pi-plus-circle" style={{ color: 'var(--primary-color)' }} />}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{name}</div>
-                        <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{description || ''}</div>
-                      </div>
-                      {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
-                    </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {settingsView === 'typography' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <Button
-                  icon="pi pi-arrow-left"
-                  className="p-button-text p-button-sm"
-                  style={{ padding: '4px', width: '24px', height: '24px' }}
-                  onClick={() => setSettingsView('choice')}
-                />
-                <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Color del árbol</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingRight: '4px', paddingBottom: '4px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>Color del texto</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      backgroundColor: explorerFontColor || '#a9b1d6',
-                      border: '2px solid var(--ui-dialog-border)',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      flexShrink: 0
-                    }} title="Seleccionar color">
-                      <input
-                        type="color"
-                        value={explorerFontColor || '#a9b1d6'}
-                        onChange={(e) => setExplorerFontColor?.(e.target.value)}
-                        style={{
-                          position: 'absolute',
-                          top: '-5px',
-                          left: '-5px',
-                          width: '34px',
-                          height: '34px',
-                          opacity: 0,
-                          cursor: 'pointer'
-                        }}
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={explorerFontColor || ''}
-                      placeholder="Color por defecto"
-                      onChange={(e) => setExplorerFontColor?.(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)',
-                        border: '1px solid var(--ui-dialog-border)',
-                        borderRadius: 'var(--ui-radius-md)',
-                        padding: '4px 8px',
-                        color: 'var(--ui-dialog-text)',
-                        fontSize: '0.8rem',
-                        height: '30px'
-                      }}
-                    />
-                    {explorerFontColor && (
-                      <Button
-                        icon="pi pi-times"
-                        className="p-button-text p-button-sm"
-                        style={{ padding: '4px', width: '24px', height: '24px', color: '#ff5555', flexShrink: 0 }}
-                        onClick={() => setExplorerFontColor?.('')}
-                        title="Restablecer color por defecto"
-                      />
-                    )}
                   </div>
+
+                  <button
+                    type="button"
+                    className="sap-link-btn"
+                    onClick={(event) => {
+                      window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
+                        detail: { anchor: event.currentTarget, section: 'ui', chip: 'typography' }
+                      }));
+                    }}
+                  >
+                    <i className="pi pi-pencil" aria-hidden="true" />
+                    Tipografía de la interfaz
+                  </button>
                 </div>
-                <div style={{ fontSize: '0.72rem', lineHeight: 1.4, color: 'var(--ui-sidebar-text)', opacity: 0.65 }}>
-                  La fuente y el tamaño se aplican a toda la interfaz.
-                </div>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    window.dispatchEvent(new CustomEvent('open-appearance-quick-panel', {
-                      detail: { anchor: event.currentTarget, section: 'ui', chip: 'typography' }
-                    }));
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--ui-radius-md)',
-                    background: 'var(--ui-context-hover)',
-                    border: '1px solid var(--ui-dialog-border)',
-                    color: 'var(--ui-sidebar-text)',
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <i className="pi pi-pencil" style={{ fontSize: '0.75rem' }} />
-                  Editar tipografía
-                </button>
-              </div>
+              )}
             </>
           )}
         </div>

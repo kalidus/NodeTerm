@@ -4,32 +4,38 @@ export const CONNECTIONS_LAYOUTS = [
   {
     id: 'tree',
     name: 'Árbol',
-    description: 'Jerarquía con carpetas anidadas'
+    description: 'Jerarquía con carpetas anidadas',
+    preview: 'tree'
   },
   {
     id: 'hosts',
     name: 'Hosts',
-    description: 'Rejilla de iconos grandes, como un rack'
+    description: 'Rejilla de iconos grandes, como un rack',
+    preview: 'grid'
   },
   {
     id: 'list',
     name: 'Lista',
-    description: 'Filas con nombre y host, sin sangría'
+    description: 'Filas con nombre y host, sin sangría',
+    preview: 'list'
   },
   {
     id: 'cards',
     name: 'Tarjetas',
-    description: 'Protocolo, host y usuario'
+    description: 'Protocolo, host y usuario',
+    preview: 'cards'
   },
   {
     id: 'protocols',
     name: 'Por protocolo',
-    description: 'SSH, RDP, VNC, archivos y túneles'
+    description: 'SSH, RDP, VNC, archivos y túneles',
+    preview: 'sections'
   },
   {
     id: 'status',
     name: 'Por estado',
-    description: 'Conectadas, favoritas y el resto'
+    description: 'Conectadas, favoritas y el resto',
+    preview: 'sections'
   }
 ];
 
