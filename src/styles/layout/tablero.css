@@ -81,6 +81,16 @@ body.layout-tablero .main-splitter .terminal-frame {
   background: var(--ui-content-bg, #1a1c1e) !important;
 }
 
+/* Colapsada: sin marco, pero hay que anular el padding global para no apretar el rail */
+body.layout-tablero .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 56px !important;
+  flex-basis: 56px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding: 0 0 0 8px !important;
+}
+
 body.layout-tablero .home-panel-frame,
 body.layout-tablero .home-clock-card,
 body.layout-tablero .home-fav-tile,

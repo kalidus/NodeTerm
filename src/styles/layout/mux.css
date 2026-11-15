@@ -31,7 +31,12 @@ body.layout-mux .main-splitter > .p-splitter-panel:last-child {
 }
 
 body.layout-mux .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
-  padding: 6px 3px 6px 6px !important;
+  flex: 0 0 68px !important;
+  flex-basis: 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  padding: 6px 4px 6px 6px !important;
 }
 
 body.layout-mux .main-splitter > .p-splitter-panel:first-child:has(.sidebar-hidden) {

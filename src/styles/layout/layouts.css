@@ -526,12 +526,12 @@ body.layout-unified-app-rounded .main-splitter > .p-splitter-panel:first-child:h
 }
 
 body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
-  flex: 0 0 56px !important;
-  flex-basis: 56px !important;
-  width: 56px !important;
-  min-width: 56px !important;
-  max-width: 56px !important;
-  padding: 6px 2px 6px 6px !important;
+  flex: 0 0 64px !important;
+  flex-basis: 64px !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  padding: 6px 4px 6px 6px !important;
 }
 
 body.layout-unified-rounded .main-splitter .terminal-frame.sidebar-collapsed {

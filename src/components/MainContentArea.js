@@ -1696,8 +1696,9 @@ const MainContentArea = ({
   // Umbral en píxeles: por debajo de esto la sidebar se repliega al IconRail al soltar
   const SIDEBAR_COLLAPSE_THRESHOLD_PX = 100;
   const SIDEBAR_EXPAND_THRESHOLD_PX = 60;
-  // Ancho fijo cuando está plegada a IconRail (48px + 8px margen)
-  const SIDEBAR_COLLAPSED_WIDTH_PX = 56;
+  // Rail 48px + padding + borde del terminal-frame (box-sizing border-box)
+  const SIDEBAR_COLLAPSED_WIDTH_PX = 64;
+  const SIDEBAR_COLLAPSED_PADDING = '8px 4px 8px 8px';
   const sidebarFullyHidden = isMinimalMode || !sidebarVisible;
 
   const handleResizeOnly = () => {
@@ -1783,7 +1784,7 @@ const MainContentArea = ({
         panel.style.width = w;
         panel.style.minWidth = w;
         panel.style.maxWidth = w;
-        panel.style.padding = '';
+        panel.style.padding = SIDEBAR_COLLAPSED_PADDING;
         panel.style.overflow = 'hidden';
       };
       try {
@@ -1821,7 +1822,7 @@ const MainContentArea = ({
           style={sidebarFullyHidden
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
             : sidebarCollapsed
-              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--ui-sidebar-bg, #0a0f1f)' }
+              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: SIDEBAR_COLLAPSED_PADDING, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--ui-sidebar-bg, #0a0f1f)' }
               : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
