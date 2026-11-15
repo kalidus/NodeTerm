@@ -1,4 +1,4 @@
-const { exec, execFile, spawn } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 const dns = require('dns').promises;
@@ -9,7 +9,6 @@ const dgram = require('dgram');
 const os = require('os');
 const path = require('path');
 const { promisify } = require('util');
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const sslCertAnalyzer = require('../ssl/sslCertAnalyzer');
 
@@ -1791,9 +1790,10 @@ methods._readWindowsNeighborTable = async function() {
     ].join(' ');
 
     try {
-      const { stdout } = await execAsync(
-        `powershell -NoProfile -NonInteractive -Command "${ps}"`,
-        { timeout: 20000, shell: true, maxBuffer: 4 * 1024 * 1024 }
+      const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', ps],
+        { timeout: 20000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }
       );
       for (const line of stdout.split(/\r?\n/)) {
         const [ip, macRaw] = line.trim().split('|');
@@ -1820,9 +1820,10 @@ methods._getMacFromNetNeighbor = async function(ip) {
 
     const ps = `Get-NetNeighbor -IPAddress '${cleanIp}' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty LinkLayerAddress`;
     try {
-      const { stdout } = await execAsync(
-        `powershell -NoProfile -NonInteractive -Command "${ps}"`,
-        { timeout: 8000, shell: true }
+      const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', ps],
+        { timeout: 8000, windowsHide: true }
       );
       const mac = this._normalizeMacAddress(stdout.trim());
       return mac && !this._isInvalidMac(mac) ? mac : null;
@@ -1838,8 +1839,9 @@ methods._getMacFromNetNeighbor = async function(ip) {
    */
 methods._readArpTableClassic = async function() {
     return new Promise((resolve) => {
-      const cmd = this.platform === 'linux' ? 'ip neigh' : 'arp -a';
-      exec(cmd, { timeout: 8000 }, (err, stdout) => {
+      const file = this.platform === 'linux' ? 'ip' : 'arp';
+      const args = this.platform === 'linux' ? ['neigh'] : ['-a'];
+      execFile(file, args, { timeout: 8000, windowsHide: true }, (err, stdout) => {
         const table = {};
         if (err || !stdout) {
           return resolve(table);

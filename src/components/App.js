@@ -55,7 +55,6 @@ import { useVaultSession, readConnectionDecryptCache, writeConnectionDecryptCach
 import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 import { useAppChromeLayout } from '../hooks/useAppChromeLayout';
 
-import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import vaultKeyring from '../services/VaultKeyring';
 import {
   loadVisibleConnectionTrees,
@@ -86,7 +85,6 @@ import {
   matchesShortcut,
   shouldIgnoreShortcutTarget,
 } from '../utils/keyboardShortcuts';
-import { detectBlockedInputs } from '../utils/formDebugger';
 import {
   insertNodesIntoVaultTree,
   buildVaultFolderOptions
@@ -104,7 +102,6 @@ import {
   getTabTypeAndIndex,
   moveTabToFirst,
   handleTerminalContextMenu,
-  handleUnblockForms,
   handleGuacamoleCreateTab
 } from '../utils/tabEventHandlers';
 import TabContextMenu from './contextmenus/TabContextMenu';
@@ -677,7 +674,6 @@ const App = () => {
       }
 
       toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas`, life: 5000 });
-      setTimeout(() => { try { resolveFormBlocking(toast.current); } catch { } }, 0);
       return;
     }
 
@@ -769,7 +765,6 @@ const App = () => {
     }
 
     toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones`, life: 5000 });
-    setTimeout(() => { try { resolveFormBlocking(toast.current); } catch { } }, 0);
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
@@ -3607,29 +3602,8 @@ const App = () => {
   );
 };
 
-// Función global para desbloquear formularios en casos de emergencia
-// Se puede llamar desde la consola del navegador: window.unblockForms()
+// confirmDialog global con la API unificada appConfirm (salida manual de formularios: menú app)
 if (typeof window !== 'undefined') {
-  window.unblockForms = () => {
-    try {
-      resolveFormBlocking(null);
-      console.log('✅ Función de desbloqueo ejecutada desde consola');
-    } catch (error) {
-      console.error('❌ Error al desbloquear formularios:', error);
-    }
-  };
-
-  // Función de emergencia ultra-agresiva
-  window.emergencyUnblock = () => {
-    try {
-      emergencyUnblockForms();
-      console.log('🚨 DESBLOQUEO DE EMERGENCIA EJECUTADO DESDE CONSOLA');
-    } catch (error) {
-      console.error('❌ Error en desbloqueo de emergencia:', error);
-    }
-  };
-
-  // Hacer disponible confirmDialog globalmente con la API unificada appConfirm
   window.confirmDialog = (options) => appConfirm(options);
 }
 

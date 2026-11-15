@@ -1,4 +1,4 @@
-const { spawn, exec, execFile } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const { promisify } = require('util');
 const net = require('net');
 const fs = require('fs');
@@ -302,17 +302,30 @@ async function extractZip(zipPath, extractPath) {
     console.warn('⚠️ unzipper falló:', e?.message || e);
   }
 
-  // Intento 2 (Windows): PowerShell Expand-Archive
+  // Intento 2 (Windows): PowerShell Expand-Archive vía execFile (sin shell)
   if (process.platform === 'win32') {
     await new Promise((resolve, reject) => {
-      const cmd = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Expand-Archive -Path \"${zipPath}\" -DestinationPath \"${extractPath}\" -Force"`;
-      exec(cmd, (err, stdout, stderr) => {
-        if (err) {
-          reject(new Error(`Expand-Archive error: ${stderr || err.message}`));
-          return;
+      execFile(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy', 'Bypass',
+          '-Command',
+          'Expand-Archive -LiteralPath $env:GUACD_ZIP -DestinationPath $env:GUACD_OUT -Force'
+        ],
+        {
+          windowsHide: true,
+          env: { ...process.env, GUACD_ZIP: zipPath, GUACD_OUT: extractPath }
+        },
+        (err, _stdout, stderr) => {
+          if (err) {
+            reject(new Error(`Expand-Archive error: ${stderr || err.message}`));
+            return;
+          }
+          resolve();
         }
-        resolve();
-      });
+      );
     });
     return;
   }

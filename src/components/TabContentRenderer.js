@@ -51,6 +51,55 @@ import { TabChunkFallback } from './tabLoaders';
 const LazyEditConnectionTabContent = React.lazy(() => import('./EditConnectionTabContent'));
 const LazyPasswordTabContent = React.lazy(() => import('./PasswordTabContent'));
 
+const LOCAL_PTY_COMPONENTS = {
+  powershell: LazyPowerShellTerminal,
+  'linux-terminal': LazyPowerShellTerminal,
+  wsl: LazyWSLTerminal,
+  ubuntu: LazyUbuntuTerminal,
+  'wsl-distro': LazyUbuntuTerminal,
+  debian: LazyUbuntuTerminal,
+  cygwin: LazyCygwinTerminal
+};
+
+function renderLocalPtyTab(terminalType, {
+  tab,
+  terminalRefs,
+  fontFamily,
+  fontSize,
+  powerShellTheme,
+  linuxTheme,
+  isActiveTab,
+  onBroadcastData,
+  showTerminalContextMenu,
+  handleTerminalContextMenu
+}) {
+  const Component = LOCAL_PTY_COMPONENTS[terminalType] || LazyPowerShellTerminal;
+  const usesLinuxTheme = terminalType === 'wsl'
+    || terminalType === 'ubuntu'
+    || terminalType === 'wsl-distro'
+    || terminalType === 'debian'
+    || terminalType === 'cygwin';
+  const theme = usesLinuxTheme ? linuxTheme : powerShellTheme;
+  const needsUbuntuInfo = terminalType === 'ubuntu'
+    || terminalType === 'wsl-distro'
+    || terminalType === 'debian';
+
+  return (
+    <Component
+      ref={el => { terminalRefs.current[tab.key] = el; }}
+      tabId={tab.key}
+      fontFamily={fontFamily}
+      fontSize={fontSize}
+      theme={theme}
+      {...(needsUbuntuInfo ? { ubuntuInfo: tab.distroInfo } : {})}
+      active={isActiveTab}
+      onBroadcastData={onBroadcastData}
+      isBroadcastActive={tab.isBroadcastActive}
+      onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
+    />
+  );
+}
+
 const TabContentRendererInner = React.memo(({
   tab,
   isActiveTab,
@@ -1391,92 +1440,29 @@ const TabContentRendererInner = React.memo(({
 
   if (tab.type === 'local-terminal') {
     const terminalType = tab.terminalType || 'powershell';
+    const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+    const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+    const AI_CLI_TYPES = new Set(['claude', 'opencode', 'codexcli', 'antigravitycli', 'hermescli']);
 
-    // PowerShell o terminal genérico
-    if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
-      // Obtener el tema correcto
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
-
-      return (
-        <LazyPowerShellTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
-          tabId={tab.key}
-          fontFamily={localFontFamily}
-          fontSize={localFontSize}
-          theme={powerShellTheme}
-          active={isActiveTab}
-          onBroadcastData={handleBroadcastData}
-          isBroadcastActive={tab.isBroadcastActive}
-          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
-        />
-      );
-    }
-
-    // WSL genérico
-    if (terminalType === 'wsl') {
-      // Obtener el tema correcto
-      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
-
-      return (
-        <LazyWSLTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
-          tabId={tab.key}
-          fontFamily={localFontFamily}
-          fontSize={localFontSize}
-          theme={linuxTheme}
-          active={isActiveTab}
-          onBroadcastData={handleBroadcastData}
-          isBroadcastActive={tab.isBroadcastActive}
-          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
-        />
-      );
-    }
-
-    // Ubuntu o distribución WSL con información completa desde tab.distroInfo
-    if (terminalType === 'ubuntu' || terminalType === 'wsl-distro' || terminalType === 'debian') {
-      // Obtener el tema correcto
-      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
-
-      return (
-        <LazyUbuntuTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
-          tabId={tab.key}
-          fontFamily={localFontFamily}
-          fontSize={localFontSize}
-          ubuntuInfo={tab.distroInfo}
-          theme={linuxTheme}
-          active={isActiveTab}
-          onBroadcastData={handleBroadcastData}
-          isBroadcastActive={tab.isBroadcastActive}
-          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
-        />
-      );
-    }
-
-    // Cygwin Terminal
-    if (terminalType === 'cygwin') {
-      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
-
-      return (
-        <LazyCygwinTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
-          tabId={tab.key}
-          fontFamily={localFontFamily}
-          fontSize={localFontSize}
-          theme={linuxTheme}
-          active={isActiveTab}
-          onBroadcastData={handleBroadcastData}
-          isBroadcastActive={tab.isBroadcastActive}
-          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
-        />
-      );
+    if (!AI_CLI_TYPES.has(terminalType)) {
+      return renderLocalPtyTab(terminalType, {
+        tab,
+        terminalRefs,
+        fontFamily: localFontFamily,
+        fontSize: localFontSize,
+        powerShellTheme,
+        linuxTheme,
+        isActiveTab,
+        onBroadcastData: handleBroadcastData,
+        showTerminalContextMenu,
+        handleTerminalContextMenu
+      });
     }
 
     if (terminalType === 'claude') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyClaudeTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
+          ref={el => { terminalRefs.current[tab.key] = el; }}
           tabId={tab.key}
           fontFamily={localFontFamily}
           fontSize={localFontSize}
@@ -1490,10 +1476,9 @@ const TabContentRendererInner = React.memo(({
     }
 
     if (terminalType === 'opencode') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyOpenCodeTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
+          ref={el => { terminalRefs.current[tab.key] = el; }}
           tabId={tab.key}
           fontFamily={localFontFamily}
           fontSize={localFontSize}
@@ -1505,10 +1490,9 @@ const TabContentRendererInner = React.memo(({
     }
 
     if (terminalType === 'codexcli') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyCodexCliTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
+          ref={el => { terminalRefs.current[tab.key] = el; }}
           tabId={tab.key}
           fontFamily={localFontFamily}
           fontSize={localFontSize}
@@ -1520,10 +1504,9 @@ const TabContentRendererInner = React.memo(({
     }
 
     if (terminalType === 'antigravitycli') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyAntigravityCliTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
+          ref={el => { terminalRefs.current[tab.key] = el; }}
           tabId={tab.key}
           fontFamily={localFontFamily}
           fontSize={localFontSize}
@@ -1535,10 +1518,9 @@ const TabContentRendererInner = React.memo(({
     }
 
     if (terminalType === 'hermescli') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyHermesCliTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
+          ref={el => { terminalRefs.current[tab.key] = el; }}
           tabId={tab.key}
           fontFamily={localFontFamily}
           fontSize={localFontSize}
@@ -1548,23 +1530,6 @@ const TabContentRendererInner = React.memo(({
         />
       );
     }
-
-    // Fallback a PowerShell
-    const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
-
-    return (
-      <LazyPowerShellTerminal
-        ref={el => terminalRefs.current[tab.key] = el}
-        tabId={tab.key}
-        fontFamily={localFontFamily}
-        fontSize={localFontSize}
-        theme={powerShellTheme}
-        active={isActiveTab}
-        onBroadcastData={handleBroadcastData}
-        isBroadcastActive={tab.isBroadcastActive}
-        onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
-      />
-    );
   }
 
   // Tab de auditoría global de grabaciones

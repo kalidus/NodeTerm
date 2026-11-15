@@ -58,4 +58,16 @@ describe('Seguridad en NetworkToolsService (H-15)', () => {
     const res = await service._getNetbiosInfo("127.0.0.1 & calc.exe");
     assert.deepStrictEqual(res, { name: null, group: null, mac: null });
   });
+
+  it('discovery-scan arma ARP/neighbor con execFile (sin shell)', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'src', 'main', 'services', 'network-tools', 'discovery-scan.js'),
+      'utf8'
+    );
+    assert.ok(src.includes("execFileAsync(\n        'powershell.exe'"));
+    assert.ok(src.includes("const file = this.platform === 'linux' ? 'ip' : 'arp'"));
+    assert.ok(!src.includes('shell: true'));
+  });
 });
