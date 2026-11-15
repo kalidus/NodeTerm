@@ -29,7 +29,8 @@ export const STORAGE_KEYS = {
   MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed',
   MINIMAL_MODE: 'nodeterm_minimal_mode',
   CONNECTION_SEARCH_SHORTCUT: 'nodeterm_connection_search_shortcut',
-  EXPANDED_KEYS: 'nodeterm_expanded_keys'
+  EXPANDED_KEYS: 'nodeterm_expanded_keys',
+  LAUNCHER_EXPANDED_KEYS: 'nodeterm_launcher_expanded_keys'
 };
 
 // Constantes de grupos

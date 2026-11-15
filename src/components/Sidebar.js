@@ -2712,9 +2712,11 @@ const Sidebar = React.memo(({
   const [connectionsBrowseStack, setConnectionsBrowseStack] = useState([]);
   const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
 
+  // Solo la sidebar principal persiste; el launcher refleja la misma vista vía LS + evento.
   useEffect(() => {
+    if (embedded) return;
     try { localStorage.setItem(CONNECTIONS_LAYOUT_STORAGE_KEY, connectionsLayout); } catch {}
-  }, [connectionsLayout]);
+  }, [connectionsLayout, embedded]);
 
   useEffect(() => {
     setConnectionsBrowseStack([]);
@@ -2751,6 +2753,9 @@ const Sidebar = React.memo(({
     const onPassLayoutState = (e) => {
       if (isVaultLayout(e.detail?.layout)) setPasswordsVaultLayout(e.detail.layout);
     };
+    const onConnectionsLayoutState = (e) => {
+      if (isConnectionsLayout(e.detail?.layout)) setConnectionsLayout(e.detail.layout);
+    };
     const onToolsExpandState = (e) => {
       if (typeof e.detail?.allExpanded === 'boolean') setToolsTreeAllExpanded(e.detail.allExpanded);
     };
@@ -2761,6 +2766,7 @@ const Sidebar = React.memo(({
     window.addEventListener('documents-sidebar:layout-state', onDocLayoutState);
     window.addEventListener('passwords-sidebar:expand-state', onPassExpandState);
     window.addEventListener('passwords-sidebar:layout-state', onPassLayoutState);
+    window.addEventListener('connections-sidebar:layout-state', onConnectionsLayoutState);
     window.addEventListener('tools-sidebar:expand-state', onToolsExpandState);
     window.addEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     return () => {
@@ -2768,6 +2774,7 @@ const Sidebar = React.memo(({
       window.removeEventListener('documents-sidebar:layout-state', onDocLayoutState);
       window.removeEventListener('passwords-sidebar:expand-state', onPassExpandState);
       window.removeEventListener('passwords-sidebar:layout-state', onPassLayoutState);
+      window.removeEventListener('connections-sidebar:layout-state', onConnectionsLayoutState);
       window.removeEventListener('tools-sidebar:expand-state', onToolsExpandState);
       window.removeEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     };
@@ -2949,11 +2956,13 @@ const Sidebar = React.memo(({
   let appearanceLayouts = null;
   let appearanceLayout = null;
   let onSelectAppearanceLayout = null;
-  if ((activeTab === 'connections' || activeTab === 'favorites') && !remoteExplorerOpen) {
+  if ((activeTab === 'connections' || activeTab === 'favorites') && !remoteExplorerOpen && !embedded) {
     appearanceLayouts = CONNECTIONS_LAYOUTS;
     appearanceLayout = connectionsLayout;
     onSelectAppearanceLayout = (id) => {
-      if (isConnectionsLayout(id)) setConnectionsLayout(id);
+      if (!isConnectionsLayout(id)) return;
+      setConnectionsLayout(id);
+      window.dispatchEvent(new CustomEvent('connections-sidebar:layout-state', { detail: { layout: id } }));
     };
   } else if (activeTab === 'documents') {
     appearanceLayouts = NOTES_LAYOUTS;
