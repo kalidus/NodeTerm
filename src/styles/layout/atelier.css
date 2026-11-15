@@ -70,6 +70,21 @@ body.layout-atelier .main-splitter .terminal-frame {
   box-shadow: none;
 }
 
+/* Sidebar colapsada: hueco para rail 48px + padding + borde del marco */
+body.layout-atelier .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 64px !important;
+  flex-basis: 64px !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  padding: 8px 4px 8px 8px !important;
+}
+
+body.layout-atelier .main-splitter .terminal-frame.sidebar-collapsed {
+  border-color: var(--ui-border-subtle, rgba(127, 127, 127, 0.16)) !important;
+  box-shadow: none !important;
+}
+
 /* Home: launcher, sin glow ni scanlines */
 body.layout-atelier .home-dock-tile-well {
   border-radius: 10px !important;
