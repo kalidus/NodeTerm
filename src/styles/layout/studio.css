@@ -41,15 +41,6 @@ body.layout-studio .main-splitter > .p-splitter-panel:first-child {
   padding: 8px 8px 8px 2px !important;
 }
 
-body.layout-studio .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
-  flex: 0 0 64px !important;
-  flex-basis: 64px !important;
-  width: 64px !important;
-  min-width: 64px !important;
-  max-width: 64px !important;
-  padding: 8px 8px 8px 4px !important;
-}
-
 body.layout-studio .main-splitter > .p-splitter-panel:last-child {
   padding: 8px 2px 8px 8px !important;
 }

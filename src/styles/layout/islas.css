@@ -59,16 +59,6 @@ body.layout-islas .main-splitter > .p-splitter-panel:first-child {
   padding-right: calc(var(--islas-gap) / 2) !important;
 }
 
-/* Colapsada: hueco para rail + gap + bordes del marco y del sidebar-root */
-body.layout-islas .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
-  flex: 0 0 80px !important;
-  flex-basis: 80px !important;
-  width: 80px !important;
-  min-width: 80px !important;
-  max-width: 80px !important;
-  padding: var(--islas-gap) 6px var(--islas-gap) var(--islas-gap) !important;
-}
-
 body.layout-islas .main-splitter > .p-splitter-panel:last-child {
   padding-left: calc(var(--islas-gap) / 2) !important;
 }

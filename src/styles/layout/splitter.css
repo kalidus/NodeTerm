@@ -33,11 +33,7 @@
 .p-splitter .p-splitter-panel:first-child[style*="width: 60px"],
 .p-splitter .p-splitter-panel:first-child[style*="width: 48px"],
 .p-splitter .p-splitter-panel:first-child[style*="width: 44px"],
-.p-splitter .p-splitter-panel:first-child[style*="width: 56px"],
-.p-splitter .p-splitter-panel:first-child[style*="width: 64px"],
-.p-splitter .p-splitter-panel:first-child[style*="width: 68px"],
-.p-splitter .p-splitter-panel:first-child[style*="width: 72px"],
-.p-splitter .p-splitter-panel:first-child[style*="width: 80px"] {
+.p-splitter .p-splitter-panel:first-child[style*="width: 56px"] {
   min-width: 48px !important;
   /* max-width temporalmente removido para resize visual */
 }
