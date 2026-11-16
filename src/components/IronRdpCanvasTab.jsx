@@ -267,6 +267,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeTransfers, setActiveTransfers] = useState({});
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
+  const [scaleMode, setScaleMode] = useState(() => {
+    try {
+      return localStorage.getItem('nodeterm_rdp_scale_mode') || 'fill';
+    } catch (_) {
+      return 'fill';
+    }
+  });
+  const [containerBox, setContainerBox] = useState({ width: 0, height: 0 });
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
@@ -2577,34 +2585,44 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
   }, [showResolutionMenu]);
 
-  // Auto: DisplayControl via session.resize. El canvas se pinta 1:1 (sin stretch CSS).
+  // Auto: DisplayControl via session.resize o Smart Sizing local instantáneo
   useEffect(() => {
     if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
     let resizeTimer = null;
     const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 400, 200);
     const handleResize = () => {
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        if (!containerRef.current || !isAutoResize) return;
-        const { width, height } = measureAutoDesktopSize();
+      if (!containerRef.current || !isAutoResize) return;
+      const el = containerRef.current;
+      const curW = el.clientWidth || 0;
+      const curH = el.clientHeight || 0;
 
-        if (!supportsDisplayControlRef.current) {
-          if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
-            return;
-          }
-          currentDesktopSizeRef.current = { width, height };
-          // En bastiones (Wallix), el CSS del canvas (width: 100%, height: 100%) ya ajusta
-          // perfectamente el escritorio al visor en tiempo real sin desestabilizar la sesión con DisplayControl.
-          return;
+      // Actualizar la caja del contenedor para el Smart Sizing visual al instante
+      setContainerBox((prev) => {
+        if (Math.abs(prev.width - curW) > 1 || Math.abs(prev.height - curH) > 1) {
+          return { width: curW, height: curH };
         }
+        return prev;
+      });
 
-        requestSessionResize(width, height);
-      }, debounceMs);
+      // Si el servidor soporta DisplayControl, enviar solicitud con debounce
+      if (supportsDisplayControlRef.current) {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if (!containerRef.current || !isAutoResize) return;
+          const { width, height } = measureAutoDesktopSize();
+          requestSessionResize(width, height);
+        }, debounceMs);
+      } else {
+        const { width, height } = measureAutoDesktopSize();
+        currentDesktopSizeRef.current = { width, height };
+      }
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.current);
+    // Disparar sincronización inicial
+    handleResize();
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
@@ -2857,7 +2875,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       {/* Contenedor de visualización / scroll para el Canvas HTML5 */}
       <div
         onClick={() => canvasRef.current?.focus()}
-        style={isAutoResize && supportsDisplayControl ? {
+        style={isAutoResize ? {
           width: '100%',
           height: '100%',
           overflow: 'hidden',
@@ -2865,10 +2883,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#000000'
-        } : isAutoResize ? {
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden'
         } : {
           width: '100%',
           height: '100%',
@@ -2879,16 +2893,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       >
         <div
           onMouseDown={() => canvasRef.current?.focus()}
-          style={isAutoResize && supportsDisplayControl ? {
+          style={isAutoResize ? {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             width: '100%',
             height: '100%',
             lineHeight: 0
-          } : isAutoResize ? {
-            width: '100%',
-            height: '100%'
           } : {
             margin: 'auto',
             display: 'flex',
@@ -2906,38 +2917,29 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             onClick={() => canvasRef.current?.focus()}
             onMouseDown={() => canvasRef.current?.focus()}
             style={(() => {
-              if (isAutoResize && supportsDisplayControl) {
-                // 1:1 lógico cuando el servidor respeta la resolución del visor;
-                // si el servidor (p.ej. KRDP) emite una resolución mayor que el contenedor,
-                // escalar limpiamente a la caja disponible sin object-fit para mantener 100%
-                // de correspondencia exacta entre getBoundingClientRect() y los píxeles del canvas.
-                const dpr = readDisplayPixelRatio();
-                let cssW = Math.max(1, Math.round(desktopDimensions.width / dpr));
-                let cssH = Math.max(1, Math.round(desktopDimensions.height / dpr));
+              if (isAutoResize) {
+                // Si el servidor soporta DisplayControl o el modo es 'proportional',
+                // adaptamos con aspect-ratio (puede dejar bandas si las relaciones difieren).
+                // Si está en 'fill' (por defecto), rellena el 100% disponible sin dejar bandas negras.
+                const dpr = supportsDisplayControl ? readDisplayPixelRatio() : 1;
+                let baseW = Math.max(1, Math.round(desktopDimensions.width / dpr));
+                let baseH = Math.max(1, Math.round(desktopDimensions.height / dpr));
                 const el = containerRef.current;
-                const availW = (el && el.clientWidth > 100) ? el.clientWidth : 0;
-                const availH = (el && el.clientHeight > 100) ? el.clientHeight : 0;
-                if (availW > 0 && availH > 0 && (cssW > availW + 4 || cssH > availH + 4)) {
-                  const scale = Math.min(availW / cssW, availH / cssH);
-                  cssW = Math.max(1, Math.floor(cssW * scale));
-                  cssH = Math.max(1, Math.floor(cssH * scale));
+                const availW = containerBox.width || (el && el.clientWidth > 100 ? el.clientWidth : 0);
+                const availH = containerBox.height || (el && el.clientHeight > 100 ? el.clientHeight : 0);
+
+                let cssW = availW || baseW;
+                let cssH = availH || baseH;
+
+                if (scaleMode === 'proportional' && availW > 0 && availH > 0) {
+                  const scale = Math.min(availW / baseW, availH / baseH);
+                  cssW = Math.max(1, Math.round(baseW * scale));
+                  cssH = Math.max(1, Math.round(baseH * scale));
                 }
+
                 return {
                   width: `${cssW}px`,
                   height: `${cssH}px`,
-                  display: 'block',
-                  backgroundColor: '#000000',
-                  outline: 'none',
-                  transform: 'translateZ(0)',
-                  backfaceVisibility: 'hidden',
-                  willChange: 'transform',
-                  imageRendering: 'auto'
-                };
-              }
-              if (isAutoResize) {
-                return {
-                  width: '100%',
-                  height: '100%',
                   display: 'block',
                   backgroundColor: '#000000',
                   outline: 'none',
@@ -3425,6 +3427,52 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     </div>
                     <span className="ironrdp-res-tag">AUTO</span>
                   </div>
+
+                  {/* Selector de Modo de Escala: Rellenar vs Proporcional */}
+                  {isAutoResize && (
+                    <div style={{ padding: '6px 12px 8px 12px', display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScaleMode('fill');
+                          try { localStorage.setItem('nodeterm_rdp_scale_mode', 'fill'); } catch (_) {}
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '4px 6px',
+                          fontSize: '11px',
+                          borderRadius: '4px',
+                          border: scaleMode === 'fill' ? '1px solid #00f0ff' : '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: scaleMode === 'fill' ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.04)',
+                          color: scaleMode === 'fill' ? '#00f0ff' : '#94a3b8',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Rellenar (Sin barras)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScaleMode('proportional');
+                          try { localStorage.setItem('nodeterm_rdp_scale_mode', 'proportional'); } catch (_) {}
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '4px 6px',
+                          fontSize: '11px',
+                          borderRadius: '4px',
+                          border: scaleMode === 'proportional' ? '1px solid #00f0ff' : '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: scaleMode === 'proportional' ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.04)',
+                          color: scaleMode === 'proportional' ? '#00f0ff' : '#94a3b8',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Proporcional
+                      </button>
+                    </div>
+                  )}
 
                   <div className="ironrdp-res-divider" />
 
