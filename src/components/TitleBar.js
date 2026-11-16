@@ -8,9 +8,15 @@ import { appConfirm } from './ui/AppConfirm';
 import TitleBarUpdateButton from './TitleBarUpdateButton';
 import TitleBarSearch from './TitleBarSearch';
 import VaultSelector from './vault/VaultSelector';
+import {
+  UI_LAYOUT_OPTIONS,
+  getCurrentUILayoutId,
+  setUILayout,
+} from '../utils/appearanceLayout';
 import { getCurrentTerminalFrameStyle } from '../utils/terminalFrameStyle';
 import { STORAGE_KEYS } from '../utils/constants';
 import { presetManager } from '../utils/presetManager';
+import UiLayoutStyleOption from './UiLayoutStyleOption';
 import PresetStyleOption from './PresetStyleOption';
 import '../styles/components/terminal-frame.css';
 
@@ -177,6 +183,7 @@ const TitleBar = ({
   const layoutBtnRef = useRef(null);
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
   const [layoutPopoverTab, setLayoutPopoverTab] = useState('views');
+  const [currentUiLayout, setCurrentUiLayout] = useState(() => getCurrentUILayoutId());
   const [currentFrameStyle, setCurrentFrameStyle] = useState(() => getCurrentTerminalFrameStyle());
   const [activePresetId, setActivePresetId] = useState(() => presetManager.getActivePresetId());
   const [layoutPresets, setLayoutPresets] = useState(() => presetManager.getAllPresets());
@@ -235,6 +242,18 @@ const TitleBar = ({
     } catch {}
     window.dispatchEvent(new CustomEvent('statusbar-visibility-changed', { detail: { visible: next } }));
   }, [statusBarVisible]);
+
+  useEffect(() => {
+    const syncLayout = () => setCurrentUiLayout(getCurrentUILayoutId());
+    window.addEventListener('settings-updated', syncLayout);
+    return () => window.removeEventListener('settings-updated', syncLayout);
+  }, []);
+
+  const handleSelectUiLayout = useCallback((layoutId) => {
+    setUILayout(layoutId);
+    setCurrentUiLayout(layoutId);
+    setLayoutPopoverOpen(false);
+  }, []);
 
   useEffect(() => {
     const syncFrame = (e) => {
@@ -718,12 +737,14 @@ const TitleBar = ({
           {layoutPopoverOpen && layoutBtnRef.current && ReactDOM.createPortal(
             (() => {
               const rect = layoutBtnRef.current.getBoundingClientRect();
+              const isViewsTab = layoutPopoverTab === 'views';
+              const isLayoutTab = layoutPopoverTab === 'layout';
               const isPresetsTab = layoutPopoverTab === 'presets';
-              const POPOVER_HEIGHT = isPresetsTab ? Math.min(window.innerHeight * 0.7, 420) + 44 : 420;
+              const POPOVER_HEIGHT = isViewsTab ? 420 : Math.min(window.innerHeight * 0.7, 420) + 44;
               const openUp = window.innerHeight - rect.bottom < POPOVER_HEIGHT;
               return (
                 <div
-                  className={`title-bar-layout-popover${isPresetsTab ? ' is-presets' : ' is-views'}`}
+                  className={`title-bar-layout-popover${isViewsTab ? ' is-views' : isLayoutTab ? ' is-layout' : ' is-presets'}`}
                   style={{
                     top: openUp ? Math.max(8, rect.top - POPOVER_HEIGHT - 4) : rect.bottom + 4,
                     right: Math.max(8, window.innerWidth - rect.right),
@@ -734,8 +755,8 @@ const TitleBar = ({
                     <button
                       type="button"
                       role="tab"
-                      aria-selected={!isPresetsTab}
-                      className={`title-bar-layout-popover-tab${!isPresetsTab ? ' is-active' : ''}`}
+                      aria-selected={isViewsTab}
+                      className={`title-bar-layout-popover-tab${isViewsTab ? ' is-active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -743,6 +764,19 @@ const TitleBar = ({
                       }}
                     >
                       Vistas
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={isLayoutTab}
+                      className={`title-bar-layout-popover-tab${isLayoutTab ? ' is-active' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLayoutPopoverTab('layout');
+                      }}
+                    >
+                      Estilos
                     </button>
                     <button
                       type="button"
@@ -766,6 +800,17 @@ const TitleBar = ({
                           preset={preset}
                           selected={activePresetId === preset.id}
                           onSelect={handleSelectPreset}
+                        />
+                      ))}
+                    </div>
+                  ) : isLayoutTab ? (
+                    <div className="title-bar-layout-popover-list" role="none">
+                      {UI_LAYOUT_OPTIONS.map((opt) => (
+                        <UiLayoutStyleOption
+                          key={opt.id}
+                          option={opt}
+                          selected={currentUiLayout === opt.id}
+                          onSelect={handleSelectUiLayout}
                         />
                       ))}
                     </div>
