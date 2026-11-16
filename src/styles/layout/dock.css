@@ -85,6 +85,15 @@ body.layout-dock .terminal-frame {
   box-shadow: none !important;
 }
 
+body.layout-dock .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 58px !important;
+  flex-basis: 58px !important;
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  padding: 8px 0 8px 8px !important;
+}
+
 body.layout-dock .home-panel-frame,
 body.layout-dock .home-clock-card,
 body.layout-dock .home-fav-tile,

@@ -70,6 +70,16 @@ body.layout-atelier .main-splitter .terminal-frame {
   box-shadow: none;
 }
 
+/* Colapsada: pad + rail 48 + borde 2; sin pad derecho (marco al gutter) */
+body.layout-atelier .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 58px !important;
+  flex-basis: 58px !important;
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  padding: 8px 0 8px 8px !important;
+}
+
 /* Home: launcher, sin glow ni scanlines */
 body.layout-atelier .home-dock-tile-well {
   border-radius: 10px !important;

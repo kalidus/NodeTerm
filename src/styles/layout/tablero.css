@@ -81,6 +81,19 @@ body.layout-tablero .main-splitter .terminal-frame {
   background: var(--ui-content-bg, #1a1c1e) !important;
 }
 
+body.layout-tablero .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 56px !important;
+  flex-basis: 56px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding: 8px 0 8px 8px !important;
+}
+
+body.layout-tablero .main-splitter .sidebar-collapsed .sidebar-container.sidebar-root {
+  border-right: none !important;
+}
+
 body.layout-tablero .home-panel-frame,
 body.layout-tablero .home-clock-card,
 body.layout-tablero .home-fav-tile,
