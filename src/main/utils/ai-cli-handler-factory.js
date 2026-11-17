@@ -4,12 +4,18 @@ const fs = require('fs');
 const { execFile, exec } = require('child_process');
 const { getNodeTermDataDir } = require('./file-utils');
 
-const CONFIG_DIR = getNodeTermDataDir();
-const SECURITY_CONFIG_PATH = path.join(CONFIG_DIR, 'security.json');
+function getConfigDir() {
+  return getNodeTermDataDir();
+}
+
+function getSecurityConfigPath() {
+  return path.join(getConfigDir(), 'security.json');
+}
 
 function ensureConfigDir() {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  const dir = getConfigDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 }
 
@@ -158,13 +164,13 @@ function createAiCliHandler(options) {
     persistDiscoveredPath = false
   } = options;
 
-  const configPath = path.join(CONFIG_DIR, configFileName);
+  const configFilePath = () => path.join(getConfigDir(), configFileName);
 
   function persistBinaryPath(binaryPath) {
     if (!persistDiscoveredPath || !binaryPath || !fs.existsSync(binaryPath)) return;
-    const current = readJsonFile(configPath);
+    const current = readJsonFile(configFilePath());
     if (String(current.binaryPath || '').trim()) return;
-    writeJsonFile(configPath, {
+    writeJsonFile(configFilePath(), {
       ...current,
       binaryPath,
       updatedAt: new Date().toISOString()
@@ -172,8 +178,8 @@ function createAiCliHandler(options) {
   }
 
   function getConfig() {
-    const config = readJsonFile(configPath);
-    const security = securityKeyField ? readJsonFile(SECURITY_CONFIG_PATH) : {};
+    const config = readJsonFile(configFilePath());
+    const security = securityKeyField ? readJsonFile(getSecurityConfigPath()) : {};
 
     const result = {
       binaryPath: config.binaryPath || '',
@@ -285,7 +291,7 @@ function createAiCliHandler(options) {
 
     if (process.platform === 'win32') {
       if (!installPs1Url) throw new Error(`No hay URL de instalación Windows para ${channelPrefix}`);
-      const scriptPath = path.join(CONFIG_DIR, `_${base}.ps1`);
+      const scriptPath = path.join(getConfigDir(), `_${base}.ps1`);
       const powershellExe = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
       const safeOut = scriptPath.replace(/'/g, "''");
       await execFileAsync(
@@ -307,7 +313,7 @@ function createAiCliHandler(options) {
     }
 
     if (!installShUrl) throw new Error(`No hay URL de instalación Unix para ${channelPrefix}`);
-    const scriptPath = path.join(CONFIG_DIR, `_${base}.sh`);
+    const scriptPath = path.join(getConfigDir(), `_${base}.sh`);
     await execFileAsync(
       'curl',
       ['-fsSL', installShUrl, '-o', scriptPath],
@@ -412,18 +418,18 @@ function createAiCliHandler(options) {
           return { success: false, error: validation.error };
         }
 
-        const current = readJsonFile(configPath);
-        writeJsonFile(configPath, {
+        const current = readJsonFile(configFilePath());
+        writeJsonFile(configFilePath(), {
           ...current,
           ...normalized,
           updatedAt: new Date().toISOString()
         });
 
         if (securityKeyField && typeof secValue === 'string' && secValue !== '********') {
-          const security = readJsonFile(SECURITY_CONFIG_PATH);
+          const security = readJsonFile(getSecurityConfigPath());
           writeSecuritySecret(security, securityKeyField, secValue);
           security.updatedAt = new Date().toISOString();
-          writeJsonFile(SECURITY_CONFIG_PATH, security);
+          writeJsonFile(getSecurityConfigPath(), security);
         }
 
         return { success: true };

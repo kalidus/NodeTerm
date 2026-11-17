@@ -10,24 +10,53 @@ const { normalizeSplashStyle } = require('./splash-styles');
  * - Manejo seguro de archivos del sistema
  */
 
+let cachedDataDir = null;
+let appDataFallbackLogged = false;
+
+/**
+ * Carpeta de datos de aplicación equivalente a app.getPath('appData'),
+ * sin crear ~/.nodeterm si Electron todavía no puede resolver la ruta.
+ */
+function resolvePlatformAppDataDir() {
+  if (process.platform === 'win32') {
+    return process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support');
+  }
+  const xdg = typeof process.env.XDG_CONFIG_HOME === 'string' ? process.env.XDG_CONFIG_HOME.trim() : '';
+  return xdg || path.join(os.homedir(), '.config');
+}
+
 /**
  * Obtiene el directorio de datos centralizado de NodeTerm en la carpeta estándar de AppData
  * @returns {string} Ruta absoluta del directorio de datos
  */
 function getNodeTermDataDir() {
+  if (cachedDataDir) return cachedDataDir;
+
+  let appDataDir = '';
   try {
-    const dir = path.join(app.getPath('appData'), 'nodeterm');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (app && typeof app.getPath === 'function') {
+      appDataDir = app.getPath('appData');
     }
-    return dir;
   } catch (e) {
-    const fallbackDir = path.join(os.homedir(), '.nodeterm');
-    if (!fs.existsSync(fallbackDir)) {
-      fs.mkdirSync(fallbackDir, { recursive: true });
+    if (!appDataFallbackLogged) {
+      appDataFallbackLogged = true;
+      console.warn(`⚠️ [DataDir] app.getPath('appData') no disponible, usando la ruta estándar del sistema: ${e.message}`);
     }
-    return fallbackDir;
   }
+
+  if (!appDataDir) {
+    appDataDir = resolvePlatformAppDataDir();
+  }
+
+  const dir = path.join(appDataDir, 'nodeterm');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  cachedDataDir = dir;
+  return dir;
 }
 
 /**
@@ -40,21 +69,63 @@ function migrateDataFromHomeDir() {
   });
 }
 
+const LEGACY_HOME_MIGRATION_MARKER = '.legacy-home-migrated';
+
+async function removeLegacyHomeDir(oldDir, { announce }) {
+  try {
+    await fs.promises.rm(oldDir, { recursive: true, force: true });
+    if (announce) {
+      console.log(`🧹 [Migration] Carpeta antigua ${oldDir} eliminada con éxito.`);
+    }
+  } catch {
+    if (announce) {
+      console.warn(`⚠️ [Migration] No se pudo borrar la carpeta antigua, renombrando...`);
+    }
+    try {
+      await fs.promises.rename(oldDir, `${oldDir}.bak`);
+    } catch (_) { /* noop */ }
+  }
+}
+
 /**
  * Migración en background (no bloquea app.ready).
+ * Una carpeta ~/.nodeterm vacía se elimina sin aviso: no hay datos que copiar.
  */
 async function migrateDataFromHomeDirAsync() {
   const oldDir = path.join(os.homedir(), '.nodeterm');
   const newDir = getNodeTermDataDir();
 
-  if (oldDir === newDir) return;
+  if (path.resolve(oldDir) === path.resolve(newDir)) return;
   try {
     await fs.promises.access(oldDir);
   } catch {
     return;
   }
 
-  console.log(`📦 [Migration] Migrando datos de NodeTerm desde: ${oldDir} hacia: ${newDir}`);
+  let files = [];
+  try {
+    files = await fs.promises.readdir(oldDir);
+  } catch {
+    return;
+  }
+
+  if (files.length === 0) {
+    await removeLegacyHomeDir(oldDir, { announce: false });
+    return;
+  }
+
+  const markerPath = path.join(newDir, LEGACY_HOME_MIGRATION_MARKER);
+  let alreadyMigrated = false;
+  try {
+    await fs.promises.access(markerPath);
+    alreadyMigrated = true;
+  } catch {
+    alreadyMigrated = false;
+  }
+
+  if (!alreadyMigrated) {
+    console.log(`📦 [Migration] Migrando datos de NodeTerm desde: ${oldDir} hacia: ${newDir}`);
+  }
 
   await fs.promises.mkdir(newDir, { recursive: true });
 
@@ -75,27 +146,30 @@ async function migrateDataFromHomeDirAsync() {
     }
   };
 
-  const files = await fs.promises.readdir(oldDir);
+  let migratedAny = false;
   for (const file of files) {
     const srcPath = path.join(oldDir, file);
     const destPath = path.join(newDir, file);
     try {
       await copyRecursive(srcPath, destPath);
-      console.log(`📦 [Migration] Migrado: ${file}`);
+      migratedAny = true;
+      if (!alreadyMigrated) {
+        console.log(`📦 [Migration] Migrado: ${file}`);
+      }
     } catch (err) {
       console.error(`❌ [Migration] Error migrando ${file}:`, err.message);
     }
   }
 
-  try {
-    await fs.promises.rm(oldDir, { recursive: true, force: true });
-    console.log(`🧹 [Migration] Carpeta antigua ${oldDir} eliminada con éxito.`);
-  } catch {
-    console.warn(`⚠️ [Migration] No se pudo borrar la carpeta antigua, renombrando...`);
+  if (migratedAny && !alreadyMigrated) {
     try {
-      await fs.promises.rename(oldDir, `${oldDir}.bak`);
-    } catch (_) { /* noop */ }
+      await fs.promises.writeFile(markerPath, new Date().toISOString(), 'utf8');
+    } catch (err) {
+      console.warn(`⚠️ [Migration] No se pudo guardar el marcador de migración: ${err.message}`);
+    }
   }
+
+  await removeLegacyHomeDir(oldDir, { announce: !alreadyMigrated && migratedAny });
 }
 
 const APP_DATA_ENC_PREFIX = 'NTENC:';
