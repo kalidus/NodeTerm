@@ -94,6 +94,7 @@ describe('Catálogo de fuentes locales', () => {
     assert.doesNotMatch(fontsCss, /fonts\.googleapis\.com/);
 
     assert.match(coreCss, /font-family:\s*['"]Inter['"]/);
+    assert.match(coreCss, /font-family:\s*['"]Plus Jakarta Sans['"]/);
     assert.match(coreCss, /font-family:\s*['"]JetBrains Mono['"]/);
     assert.match(coreCss, /font-family:\s*['"]Fira Code['"]/);
     assert.match(coreCss, /font-family:\s*['"]Victor Mono['"]/);

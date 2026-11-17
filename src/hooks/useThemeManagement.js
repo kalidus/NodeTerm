@@ -133,16 +133,30 @@ export const useThemeManagement = () => {
     return () => window.removeEventListener('terminal-theme-changed', handleTerminalThemeChanged);
   }, []);
 
-  // Escuchar cambio de tipografía/tamaño desde menú rápido SSH
+  // Escuchar cambio de tipografía/tamaño (menú rápido o presets)
   useEffect(() => {
     const handleTerminalFontChanged = (e) => {
-      const terminalType = e.detail?.terminalType;
-      if (terminalType !== 'ssh') return;
+      const terminalType = e.detail?.terminalType || 'ssh';
       const nextFont = e.detail?.fontFamily;
       const nextSize = e.detail?.fontSize;
-      if (nextFont) setFontFamily(nextFont);
+      if (terminalType === 'ssh') {
+        if (nextFont) setFontFamily(nextFont);
+        if (nextSize != null && !Number.isNaN(Number(nextSize))) {
+          setFontSize(Number(nextSize));
+        }
+        return;
+      }
+      if (terminalType === 'docker') {
+        if (nextFont) setDockerFontFamily(nextFont);
+        if (nextSize != null && !Number.isNaN(Number(nextSize))) {
+          setDockerFontSize(Number(nextSize));
+        }
+        return;
+      }
+      // local / powershell / linux / cygwin
+      if (nextFont) setLocalFontFamily(nextFont);
       if (nextSize != null && !Number.isNaN(Number(nextSize))) {
-        setFontSize(Number(nextSize));
+        setLocalFontSize(Number(nextSize));
       }
     };
     window.addEventListener('terminal-font-changed', handleTerminalFontChanged);
@@ -377,6 +391,21 @@ export const useThemeManagement = () => {
   }, [fontSize]);
 
   useEffect(() => {
+    localStorage.setItem(LOCAL_FONT_FAMILY_STORAGE_KEY, localFontFamily);
+    localStorageSyncService.debouncedSync({
+      [LOCAL_FONT_FAMILY_STORAGE_KEY]: localFontFamily
+    });
+  }, [localFontFamily]);
+
+  useEffect(() => {
+    const size = String(localFontSize);
+    localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, size);
+    localStorageSyncService.debouncedSync({
+      [LOCAL_FONT_SIZE_STORAGE_KEY]: size
+    });
+  }, [localFontSize]);
+
+  useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
     localStorageSyncService.debouncedSync({ [THEME_STORAGE_KEY]: terminalTheme.name });
   }, [terminalTheme]);
@@ -573,6 +602,10 @@ export const useThemeManagement = () => {
     const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
     const updatedLocalLinuxTerminalTheme = localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark';
     const updatedLocalDockerTerminalTheme = localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
+    const updatedDockerFontFamily = migrateStoredFont(
+      localStorage.getItem('nodeterm_docker_font_family') || updatedLocalFontFamily || 'Consolas'
+    );
+    const updatedDockerFontSize = localStorage.getItem('nodeterm_docker_font_size');
 
     // UI Fonts
     const updatedFontFamily = migrateStoredFont(
@@ -600,6 +633,8 @@ export const useThemeManagement = () => {
     setLocalPowerShellTheme(updatedLocalPowerShellTheme);
     setLocalLinuxTerminalTheme(updatedLocalLinuxTerminalTheme);
     setLocalDockerTerminalTheme(updatedLocalDockerTerminalTheme);
+    setDockerFontFamily(updatedDockerFontFamily);
+    if (updatedDockerFontSize) setDockerFontSize(parseInt(updatedDockerFontSize, 10));
 
     // Terminal Font State Update
     setFontFamily(updatedFontFamily);

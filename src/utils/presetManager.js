@@ -12,6 +12,7 @@ import { applyAppTypography, deriveUiIconSize } from './sidebarFontStack';
 import { applyUILayoutFromStorage } from './appearanceLayout';
 import { clearSidebarSectionAppearance } from './sidebarSectionAppearance';
 import { STORAGE_KEYS } from './constants';
+import { readyBundledFontFamily, readyTerminalFontFamily } from './resolveTerminalFontFamily';
 
 const MAIN_FRAME_HEADER_KEY = STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED;
 
@@ -313,19 +314,64 @@ class PresetManager {
       }));
     }
 
-    // UI Typography change
+    // UI Typography change (sidebar / titlebar / chrome)
     const effectiveUiFont = preset.settings['uiFont'] || preset.settings['sidebarFont'];
+    const effectiveUiSize = preset.settings['uiFontSize'] || preset.settings['sidebarFontSize'];
     if (effectiveUiFont) {
       applyAppTypography({
         uiFont: effectiveUiFont,
-        uiFontSize: preset.settings['uiFontSize'] || preset.settings['sidebarFontSize'],
+        uiFontSize: effectiveUiSize,
         sidebarFont: preset.settings['sidebarFont'],
         sidebarFontSize: preset.settings['sidebarFontSize'],
         explorerFont: preset.settings['explorerFont'],
         explorerFontSize: preset.settings['explorerFontSize']
       });
-      window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: effectiveUiFont } }));
+      readyBundledFontFamily(effectiveUiFont, effectiveUiSize || 14)
+        .catch(() => undefined)
+        .finally(() => {
+          window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: effectiveUiFont } }));
+        });
     }
+
+    // Terminal fonts: esperar a que la cara esté lista y notificar SSH/local/Docker
+    const sshFont = preset.settings.basicapp_terminal_font_family || preset.settings.basicapp_font_family;
+    const localFont = preset.settings.basicapp_local_terminal_font_family || sshFont;
+    const dockerFont = preset.settings.nodeterm_docker_font_family || localFont;
+    const sshSize = preset.settings.basicapp_terminal_font_size || preset.settings.basicapp_font_size;
+    const localSize = preset.settings.basicapp_local_terminal_font_size || sshSize;
+    const dockerSize = preset.settings.nodeterm_docker_font_size || localSize;
+    const notifyTerminalFonts = () => {
+      if (sshFont) {
+        window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+          detail: {
+            fontFamily: sshFont,
+            fontSize: sshSize != null ? Number(sshSize) : undefined,
+            terminalType: 'ssh'
+          }
+        }));
+      }
+      if (localFont) {
+        window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+          detail: {
+            fontFamily: localFont,
+            fontSize: localSize != null ? Number(localSize) : undefined,
+            terminalType: 'local'
+          }
+        }));
+      }
+      if (dockerFont) {
+        window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+          detail: {
+            fontFamily: dockerFont,
+            fontSize: dockerSize != null ? Number(dockerSize) : undefined,
+            terminalType: 'docker'
+          }
+        }));
+      }
+    };
+    readyTerminalFontFamily(localFont || sshFont, localSize || sshSize || 14)
+      .catch(() => undefined)
+      .finally(notifyTerminalFonts);
 
     this._notifyChange();
 

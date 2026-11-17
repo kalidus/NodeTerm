@@ -61,7 +61,7 @@ if (typeof window !== 'undefined') {
 // Custom styles — shell sync; features.css entra en idle vía loadDeferredAppCss
 import './styles/shell.css';
 import './styles/layout/layouts.css';
-// Arranque: Inter, JetBrains Mono, Fira Code y Victor Mono. El resto de familias locales entra en idle.
+// Arranque: Inter, Plus Jakarta Sans, JetBrains Mono, Fira Code y Victor Mono. El resto entra en idle.
 import './styles/fonts-core.css';
 
 // Aplicar tema mínimo lo antes posible: evita destello blanco

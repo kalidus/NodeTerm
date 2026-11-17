@@ -341,7 +341,8 @@ const catalog = {
         500,
         600,
         700
-      ]
+      ],
+      "core": true
     },
     {
       "family": "Roboto",

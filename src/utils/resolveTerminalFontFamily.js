@@ -62,6 +62,56 @@ export function ensureTerminalFontsLoaded() {
 }
 
 /**
+ * Nombre de familia principal de una pila CSS ("Victor Mono", monospace → Victor Mono).
+ * @param {string} [fontFamily]
+ * @returns {string}
+ */
+export function primaryFontFamilyName(fontFamily) {
+  const match = String(fontFamily || '').trim().match(/^["']?([^"',]+)["']?/);
+  return match ? match[1].trim() : '';
+}
+
+/**
+ * Espera a que una familia empaquetada (UI o mono) esté usable en el documento.
+ * @param {string} [fontFamily]
+ * @param {number|string} [size=14]
+ * @returns {Promise<string>} nombre de familia principal
+ */
+export async function readyBundledFontFamily(fontFamily, size = 14) {
+  await ensureTerminalFontsLoaded();
+  const family = primaryFontFamilyName(fontFamily);
+  if (!family || typeof document === 'undefined' || !document.fonts?.load) {
+    return family;
+  }
+  const px = Math.max(8, Number(size) || 14);
+  try {
+    await Promise.all([
+      document.fonts.load(`${px}px "${family}"`),
+      document.fonts.load(`${px}px ${family}`),
+      document.fonts.load(`600 ${px}px "${family}"`),
+      document.fonts.load(`700 ${px}px "${family}"`)
+    ]);
+  } catch { /* ignore */ }
+  try {
+    if (document.fonts.ready) await document.fonts.ready;
+  } catch { /* ignore */ }
+  return family;
+}
+
+/**
+ * Asegura CSS de fuentes y espera a que la familia pedida esté usable.
+ * Evita que xterm mida con el fallback monospace al cambiar de preset.
+ * @param {string} [fontFamily]
+ * @param {number|string} [size=14]
+ * @returns {Promise<string>} pila CSS resuelta
+ */
+export async function readyTerminalFontFamily(fontFamily, size = 14) {
+  const resolved = resolveTerminalFontFamily(fontFamily);
+  await readyBundledFontFamily(resolved, size);
+  return resolved;
+}
+
+/**
  * Inserta "Symbols Nerd Font" antes de monospace / al final de la pila.
  * @param {string} stack
  * @returns {string}

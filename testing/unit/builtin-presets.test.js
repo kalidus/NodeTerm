@@ -130,11 +130,12 @@ describe('Presets de apariencia integrados', () => {
       for (const family of uiFamilies) {
         const font = families.get(family);
         assert.ok(font, `${preset.id} fuente UI ${family}`);
-        assert.strictEqual(font.role, 'sans', `${preset.id} ${family} no es sans`);
+        assert.ok(font.role === 'sans' || font.role === 'mono', `${preset.id} ${family} role=${font.role}`);
         assert.strictEqual(family, uiFamilies[0], `${preset.id} mezcla fuentes UI`);
       }
+      const expectedUiSize = preset.id === 'pro-ocean' ? '13' : '14';
       for (const size of [settings.uiFontSize, settings.sidebarFontSize, settings.explorerFontSize, settings.homeTabFontSize]) {
-        assert.strictEqual(size, settings.uiFontSize, preset.id);
+        assert.strictEqual(size, expectedUiSize, preset.id);
       }
 
       const monoKeys = [

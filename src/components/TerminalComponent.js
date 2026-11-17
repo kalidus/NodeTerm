@@ -33,7 +33,8 @@ import { isBroadcastMember } from '../utils/broadcastMembership';
 import {
     resolveTerminalFontFamily,
     getDefaultLocalTerminalFontFamily,
-    ensureTerminalFontsLoaded
+    ensureTerminalFontsLoaded,
+    readyTerminalFontFamily
 } from '../utils/resolveTerminalFontFamily';
 import { getAvailableFonts } from '../utils/fontsList';
 
@@ -930,10 +931,13 @@ const TerminalComponent = forwardRef(({
         };
     }, [layoutSuspended]);
 
-    // Effect to update font family dynamically
+    // Effect to update font family dynamically (espera a que la cara esté lista)
     useEffect(() => {
-        if (term.current && effectiveFontFamily) {
-            term.current.options.fontFamily = resolveTerminalFontFamily(effectiveFontFamily);
+        if (!term.current || !effectiveFontFamily) return undefined;
+        let cancelled = false;
+        readyTerminalFontFamily(effectiveFontFamily, effectiveFontSize).then((resolved) => {
+            if (cancelled || !term.current) return;
+            term.current.options.fontFamily = resolved;
 
             // CR??TICO: Re-aplicar opciones de nitidez al cambiar de fuente
             // xterm.js a veces resetea o recalcula el renderizado internamente
@@ -943,11 +947,14 @@ const TerminalComponent = forwardRef(({
             term.current.options.letterSpacing = 0;
             term.current.options.lineHeight = 1.0;
 
-            // We might need to call fit again to readjust character sizes
+            try {
+                term.current.refresh(0, Math.max(0, (term.current.rows || 1) - 1));
+            } catch { /* ignore */ }
             stableFitRef.current?.reset();
             fitStable();
-        }
-    }, [effectiveFontFamily]);
+        });
+        return () => { cancelled = true; };
+    }, [effectiveFontFamily, effectiveFontSize]);
 
     // Effect to update font size dynamically
     useEffect(() => {

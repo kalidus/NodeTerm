@@ -183,6 +183,13 @@ export function applyAppTypography({
   const root = document.documentElement;
 
   const effectiveFont = uiFont || sidebarFont || explorerFont;
+  const effectiveSize = uiFontSize != null && uiFontSize !== ''
+    ? uiFontSize
+    : (sidebarFontSize != null && sidebarFontSize !== '' ? sidebarFontSize : explorerFontSize);
+  const numericSize = effectiveSize != null && effectiveSize !== ''
+    ? clampUiFontSize(effectiveSize)
+    : null;
+
   if (effectiveFont) {
     const stack = buildAppFontStack(effectiveFont);
     root.style.setProperty('--ui-font-family', stack);
@@ -190,14 +197,13 @@ export function applyAppTypography({
     root.style.setProperty('--sidebar-font-family', stack);
     root.style.setProperty('--explorer-font-family', stack);
     root.style.setProperty('--home-tab-font-family', stack);
+    // Precargar la cara empaquetada (p. ej. Plus Jakarta Sans al aplicar Pro Ocean)
+    import('./resolveTerminalFontFamily.js')
+      .then(({ readyBundledFontFamily }) => readyBundledFontFamily(effectiveFont, numericSize || UI_FONT_SIZE_DEFAULT))
+      .catch(() => undefined);
   }
 
-  const effectiveSize = uiFontSize != null && uiFontSize !== ''
-    ? uiFontSize
-    : (sidebarFontSize != null && sidebarFontSize !== '' ? sidebarFontSize : explorerFontSize);
-
-  if (effectiveSize != null && effectiveSize !== '') {
-    const numericSize = clampUiFontSize(effectiveSize);
+  if (numericSize != null) {
     const iconPx = deriveUiIconSize(numericSize);
     root.style.setProperty('--ui-font-size', `${numericSize}px`);
     root.style.setProperty('--ui-font-size-xs', `${Math.max(UI_FONT_SIZE_MIN, numericSize - 2)}px`);

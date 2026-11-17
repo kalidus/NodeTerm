@@ -20,7 +20,7 @@ import { useLocalTelemetrySubscription } from '../hooks/useLocalTelemetrySubscri
 import { setupTerminalClipboard, pasteToTerminal } from './terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { sendPtyUserInput } from './terminalInputSend';
-import { resolveTerminalFontFamily, ensureTerminalFontsLoaded } from './resolveTerminalFontFamily';
+import { resolveTerminalFontFamily, ensureTerminalFontsLoaded, readyTerminalFontFamily } from './resolveTerminalFontFamily';
 import { useResumeTerminalFit } from '../hooks/useResumeTerminalFit';
 import { publishBroadcastInput } from './localPtyChannel';
 import {
@@ -493,12 +493,19 @@ export function createLocalPtyTerminal(kind) {
     useEffect(() => registerScrollbackSync(term), []);
 
     useEffect(() => {
-      if (term.current && fontFamily) {
-        term.current.options.fontFamily = resolveTerminalFontFamily(fontFamily);
+      if (!term.current || !fontFamily) return undefined;
+      let cancelled = false;
+      readyTerminalFontFamily(fontFamily, fontSize).then((resolved) => {
+        if (cancelled || !term.current) return;
+        term.current.options.fontFamily = resolved;
+        try {
+          term.current.refresh(0, Math.max(0, (term.current.rows || 1) - 1));
+        } catch { /* ignore */ }
         invalidate();
         fitStable();
-      }
-    }, [fontFamily]);
+      });
+      return () => { cancelled = true; };
+    }, [fontFamily, fontSize]);
 
     useEffect(() => {
       if (term.current && fontSize) {

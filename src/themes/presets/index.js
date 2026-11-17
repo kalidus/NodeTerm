@@ -180,7 +180,7 @@ const presetSpecs = [
   {
     id: 'pro-ocean',
     name: 'Pro Ocean (Por defecto)',
-    description: 'Estética oceánica con estilo unified, Plus Jakarta Sans, Victor Mono 13px y terminal Oceanic Next',
+    description: 'Estética oceánica con estilo unified y Victor Mono 13px en UI y terminal',
     icon: '🌊',
     ui: 'Pro Ocean',
     layout: 'unified',
@@ -188,7 +188,8 @@ const presetSpecs = [
     tabLayout: 'spacious',
     terminal: 'Oceanic Next',
     status: 'Tokyo Night',
-    uiFont: 'Plus Jakarta Sans',
+    uiFont: 'Victor Mono',
+    uiFontSize: '13',
     monoFont: 'Victor Mono',
     monoFontSize: '13',
     iconTheme: 'ocean',
