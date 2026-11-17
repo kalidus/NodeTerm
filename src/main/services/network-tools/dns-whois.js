@@ -1,10 +1,10 @@
-const { exec, execFile } = require('child_process');
+const { execFile } = require('child_process');
 const net = require('net');
 const dns = require('dns').promises;
 const https = require('https');
 const crypto = require('crypto');
 const { promisify } = require('util');
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const { assertSafeOutboundUrl } = require('../../utils/ssrf-guard');
 
 const methods = {};
@@ -22,7 +22,7 @@ methods.findIpByMac = async function(mac) {
     const cleanMac = mac.replace(/[:-]/g, '').toUpperCase();
 
     return new Promise((resolve) => {
-      exec('arp -a', { timeout: 5000 }, (err, stdout, stderr) => {
+      execFile('arp', ['-a'], { timeout: 5000, windowsHide: true }, (err, stdout, stderr) => {
         if (err) {
           return resolve({ success: false, error: err.message });
         }
@@ -586,10 +586,10 @@ methods.getLocalRoutes = async function() {
         return { success: true, routes: this._parseWindowsRoutes(stdout) };
       }
       if (this.platform === 'linux') {
-        const { stdout } = await execAsync('ip -4 route', { timeout: 8000, shell: true });
+        const { stdout } = await execFileAsync('ip', ['-4', 'route'], { timeout: 8000 });
         return { success: true, routes: this._parseLinuxRoutes(stdout) };
       }
-      const { stdout } = await execAsync('netstat -rn -f inet', { timeout: 8000, shell: true });
+      const { stdout } = await execFileAsync('netstat', ['-rn', '-f', 'inet'], { timeout: 8000 });
       return { success: true, routes: this._parseBsdRoutes(stdout) };
     } catch (err) {
       return { success: false, error: err.message || 'No se pudo leer la tabla de rutas', routes: [] };

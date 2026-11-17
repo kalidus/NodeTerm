@@ -145,14 +145,31 @@ function createAiCliHandler(options) {
     configFileName,
     securityKeyField = null,
     securityKeyOutputName = null,
-    npmPackage,
+    npmPackage = null,
     binaryNamesWin = [`${channelPrefix}.cmd`, `${channelPrefix}.exe`, channelPrefix],
     binaryNamesUnix = [channelPrefix],
     hasDefaultModel = false,
-    versionFlag = '--version'
+    versionFlag = '--version',
+    installPs1Url = null,
+    installShUrl = null,
+    installScriptBasename = null,
+    getDefaultBinaryCandidates = null,
+    uninstallMessage = null,
+    persistDiscoveredPath = false
   } = options;
 
   const configPath = path.join(CONFIG_DIR, configFileName);
+
+  function persistBinaryPath(binaryPath) {
+    if (!persistDiscoveredPath || !binaryPath || !fs.existsSync(binaryPath)) return;
+    const current = readJsonFile(configPath);
+    if (String(current.binaryPath || '').trim()) return;
+    writeJsonFile(configPath, {
+      ...current,
+      binaryPath,
+      updatedAt: new Date().toISOString()
+    });
+  }
 
   function getConfig() {
     const config = readJsonFile(configPath);
@@ -206,6 +223,14 @@ function createAiCliHandler(options) {
       return customPath;
     }
 
+    if (typeof getDefaultBinaryCandidates === 'function') {
+      for (const candidate of getDefaultBinaryCandidates() || []) {
+        if (candidate && fs.existsSync(candidate)) {
+          return candidate;
+        }
+      }
+    }
+
     const isWin = process.platform === 'win32';
     const names = isWin ? binaryNamesWin : binaryNamesUnix;
     const lookupCmd = isWin ? 'where' : 'which';
@@ -235,6 +260,8 @@ function createAiCliHandler(options) {
       };
     }
 
+    persistBinaryPath(binaryPath);
+
     try {
       const { stdout } = await execFileAsync(binaryPath, [versionFlag], { windowsHide: true });
       return {
@@ -251,7 +278,69 @@ function createAiCliHandler(options) {
     }
   }
 
+  async function installFromUrl() {
+    ensureConfigDir();
+    const base = installScriptBasename || `${channelPrefix}-install`;
+    const timeoutMs = 20 * 60 * 1000;
+
+    if (process.platform === 'win32') {
+      if (!installPs1Url) throw new Error(`No hay URL de instalación Windows para ${channelPrefix}`);
+      const scriptPath = path.join(CONFIG_DIR, `_${base}.ps1`);
+      const powershellExe = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+      const safeOut = scriptPath.replace(/'/g, "''");
+      await execFileAsync(
+        powershellExe,
+        [
+          '-NoProfile',
+          '-ExecutionPolicy', 'Bypass',
+          '-Command',
+          `Invoke-WebRequest -Uri '${installPs1Url}' -OutFile '${safeOut}'`
+        ],
+        { windowsHide: true, timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }
+      );
+      await execFileAsync(
+        powershellExe,
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+        { windowsHide: true, timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }
+      );
+      return;
+    }
+
+    if (!installShUrl) throw new Error(`No hay URL de instalación Unix para ${channelPrefix}`);
+    const scriptPath = path.join(CONFIG_DIR, `_${base}.sh`);
+    await execFileAsync(
+      'curl',
+      ['-fsSL', installShUrl, '-o', scriptPath],
+      { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }
+    );
+    await execFileAsync(
+      'bash',
+      [scriptPath],
+      { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }
+    );
+  }
+
   async function installCli() {
+    if (installPs1Url || installShUrl) {
+      await installFromUrl();
+      const binaryPath = await findBinaryPath();
+      if (binaryPath) {
+        persistBinaryPath(binaryPath);
+        return getCliStatus();
+      }
+      const expected = typeof getDefaultBinaryCandidates === 'function'
+        ? (getDefaultBinaryCandidates() || []).join(', ')
+        : '(PATH)';
+      throw new Error(
+        `La instalación terminó pero no se encontró el binario de ${channelPrefix}. ` +
+        `Ruta esperada: ${expected}.`
+      );
+    }
+
+    if (!npmPackage) {
+      throw new Error(`No hay método de instalación configurado para ${channelPrefix}`);
+    }
+
     if (process.platform === 'win32') {
       await runWindowsCommand(`npm install -g ${npmPackage}`);
     } else {
@@ -274,6 +363,12 @@ function createAiCliHandler(options) {
   }
 
   async function uninstallCli() {
+    if (uninstallMessage) {
+      throw new Error(uninstallMessage);
+    }
+    if (!npmPackage) {
+      throw new Error(`${channelPrefix} no ofrece desinstalación automática desde NodeTerm.`);
+    }
     if (process.platform === 'win32') {
       await runWindowsCommand(`npm uninstall -g ${npmPackage}`);
     } else {

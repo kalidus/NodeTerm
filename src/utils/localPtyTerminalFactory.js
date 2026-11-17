@@ -165,14 +165,15 @@ const DISPLAY_NAMES = {
   wsl: 'WSLTerminal',
   ubuntu: 'UbuntuTerminal',
   powershell: 'PowerShellTerminal',
-  cygwin: 'CygwinTerminal'
+  cygwin: 'CygwinTerminal',
+  docker: 'DockerTerminal'
 };
 
 /**
- * Montaje compartido de xterm/IPC/clipboard/fit para WSL, Ubuntu, PowerShell y Cygwin.
+ * Montaje compartido de xterm/IPC/clipboard/fit para WSL, Ubuntu, PowerShell, Cygwin y Docker.
  * El canal y el payload salen de localPtySession.
  *
- * @param {'wsl'|'ubuntu'|'powershell'|'cygwin'} kind
+ * @param {'wsl'|'ubuntu'|'powershell'|'cygwin'|'docker'} kind
  */
 export function createLocalPtyTerminal(kind) {
   const profile = getLocalPtyProfile(kind);
@@ -230,7 +231,7 @@ export function createLocalPtyTerminal(kind) {
     const channelOf = () => resolveLocalPtyChannel(kind, sessionInfoRef.current);
     const shellBackground = isIntegrated ? 'transparent' : (theme?.background || profile.defaultBackground);
     const sessionKey = profile.sessionProp
-      ? `${sessionInfo?.name || ''}|${sessionInfo?.category || ''}`
+      ? `${sessionInfo?.name || sessionInfo?.containerName || ''}|${sessionInfo?.category || ''}`
       : '';
 
     useEffect(() => {

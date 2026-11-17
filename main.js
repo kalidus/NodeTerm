@@ -1281,12 +1281,11 @@ ipcMain.on('terminal:flow', (event, { tabId, paused } = {}) => {
  * - Se ejecuta antes de cleanupTunnels/SSH para que un túnel lento no deje OpenClaw/Agent Zero en marcha.
  */
 async function stopAiClientDockerContainersOnQuit() {
-  const { exec } = require('child_process');
+  const { execFile } = require('child_process');
   const util = require('util');
-  const execAsync = util.promisify(exec);
+  const execFileAsync = util.promisify(execFile);
 
   const dockerBin = getAgentZeroService().resolveDockerCommand();
-  const dockerPrefix = /\s/.test(dockerBin) ? `"${dockerBin}"` : dockerBin;
 
   const stopTasks = [
     getAnythingLLMService().stop().catch(() => null),
@@ -1304,7 +1303,9 @@ async function stopAiClientDockerContainersOnQuit() {
     'nodeterm-librechat-mongo'
   ];
   for (const name of forcedNames) {
-    stopTasks.push(execAsync(`${dockerPrefix} stop ${name}`, { stdio: 'ignore', timeout: 1500 }).catch(() => null));
+    stopTasks.push(
+      execFileAsync(dockerBin, ['stop', name], { windowsHide: true, timeout: 1500 }).catch(() => null)
+    );
   }
 
   await Promise.all(stopTasks);

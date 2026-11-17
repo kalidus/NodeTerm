@@ -87,6 +87,27 @@ const LOCAL_PTY_PROFILES = {
     statusBarTerminalType: 'cygwin',
     statusBarCss: 'compact',
     sessionProp: null
+  },
+  docker: {
+    delayFirstTab: true,
+    skipStopOnReload: false,
+    listenReady: false,
+    listenVisibility: false,
+    refocusOnWindowFocus: false,
+    exposeAgentApi: false,
+    cleanupBuffer: 'clear',
+    fillFlex: true,
+    windowsMode: false,
+    bracketedPasteMode: true,
+    palette: 'gnome',
+    defaultBackground: '#0c1a25',
+    themeUpdateBackground: '#0c1a25',
+    defaultFontFamily: '"FiraCode Nerd Font", Consolas, monospace',
+    statusBarStorageKey: 'localDockerStatusBarTheme',
+    statusBarFallbackKey: null,
+    statusBarTerminalType: 'docker',
+    statusBarCss: 'metrics',
+    sessionProp: 'dockerInfo'
   }
 };
 
@@ -122,6 +143,9 @@ function buildLocalPtyStartPayload(channel, cols, rows, sessionInfo) {
   const payload = { cols, rows };
   if (channel === 'ubuntu') payload.ubuntuInfo = sessionInfo ?? null;
   else if (channel === 'wsl-distro') payload.distroInfo = sessionInfo ?? null;
+  else if (channel === 'docker') {
+    payload.containerName = sessionInfo?.containerName || 'unknown';
+  }
   return payload;
 }
 
@@ -148,6 +172,7 @@ function localPtyErrorLabel(kind, { platform, sessionInfo } = {}) {
   if (kind === 'powershell') return platform === 'win32' ? 'PowerShell' : 'Terminal';
   if (kind === 'ubuntu') return sessionInfo?.label || 'WSL Distribution';
   if (kind === 'cygwin') return 'Cygwin';
+  if (kind === 'docker') return sessionInfo?.containerName || 'Docker';
   return 'WSL';
 }
 
@@ -157,6 +182,7 @@ function localPtyUnavailableMessage(kind, label) {
   }
   if (kind === 'ubuntu') return 'Error: Electron API not available. Ubuntu integration will not work.';
   if (kind === 'cygwin') return 'Error: Electron API not available. Cygwin integration will not work.';
+  if (kind === 'docker') return 'Error: Electron API not available. Docker integration will not work.';
   return 'Error: Electron API not available. WSL integration will not work.';
 }
 

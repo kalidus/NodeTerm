@@ -9,13 +9,13 @@
  * - WHOIS, Subnet Calculator, Wake on LAN
  */
 
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const { promisify } = require('util');
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const { assertSafeOutboundUrl } = require('../utils/ssrf-guard');
 
 class NetworkToolsService {
@@ -102,29 +102,30 @@ class NetworkToolsService {
       return this.commandCache.get(command);
     }
 
+    // Solo nombres de binario simples (sin metacaracteres)
+    if (typeof command !== 'string' || !/^[A-Za-z0-9._+-]+$/.test(command)) {
+      this.commandCache.set(command, false);
+      return false;
+    }
+
     try {
       if (this.platform === 'win32') {
-        // En Windows, usar 'where' para verificar comandos
-        // where es un comando interno de cmd.exe
-        const { stdout } = await execAsync(`where ${command}`, {
+        const { stdout } = await execFileAsync('where', [command], {
           timeout: 2000,
-          shell: true
+          windowsHide: true
         });
         const isAvailable = stdout && stdout.trim().length > 0 && !stdout.includes('INFO:');
         this.commandCache.set(command, isAvailable);
         return isAvailable;
-      } else {
-        // En Unix/Linux/macOS, usar 'command -v' (más portable que 'which')
-        const { stdout } = await execAsync(`command -v ${command}`, {
-          timeout: 2000,
-          shell: true
-        });
-        const isAvailable = stdout && stdout.trim().length > 0;
-        this.commandCache.set(command, isAvailable);
-        return isAvailable;
       }
+
+      const { stdout } = await execFileAsync('which', [command], {
+        timeout: 2000
+      });
+      const isAvailable = stdout && stdout.trim().length > 0;
+      this.commandCache.set(command, isAvailable);
+      return isAvailable;
     } catch (error) {
-      // Si hay error, el comando no está disponible
       this.commandCache.set(command, false);
       return false;
     }

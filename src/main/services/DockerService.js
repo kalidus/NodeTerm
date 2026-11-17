@@ -1,8 +1,17 @@
-const { execSync, spawn } = require('child_process');
+const { execFileSync, spawn } = require('child_process');
 const pty = require('node-pty');
 const os = require('os');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+
+function dockerExecSync(args, options = {}) {
+  return execFileSync('docker', args, {
+    encoding: 'utf8',
+    stdio: 'pipe',
+    windowsHide: true,
+    ...options
+  });
+}
 
 /**
  * Servicio para gestión de contenedores Docker
@@ -43,7 +52,7 @@ function setMainWindow(window) {
  */
 function isDockerAvailable() {
   try {
-    execSync('docker --version', { encoding: 'utf8', stdio: 'pipe', shell: true, timeout: 2000 });
+    dockerExecSync(['--version'], { timeout: 2000 });
     return true;
   } catch (error) {
     return false;
@@ -83,9 +92,9 @@ function getRunningContainers() {
 
     try {
       // Intento 1: Formato JSON (más confiable)
-      const jsonOutput = execSync(
-        'docker ps --format "table{{json .}}"',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
+      const jsonOutput = dockerExecSync(
+        ['ps', '--format', '{{json .}}'],
+        { maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
 
       if (jsonOutput.trim()) {
@@ -118,9 +127,9 @@ function getRunningContainers() {
 
     try {
       // Intento 2: Formato simple con separadores
-      output = execSync(
-        'docker ps --no-trunc --format "{{.Names}} {{.ID}}"',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
+      output = dockerExecSync(
+        ['ps', '--no-trunc', '--format', '{{.Names}} {{.ID}}'],
+        { maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
 
       if (output.trim()) {
@@ -154,9 +163,9 @@ function getRunningContainers() {
 
     try {
       // Intento 3: Comando básico sin formato
-      output = execSync(
-        'docker ps',
-        { encoding: 'utf8', stdio: 'pipe', shell: true, maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
+      output = dockerExecSync(
+        ['ps'],
+        { maxBuffer: 1024 * 1024 * 5, timeout: 5000 }
       );
 
       if (output.trim()) {

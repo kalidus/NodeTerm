@@ -14,6 +14,7 @@ describe('localPtySession', () => {
     assert.strictEqual(resolveLocalPtyChannel('wsl'), 'wsl');
     assert.strictEqual(resolveLocalPtyChannel('powershell'), 'powershell');
     assert.strictEqual(resolveLocalPtyChannel('cygwin'), 'cygwin');
+    assert.strictEqual(resolveLocalPtyChannel('docker'), 'docker');
     assert.strictEqual(resolveLocalPtyChannel('ubuntu', null), 'ubuntu');
     assert.strictEqual(resolveLocalPtyChannel('ubuntu', { category: 'ubuntu' }), 'ubuntu');
     assert.strictEqual(resolveLocalPtyChannel('ubuntu', { category: 'debian' }), 'wsl-distro');
@@ -46,6 +47,10 @@ describe('localPtySession', () => {
     assert.deepStrictEqual(
       buildLocalPtyStartPayload('wsl-distro', 120, 30, debian),
       { cols: 120, rows: 30, distroInfo: debian }
+    );
+    assert.deepStrictEqual(
+      buildLocalPtyStartPayload('docker', 100, 40, { containerName: 'nginx' }),
+      { cols: 100, rows: 40, containerName: 'nginx' }
     );
   });
 
