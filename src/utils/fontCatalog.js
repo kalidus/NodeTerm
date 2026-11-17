@@ -266,7 +266,8 @@ const catalog = {
         400,
         500,
         700
-      ]
+      ],
+      "core": true
     },
     {
       "family": "Symbols Nerd Font",

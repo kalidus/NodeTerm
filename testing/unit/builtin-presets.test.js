@@ -62,7 +62,7 @@ describe('Presets de apariencia integrados', () => {
     const optionalKey = 'sidebarFontColor';
 
     const expectedIds = [
-      'mux', 'atelier', 'pro-ocean', 'ion-storm', 'default-dark', 'dracula', 'nord',
+      'pro-ocean', 'mux', 'atelier', 'ion-storm', 'default-dark', 'dracula', 'nord',
       'tokyo-night', 'cyberpunk', 'cyberpunk-light', 'night-owl', 'everforest', 'catppuccin',
       'rose-pine', 'emerald', 'sakura', 'moonlight', 'magma', 'oceanic',
       'papel', 'atelier-light', 'mux-light', 'menta', 'calido', 'solarized',
@@ -134,7 +134,7 @@ describe('Presets de apariencia integrados', () => {
         assert.strictEqual(family, uiFamilies[0], `${preset.id} mezcla fuentes UI`);
       }
       for (const size of [settings.uiFontSize, settings.sidebarFontSize, settings.explorerFontSize, settings.homeTabFontSize]) {
-        assert.strictEqual(size, '14', preset.id);
+        assert.strictEqual(size, settings.uiFontSize, preset.id);
       }
 
       const monoKeys = [
@@ -150,8 +150,9 @@ describe('Presets de apariencia integrados', () => {
         assert.strictEqual(font.role, 'mono', `${preset.id} ${settings[key]} no es mono`);
         assert.strictEqual(settings[key], settings.basicapp_terminal_font_family, preset.id);
       }
+      const expectedMonoSize = preset.id === 'pro-ocean' ? '13' : '14';
       for (const key of ['basicapp_terminal_font_size', 'basicapp_font_size', 'basicapp_local_terminal_font_size', 'nodeterm_linux_font_size', 'nodeterm_docker_font_size']) {
-        assert.strictEqual(settings[key], '14', preset.id);
+        assert.strictEqual(settings[key], expectedMonoSize, preset.id);
       }
 
       assert.strictEqual(settings.nodeterm_terminal_opacity, '1', preset.id);

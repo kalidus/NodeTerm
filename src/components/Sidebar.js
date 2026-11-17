@@ -39,6 +39,7 @@ const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
 import { getFavorites, isFavorite, onUpdate as onFavoritesUpdate, removeFavorite, removeFavoritesForTreeNode } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
+import { themeManager } from '../utils/themeManager';
 import { setSidebarView } from '../utils/sidebarViewBus';
 import { getHomeTabActive } from '../utils/homeTabActiveBus';
 import { appConfirm } from './ui/AppConfirm';
@@ -787,6 +788,9 @@ const Sidebar = React.memo(({
       const root = document.documentElement;
       root.style.removeProperty('--ui-sidebar-text');
     }
+    try {
+      themeManager.refreshTitlebarForCurrentLayout();
+    } catch { /* ignore */ }
   }, [explorerFontColor]);
 
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({

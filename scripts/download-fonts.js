@@ -289,7 +289,7 @@ async function main() {
   }
 
   const fullCss = `${cssHeader('Fuentes integradas en NodeTerm (latin/latin-ext + Symbols Nerd Font).')}${allFontFaces.join('\n\n')}\n`;
-  const coreCss = `${cssHeader('Subconjunto de arranque: Inter, JetBrains Mono y Fira Code, pesos 400 y 700.')}${coreFontFaces.join('\n\n')}\n`;
+  const coreCss = `${cssHeader('Subconjunto de arranque: Inter, JetBrains Mono, Fira Code y Victor Mono, pesos 400 y 700.')}${coreFontFaces.join('\n\n')}\n`;
 
   fs.writeFileSync(fontsCSSFile, fullCss);
   fs.writeFileSync(fontsCoreCSSFile, coreCss);

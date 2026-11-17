@@ -330,6 +330,9 @@ export const useThemeManagement = () => {
       }
     } catch { }
     setSidebarFontColorState(value);
+    try {
+      themeManager.refreshTitlebarForCurrentLayout();
+    } catch { /* ignore */ }
   }, []);
 
   // Tree theme state

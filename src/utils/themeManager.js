@@ -176,9 +176,26 @@ export function getThemeTitlebarPalette(themeColors) {
 }
 
 /**
+ * Foreground del chrome: color elegido de sidebar, o tokens del tema.
+ * Orden: sidebarFontColor → --ui-titlebar-text → sidebarText → contraste.
+ */
+function resolveTitlebarTextColor(themeColors, accentForContrast) {
+  const sidebarOverride = normalizeHexColor(localStorage.getItem('sidebarFontColor'));
+  if (sidebarOverride) return sidebarOverride;
+
+  const themeTitlebarText = normalizeHexColor(themeColors['--ui-titlebar-text']);
+  if (themeTitlebarText) return themeTitlebarText;
+
+  const sidebarText = normalizeHexColor(themeColors.sidebarText);
+  if (sidebarText) return sidebarText;
+
+  return isColorLight(accentForContrast) ? '#222' : '#fff';
+}
+
+/**
  * Lógica histórica de titlebar (pre-selector manual de color).
- * - Toggle OFF: fondo = sidebar aclarado; texto = buttonPrimary
- * - Toggle ON: fondo = --ui-titlebar-accent; texto = --ui-titlebar-text
+ * - Toggle OFF: fondo = sidebar aclarado; texto = foreground de sidebar/tema
+ * - Toggle ON: fondo = --ui-titlebar-accent; texto = foreground de sidebar/tema
  */
 export function getTitlebarColorConfig(themeColors) {
   if (!themeColors) {
@@ -201,22 +218,25 @@ export function getTitlebarColorConfig(themeColors) {
     localStorage.getItem('use_primary_colors_titlebar') === 'true';
 
   if (usePrimaryColorsForTitlebar) {
+    const accent =
+      themeColors['--ui-titlebar-accent'] ||
+      themeColors.buttonPrimary ||
+      '#1976d2';
     return {
-      accent:
-        themeColors['--ui-titlebar-accent'] ||
-        themeColors.buttonPrimary ||
-        '#1976d2',
-      text: themeColors['--ui-titlebar-text'] || '#fff',
+      accent,
+      text: resolveTitlebarTextColor(themeColors, accent),
       isCustom: false,
     };
   }
 
+  const accent =
+    adjustColorBrightness(themeColors.sidebarBackground, 8) ||
+    themeColors.buttonPrimary ||
+    '#1976d2';
+
   return {
-    accent:
-      adjustColorBrightness(themeColors.sidebarBackground, 8) ||
-      themeColors.buttonPrimary ||
-      '#1976d2',
-    text: themeColors.buttonPrimary || '#fff',
+    accent,
+    text: resolveTitlebarTextColor(themeColors, accent),
     isCustom: false,
   };
 }

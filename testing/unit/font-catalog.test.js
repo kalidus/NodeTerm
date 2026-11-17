@@ -96,6 +96,7 @@ describe('Catálogo de fuentes locales', () => {
     assert.match(coreCss, /font-family:\s*['"]Inter['"]/);
     assert.match(coreCss, /font-family:\s*['"]JetBrains Mono['"]/);
     assert.match(coreCss, /font-family:\s*['"]Fira Code['"]/);
+    assert.match(coreCss, /font-family:\s*['"]Victor Mono['"]/);
     assert.doesNotMatch(coreCss, /font-family:\s*['"]Share Tech Mono['"]/);
     assert.doesNotMatch(coreCss, /U\+0460-052F/);
 

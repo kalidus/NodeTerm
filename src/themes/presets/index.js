@@ -109,6 +109,8 @@ function treeForLayout(layout) {
 function definePreset(spec) {
   const mono = monoStack(spec.monoFont);
   const tabLayout = spec.tabLayout;
+  const uiSize = spec.uiFontSize || UI_FONT_SIZE;
+  const monoSize = spec.monoFontSize || TERMINAL_FONT_SIZE;
   const settings = {
     ui_theme: spec.ui,
     ui_layout: spec.layout,
@@ -130,24 +132,24 @@ function definePreset(spec) {
     basicapp_linux_statusbar_icon_theme: spec.statusIcon || 'classic',
     basicapp_docker_statusbar_icon_theme: spec.statusIcon || 'classic',
     basicapp_terminal_font_family: mono,
-    basicapp_terminal_font_size: TERMINAL_FONT_SIZE,
+    basicapp_terminal_font_size: monoSize,
     basicapp_font_family: mono,
-    basicapp_font_size: TERMINAL_FONT_SIZE,
+    basicapp_font_size: monoSize,
     basicapp_local_terminal_font_family: mono,
-    basicapp_local_terminal_font_size: TERMINAL_FONT_SIZE,
+    basicapp_local_terminal_font_size: monoSize,
     nodeterm_linux_font_family: mono,
-    nodeterm_linux_font_size: TERMINAL_FONT_SIZE,
+    nodeterm_linux_font_size: monoSize,
     nodeterm_docker_font_family: mono,
-    nodeterm_docker_font_size: TERMINAL_FONT_SIZE,
+    nodeterm_docker_font_size: monoSize,
     uiFont: spec.uiFont,
-    uiFontSize: UI_FONT_SIZE,
+    uiFontSize: uiSize,
     homeTabFont: spec.uiFont,
-    homeTabFontSize: UI_FONT_SIZE,
+    homeTabFontSize: uiSize,
     explorerFont: spec.uiFont,
-    explorerFontSize: UI_FONT_SIZE,
+    explorerFontSize: uiSize,
     explorerColorTheme: spec.ui,
     sidebarFont: spec.uiFont,
-    sidebarFontSize: UI_FONT_SIZE,
+    sidebarFontSize: uiSize,
     nodeterm_cursor_style: 'bar',
     nodeterm_cursor_blink: 'true',
     iconTheme: spec.iconTheme,
@@ -175,6 +177,24 @@ function definePreset(spec) {
 }
 
 const presetSpecs = [
+  {
+    id: 'pro-ocean',
+    name: 'Pro Ocean (Por defecto)',
+    description: 'Estética oceánica con estilo unified, Plus Jakarta Sans, Victor Mono 13px y terminal Oceanic Next',
+    icon: '🌊',
+    ui: 'Pro Ocean',
+    layout: 'unified',
+    tabTheme: 'proOcean',
+    tabLayout: 'spacious',
+    terminal: 'Oceanic Next',
+    status: 'Tokyo Night',
+    uiFont: 'Plus Jakarta Sans',
+    monoFont: 'Victor Mono',
+    monoFontSize: '13',
+    iconTheme: 'ocean',
+    sessionIcons: 'glass',
+    actionBar: 'glass'
+  },
   {
     id: 'mux',
     name: 'Mux',
@@ -207,23 +227,6 @@ const presetSpecs = [
     iconTheme: 'cupertino',
     sessionIcons: 'glyphs',
     actionBar: 'outline'
-  },
-  {
-    id: 'pro-ocean',
-    name: 'Pro Ocean (Por defecto)',
-    description: 'Estética oceánica con Plus Jakarta Sans, pestañas Pro Ocean y terminal Oceanic Next',
-    icon: '🌊',
-    ui: 'Pro Ocean',
-    layout: 'unified-rounded',
-    tabTheme: 'proOcean',
-    tabLayout: 'spacious',
-    terminal: 'Oceanic Next',
-    status: 'Tokyo Night',
-    uiFont: 'Plus Jakarta Sans',
-    monoFont: 'JetBrains Mono',
-    iconTheme: 'ocean',
-    sessionIcons: 'glass',
-    actionBar: 'glass'
   },
   {
     id: 'ion-storm',
