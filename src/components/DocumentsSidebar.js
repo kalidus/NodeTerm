@@ -47,6 +47,7 @@ import {
   DEFAULT_VAULT_ID
 } from '../shared/vault-connection-trees';
 import NotesBrowser from './notes/NotesBrowser';
+import NotebookNavigator from './notes/NotebookNavigator';
 import { renderDocumentNodeIcon } from './notes/documentNodeIcon';
 import {
   findFolderPath,
@@ -56,7 +57,14 @@ import {
   isLibraryFile,
   isLinkedFolder,
   isCloudFolder,
-  isManagedFolder
+  isManagedFolder,
+  NOTEBOOK_QUICK_KEY,
+  NOTEBOOK_PAGES_KEY,
+  NOTEBOOK_NAV_STORAGE_KEY,
+  looseNotesParentKey,
+  readNotebookNavState,
+  resolveNotebookNav,
+  notebookPageParentKey
 } from './notes/notesBrowse';
 import { useLibraryIngest } from './library/useLibraryIngest';
 import LibraryFolderPropertiesDialog from './library/LibraryFolderPropertiesDialog';
@@ -449,6 +457,9 @@ const DocumentsSidebar = ({
   const [quickNotesPanelOpen, setQuickNotesPanelOpen] = useState(false);
   const [notesLayout, setNotesLayout] = useState(readSavedNotesLayout);
   const [browseStack, setBrowseStack] = useState([]);
+  const [notebookNav, setNotebookNav] = useState(readNotebookNavState);
+  const notebookNavRef = useRef(notebookNav);
+  notebookNavRef.current = notebookNav;
 
   useEffect(() => {
     try { localStorage.setItem(NOTES_LAYOUT_STORAGE_KEY, notesLayout); } catch {}
@@ -465,6 +476,27 @@ const DocumentsSidebar = ({
     window.addEventListener('documents-sidebar:set-layout', onSetLayout);
     return () => window.removeEventListener('documents-sidebar:set-layout', onSetLayout);
   }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+    try {
+      localStorage.setItem(NOTEBOOK_NAV_STORAGE_KEY, JSON.stringify(notebookNav));
+    } catch { /* ignore */ }
+  }, [notebookNav, isLoading]);
+
+  useEffect(() => {
+    if (notesLayout !== 'notebook' || isLoading) return;
+    const resolved = resolveNotebookNav(documentNodes, notebookNav);
+    if (
+      resolved.notebookKey === (notebookNav.notebookKey || null)
+      && resolved.sectionKey === (notebookNav.sectionKey || null)
+    ) return;
+    setNotebookNav((prev) => ({
+      ...prev,
+      notebookKey: resolved.notebookKey,
+      sectionKey: resolved.sectionKey
+    }));
+  }, [notesLayout, isLoading, documentNodes, notebookNav]);
 
   useEffect(() => {
     setBrowseStack((prev) => {
@@ -736,6 +768,9 @@ const DocumentsSidebar = ({
   }, [selectedNodeKey]);
 
   const getParentKeyForNewNote = useCallback(() => {
+    if (notesLayout === 'notebook') {
+      return notebookPageParentKey(documentNodes, notebookNavRef.current);
+    }
     if (notesLayout !== 'tree' && browseStack.length) {
       return browseStack[browseStack.length - 1];
     }
@@ -747,7 +782,8 @@ const DocumentsSidebar = ({
     return isFolder ? key : null;
   }, [documentNodes, resolveSelectedKey, notesLayout, browseStack]);
 
-  const createNewDocumentInTree = useCallback((parentKey = null) => {
+  const createNewDocumentInTree = useCallback((parentKey = null, options = {}) => {
+    const inlineRename = options.inlineRename !== false;
     let newDoc;
     setDocumentNodes(prev => {
       const label = getUniqueNoteLabel(prev);
@@ -759,9 +795,12 @@ const DocumentsSidebar = ({
     }
     if (newDoc) {
       setSelectedNodeKey(newDoc.key);
-      setInlineRenamingKey(newDoc.key);
-      setInlineRenameValue(newDoc.label);
+      if (inlineRename) {
+        setInlineRenamingKey(newDoc.key);
+        setInlineRenameValue(newDoc.label);
+      }
     }
+    return newDoc;
   }, []);
 
   // Crea una nueva nota dentro del contenedor de notas rápidas
@@ -836,8 +875,18 @@ const DocumentsSidebar = ({
   }, [showToast, setTrashedDocuments]);
 
   const handleCreateNewNote = useCallback(() => {
+    if (notesLayout === 'notebook') {
+      const resolved = resolveNotebookNav(documentNodesRef.current, notebookNavRef.current);
+      if (resolved.sectionKey === NOTEBOOK_QUICK_KEY) {
+        createNewQuickNote();
+        return;
+      }
+      const created = createNewDocumentInTree(getParentKeyForNewNote(), { inlineRename: false });
+      if (created) setTimeout(() => handleOpenDocument(created, 'reuse'), 50);
+      return;
+    }
     createNewDocumentInTree(getParentKeyForNewNote());
-  }, [createNewDocumentInTree, getParentKeyForNewNote]);
+  }, [notesLayout, createNewQuickNote, createNewDocumentInTree, getParentKeyForNewNote, handleOpenDocument]);
 
   const commitInlineRename = useCallback(() => {
     if (!inlineRenamingKey) return;
@@ -866,9 +915,25 @@ const DocumentsSidebar = ({
   const handleCreateFolder = () => {
     if (!newItemName.trim()) return;
     const newFolder = createFolderNode(newItemName.trim());
-    setDocumentNodes(prev => addNodeToTree(prev, parentKeyForNew, newFolder));
-    if (parentKeyForNew) {
-      setExpandedKeys(prev => ({ ...prev, [parentKeyForNew]: true }));
+    const parentKey = parentKeyForNew;
+    setDocumentNodes(prev => addNodeToTree(prev, parentKey, newFolder));
+    if (parentKey) {
+      setExpandedKeys(prev => ({ ...prev, [parentKey]: true }));
+    }
+    if (notesLayout === 'notebook') {
+      const resolved = resolveNotebookNav(documentNodes, notebookNav);
+      const currentNotebookKey = resolved.notebook && !resolved.notebook.synthetic
+        ? resolved.notebook.key
+        : null;
+      setNotebookNav((prev) => {
+        if (currentNotebookKey && parentKey === currentNotebookKey) {
+          return { ...prev, notebookKey: currentNotebookKey, sectionKey: newFolder.key };
+        }
+        if (!parentKey || parentKey === looseNotesParentKey(documentNodes)) {
+          return { ...prev, notebookKey: newFolder.key, sectionKey: null };
+        }
+        return { ...prev, sectionKey: newFolder.key };
+      });
     }
     setShowNewFolderDialog(false);
     setNewItemName('');
@@ -1500,7 +1565,25 @@ const DocumentsSidebar = ({
         {
           label: 'Nueva nota',
           icon: 'pi pi-file',
-          command: () => createNewDocumentInTree(node.key)
+          command: () => {
+            if (notesLayout !== 'notebook') {
+              createNewDocumentInTree(node.key);
+              return;
+            }
+            const created = createNewDocumentInTree(node.key, { inlineRename: false });
+            if (!created) return;
+            const current = resolveNotebookNav(documentNodesRef.current, notebookNavRef.current);
+            const currentNotebookKey = current.notebook && !current.notebook.synthetic
+              ? current.notebook.key
+              : null;
+            setNotebookNav((prev) => ({
+              ...prev,
+              sectionKey: currentNotebookKey && node.key === currentNotebookKey
+                ? NOTEBOOK_PAGES_KEY
+                : node.key
+            }));
+            setTimeout(() => handleOpenDocument(created, 'reuse'), 50);
+          }
         },
         {
           label: 'Nueva subcarpeta',
@@ -1892,8 +1975,19 @@ const DocumentsSidebar = ({
     return () => window.removeEventListener('document-icon-updated', handler);
   }, []);
 
-  const openNewFolderDialog = () => {
-    setParentKeyForNew(notesLayout !== 'tree' && browseStack.length ? browseStack[browseStack.length - 1] : null);
+  const openNewFolderDialog = (asSection) => {
+    const sectionInsideNotebook = asSection === true;
+    if (notesLayout === 'notebook' && sectionInsideNotebook) {
+      const resolved = resolveNotebookNav(documentNodesRef.current, notebookNavRef.current);
+      const parent = resolved.notebook && !resolved.notebook.synthetic
+        ? resolved.notebook.key
+        : looseNotesParentKey(documentNodesRef.current);
+      setParentKeyForNew(parent);
+    } else if (notesLayout === 'notebook') {
+      setParentKeyForNew(looseNotesParentKey(documentNodesRef.current));
+    } else {
+      setParentKeyForNew(notesLayout !== 'tree' && browseStack.length ? browseStack[browseStack.length - 1] : null);
+    }
     setNewItemName('');
     setShowNewFolderDialog(true);
   };
@@ -2387,6 +2481,29 @@ const DocumentsSidebar = ({
             <i className="pi pi-spin pi-spinner" />
             <p>Cargando biblioteca...</p>
           </div>
+        ) : notesLayout === 'notebook' ? (
+          <NotebookNavigator
+            nodes={documentNodes}
+            notebookKey={notebookNav.notebookKey}
+            sectionKey={notebookNav.sectionKey}
+            collapsed={notebookNav.collapsed || {}}
+            searchTerm={sidebarFilter}
+            selectedKey={typeof selectedNodeKey === 'string' ? selectedNodeKey : (selectedNodeKey ? Object.keys(selectedNodeKey)[0] : null)}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            onSelectNotebook={(key) => setNotebookNav((prev) => ({ ...prev, notebookKey: key, sectionKey: null }))}
+            onSelectSection={(key) => setNotebookNav((prev) => ({ ...prev, sectionKey: key }))}
+            onToggleCollapsed={(key) => setNotebookNav((prev) => {
+              const nextCollapsed = { ...(prev.collapsed || {}) };
+              if (nextCollapsed[key]) delete nextCollapsed[key];
+              else nextCollapsed[key] = true;
+              return { ...prev, collapsed: nextCollapsed };
+            })}
+            onAddSection={() => openNewFolderDialog(true)}
+            onAddPage={handleCreateNewNote}
+            onActivate={activateNotesItem}
+            onContextMenu={onBrowserContextMenu}
+          />
         ) : notesLayout !== 'tree' ? (
           <NotesBrowser
             nodes={documentNodes}

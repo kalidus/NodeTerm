@@ -170,6 +170,25 @@
   background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 35%, transparent);
 }
 
+.sap-mini-notebook {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+}
+
+.sap-mini-notebook-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sap-mini-notebook-col .sap-mini-line {
+  width: 100%;
+}
+
 .sap-mini-line--root {
   width: 72%;
 }

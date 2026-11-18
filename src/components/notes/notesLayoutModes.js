@@ -8,6 +8,12 @@ export const NOTES_LAYOUTS = [
     preview: 'tree'
   },
   {
+    id: 'notebook',
+    name: 'Cuaderno',
+    description: 'Secciones y páginas, estilo OneNote',
+    preview: 'notebook'
+  },
+  {
     id: 'shelf',
     name: 'Estantería',
     description: 'Carpetas como lomos en una estantería',

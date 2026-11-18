@@ -1,4 +1,5 @@
 import { viewerKindFor, formatFileSize } from '../../shared/library-mime';
+import { getVaultRootId, isVaultRoot, DEFAULT_VAULT_ID } from '../../shared/vault-connection-trees';
 
 const NOTE_TYPES = ['document', 'quick-note'];
 
@@ -255,6 +256,202 @@ export function toRoman(n) {
     }
   }
   return out;
+}
+
+/** Claves sintéticas de la vista Cuaderno. No se persisten en el árbol. */
+export const NOTEBOOK_LOOSE_KEY = '__notebook_loose__';
+export const NOTEBOOK_PAGES_KEY = '__notebook_pages__';
+export const NOTEBOOK_QUICK_KEY = 'quick_note';
+export const NOTEBOOK_NAV_STORAGE_KEY = 'documents_notebook_nav';
+
+/**
+ * Nivel donde viven los cuadernos del usuario.
+ * Si el árbol está envuelto en vaults, baja a sus hijos: el vault no es un cuaderno.
+ */
+export function libraryLevelNodes(nodes) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  if (!list.some((node) => isVaultRoot(node))) return list;
+  const level = [];
+  list.forEach((node) => {
+    if (!node) return;
+    if (isVaultRoot(node)) {
+      if (!node.data?.locked) level.push(...(node.children || []));
+      return;
+    }
+    level.push(node);
+  });
+  return level;
+}
+
+/** Carpeta donde deben caer las notas sueltas y el primer cuaderno, si hay vault. */
+export function looseNotesParentKey(nodes) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  if (!list.some((node) => isVaultRoot(node))) return null;
+  const vault = list.find((node) => (
+    isVaultRoot(node)
+    && !node.data?.locked
+    && getVaultRootId(node) === DEFAULT_VAULT_ID
+  )) || list.find((node) => isVaultRoot(node) && !node.data?.locked);
+  return vault?.key || null;
+}
+
+export function findQuickNotesGroup(nodes) {
+  const walk = (list) => {
+    for (const node of list || []) {
+      if (!node) continue;
+      if (isQuickNotesGroup(node)) return node;
+      if (node.children?.length) {
+        const found = walk(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return walk(nodes);
+}
+
+function isUserFolder(node) {
+  return isManagedFolder(node) && !isVaultRoot(node);
+}
+
+/** Cuadernos: carpetas del nivel de biblioteca, más «Sueltas» si hay notas fuera de ellas. */
+export function listNotebooks(nodes) {
+  const notebooks = [];
+  let loose = false;
+  libraryLevelNodes(nodes).forEach((node) => {
+    if (!node || isQuickNotesGroup(node)) return;
+    if (isUserFolder(node)) {
+      notebooks.push({
+        key: node.key,
+        label: node.label || 'Cuaderno',
+        synthetic: false,
+        node
+      });
+      return;
+    }
+    if (isNote(node)) loose = true;
+  });
+  if (loose) {
+    notebooks.push({
+      key: NOTEBOOK_LOOSE_KEY,
+      label: 'Sueltas',
+      synthetic: true,
+      node: null
+    });
+  }
+  return notebooks;
+}
+
+function collectFolderSections(children, depth, ancestors, out) {
+  (children || []).forEach((node) => {
+    if (!isUserFolder(node)) return;
+    const hasChildren = (node.children || []).some(isUserFolder);
+    out.push({
+      key: node.key,
+      label: node.label || 'Sección',
+      depth,
+      synthetic: false,
+      hasChildren,
+      ancestorKeys: ancestors,
+      node
+    });
+    collectFolderSections(node.children, depth + 1, [...ancestors, node.key], out);
+  });
+}
+
+function pagesSection(depth = 0) {
+  return {
+    key: NOTEBOOK_PAGES_KEY,
+    label: 'Páginas',
+    depth,
+    synthetic: true,
+    hasChildren: false,
+    ancestorKeys: [],
+    node: null
+  };
+}
+
+/** Secciones del cuaderno. Las notas colgando del cuaderno van a «Páginas». */
+export function listNotebookSections(notebook, nodes) {
+  if (!notebook) return [];
+  if (notebook.synthetic) return [pagesSection()];
+  const children = notebook.node?.children || [];
+  const sections = [];
+  collectFolderSections(children, 0, [], sections);
+  const directNotes = children.some(isNote);
+  if (directNotes || sections.length === 0) sections.unshift(pagesSection());
+  return sections;
+}
+
+function findFolderByKey(node, key) {
+  if (!node || !key) return null;
+  if (node.key === key) return node;
+  for (const child of node.children || []) {
+    const found = findFolderByKey(child, key);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Páginas (notas) hijas directas de la sección. Los archivos de biblioteca no entran. */
+export function listSectionPages(nodes, notebook, sectionKey) {
+  if (sectionKey === NOTEBOOK_QUICK_KEY) {
+    const group = findQuickNotesGroup(nodes);
+    return (group?.children || []).filter(isNote);
+  }
+  if (!notebook || !sectionKey) return [];
+  if (sectionKey === NOTEBOOK_PAGES_KEY) {
+    if (notebook.synthetic) return libraryLevelNodes(nodes).filter(isNote);
+    return (notebook.node?.children || []).filter(isNote);
+  }
+  const folder = findFolderByKey(notebook.node, sectionKey);
+  return (folder?.children || []).filter(isNote);
+}
+
+export function readNotebookNavState() {
+  const empty = { notebookKey: null, sectionKey: null, collapsed: {} };
+  try {
+    const raw = JSON.parse(localStorage.getItem(NOTEBOOK_NAV_STORAGE_KEY) || 'null');
+    if (!raw || typeof raw !== 'object') return empty;
+    const collapsed = {};
+    if (raw.collapsed && typeof raw.collapsed === 'object') {
+      Object.entries(raw.collapsed).forEach(([key, value]) => {
+        if (value) collapsed[key] = true;
+      });
+    }
+    return {
+      notebookKey: typeof raw.notebookKey === 'string' ? raw.notebookKey : null,
+      sectionKey: typeof raw.sectionKey === 'string' ? raw.sectionKey : null,
+      collapsed
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/** Elige un cuaderno y una sección que sigan existiendo. */
+export function resolveNotebookNav(nodes, saved = {}) {
+  const notebooks = listNotebooks(nodes);
+  const notebook = notebooks.find((item) => item.key === saved.notebookKey) || notebooks[0] || null;
+  const notebookKey = notebook ? notebook.key : null;
+  let sectionKey = saved.sectionKey || null;
+  if (sectionKey !== NOTEBOOK_QUICK_KEY) {
+    const sections = notebook ? listNotebookSections(notebook, nodes) : [];
+    const match = sections.find((section) => section.key === sectionKey);
+    sectionKey = match ? match.key : (sections[0]?.key || null);
+  }
+  return { notebooks, notebook, notebookKey, sectionKey };
+}
+
+/** Carpeta donde crear la página de la sección activa. Null en notas rápidas. */
+export function notebookPageParentKey(nodes, saved) {
+  const { notebook, sectionKey } = resolveNotebookNav(nodes, saved);
+  if (!sectionKey || sectionKey === NOTEBOOK_QUICK_KEY) return null;
+  if (sectionKey === NOTEBOOK_PAGES_KEY) {
+    if (!notebook || notebook.synthetic) return looseNotesParentKey(nodes);
+    return notebook.key;
+  }
+  return sectionKey;
 }
 
 export function notesSubtitle(node) {

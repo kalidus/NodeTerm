@@ -59,6 +59,20 @@ const SidebarLayoutMiniPreview = ({ variant = 'tree' }) => {
           <span className="sap-mini-dot" />
         </div>
       )}
+      {kind === 'notebook' && (
+        <div className="sap-mini-notebook">
+          <span className="sap-mini-notebook-col">
+            <span className="sap-mini-line" />
+            <span className="sap-mini-line sap-mini-line--short" />
+            <span className="sap-mini-line" />
+          </span>
+          <span className="sap-mini-notebook-col">
+            <span className="sap-mini-line" />
+            <span className="sap-mini-line" />
+            <span className="sap-mini-line sap-mini-line--short" />
+          </span>
+        </div>
+      )}
       {kind === 'tags' && (
         <div className="sap-mini-tags">
           <span /><span /><span />
