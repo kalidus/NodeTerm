@@ -4,7 +4,7 @@ import { persistSyncedSetting } from './persistSyncedSetting';
 const TERMINAL_TITLES = {
   powershell: 'Windows PowerShell',
   wsl: 'WSL',
-  cygwin: 'Cygwin',
+  cygwin: 'NodeTerm',
   claude: 'Claude Code',
   opencode: 'OpenCode',
   codexcli: 'Codex CLI',
@@ -63,7 +63,7 @@ export function buildDefaultTerminalOptions({
     }
 
     if (cygwinAvailable && aiClientsEnabled.cygwin === true) {
-      options.push({ label: 'Cygwin', value: 'cygwin' });
+      options.push({ label: 'NodeTerm', value: 'cygwin' });
     }
   } else if (platform === 'linux' || platform === 'darwin') {
     options.push({
@@ -191,7 +191,7 @@ export function resolveInitialTabFromDefault(defaultTerminal, context = {}) {
     return base({ title: 'Terminal macOS', type: 'powershell' });
   }
   if (useCygwin) {
-    return base({ title: 'Cygwin', type: 'cygwin' });
+    return base({ title: 'NodeTerm', type: 'cygwin' });
   }
   return base({ title: 'Windows PowerShell', type: 'powershell' });
 }

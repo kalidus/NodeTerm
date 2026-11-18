@@ -666,7 +666,7 @@ const TabbedTerminal = forwardRef(({
             const terminalTitles = {
                 'powershell': isMac ? 'Terminal macOS' : (window.electron?.platform === 'linux' ? 'Terminal Linux' : 'Windows PowerShell'),
                 'wsl': 'WSL',
-                'cygwin': 'Cygwin',
+                'cygwin': 'NodeTerm',
                 'ubuntu': 'Ubuntu',
                 'claude': 'Claude Code',
                 'opencode': 'OpenCode',
@@ -1024,7 +1024,7 @@ const TabbedTerminal = forwardRef(({
                                         if (isDefaultPowerShell && !currentDefaultTerminal) {
                                             return [{
                                                 id: 'tab-1',
-                                                title: 'Cygwin',
+                                                title: 'NodeTerm',
                                                 type: 'cygwin',
                                                 active: true
                                             }];
@@ -1318,7 +1318,7 @@ const TabbedTerminal = forwardRef(({
             shells.push({ label: 'PowerShell', value: 'powershell', icon: <FaWindows style={{ color: '#0078D4' }} /> });
             if (aiClientsEnabled.cygwin) {
                 shells.push({
-                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
+                    label: cygwinAvailable ? 'NodeTerm' : 'NodeTerm (instalar)',
                     value: 'cygwin',
                     icon: <FaLinux style={{ color: '#FCC624' }} />
                 });
@@ -1498,7 +1498,7 @@ const TabbedTerminal = forwardRef(({
                 const det = await window.electronAPI.invoke('cygwin:detect');
                 if (det?.available) {
                     setCygwinAvailable(true);
-                    title = 'Cygwin';
+                    title = 'NodeTerm';
                     terminalType = 'cygwin';
                 } else {
                     openCygwinAppsInstall();

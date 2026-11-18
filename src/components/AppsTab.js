@@ -641,7 +641,7 @@ const AppsTab = ({
         upgraded: !!result?.upgraded,
         progressPhase: result?.installing ? prev.progressPhase : null,
         progressPercent: result?.installing ? prev.progressPercent : 0,
-        error: result?.success === false ? (result?.error || 'No se pudo verificar Cygwin') : null
+        error: result?.success === false ? (result?.error || 'No se pudo verificar NodeTerm Terminal') : null
       }));
       if (result?.tier === 'lite' || result?.source === 'bundled') {
         setCygwinTier('medium');
@@ -651,7 +651,7 @@ const AppsTab = ({
         ...prev,
         loading: false,
         installing: false,
-        error: error.message || 'No se pudo verificar Cygwin'
+        error: error.message || 'No se pudo verificar NodeTerm Terminal'
       }));
     }
   };
@@ -669,12 +669,12 @@ const AppsTab = ({
       const invoke = window.electronAPI?.invoke || window.electron?.ipcRenderer?.invoke;
       const result = await invoke?.('cygwin:install', { tier: cygwinTier || 'medium' });
       if (!result?.success) {
-        throw new Error(result?.error || 'No se pudo instalar Cygwin');
+        throw new Error(result?.error || 'No se pudo ampliar NodeTerm Terminal');
       }
       await checkCygwinStatus();
       toast.current?.show({
         severity: 'success',
-        summary: 'Cygwin instalado',
+        summary: 'NodeTerm Terminal ampliado',
         detail: `${result.tier || cygwinTier} en ${result.root || 'AppData'}`,
         life: 4000
       });
@@ -686,11 +686,11 @@ const AppsTab = ({
         installing: false,
         progressPhase: null,
         progressPercent: 0,
-        error: error.message || 'No se pudo instalar Cygwin'
+        error: error.message || 'No se pudo ampliar NodeTerm Terminal'
       }));
       toast.current?.show({
         severity: 'error',
-        summary: 'Error instalando Cygwin',
+        summary: 'Error ampliando NodeTerm Terminal',
         detail: error.message || 'Error desconocido',
         life: 7000
       });
@@ -705,13 +705,13 @@ const AppsTab = ({
       const invoke = window.electronAPI?.invoke || window.electron?.ipcRenderer?.invoke;
       const result = await invoke?.('cygwin:uninstall');
       if (!result?.success) {
-        throw new Error(result?.error || 'No se pudo desinstalar Cygwin');
+        throw new Error(result?.error || 'No se pudo quitar la ampliacion');
       }
       await checkCygwinStatus();
       toast.current?.show({
         severity: 'success',
-        summary: 'Ampliacion Cygwin eliminada',
-        detail: 'Se quito AppData; el LITE embebido sigue disponible',
+        summary: 'Ampliacion eliminada',
+        detail: 'Se quito AppData; NodeTerm Terminal LITE sigue disponible',
         life: 4000
       });
       window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: true } }));
@@ -720,7 +720,7 @@ const AppsTab = ({
       setCygwinStatus((prev) => ({
         ...prev,
         uninstalling: false,
-        error: error.message || 'No se pudo desinstalar Cygwin'
+        error: error.message || 'No se pudo quitar la ampliacion'
       }));
       return false;
     } finally {
@@ -941,7 +941,7 @@ const AppsTab = ({
       if (!isWindows) {
         toast.current?.show({
           severity: 'warn',
-          summary: 'Cygwin',
+          summary: 'NodeTerm',
           detail: 'Solo disponible en Windows.',
           life: 4000
         });
@@ -1232,11 +1232,11 @@ const AppsTab = ({
     },
     {
       key: 'cygwin', category: 'services',
-      name: 'Cygwin Terminal', shortName: 'Cygwin',
+      name: 'NodeTerm Terminal', shortName: 'NodeTerm',
       color: '#00AA00',
       description: isWindows
-        ? 'Runtime Unix LITE embebido (bash, coreutils, ssh, curl). Activado por defecto. Desde aqui puedes ampliar a Medium/Full en AppData.'
-        : 'Cygwin solo esta disponible en Windows.',
+        ? 'NodeTerm Terminal LITE embebido (bash, coreutils, ssh, curl). Activado por defecto. Desde aqui puedes ampliar a Medium/Full en AppData.'
+        : 'NodeTerm Terminal solo esta disponible en Windows.',
       features: ['LITE embebido', 'ssh + curl', 'Upgrade Medium/Full', 'Sin admin'],
       badges: [
         { label: 'WINDOWS', severity: 'info' },
@@ -1682,7 +1682,7 @@ const AppsTab = ({
               <i className="pi pi-info-circle apps-card-icon" />
             </div>
             <div className="apps-card-header-text">
-              <h3>Estado de Cygwin</h3>
+              <h3>Estado de NodeTerm Terminal</h3>
               <p className="apps-card-subtitle">
                 LITE embebido en el instalador; Medium/Full opcional en AppData
               </p>

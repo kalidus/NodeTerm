@@ -1257,7 +1257,7 @@ const HomeTab = ({
             'claude': 'Claude Code',
             'opencode': 'OpenCode',
             'wsl': 'WSL',
-            'cygwin': 'Cygwin',
+            'cygwin': 'NodeTerm',
             'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
           };
 

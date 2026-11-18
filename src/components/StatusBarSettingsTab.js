@@ -42,7 +42,7 @@ const TERMINAL_TYPES = [
   { id: 'powershell', name: 'PowerShell', icon: 'pi pi-microsoft', iconClass: 'powershell' },
   { id: 'linux', name: 'Linux / WSL', icon: 'pi pi-desktop', iconClass: 'linux' },
   { id: 'docker', name: 'Docker', icon: 'pi pi-box', iconClass: 'docker' },
-  { id: 'cygwin', name: 'Cygwin', icon: 'pi pi-desktop', iconClass: 'cygwin' }
+  { id: 'cygwin', name: 'NodeTerm', icon: 'pi pi-desktop', iconClass: 'cygwin' }
 ];
 
 // Preview tabs
@@ -51,7 +51,7 @@ const PREVIEW_TABS = [
   { id: 'powershell', label: 'PS', icon: 'pi pi-microsoft' },
   { id: 'linux', label: 'Linux', icon: 'pi pi-desktop' },
   { id: 'docker', label: 'Docker', icon: 'pi pi-box' },
-  { id: 'cygwin', label: 'Cygwin', icon: 'pi pi-desktop' }
+  { id: 'cygwin', label: 'NodeTerm', icon: 'pi pi-desktop' }
 ];
 
 const StatusBarSettingsTab = ({

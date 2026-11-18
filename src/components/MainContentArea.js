@@ -926,7 +926,7 @@ const MainContentArea = ({
       ];
       if (aiClientsEnabled.cygwin) {
         shells.push({
-          label: 'Cygwin',
+          label: 'NodeTerm',
           icon: getTerminalMenuIcon('cygwin'),
           command: () => {
             setLastLocalTerminalType('cygwin');
@@ -1418,7 +1418,7 @@ const MainContentArea = ({
             label = 'Terminal';
             break;
           case 'cygwin':
-            label = 'Cygwin';
+            label = 'NodeTerm';
             break;
           default:
             label = 'Terminal';

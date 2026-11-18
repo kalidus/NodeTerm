@@ -439,7 +439,7 @@ const ConnectionHistory = ({
 						try {
 							const result = await window.electronAPI.invoke('cygwin:detect');
 							if (result && result.available) {
-								shells.push({ label: 'Cygwin', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
+								shells.push({ label: 'NodeTerm', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
 							}
 						} catch (e) { /* ignore */ }
 					}

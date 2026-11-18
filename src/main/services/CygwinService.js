@@ -227,7 +227,7 @@ alias l='ls -CF'
 export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.tar=01;31:*.zip=01;31:*.jpg=01;35:*.png=01;35'
 
 # Bienvenida simple
-echo -e "\\033[1;32m■\\033[0m \\033[1;36mCygwin Terminal\\033[0m - NodeTerm"
+echo -e "\\033[1;32m■\\033[0m \\033[1;36mNodeTerm Terminal\\033[0m"
 echo ""
 
 cd ~

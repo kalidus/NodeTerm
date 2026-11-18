@@ -90,7 +90,7 @@ describe('localPtySession', () => {
 
   it('la etiqueta de error depende de la plataforma y de la distro', () => {
     assert.strictEqual(localPtyErrorLabel('wsl'), 'WSL');
-    assert.strictEqual(localPtyErrorLabel('cygwin'), 'Cygwin');
+    assert.strictEqual(localPtyErrorLabel('cygwin'), 'NodeTerm');
     assert.strictEqual(localPtyErrorLabel('powershell', { platform: 'win32' }), 'PowerShell');
     assert.strictEqual(localPtyErrorLabel('powershell', { platform: 'linux' }), 'Terminal');
     assert.strictEqual(

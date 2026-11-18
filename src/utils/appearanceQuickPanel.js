@@ -148,7 +148,7 @@ const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
 const APP_CATALOG = [
   { id: 'guacamole', category: 'services', name: 'Guacamole', short: 'GU', color: '#059669', description: 'Proxy RDP/VNC con Docker, WSL o nativo.' },
-  { id: 'cygwin', category: 'services', name: 'Cygwin Terminal', short: 'CY', color: '#00AA00', description: 'LITE embebido (bash, ssh, curl) en Windows; ampliar desde Apps.' },
+  { id: 'cygwin', category: 'services', name: 'NodeTerm', short: 'NT', color: '#00AA00', description: 'NodeTerm Terminal (bash, ssh, curl) embebido en Windows; ampliar desde Apps.' },
   { id: 'browser', category: 'services', name: 'Navegador Web', short: 'WB', color: '#38bdf8', description: 'Navegador integrado en pestañas.' },
   { id: 'claude', category: 'cli', name: 'Claude Code', short: 'CL', color: '#f59e0b', description: 'CLI de Anthropic con terminal dedicada.' },
   { id: 'opencode', category: 'cli', name: 'OpenCode', short: 'OC', color: '#6366f1', description: 'Agente open-source multi-proveedor.' },

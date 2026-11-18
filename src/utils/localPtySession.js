@@ -171,7 +171,7 @@ function localPtyProbeCommand(kind, sessionInfo) {
 function localPtyErrorLabel(kind, { platform, sessionInfo } = {}) {
   if (kind === 'powershell') return platform === 'win32' ? 'PowerShell' : 'Terminal';
   if (kind === 'ubuntu') return sessionInfo?.label || 'WSL Distribution';
-  if (kind === 'cygwin') return 'Cygwin';
+  if (kind === 'cygwin') return 'NodeTerm';
   if (kind === 'docker') return sessionInfo?.containerName || 'Docker';
   return 'WSL';
 }
