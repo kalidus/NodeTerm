@@ -31,6 +31,7 @@ const {
   printJobStreamCallbacks,
   PrinterDriverName,
   avc420Webcodecs = null,
+  avc420Only = null,
   setAvc420WebcodecsCallback = null,
   setEgfxCapsCallback = null,
   setEgfxResetCallback = null,
@@ -278,15 +279,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
-  const [isH264EnabledState, setIsH264EnabledState] = useState(() => {
-    if (rdpConfig.useH264 === true) return true;
-    if (rdpConfig.useH264 === false) return false;
-    try {
-      return window.localStorage?.getItem('NODETERM_RDP_WEBCODECS') === '1';
-    } catch (_) {
-      return false;
-    }
-  });
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
   const webAudioPlayerRef = useRef(null);
@@ -331,8 +323,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const hostFileClipUnavailableRef = useRef(false);
   const filePathAsTextToastShownRef = useRef(false);
   const userClosingRef = useRef(false);
-  /** Tras 0x112f: reintentar EGFX sin H.264/WebCodecs (Progressive/ClearCodec). */
-  const gfxNoAvcFallbackUsedRef = useRef(false);
+  /** full → avc420 tras 0x112f → off (Progressive) si AVC420 también cae. */
+  const gfxAvcModeRef = useRef('full');
   const gfxFallbackPendingRef = useRef(false);
 
   const notifyUserClose = () => {
@@ -942,7 +934,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (_) {}
     }
     hasEverConnectedRef.current = false;
-    gfxNoAvcFallbackUsedRef.current = false;
+    gfxAvcModeRef.current = 'full';
     lastBackendReasonRef.current = null;
     clipboardFailedRef.current = false;
     clipboardUnhealthyToastShownRef.current = false;
@@ -958,24 +950,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     setDisconnectDetails(null);
     setErrorMessage('');
     setReconnectTrigger(prev => prev + 1);
-  };
-
-  const toggleH264Codec = () => {
-    const nextH264 = !isH264EnabledState;
-    setIsH264EnabledState(nextH264);
-    try {
-      window.localStorage?.setItem('NODETERM_RDP_WEBCODECS', nextH264 ? '1' : '0');
-    } catch (_) {}
-    window.__NODETERM_RDP_WEBCODECS__ = nextH264;
-    toastRef.current?.show({
-      severity: 'info',
-      summary: nextH264 ? 'Cambiando a H.264 (Vídeo)' : 'Cambiando a Progressive (Baja latencia)',
-      detail: nextH264
-        ? 'Reconectando con H.264 WebCodecs (optimizado para vídeo y movimiento fluido)...'
-        : 'Reconectando con RemoteFX Progressive / ClearCodec (máxima reactividad en Konsole/terminales)...',
-      life: 3500
-    });
-    handleReconnect();
   };
 
   const handleCloseTab = () => {
@@ -1137,12 +1111,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
     releaseSessionMediaRef.current = releaseSessionMedia;
 
-    const beginGfxNoAvcFallback = (reason) => {
-      if (isAborted() || userClosingRef.current || gfxNoAvcFallbackUsedRef.current) return;
-      gfxNoAvcFallbackUsedRef.current = true;
+    const beginGfxAvcFallback = (reason) => {
+      if (isAborted() || userClosingRef.current || gfxFallbackPendingRef.current) return;
+      const next = gfxAvcModeRef.current === 'full'
+        ? 'avc420'
+        : gfxAvcModeRef.current === 'avc420'
+          ? 'off'
+          : null;
+      if (!next) return;
+      gfxAvcModeRef.current = next;
       gfxFallbackPendingRef.current = true;
-      writeEgfxLine({ t: 'gfx-fallback', reason, mode: 'no-avc' });
-      console.warn('⚠️ [IronRDP EGFX] 0x112f → reintento sin H.264/WebCodecs (Progressive/ClearCodec)');
+      writeEgfxLine({ t: 'gfx-fallback', reason, mode: next });
+      console.warn(`⚠️ [IronRDP EGFX] 0x112f → reintento ${next === 'avc420' ? 'solo AVC420' : 'sin H.264'}`);
       setConnectionState('connecting');
       setReconnectTrigger((n) => n + 1);
     };
@@ -1161,12 +1141,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const reasonText = rawReason || (err ? extractErrorMessage(err) : '');
       if (
         !userClosingRef.current
-        && !gfxNoAvcFallbackUsedRef.current
+        && gfxAvcModeRef.current !== 'off'
         && isGraphicsSubsystemFailure(reasonText)
       ) {
         writeEgfxLine({ t: 'gfx-fail', reason: '0x112f' });
         abandonSession(sessionRef.current);
-        beginGfxNoAvcFallback('0x112f');
+        beginGfxAvcFallback('0x112f');
         return;
       }
       releaseSessionMedia();
@@ -1215,8 +1195,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
         if (isAborted()) return;
         if (typeof setEgfxAvcThinClient === 'function') {
-          // Thin-client ya no cambia caps; se deja apagado en el reintento sin AVC.
-          setEgfxAvcThinClient(gfxSessionId, !gfxNoAvcFallbackUsedRef.current);
+          setEgfxAvcThinClient(gfxSessionId, false);
         }
         if (typeof setUdpOpenCallback === 'function') {
           setUdpOpenCallback(gfxSessionId, async (destination, requestId, cookie) => {
@@ -1483,11 +1462,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           }
         } catch (_) { /* noop */ }
 
-        // AVC420/444 en H.264. WebGPU pinta la imagen; el croma 4:4:4 va por putImageData.
-        // Tras 0x112f o si isH264EnabledState === false: sin passthrough AVC → IronRDP filtra caps y usa Progressive/ClearCodec.
+        const avcMode = gfxAvcModeRef.current;
         const useWebCodecs = egfxEnabled
-          && isH264EnabledState
-          && !gfxNoAvcFallbackUsedRef.current
+          && avcMode !== 'off'
+          && isWebCodecsH264Enabled()
           && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
           && typeof applyEgfxRgba === 'function'
@@ -1559,10 +1537,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        if (egfxEnabled && gfxNoAvcFallbackUsedRef.current) {
-          writeEgfxLine({ t: 'codec', chosen: 'no-avc-fallback' });
+        if (egfxEnabled && avcMode !== 'full') {
+          writeEgfxLine({ t: 'codec', chosen: avcMode === 'avc420' ? 'avc420-only' : 'no-avc-fallback' });
           if (isRdpDebugEnabled()) {
-            console.log('ℹ️ [IronRDP EGFX] Sesión sin H.264 (fallback tras 0x112f)');
+            console.log(`ℹ️ [IronRDP EGFX] Reintento gráfico: ${avcMode}`);
           }
         }
         if (useWebCodecs) {
@@ -1595,7 +1573,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 if (isRdpDebugEnabled()) {
                   console.warn('[IronRDP WebCodecs]', err?.message || err);
                 }
-                gfxNoAvcFallbackUsedRef.current = true;
               }
             });
             // Contadores en el borde WASM→JS (antes de push): si wireChroma=0,
@@ -1615,6 +1592,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               webCodecsDecoder.push(data, surfaceId, left, top, right, bottom, rects, epoch, display);
             });
             builder.extension(avc420Webcodecs(true));
+            if (avcMode === 'avc420' && typeof avc420Only === 'function') {
+              builder.extension(avc420Only(true));
+            }
           } catch (wcErr) {
             if (isRdpDebugEnabled()) {
               console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
@@ -3370,19 +3350,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
             <span className="ironrdp-cyber-divider" />
 
-            <button
-              type="button"
-              className="ironrdp-badge-resolution clickable is-fixed"
-              title="Códec activo. Haz clic para alternar entre H.264 (Vídeo/Fluidez) y Progressive/ClearCodec (Baja latencia/Konsole)"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleH264Codec();
-              }}
+            <span
+              className="ironrdp-badge-resolution is-fixed"
+              title="Códec negociado con el servidor"
             >
               <i className={`pi ${negotiatedCodec === 'h264' ? 'pi-video' : 'pi-bolt'}`} style={{ marginRight: '5px' }}></i>
               <span>{negotiatedCodec === 'h264' ? 'EGFX · H.264' : negotiatedCodec === 'clear' ? 'EGFX · ClearCodec' : negotiatedCodec === 'progressive' ? 'EGFX · Progressive' : negotiatedCodec === 'bitmap' ? 'Bitmap' : '—'}</span>
-            </button>
+            </span>
 
             <span className="ironrdp-cyber-divider" />
 

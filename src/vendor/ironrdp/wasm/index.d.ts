@@ -4,6 +4,9 @@ export declare function acknowledgeEgfxPresented(sessionId: number, count?: numb
 /** Write one decoded AVC rectangle into the EGFX framebuffer of this session. */
 export declare function applyEgfxRgba(sessionId: number, epoch: number, surfaceId: number, left: number, top: number, right: number, bottom: number, rgba: Uint8Array): void;
 
+/** Tras 0x112f: anunciar solo V8.1 AVC420 para que KRDP siga en H.264 YUV420. */
+export declare function avc420Only(enable: boolean): Extension;
+
 /** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
 export declare function avc420Webcodecs(enable: boolean): Extension;
 

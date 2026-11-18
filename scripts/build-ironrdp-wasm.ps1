@@ -39,7 +39,7 @@ if (Test-Path $patchDir) {
   }
 }
 
-$env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS = '--cfg getrandom_backend="wasm_js"'
+$env:CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS = '--cfg getrandom_backend="wasm_js" -C target-feature=+simd128'
 $env:CARGO_BUILD_JOBS = '4'
 
 Push-Location (Join-Path $IronRdpSrc 'crates\ironrdp-web')
@@ -64,8 +64,8 @@ Copy-Item (Join-Path $IronRdpSrc 'web-client\iron-remote-desktop-rdp\dist\*') $d
 $pkgPath = Join-Path $dst 'package.json'
 $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
 $pkg.name = '@devolutions/iron-remote-desktop-rdp'
-$pkg.version = '0.7.0-nodeterm-egfx.41'
-$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX V10.7 (sin thin-client) + Soft-Sync + ACK eager + rdpsnd (sin AUDIO_PLAYBACK_DVC en EGFX)"
+$pkg.version = '0.7.0-nodeterm-egfx.52'
+$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX V10.7 (sin thin-client) + Soft-Sync + ACK eager + blits contiguos + rdpsnd (sin AUDIO_PLAYBACK_DVC en EGFX)"
 $json = ($pkg | ConvertTo-Json -Depth 8) -replace "`r`n", "`n"
 if (-not $json.EndsWith("`n")) { $json += "`n" }
 $utf8 = New-Object System.Text.UTF8Encoding $false

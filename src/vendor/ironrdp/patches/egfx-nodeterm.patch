@@ -42,7 +42,7 @@ index db347f0..94ade70 100644
  
      fn invoke_extension(&self, ext: Extension) -> Result<JsValue, Self::Error>;
 diff --git a/crates/ironrdp-egfx/src/client.rs b/crates/ironrdp-egfx/src/client.rs
-index 59eb048..12f1bb5 100644
+index 59eb048..2607f21 100644
 --- a/crates/ironrdp-egfx/src/client.rs
 +++ b/crates/ironrdp-egfx/src/client.rs
 @@ -53,7 +53,8 @@
@@ -55,7 +55,7 @@ index 59eb048..12f1bb5 100644
  
  use ironrdp_core::{Decode as _, ReadCursor, impl_as_any};
  use ironrdp_dvc::{DvcClientProcessor, DvcMessage, DvcProcessor};
-@@ -68,12 +69,146 @@ use tracing::{debug, trace, warn};
+@@ -68,12 +69,151 @@ use tracing::{debug, trace, warn};
  use crate::CHANNEL_NAME;
  use crate::compositor::{Compositor, OutputUpdate};
  use crate::decode::H264Decoder;
@@ -74,6 +74,8 @@ index 59eb048..12f1bb5 100644
 +    avc444_luma: u32,
 +    avc444_chroma: u32,
 +    progressive: u32,
++    /// Copias SurfaceToSurface. Windows las usa al mover ventanas; KRDP no.
++    s2s: u32,
 +    held: u32,
 +    errors: u32,
 +    any: u32,
@@ -94,6 +96,7 @@ index 59eb048..12f1bb5 100644
 +            avc444_luma: 0,
 +            avc444_chroma: 0,
 +            progressive: 0,
++            s2s: 0,
 +            held: 0,
 +            errors: 0,
 +            any: 0,
@@ -176,12 +179,14 @@ index 59eb048..12f1bb5 100644
 +            0
 +        };
 +        let summary = format!(
-+            r#"{{"painted":{painted},"anyCodec":{any_codec},"unclean":{},"altSign":0,"held":{},"errors":{},"cacheMiss":{},"pdus":"wts2:{},clear:{},cache:{},solid:{},avc:{},a420:{},a444l:{},a444c:{}"}}"#,
++            r#"{{"painted":{painted},"anyCodec":{any_codec},"unclean":{},"altSign":0,"held":{},"errors":{},"cacheMiss":{},"pdus":"wts2:{},s2s:{},prog:{},clear:{},cache:{},solid:{},avc:{},a420:{},a444l:{},a444c:{}"}}"#,
 +            diag.held,
 +            diag.held,
 +            diag.errors,
 +            diag.cache_miss,
 +            diag.wts2,
++            diag.s2s,
++            diag.progressive,
 +            diag.clear,
 +            diag.cache,
 +            diag.solid,
@@ -207,7 +212,7 @@ index 59eb048..12f1bb5 100644
  };
  
  /// Max capacity to keep for decompressed buffer when cleared.
-@@ -284,6 +419,38 @@ pub trait GraphicsPipelineHandler: Send {
+@@ -284,6 +424,38 @@ pub trait GraphicsPipelineHandler: Send {
      /// Called when the EGFX channel is closed
      fn on_close(&mut self) {}
  
@@ -246,7 +251,7 @@ index 59eb048..12f1bb5 100644
      // ========================================================================
      // Additional PDU handlers (server→client)
      // ========================================================================
-@@ -401,6 +568,8 @@ enum ClientState {
+@@ -401,6 +573,8 @@ enum ClientState {
  pub struct GraphicsPipelineClient {
      handler: Box<dyn GraphicsPipelineHandler>,
      h264_decoder: Option<Box<dyn H264Decoder>>,
@@ -255,7 +260,7 @@ index 59eb048..12f1bb5 100644
      /// Built on first use via [`Self::decode_clearcodec`]. `None` means no ClearCodec
      /// frame has arrived yet, not that the codec is unsupported: keeping the ~1.37 MiB
      /// V-bar and glyph cache spine (see `ClearCodecDecoder::new`) unallocated saves that
-@@ -420,8 +589,19 @@ pub struct GraphicsPipelineClient {
+@@ -420,8 +594,24 @@ pub struct GraphicsPipelineClient {
      compositor: Compositor,
      current_frame_id: Option<u32>,
      frames_queued: u32,
@@ -272,10 +277,15 @@ index 59eb048..12f1bb5 100644
 +    /// cell has received an absolute tile. The DAS math is unchanged.
 +    hold_diffs: bool,
 +    absolute_since_reset: BTreeSet<(u16, u16, u16)>,
++    /// GFX PDUs not finished in this turn. A KRDP window drag is one
++    /// WireToSurface2 with hundreds of tiles; decoding all of them before
++    /// returning to the browser freezes the mouse.
++    gfx_pending: VecDeque<GfxPdu>,
++    wts2_skip: usize,
  }
  
  impl GraphicsPipelineClient {
-@@ -435,6 +615,7 @@ impl GraphicsPipelineClient {
+@@ -435,6 +625,7 @@ impl GraphicsPipelineClient {
          Self {
              handler,
              h264_decoder,
@@ -283,7 +293,7 @@ index 59eb048..12f1bb5 100644
              clearcodec_decoder: None,
              planar_decoder: BitmapStreamDecoder::default(),
              progressive_decoder: ProgressiveDecoder::new(),
-@@ -447,9 +628,80 @@ impl GraphicsPipelineClient {
+@@ -447,11 +638,88 @@ impl GraphicsPipelineClient {
              compositor: Compositor::default(),
              current_frame_id: None,
              frames_queued: 0,
@@ -294,7 +304,13 @@ index 59eb048..12f1bb5 100644
              pending_output_reset: None,
 +            hold_diffs: false,
 +            absolute_since_reset: BTreeSet::new(),
-+        }
++            gfx_pending: VecDeque::new(),
++            wts2_skip: 0,
+         }
+     }
+ 
++    pub fn egfx_backlog(&self) -> bool {
++        !self.gfx_pending.is_empty()
 +    }
 +
 +    /// Advertise AVC420 and prefer [`GraphicsPipelineHandler::on_avc420_bitstream`].
@@ -315,7 +331,7 @@ index 59eb048..12f1bb5 100644
 +    pub fn mark_frames_presented(&mut self) {
 +        if self.advertise_avc {
 +            return;
-         }
++        }
 +        self.frames_awaiting_present = 0;
 +    }
 +
@@ -361,10 +377,20 @@ index 59eb048..12f1bb5 100644
 +            out.push(Box::new(ack) as DvcMessage);
 +        }
 +        out
-     }
- 
++    }
++
      // ========================================================================
-@@ -554,6 +806,8 @@ impl GraphicsPipelineClient {
+     // State Queries
+     // ========================================================================
+@@ -546,7 +814,6 @@ impl GraphicsPipelineClient {
+             }
+             GfxPdu::WireToSurface2(pdu) => {
+                 trace!("WireToSurface2 (progressive codec)");
+-                self.handler.on_wire_to_surface2(&pdu);
+                 self.handle_wire_to_surface2(pdu)?;
+                 Ok(vec![])
+             }
+@@ -554,6 +821,8 @@ impl GraphicsPipelineClient {
  
              // Surface operations
              GfxPdu::SolidFill(pdu) => {
@@ -373,7 +399,17 @@ index 59eb048..12f1bb5 100644
                  trace!(surface_id = pdu.surface_id, "SolidFill");
                  self.compositor
                      .solid_fill(pdu.surface_id, &pdu.fill_pixel, &pdu.rectangles);
-@@ -589,13 +843,19 @@ impl GraphicsPipelineClient {
+@@ -561,6 +830,9 @@ impl GraphicsPipelineClient {
+                 Ok(vec![])
+             }
+             GfxPdu::SurfaceToSurface(pdu) => {
++                // Windows copia la ventana ya decodificada. KRDP deja este contador en 0
++                // y manda el daño como WireToSurface2 (`wts2` / `prog`).
++                diag_with(|diag| diag.s2s = diag.s2s.saturating_add(1));
+                 trace!(
+                     src = pdu.source_surface_id,
+                     dst = pdu.destination_surface_id,
+@@ -589,13 +861,19 @@ impl GraphicsPipelineClient {
                  Ok(vec![])
              }
              GfxPdu::CacheToSurface(pdu) => {
@@ -394,7 +430,7 @@ index 59eb048..12f1bb5 100644
                  self.handler.on_cache_to_surface(&pdu);
                  Ok(vec![])
              }
-@@ -705,6 +965,12 @@ impl GraphicsPipelineClient {
+@@ -705,6 +983,12 @@ impl GraphicsPipelineClient {
          // ResetGraphics, and a ResetGraphics does not re-negotiate capabilities.
          self.current_frame_id = None;
          self.frames_queued = 0;
@@ -407,7 +443,7 @@ index 59eb048..12f1bb5 100644
  
          // Reset decoder state for new stream
          if let Some(ref mut decoder) = self.h264_decoder {
-@@ -848,8 +1114,7 @@ impl GraphicsPipelineClient {
+@@ -848,8 +1132,7 @@ impl GraphicsPipelineClient {
                  self.decode_avc420(pdu.surface_id, &pdu.destination_rectangle, &pdu.bitmap_data)?;
              }
              Codec1Type::Avc444 | Codec1Type::Avc444v2 => {
@@ -417,7 +453,7 @@ index 59eb048..12f1bb5 100644
              }
              Codec1Type::ClearCodec => {
                  self.decode_clearcodec(pdu.surface_id, &pdu.destination_rectangle, &pdu.bitmap_data)?;
-@@ -869,6 +1134,22 @@ impl GraphicsPipelineClient {
+@@ -869,28 +1152,69 @@ impl GraphicsPipelineClient {
          Ok(())
      }
  
@@ -440,7 +476,22 @@ index 59eb048..12f1bb5 100644
      /// Decode RemoteFX Progressive bitmap data, applying each decoded tile to the
      /// persistent surface before delivering the same RGBA update to the handler.
      fn handle_wire_to_surface2(&mut self, pdu: WireToSurface2Pdu) -> PduResult<()> {
-@@ -878,19 +1159,26 @@ impl GraphicsPipelineClient {
++        let (_consumed, _done) = self.paint_wts2_slice(&pdu, 0, usize::MAX)?;
++        Ok(())
++    }
++
++    /// Decode up to `max_tiles` new tile blocks, starting after `skip` blocks
++    /// already applied from this same PDU. `done` means the bitmap has no
++    /// further tile blocks.
++    fn paint_wts2_slice(
++        &mut self,
++        pdu: &WireToSurface2Pdu,
++        skip: usize,
++        max_tiles: usize,
++    ) -> PduResult<(usize, bool)> {
+         let surface = self
+             .surfaces
+             .get(&pdu.surface_id)
              .ok_or_else(|| pdu_other_err!("unknown surface in WireToSurface2"))?;
          let (surface_width, surface_height) = (surface.width, surface.height);
  
@@ -457,30 +508,35 @@ index 59eb048..12f1bb5 100644
 -                warn!(?error, "rfx progressive decode failed");
 -                pdu_other_err!("rfx progressive decode failed")
 -            })?;
-+        let tiles = match self.progressive_decoder.decode_bitmap(
++        let (tiles, visited, done) = match self.progressive_decoder.decode_bitmap_slice(
 +            pdu.surface_id,
 +            pdu.codec_context_id,
 +            surface_width,
 +            surface_height,
 +            &pdu.bitmap_data,
++            skip,
++            max_tiles,
 +        ) {
-+            Ok(tiles) => {
++            Ok(decoded) => {
 +                diag_add_errors(self.progressive_decoder.take_soft_fail_count());
-+                tiles
++                decoded
 +            }
 +            Err(_error) => {
 +                // Fatal stream/context errors: soft-fail the PDU so ClearCodec /
 +                // later progressive frames can still paint instead of killing DVC.
 +                diag_add_errors(self.progressive_decoder.take_soft_fail_count().saturating_add(1));
-+                return Ok(());
++                return Ok((0, true));
 +            }
 +        };
 +
-+        diag_add_wts2(&pdu.bitmap_data);
++        if skip == 0 {
++            self.handler.on_wire_to_surface2(pdu);
++            diag_add_wts2(&pdu.bitmap_data);
++        }
  
          for tile in tiles {
              let tile_left = tile.x_idx.saturating_mul(TILE_DIM);
-@@ -901,28 +1189,25 @@ impl GraphicsPipelineClient {
+@@ -901,28 +1225,25 @@ impl GraphicsPipelineClient {
                  continue;
              }
  
@@ -522,7 +578,7 @@ index 59eb048..12f1bb5 100644
              if tile.update_rectangles.len() == 1 && tile.update_rectangles[0] == tile_rectangle {
                  let data = if tile_width == TILE_DIM && tile_height == TILE_DIM {
                      tile.pixels
-@@ -935,7 +1220,7 @@ impl GraphicsPipelineClient {
+@@ -935,7 +1256,7 @@ impl GraphicsPipelineClient {
                          tile_height,
                      )
                  };
@@ -531,7 +587,7 @@ index 59eb048..12f1bb5 100644
                  continue;
              }
  
-@@ -951,7 +1236,7 @@ impl GraphicsPipelineClient {
+@@ -951,16 +1272,57 @@ impl GraphicsPipelineClient {
                      let source_start = (source_y + row) * source_stride + source_x * TILE_BYTES_PER_PIXEL;
                      data.extend_from_slice(&tile.pixels[source_start..source_start + row_bytes]);
                  }
@@ -540,7 +596,10 @@ index 59eb048..12f1bb5 100644
              }
          }
  
-@@ -961,6 +1246,47 @@ impl GraphicsPipelineClient {
+-        Ok(())
++        Ok((visited, done))
+     }
+ 
      fn decode_avc420(&mut self, surface_id: u16, dest_rect: &ExclusiveRectangle, bitmap_data: &[u8]) -> PduResult<()> {
          let mut cursor = ReadCursor::new(bitmap_data);
          let stream = Avc420BitmapStream::decode(&mut cursor).map_err(|e| decode_err!(e))?;
@@ -588,7 +647,7 @@ index 59eb048..12f1bb5 100644
  
          let Some(ref mut decoder) = self.h264_decoder else {
              debug!("No H.264 decoder configured, skipping AVC420 frame");
-@@ -1089,6 +1415,8 @@ impl GraphicsPipelineClient {
+@@ -1089,6 +1451,8 @@ impl GraphicsPipelineClient {
          dest_rect: &ExclusiveRectangle,
          bitmap_data: &[u8],
      ) -> PduResult<()> {
@@ -597,7 +656,7 @@ index 59eb048..12f1bb5 100644
          // MS-RDPEGFX 2.2.1.4.1: see decode_avc420 above for wire-format note.
          let dest_width = dest_rect.right - dest_rect.left;
          let dest_height = dest_rect.bottom - dest_rect.top;
-@@ -1200,11 +1528,17 @@ impl GraphicsPipelineClient {
+@@ -1200,11 +1564,17 @@ impl GraphicsPipelineClient {
  
          self.handler.on_frame_complete(frame_id);
  
@@ -619,7 +678,7 @@ index 59eb048..12f1bb5 100644
              frame_id,
              total_frames_decoded: self.total_frames_decoded,
          });
-@@ -1222,7 +1556,7 @@ impl DvcProcessor for GraphicsPipelineClient {
+@@ -1222,7 +1592,7 @@ impl DvcProcessor for GraphicsPipelineClient {
      }
  
      fn start(&mut self, _channel_id: u32) -> PduResult<Vec<DvcMessage>> {
@@ -628,7 +687,7 @@ index 59eb048..12f1bb5 100644
              self.handler.capabilities()
          } else {
              // No H.264 decoder: filter out capability sets that imply AVC support.
-@@ -1257,28 +1591,54 @@ impl DvcProcessor for GraphicsPipelineClient {
+@@ -1257,30 +1627,103 @@ impl DvcProcessor for GraphicsPipelineClient {
      }
  
      fn process(&mut self, _channel_id: u32, payload: &[u8]) -> PduResult<Vec<DvcMessage>> {
@@ -678,22 +737,73 @@ index 59eb048..12f1bb5 100644
          }
  
 -        // Process decoded PDUs
-+        // Process decoded PDUs. Soft-fail per-PDU so a single progressive/ClearCodec
-+        // glitch does not tear down the Graphics DVC (and the whole RDP session).
++        self.gfx_pending.extend(pdus);
++        self.pump_egfx(Self::tiles_per_slice())
++    }
++}
++
++impl GraphicsPipelineClient {
++    /// Teselas por vuelta al navegador. Un arrastre KRDP son cientos de teselas;
++    /// acabarlas en un solo turno congela el ratón. 24 amortigua el parseo y
++    /// deja un hueco para el mousemove.
++    pub fn tiles_per_slice() -> usize {
++        24
++    }
++
++    /// Continue a graphics payload that was too large for one turn.
++    ///
++    /// Non-tile PDUs (including EndFrame and its FrameAcknowledge) run in the
++    /// same turn as the last tiles of the bitmap, so the frame is painted and
++    /// acknowledged together.
++    pub fn pump_egfx(&mut self, tile_budget: usize) -> PduResult<Vec<DvcMessage>> {
++        let mut budget = tile_budget.max(1);
          let mut responses: Vec<DvcMessage> = Vec::new();
-         for pdu in pdus {
+-        for pdu in pdus {
 -            let pdu_responses = self.handle_pdu(pdu)?;
 -            responses.extend(pdu_responses);
-+            match self.handle_pdu(pdu) {
-+                Ok(pdu_responses) => responses.extend(pdu_responses),
++        while let Some(pdu) = self.gfx_pending.pop_front() {
++            let GfxPdu::WireToSurface2(wts2) = pdu else {
++                match self.handle_pdu(pdu) {
++                    Ok(pdu_responses) => responses.extend(pdu_responses),
++                    Err(error) => {
++                        warn!(error = %error, "skipping GFX PDU processing error");
++                    }
++                }
++                continue;
++            };
++            let pdu = wts2;
++            let skip = self.wts2_skip;
++            match self.paint_wts2_slice(&pdu, skip, budget) {
++                Ok((consumed, done)) => {
++                    if !done && consumed == 0 {
++                        warn!("progressive slice made no progress; dropping the bitmap");
++                        self.wts2_skip = 0;
++                        continue;
++                    }
++                    self.wts2_skip = skip.saturating_add(consumed);
++                    budget = budget.saturating_sub(consumed);
++                    if !done {
++                        // Las teselas ya están en el compositor. Publicarlas ahora
++                        // pintaría el canvas en tiras; EndFrame suelta el recorte entero.
++                        self.gfx_pending.push_front(GfxPdu::WireToSurface2(pdu));
++                        break;
++                    }
++                    self.wts2_skip = 0;
++                }
 +                Err(error) => {
 +                    warn!(error = %error, "skipping GFX PDU processing error");
++                    self.wts2_skip = 0;
 +                }
 +            }
++            if budget == 0 && matches!(self.gfx_pending.front(), Some(GfxPdu::WireToSurface2(_))) {
++                break;
++            }
          }
- 
+-
          Ok(responses)
-@@ -2320,7 +2680,8 @@ mod tests {
+     }
+ }
+@@ -2320,7 +2763,8 @@ mod tests {
          assert_eq!(output[1].data.len(), 8 * 10 * 4);
          assert!(output[1].data.iter().any(|&value| value != 0));
  
@@ -703,7 +813,7 @@ index 59eb048..12f1bb5 100644
          start_frame(&mut client, 3);
          wire_progressive(&mut client, shared_bitmap_data).unwrap();
          end_frame(&mut client, 3);
-@@ -2331,7 +2692,10 @@ mod tests {
+@@ -2331,7 +2775,10 @@ mod tests {
          let mut client = progressive_client();
          wire_progressive(&mut client, progressive_context_stream(true)).unwrap();
          clear(&mut client);
@@ -715,7 +825,7 @@ index 59eb048..12f1bb5 100644
      }
  
      #[test]
-@@ -2573,6 +2937,122 @@ mod tests {
+@@ -2573,6 +3020,122 @@ mod tests {
          );
      }
  
@@ -839,19 +949,23 @@ index 59eb048..12f1bb5 100644
      /// NOT relative to the destination rectangle's origin. The test above uses
      /// `dest_rect` at `(0, 0)`, where absolute and destRect-relative readings
 diff --git a/crates/ironrdp-egfx/src/compositor.rs b/crates/ironrdp-egfx/src/compositor.rs
-index ea7f600..9b74a98 100644
+index ea7f600..28e9c66 100644
 --- a/crates/ironrdp-egfx/src/compositor.rs
 +++ b/crates/ironrdp-egfx/src/compositor.rs
-@@ -16,7 +16,7 @@
+@@ -16,9 +16,10 @@
  //! [`BitmapUpdate`](crate::client::BitmapUpdate) and the session's decoded image,
  //! so a drained region is ready to blit without conversion.
  
 -use std::collections::BTreeMap;
 +use std::collections::{BTreeMap, BTreeSet};
  
- use ironrdp_pdu::geometry::ExclusiveRectangle;
+-use ironrdp_pdu::geometry::ExclusiveRectangle;
++use ironrdp_graphics::rectangle_processing::coalesce_contiguous_rects;
++use ironrdp_pdu::geometry::{ExclusiveRectangle, InclusiveRectangle};
  use tracing::debug;
-@@ -144,6 +144,10 @@ pub(crate) struct Compositor {
+ 
+ use crate::pdu::{Color, Point};
+@@ -144,6 +145,10 @@ pub(crate) struct Compositor {
      frame: Vec<DirtyRegion>,
      /// Deltas from completed frames, awaiting drain.
      ready: Vec<OutputUpdate>,
@@ -862,7 +976,7 @@ index ea7f600..9b74a98 100644
  }
  
  impl Compositor {
-@@ -162,25 +166,41 @@ impl Compositor {
+@@ -162,25 +167,41 @@ impl Compositor {
              .then_some((width, height))
      }
  
@@ -916,7 +1030,7 @@ index ea7f600..9b74a98 100644
      }
  
      /// Reserve `len` pixel bytes, or refuse if that would exceed the budget.
-@@ -418,16 +438,14 @@ impl Compositor {
+@@ -418,16 +439,14 @@ impl Compositor {
  
      /// Render a cached tile onto a surface at each destination point
      /// (`CacheToSurface`).
@@ -938,7 +1052,7 @@ index ea7f600..9b74a98 100644
          if let Some(surface) = self.surfaces.get_mut(&surface_id) {
              for point in dst_points {
                  blit_region(surface.canvas_mut(), point.x, point.y, w, h, &tile.data);
-@@ -436,6 +454,7 @@ impl Compositor {
+@@ -436,6 +455,7 @@ impl Compositor {
          for point in dst_points {
              self.record_dirty(surface_id, point.x, point.y, w, h);
          }
@@ -946,7 +1060,19 @@ index ea7f600..9b74a98 100644
      }
  
      /// Evict a cache slot (`EvictCacheEntry`).
-@@ -566,6 +585,13 @@ impl Compositor {
+@@ -455,7 +475,10 @@ impl Compositor {
+         // Released before materializing so the pixel copies can spend the budget the
+         // metadata was holding.
+         self.release(frame.len() * size_of::<DirtyRegion>());
+-        for dirty in frame {
++        // KRDP manda el daño de una ventana como una tesela de 64px por entrada.
++        // Materializar cada una reserva y copia un buffer. Las que se tocan se
++        // fusionan; un hueco no entra en el blit.
++        for dirty in coalesce_dirty_regions(&frame) {
+             self.materialize(&dirty);
+         }
+     }
+@@ -566,6 +589,13 @@ impl Compositor {
          if right <= left || bottom <= top {
              return;
          }
@@ -960,7 +1086,90 @@ index ea7f600..9b74a98 100644
          let rect = ExclusiveRectangle {
              left,
              top,
-@@ -1451,4 +1477,43 @@ mod tests {
+@@ -596,6 +626,43 @@ impl Compositor {
+     }
+ }
+ 
++/// Fusiona regiones sucias contiguas de una misma superficie.
++fn coalesce_dirty_regions(frame: &[DirtyRegion]) -> Vec<DirtyRegion> {
++    if frame.len() <= 1 {
++        return frame.to_vec();
++    }
++
++    let mut by_surface: BTreeMap<u16, Vec<InclusiveRectangle>> = BTreeMap::new();
++    for dirty in frame {
++        let rect = &dirty.rect;
++        if rect.right <= rect.left || rect.bottom <= rect.top {
++            continue;
++        }
++        by_surface.entry(dirty.surface_id).or_default().push(InclusiveRectangle {
++            left: rect.left,
++            top: rect.top,
++            right: rect.right - 1,
++            bottom: rect.bottom - 1,
++        });
++    }
++
++    let mut coalesced = Vec::new();
++    for (surface_id, rects) in by_surface {
++        for rect in coalesce_contiguous_rects(&rects) {
++            coalesced.push(DirtyRegion {
++                surface_id,
++                rect: ExclusiveRectangle {
++                    left: rect.left,
++                    top: rect.top,
++                    right: rect.right.saturating_add(1),
++                    bottom: rect.bottom.saturating_add(1),
++                },
++            });
++        }
++    }
++    coalesced
++}
++
+ /// Whether `outer` fully contains `inner`, both in the exclusive convention.
+ fn covers(outer: &ExclusiveRectangle, inner: &ExclusiveRectangle) -> bool {
+     outer.left <= inner.left && outer.top <= inner.top && outer.right >= inner.right && outer.bottom >= inner.bottom
+@@ -741,6 +808,38 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn krdp_tile_grid_becomes_one_dirty_region() {
++        let mut frame = Vec::new();
++        for y in 0..2u16 {
++            for x in 0..2u16 {
++                frame.push(DirtyRegion {
++                    surface_id: 7,
++                    rect: rect(x * 64, y * 64, (x + 1) * 64, (y + 1) * 64),
++                });
++            }
++        }
++        let merged = coalesce_dirty_regions(&frame);
++        assert_eq!(merged.len(), 1);
++        assert_eq!(merged[0].rect, rect(0, 0, 128, 128));
++    }
++
++    #[test]
++    fn dirty_gap_is_not_filled() {
++        let frame = vec![
++            DirtyRegion {
++                surface_id: 1,
++                rect: rect(0, 0, 64, 64),
++            },
++            DirtyRegion {
++                surface_id: 1,
++                rect: rect(128, 0, 192, 64),
++            },
++        ];
++        let merged = coalesce_dirty_regions(&frame);
++        assert_eq!(merged.len(), 2);
++    }
++
+     /// A mapped surface filled with a solid color drains one output update, in
+     /// output coordinates, with the expected pixels.
+     #[test]
+@@ -1451,4 +1550,43 @@ mod tests {
          assert!(c.drain_output().is_empty(), "pre-reset deltas must not be drainable");
          assert_eq!(c.allocated_bytes, 0);
      }
@@ -1004,8 +1213,34 @@ index ea7f600..9b74a98 100644
 +        assert_eq!(&updates[0].data[0..4], &[0x30, 0x20, 0x10, 0xFF]);
 +    }
  }
+diff --git a/crates/ironrdp-futures/src/lib.rs b/crates/ironrdp-futures/src/lib.rs
+index 6739507..e6aef95 100644
+--- a/crates/ironrdp-futures/src/lib.rs
++++ b/crates/ironrdp-futures/src/lib.rs
+@@ -119,11 +119,16 @@ where
+         use futures_util::io::AsyncReadExt as _;
+ 
+         Box::pin(async {
+-            // NOTE(perf): tokio implementation is more efficient
+-            let mut read_bytes = [0u8; 1024];
+-            let len = self.inner.read(&mut read_bytes[..]).await?;
+-            buf.extend_from_slice(&read_bytes[..len]);
+-
++            // Un frame Progressive de KRDP son cientos de KiB. Leer de 1 KiB
++            // cede el turno en cada trozo y el puntero espera al socket.
++            // El trozo vive aparte: `select` puede cancelar este read, y alargar
++            // `buf` antes del await dejaba ceros que `find_size` leía como fast-path.
++            const CHUNK: usize = 64 * 1024;
++            let mut chunk = vec![0u8; CHUNK];
++            let len = self.inner.read(&mut chunk).await?;
++            if len > 0 {
++                buf.extend_from_slice(&chunk[..len]);
++            }
+             Ok(len)
+         })
+     }
 diff --git a/crates/ironrdp-graphics/src/progressive.rs b/crates/ironrdp-graphics/src/progressive.rs
-index 5ea16f3..b2018b4 100644
+index 5ea16f3..e6c16d6 100644
 --- a/crates/ironrdp-graphics/src/progressive.rs
 +++ b/crates/ironrdp-graphics/src/progressive.rs
 @@ -1120,6 +1120,13 @@ impl SurfaceTiles {
@@ -1097,24 +1332,80 @@ index 5ea16f3..b2018b4 100644
      /// Start an RDPGFX frame, resetting the set of tiles available to REGION blocks.
      pub fn begin_frame(&mut self) {
          self.frame_tiles.clear();
-@@ -1405,6 +1456,7 @@ impl ProgressiveDecoder {
+@@ -1335,6 +1386,33 @@ impl ProgressiveDecoder {
+         surface_height: u16,
+         bitmap_data: &[u8],
+     ) -> Result<Vec<DecodedTile>, ProgressiveDecodeError> {
++        self.decode_bitmap_slice(
++            surface_id,
++            codec_context_id,
++            surface_width,
++            surface_height,
++            bitmap_data,
++            0,
++            usize::MAX,
++        )
++        .map(|(tiles, _, _)| tiles)
++    }
++
++    /// Decode at most `max_tiles` tile blocks, skipping `skip_tiles` already applied.
++    ///
++    /// `visited` is how many tile blocks this call decoded. `done` is false when the
++    /// stream still has tile blocks after the budget. A later call with `skip_tiles`
++    /// equal to the sum of `visited` continues the same bitmap without re-decoding.
++    pub fn decode_bitmap_slice(
++        &mut self,
++        surface_id: u16,
++        codec_context_id: u32,
++        surface_width: u16,
++        surface_height: u16,
++        bitmap_data: &[u8],
++        skip_tiles: usize,
++        max_tiles: usize,
++    ) -> Result<(Vec<DecodedTile>, usize, bool), ProgressiveDecodeError> {
+         use ironrdp_pdu::codecs::rfx::progressive::{ProgressiveBlock, decode_progressive_stream};
+ 
+         let blocks = decode_progressive_stream(bitmap_data)?;
+@@ -1405,6 +1483,10 @@ impl ProgressiveDecoder {
  
          let mut decoded_tiles = Vec::new();
          let mut region_clipping_work = 0;
 +        let mut soft_fails = 0u32;
++        let mut skipped = 0usize;
++        let mut visited = 0usize;
++        let mut hit_limit = false;
  
          // Process REGION blocks only inside the first FRAME_BEGIN/FRAME_END
          // pair in this bitmap stream. Codec state persists across RDPGFX
-@@ -1428,7 +1480,7 @@ impl ProgressiveDecoder {
+@@ -1412,6 +1494,9 @@ impl ProgressiveDecoder {
+         let mut in_frame = false;
+         let mut frame_ended = false;
+         for block in &blocks {
++            if hit_limit {
++                break;
++            }
+             let region = match block {
+                 ProgressiveBlock::FrameBegin(_) if !frame_ended => {
+                     in_frame = true;
+@@ -1428,7 +1513,16 @@ impl ProgressiveDecoder {
  
              let mut region_tiles = BTreeMap::new();
              for tile_block in &region.tiles {
 -                let tiles = decode_tile_block(
++                if skipped < skip_tiles {
++                    skipped += 1;
++                    continue;
++                }
++                if visited >= max_tiles {
++                    hit_limit = true;
++                    break;
++                }
++                visited += 1;
 +                match decode_tile_block(
                      surface_id,
                      &mut context.surface,
                      references,
-@@ -1436,11 +1488,19 @@ impl ProgressiveDecoder {
+@@ -1436,11 +1530,19 @@ impl ProgressiveDecoder {
                      &region.quant_vals,
                      &region.quant_prog_vals,
                      use_reduce_extrapolate,
@@ -1139,7 +1430,7 @@ index 5ea16f3..b2018b4 100644
                  }
              }
  
-@@ -1464,55 +1524,23 @@ impl ProgressiveDecoder {
+@@ -1464,55 +1566,23 @@ impl ProgressiveDecoder {
                  }
              }
  
@@ -1209,15 +1500,17 @@ index 5ea16f3..b2018b4 100644
                  decoded_tiles.push(tile);
              }
          }
-@@ -1521,6 +1549,7 @@ impl ProgressiveDecoder {
+@@ -1521,7 +1591,8 @@ impl ProgressiveDecoder {
              self.frame_tiles.clear();
          }
  
+-        Ok(decoded_tiles)
 +        self.soft_fail_count = self.soft_fail_count.saturating_add(soft_fails);
-         Ok(decoded_tiles)
++        Ok((decoded_tiles, visited, !hit_limit))
      }
  
-@@ -1657,6 +1686,7 @@ fn decode_tile_block(
+     /// Delete a codec context, freeing its progressive tile state.
+@@ -1657,6 +1728,7 @@ fn decode_tile_block(
                  y_idx,
                  pixels,
                  update_rectangles: Vec::new(),
@@ -1225,7 +1518,7 @@ index 5ea16f3..b2018b4 100644
              }])
          }
  
-@@ -1716,6 +1746,7 @@ fn decode_tile_block(
+@@ -1716,6 +1788,7 @@ fn decode_tile_block(
                  y_idx,
                  pixels,
                  update_rectangles: Vec::new(),
@@ -1233,7 +1526,7 @@ index 5ea16f3..b2018b4 100644
              }])
          }
  
-@@ -1750,6 +1781,7 @@ fn decode_tile_block(
+@@ -1750,6 +1823,7 @@ fn decode_tile_block(
                  y_idx,
                  pixels,
                  update_rectangles: Vec::new(),
@@ -1241,7 +1534,7 @@ index 5ea16f3..b2018b4 100644
              }])
          }
      }
-@@ -2322,18 +2354,17 @@ mod tests {
+@@ -2322,18 +2396,17 @@ mod tests {
                  .is_ok()
          );
  
@@ -1266,7 +1559,7 @@ index 5ea16f3..b2018b4 100644
      }
  
      #[test]
-@@ -2403,10 +2434,12 @@ mod tests {
+@@ -2403,10 +2476,12 @@ mod tests {
              ProgressiveBlock::FrameEnd(ProgressiveFrameEndPdu),
          ])
          .unwrap();
@@ -1283,7 +1576,7 @@ index 5ea16f3..b2018b4 100644
      }
  
      #[test]
-@@ -3776,16 +3809,18 @@ mod tests {
+@@ -3776,16 +3851,18 @@ mod tests {
  
          decoder.delete_surface(1);
          assert!(!decoder.references.contains_key(&(1, 0, 0)));
@@ -1307,7 +1600,7 @@ index 5ea16f3..b2018b4 100644
      }
  
      #[test]
-@@ -3842,16 +3877,18 @@ mod tests {
+@@ -3842,16 +3919,18 @@ mod tests {
      fn difference_tile_requires_a_retained_reference() {
          let mut decoder = ProgressiveDecoder::new();
  
@@ -1331,8 +1624,108 @@ index 5ea16f3..b2018b4 100644
      }
  
      #[test]
+@@ -3950,4 +4029,99 @@ mod tests {
+             }
+         }
+     }
++
++    #[test]
++    fn sliced_decode_matches_the_full_bitmap() {
++        use ironrdp_pdu::codecs::rfx::RfxRectangle;
++        use ironrdp_pdu::codecs::rfx::progressive::{
++            ProgressiveBlock, ProgressiveContextPdu, ProgressiveFrameBeginPdu, ProgressiveFrameEndPdu,
++            ProgressiveRegion, ProgressiveSyncPdu, ProgressiveTile, TileSimple, encode_progressive_stream,
++        };
++
++        let y0 = encode_full_quality_component(40);
++        let cb0 = encode_full_quality_component(-8);
++        let cr0 = encode_full_quality_component(12);
++        let y1 = encode_full_quality_component(18);
++        let cb1 = encode_full_quality_component(6);
++        let cr1 = encode_full_quality_component(-4);
++        let stream = encode_progressive_stream(&[
++            ProgressiveBlock::Sync(ProgressiveSyncPdu),
++            ProgressiveBlock::Context(ProgressiveContextPdu {
++                context_id: 0,
++                tile_size: 0x0040,
++                flags: 0,
++            }),
++            ProgressiveBlock::FrameBegin(ProgressiveFrameBeginPdu {
++                frame_index: 0,
++                region_count: 1,
++            }),
++            ProgressiveBlock::Region(ProgressiveRegion {
++                tile_size: 0x40,
++                rects: vec![RfxRectangle {
++                    x: 0,
++                    y: 0,
++                    width: 128,
++                    height: 64,
++                }],
++                quant_vals: vec![ComponentCodecQuant::LOSSLESS],
++                quant_prog_vals: vec![],
++                flags: 0,
++                tiles: vec![
++                    ProgressiveTile::Simple(TileSimple {
++                        quant_idx_y: 0,
++                        quant_idx_cb: 0,
++                        quant_idx_cr: 0,
++                        x_idx: 0,
++                        y_idx: 0,
++                        flags: 0,
++                        y_data: &y0,
++                        cb_data: &cb0,
++                        cr_data: &cr0,
++                        tail_data: &[],
++                    }),
++                    ProgressiveTile::Simple(TileSimple {
++                        quant_idx_y: 0,
++                        quant_idx_cb: 0,
++                        quant_idx_cr: 0,
++                        x_idx: 1,
++                        y_idx: 0,
++                        flags: 0,
++                        y_data: &y1,
++                        cb_data: &cb1,
++                        cr_data: &cr1,
++                        tail_data: &[],
++                    }),
++                ],
++            }),
++            ProgressiveBlock::FrameEnd(ProgressiveFrameEndPdu),
++        ])
++        .expect("two-tile stream");
++
++        let mut once = ProgressiveDecoder::new();
++        once.begin_frame();
++        let all = once.decode_bitmap(1, 0, 128, 64, &stream).expect("full decode");
++        once.end_frame();
++
++        let mut sliced = ProgressiveDecoder::new();
++        sliced.begin_frame();
++        let (first, visited, done) = sliced
++            .decode_bitmap_slice(1, 0, 128, 64, &stream, 0, 1)
++            .expect("first slice");
++        assert_eq!(visited, 1);
++        assert!(!done);
++        let (second, visited, done) = sliced
++            .decode_bitmap_slice(1, 0, 128, 64, &stream, 1, 1)
++            .expect("second slice");
++        assert_eq!(visited, 1);
++        assert!(done);
++        sliced.end_frame();
++
++        assert_eq!(first.len(), 1);
++        assert_eq!(second.len(), 1);
++        assert_eq!(all.len(), 2);
++        assert_eq!(first[0].pixels, all[0].pixels);
++        assert_eq!(second[0].pixels, all[1].pixels);
++        assert_eq!(first[0].x_idx, 0);
++        assert_eq!(second[0].x_idx, 1);
++    }
+ }
 diff --git a/crates/ironrdp-graphics/src/rectangle_processing.rs b/crates/ironrdp-graphics/src/rectangle_processing.rs
-index eaffb39..9ddc935 100644
+index eaffb39..db979f0 100644
 --- a/crates/ironrdp-graphics/src/rectangle_processing.rs
 +++ b/crates/ironrdp-graphics/src/rectangle_processing.rs
 @@ -71,7 +71,7 @@ impl Region {
@@ -1344,6 +1737,349 @@ index eaffb39..9ddc935 100644
                      .filter_map(|r| r.intersect(rectangle))
                      .collect::<Vec<_>>();
                  let extents = InclusiveRectangle::union_all(rectangles.as_slice());
+@@ -398,10 +398,61 @@ fn bands_internals_equal(first_band: &[InclusiveRectangle], second_band: &[Inclu
+     true
+ }
+ 
++/// Fusiona rectángulos que se tocan o se solapan, sin rellenar huecos.
++///
++/// Una rejilla sólida de teselas (el daño de KRDP al mover una ventana) pasa a
++/// un solo blit. Dos teselas separadas por un hueco siguen siendo dos blits:
++/// el bounding box pintaría de fondo lo que este frame no actualizó.
++#[must_use]
++pub fn coalesce_contiguous_rects(rects: &[InclusiveRectangle]) -> Vec<InclusiveRectangle> {
++    let mut pending: Vec<InclusiveRectangle> = rects
++        .iter()
++        .cloned()
++        .filter(|rect| rect.left <= rect.right && rect.top <= rect.bottom)
++        .collect();
++    if pending.len() <= 1 {
++        return pending;
++    }
++
++    pending.sort_by(|a, b| a.top.cmp(&b.top).then(a.bottom.cmp(&b.bottom)).then(a.left.cmp(&b.left)));
++    pending = merge_aligned_spans(pending, true);
++
++    pending.sort_by(|a, b| a.left.cmp(&b.left).then(a.right.cmp(&b.right)).then(a.top.cmp(&b.top)));
++    pending = merge_aligned_spans(pending, false);
++
++    pending.sort_by(|a, b| a.top.cmp(&b.top).then(a.left.cmp(&b.left)));
++    pending
++}
++
++fn merge_aligned_spans(rects: Vec<InclusiveRectangle>, horizontal: bool) -> Vec<InclusiveRectangle> {
++    let mut merged: Vec<InclusiveRectangle> = Vec::with_capacity(rects.len());
++    for rect in rects {
++        if let Some(last) = merged.last_mut() {
++            let aligned = if horizontal {
++                last.top == rect.top && last.bottom == rect.bottom && last.right.saturating_add(1) >= rect.left
++            } else {
++                last.left == rect.left && last.right == rect.right && last.bottom.saturating_add(1) >= rect.top
++            };
++            if aligned {
++                if horizontal {
++                    last.right = max(last.right, rect.right);
++                } else {
++                    last.bottom = max(last.bottom, rect.bottom);
++                }
++                continue;
++            }
++        }
++        merged.push(rect);
++    }
++    merged
++}
++
+ #[cfg(test)]
+ mod tests {
+     use std::sync::LazyLock;
+ 
++    use ironrdp_pdu::geometry::Rectangle as _;
++
+     use super::*;
+ 
+     static REGION_FOR_RECTANGLES_INTERSECTION: LazyLock<Region> = LazyLock::new(|| Region {
+@@ -1633,4 +1684,66 @@ mod tests {
+         let actual_region = region.intersect_rectangle(&input_rectangle);
+         assert_eq!(expected_region, actual_region);
+     }
++
++    fn tile(x: u16, y: u16) -> InclusiveRectangle {
++        let left = x.saturating_mul(64);
++        let top = y.saturating_mul(64);
++        InclusiveRectangle {
++            left,
++            top,
++            right: left + 63,
++            bottom: top + 63,
++        }
++    }
++
++    #[test]
++    fn krdp_window_grid_coalesces_to_one_blit() {
++        // KRDP reencoda el rectángulo de daño como teselas 64x64 contiguas, sin SurfaceToSurface.
++        let mut tiles = Vec::new();
++        for y in 0..10 {
++            for x in 0..13 {
++                tiles.push(tile(x, y));
++            }
++        }
++        let blits = coalesce_contiguous_rects(&tiles);
++        assert_eq!(blits.len(), 1);
++        assert_eq!(
++            blits[0],
++            InclusiveRectangle {
++                left: 0,
++                top: 0,
++                right: 13 * 64 - 1,
++                bottom: 10 * 64 - 1,
++            }
++        );
++    }
++
++    #[test]
++    fn windows_uncovered_strip_stays_one_blit() {
++        // Windows mueve la ventana con SurfaceToSurface; lo nuevo es una tira estrecha.
++        let strip: Vec<_> = (0..8).map(|y| tile(0, y)).collect();
++        let blits = coalesce_contiguous_rects(&strip);
++        assert_eq!(blits.len(), 1);
++        assert_eq!(blits[0].width(), 64);
++        assert_eq!(blits[0].height(), 8 * 64);
++    }
++
++    #[test]
++    fn gap_between_tiles_is_not_filled() {
++        let blits = coalesce_contiguous_rects(&[tile(0, 0), tile(2, 0)]);
++        assert_eq!(blits.len(), 2);
++        assert!(blits.iter().all(|rect| rect.width() == 64));
++        assert!(blits.iter().all(|rect| rect.right < 64 || rect.left >= 128));
++    }
++
++    #[test]
++    fn l_shape_does_not_become_the_bounding_box() {
++        let blits = coalesce_contiguous_rects(&[tile(0, 0), tile(1, 0), tile(2, 0), tile(0, 1)]);
++        assert!(blits.len() > 1, "un bounding box rellenaría el hueco de la L");
++        let area: u32 = blits
++            .iter()
++            .map(|rect| u32::from(rect.width()) * u32::from(rect.height()))
++            .sum();
++        assert_eq!(area, 4 * 64 * 64);
++    }
+ }
+diff --git a/crates/ironrdp-graphics/src/rlgr.rs b/crates/ironrdp-graphics/src/rlgr.rs
+index c3b734d..26e1774 100644
+--- a/crates/ironrdp-graphics/src/rlgr.rs
++++ b/crates/ironrdp-graphics/src/rlgr.rs
+@@ -6,8 +6,6 @@ use bitvec::prelude::*;
+ use ironrdp_pdu::codecs::rfx::EntropyAlgorithm;
+ use yuv::YuvError;
+ 
+-use crate::utils::Bits;
+-
+ const KP_MAX: u32 = 80;
+ const LS_GR: u32 = 3;
+ const UP_GR: u32 = 4;
+@@ -26,16 +24,6 @@ macro_rules! write_byte {
+     };
+ }
+ 
+-macro_rules! try_split_bits {
+-    ($bits:ident, $n:expr) => {
+-        if $bits.len() < $n {
+-            break;
+-        } else {
+-            $bits.split_to($n)
+-        }
+-    };
+-}
+-
+ struct BitStream<'a> {
+     bits: &'a mut BitSlice<u8, Msb0>,
+     idx: usize,
+@@ -252,6 +240,73 @@ fn code_gr(bits: &mut BitStream<'_>, krp: &mut u32, val: u32) {
+     }
+ }
+ 
++/// MSB-first cursor. Flat tiles (a moved or maximized window) are long zero
++/// runs; those skip a whole byte instead of walking `bitvec` one bit at a time.
++struct BitCursor<'a> {
++    data: &'a [u8],
++    pos: usize,
++}
++
++impl<'a> BitCursor<'a> {
++    fn new(data: &'a [u8]) -> Self {
++        Self { data, pos: 0 }
++    }
++
++    fn remaining(&self) -> usize {
++        self.data.len().saturating_mul(8).saturating_sub(self.pos)
++    }
++
++    fn read_bits(&mut self, n: usize) -> Option<u32> {
++        if n > 32 || self.remaining() < n {
++            return None;
++        }
++        if n == 0 {
++            return Some(0);
++        }
++        let mut value = 0u32;
++        let mut left = n;
++        while left > 0 {
++            let byte_index = self.pos / 8;
++            let bit_in_byte = self.pos % 8;
++            let take = left.min(8 - bit_in_byte);
++            let shift = 8 - bit_in_byte - take;
++            let mask = ((1u32 << take) - 1) << shift;
++            let bits = (u32::from(self.data[byte_index]) & mask) >> shift;
++            value = (value << take) | bits;
++            self.pos += take;
++            left -= take;
++        }
++        Some(value)
++    }
++
++    /// Count and consume a leading run of `ones` or zeros. Stops before the
++    /// first bit that does not match, same as `BitSlice::leading_ones/zeros`
++    /// followed by `split_to`.
++    fn count_leading(&mut self, ones: bool) -> usize {
++        let mut count = 0usize;
++        let total = self.data.len().saturating_mul(8);
++        while self.pos < total {
++            let bit_in_byte = self.pos % 8;
++            if bit_in_byte == 0 {
++                let byte = self.data[self.pos / 8];
++                if (ones && byte == 0xFF) || (!ones && byte == 0) {
++                    self.pos += 8;
++                    count += 8;
++                    continue;
++                }
++            }
++            let bit = (self.data[self.pos / 8] >> (7 - bit_in_byte)) & 1;
++            let matches = if ones { bit == 1 } else { bit == 0 };
++            if !matches {
++                break;
++            }
++            self.pos += 1;
++            count += 1;
++        }
++        count
++    }
++}
++
+ pub fn decode(mode: EntropyAlgorithm, tile: &[u8], mut output: &mut [i16]) -> Result<(), RlgrError> {
+     #![expect(
+         clippy::as_conversions,
+@@ -268,38 +323,46 @@ pub fn decode(mode: EntropyAlgorithm, tile: &[u8], mut output: &mut [i16]) -> Re
+     let mut kp: u32 = k << LS_GR;
+     let mut krp: u32 = kr << LS_GR;
+ 
+-    let mut bits = Bits::new(BitSlice::from_slice(tile));
++    let mut bits = BitCursor::new(tile);
+ 
+-    while !bits.is_empty() && !output.is_empty() {
++    while bits.remaining() > 0 && !output.is_empty() {
+         match CompressionMode::from(k) {
+             CompressionMode::RunLength => {
+-                let number_of_zeros = truncate_leading_value(&mut bits, false);
+-                try_split_bits!(bits, 1);
+-                let run = count_run(number_of_zeros, &mut k, &mut kp) + load_be_u32(try_split_bits!(bits, k as usize));
+-
+-                let sign_bit = try_split_bits!(bits, 1).load_be::<u8>();
+-
+-                let number_of_ones = truncate_leading_value(&mut bits, true);
+-                try_split_bits!(bits, 1);
+-
+-                let code_remainder = load_be_u32(try_split_bits!(bits, kr as usize)) + ((number_of_ones as u32) << kr);
++                let number_of_zeros = bits.count_leading(false);
++                if bits.read_bits(1).is_none() {
++                    break;
++                }
++                // `count_run` updates `k` before the k-bit remainder is read.
++                let run_base = count_run(number_of_zeros, &mut k, &mut kp);
++                let Some(k_bits) = bits.read_bits(k as usize) else { break };
++                let run = run_base + k_bits;
++
++                let Some(sign_bit) = bits.read_bits(1) else { break };
++                let number_of_ones = bits.count_leading(true);
++                if bits.read_bits(1).is_none() {
++                    break;
++                }
++                let Some(kr_bits) = bits.read_bits(kr as usize) else { break };
++                let code_remainder = kr_bits + ((number_of_ones as u32) << kr);
+ 
+                 update_parameters_according_to_number_of_ones(number_of_ones, &mut kr, &mut krp);
+                 kp = kp.saturating_sub(DN_GR);
+                 k = kp >> LS_GR;
+ 
+-                let magnitude = compute_rl_magnitude(sign_bit, code_remainder)?;
++                let magnitude = compute_rl_magnitude(sign_bit as u8, code_remainder)?;
+ 
+                 let size = min(run as usize, output.len());
+-                fill(&mut output[..size], 0);
++                output[..size].fill(0);
+                 output = &mut output[size..];
+                 write_byte!(output, magnitude);
+             }
+             CompressionMode::GolombRice => {
+-                let number_of_ones = truncate_leading_value(&mut bits, true);
+-                try_split_bits!(bits, 1);
+-
+-                let code_remainder = load_be_u32(try_split_bits!(bits, kr as usize)) + ((number_of_ones as u32) << kr);
++                let number_of_ones = bits.count_leading(true);
++                if bits.read_bits(1).is_none() {
++                    break;
++                }
++                let Some(kr_bits) = bits.read_bits(kr as usize) else { break };
++                let code_remainder = kr_bits + ((number_of_ones as u32) << kr);
+ 
+                 update_parameters_according_to_number_of_ones(number_of_ones, &mut kr, &mut krp);
+ 
+@@ -310,8 +373,7 @@ pub fn decode(mode: EntropyAlgorithm, tile: &[u8], mut output: &mut [i16]) -> Re
+                     }
+                     EntropyAlgorithm::Rlgr3 => {
+                         let n_index = compute_n_index(code_remainder);
+-
+-                        let val1 = load_be_u32(try_split_bits!(bits, n_index));
++                        let Some(val1) = bits.read_bits(n_index) else { break };
+                         let val2 = code_remainder - val1;
+                         if val1 != 0 && val2 != 0 {
+                             kp = kp.saturating_sub(2 * DQ_GR);
+@@ -332,33 +394,11 @@ pub fn decode(mode: EntropyAlgorithm, tile: &[u8], mut output: &mut [i16]) -> Re
+         }
+     }
+ 
+-    // Fill remaining buffer with zeros.
+-    fill(output, 0);
++    output.fill(0);
+ 
+     Ok(())
+ }
+ 
+-fn fill(buffer: &mut [i16], value: i16) {
+-    for v in buffer {
+-        *v = value;
+-    }
+-}
+-
+-fn load_be_u32(s: &BitSlice<u8, Msb0>) -> u32 {
+-    if s.is_empty() { 0 } else { s.load_be::<u32>() }
+-}
+-
+-// Returns number of truncated bits
+-fn truncate_leading_value(bits: &mut Bits<'_>, value: bool) -> usize {
+-    let leading_values = if value {
+-        bits.leading_ones()
+-    } else {
+-        bits.leading_zeros()
+-    };
+-    bits.split_to(leading_values);
+-    leading_values
+-}
+-
+ fn count_run(number_of_zeros: usize, k: &mut u32, kp: &mut u32) -> u32 {
+     core::iter::repeat_with(|| {
+         let run = 1 << *k;
 diff --git a/crates/ironrdp-graphics/src/srl.rs b/crates/ironrdp-graphics/src/srl.rs
 index 9503dc7..a2d2a77 100644
 --- a/crates/ironrdp-graphics/src/srl.rs
@@ -1555,7 +2291,7 @@ index 107c03b..59bb1a7 100644
          codecs.push(Codec {
              id: CODEC_ID_REMOTEFX.0,
 diff --git a/crates/ironrdp-session/src/active_stage.rs b/crates/ironrdp-session/src/active_stage.rs
-index 050111d..dea3071 100644
+index 050111d..6eb5025 100644
 --- a/crates/ironrdp-session/src/active_stage.rs
 +++ b/crates/ironrdp-session/src/active_stage.rs
 @@ -234,7 +234,7 @@ impl ActiveStage {
@@ -1579,7 +2315,7 @@ index 050111d..dea3071 100644
          let (output_reset, graphics_updates) = self
              .get_dvc_mut::<GraphicsPipelineClient>()
              .map(|mut gfx| {
-@@ -289,13 +290,13 @@ impl ActiveStage {
+@@ -289,13 +290,58 @@ impl ActiveStage {
              })
              .unwrap_or_default();
          if let Some((width, height)) = output_reset {
@@ -1594,10 +2330,55 @@ index 050111d..dea3071 100644
 -        Ok(region)
 +        self.damage_regions.extend(damage_regions.iter().cloned());
 +        Ok(damage_regions)
++    }
++
++    /// Quedan teselas de un bitmap que no cupieron en el turno anterior.
++    pub fn egfx_backlog(&mut self) -> bool {
++        self.get_dvc_mut::<GraphicsPipelineClient>()
++            .is_some_and(|gfx| gfx.processor().egfx_backlog())
++    }
++
++    /// Decodifica otra tanda del bitmap en curso y, si cierra el frame, el ACK.
++    ///
++    /// No espera otro PDU: el resto del bitmap ya está en la cola del cliente.
++    pub fn resume_pending_graphics(&mut self, image: &mut DecodedImage) -> SessionResult<Vec<ActiveStageOutput>> {
++        let encoded = {
++            let Some(mut gfx) = self.get_dvc_mut::<GraphicsPipelineClient>() else {
++                return Ok(Vec::new());
++            };
++            if !gfx.processor().egfx_backlog() {
++                return Ok(Vec::new());
++            }
++            let channel_id = gfx.channel_id();
++            let messages = gfx
++                .processor_mut()
++                .pump_egfx(GraphicsPipelineClient::tiles_per_slice())
++                .map_err(SessionError::pdu)?;
++            if messages.is_empty() {
++                None
++            } else {
++                Some(
++                    ironrdp_dvc::encode_dvc_messages(channel_id, messages, ironrdp_svc::ChannelFlags::empty())
++                        .map_err(SessionError::encode)?,
++                )
++            }
++        };
++        let mut stage_outputs = Vec::new();
++        if let Some(messages) = encoded {
++            let frame = self.encode_dvc_messages(messages)?;
++            if !frame.is_empty() {
++                stage_outputs.push(ActiveStageOutput::ResponseFrame(frame));
++            }
++        }
++        for region in self.drain_graphics_pipeline(image)? {
++            stage_outputs.push(ActiveStageOutput::GraphicsUpdate(region));
++        }
++        self.widen_to_full_refresh(image, &mut stage_outputs);
++        Ok(stage_outputs)
      }
  
      /// After a graphics output reset, widens the first graphics update to the whole image so
-@@ -590,7 +591,7 @@ impl ActiveStage {
+@@ -590,7 +636,7 @@ impl ActiveStage {
              .process_tunnel(tunnel_type, payload)
              .map_err(SessionError::pdu)?;
          let mut stage_outputs = Vec::new();
@@ -1723,7 +2504,7 @@ index 2322b1f..aaec9c6 100644
 +    assert!(decoder.stats().last_error.is_some());
  }
 diff --git a/crates/ironrdp-web/Cargo.toml b/crates/ironrdp-web/Cargo.toml
-index c964d7c..8c49622 100644
+index c964d7c..541d2cf 100644
 --- a/crates/ironrdp-web/Cargo.toml
 +++ b/crates/ironrdp-web/Cargo.toml
 @@ -39,6 +39,7 @@ ironrdp = { path = "../ironrdp", features = [
@@ -1734,6 +2515,16 @@ index c964d7c..8c49622 100644
  ironrdp-cliprdr-format.path = "../ironrdp-cliprdr-format"
  ironrdp-futures.path = "../ironrdp-futures"
  ironrdp-pdu.path = "../ironrdp-pdu"
+@@ -56,6 +57,9 @@ web-sys = { version = "0.3", features = [
+     "CanvasRenderingContext2d",
+     "HtmlCanvasElement",
+     "ImageData",
++    "MessageChannel",
++    "MessageEvent",
++    "MessagePort",
+     "Navigator",
+     "Performance",
+     "Window",
 diff --git a/crates/ironrdp-web/src/canvas.rs b/crates/ironrdp-web/src/canvas.rs
 index 30ba5be..65a5a4d 100644
 --- a/crates/ironrdp-web/src/canvas.rs
@@ -1778,7 +2569,7 @@ index 2df63ef..2c901ea 100644
  }
 +
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..ded719f 100644
+index a47bd3d..879cf49 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -1,4 +1,5 @@
@@ -1787,7 +2578,7 @@ index a47bd3d..ded719f 100644
  use core::net::{Ipv4Addr, SocketAddrV4};
  use core::num::NonZeroU32;
  use core::time::Duration;
-@@ -21,21 +22,26 @@ use ironrdp::connector::connection_activation::ConnectionActivationState;
+@@ -21,21 +22,27 @@ use ironrdp::connector::connection_activation::ConnectionActivationState;
  use ironrdp::connector::credssp::KerberosConfig;
  use ironrdp::connector::{self, ClientConnector, Credentials};
  use ironrdp::displaycontrol::client::DisplayControlClient;
@@ -1795,6 +2586,7 @@ index a47bd3d..ded719f 100644
 +use ironrdp::dvc::{DrdynvcClient, DvcClientProcessor, DvcEncode, DvcMessage, DvcProcessor};
 +use ironrdp::svc::{SvcMessage, SvcProcessor};
  use ironrdp::graphics::image_processing::PixelFormat;
++use ironrdp::graphics::rectangle_processing::coalesce_contiguous_rects;
 +use ironrdp::pdu::geometry::InclusiveRectangle;
  use ironrdp::pdu::input::fast_path::FastPathInputEvent;
  use ironrdp::pdu::rdp::capability_sets::{BitmapCodecs, client_codecs_capabilities};
@@ -1819,7 +2611,7 @@ index a47bd3d..ded719f 100644
  use wasm_bindgen::{JsCast as _, JsValue};
  use wasm_bindgen_futures::spawn_local;
  use web_sys::HtmlCanvasElement;
-@@ -55,6 +61,602 @@ const DEFAULT_HEIGHT: u16 = 720;
+@@ -55,6 +62,602 @@ const DEFAULT_HEIGHT: u16 = 720;
  #[derive(Clone, Default)]
  pub(crate) struct SessionBuilder(Rc<RefCell<SessionBuilderInner>>);
  
@@ -2422,34 +3214,38 @@ index a47bd3d..ded719f 100644
  struct SessionBuilderInner {
      username: Option<String>,
      destination: Option<String>,
-@@ -90,6 +692,10 @@ struct SessionBuilderInner {
+@@ -90,6 +693,12 @@ struct SessionBuilderInner {
      printer_driver_name: Option<String>,
  
      use_display_control: bool,
 +    use_egfx: bool,
 +    avc420_webcodecs: bool,
++    /// Tras un 0x112f: anunciar solo V8.1 AVC420, que KRDP acepta como YUV420.
++    avc420_only: bool,
 +    use_rdpsnd_audio: bool,
 +    gfx_session_id: u32,
      enable_credssp: bool,
      enable_server_pointer: bool,
      legacy_graphics: bool,
-@@ -134,6 +740,10 @@ impl Default for SessionBuilderInner {
+@@ -134,6 +743,11 @@ impl Default for SessionBuilderInner {
              printer_driver_name: None,
  
              use_display_control: false,
 +            use_egfx: false,
 +            avc420_webcodecs: false,
++            avc420_only: false,
 +            use_rdpsnd_audio: false,
 +            gfx_session_id: 0,
              enable_credssp: true,
              enable_server_pointer: true,
              legacy_graphics: false,
-@@ -254,6 +864,20 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -254,6 +868,21 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              |vmconnect: String| { self.0.borrow_mut().vmconnect = Some(vmconnect) };
              |kdc_proxy_url: String| { self.0.borrow_mut().kdc_proxy_url = Some(kdc_proxy_url) };
              |display_control: bool| { self.0.borrow_mut().use_display_control = display_control };
 +            |egfx: bool| { self.0.borrow_mut().use_egfx = egfx };
 +            |avc420_webcodecs: bool| { self.0.borrow_mut().avc420_webcodecs = avc420_webcodecs };
++            |avc420_only: bool| { self.0.borrow_mut().avc420_only = avc420_only };
 +            |rdpsnd_audio: bool| { self.0.borrow_mut().use_rdpsnd_audio = rdpsnd_audio };
 +            |gfx_session: f64| {
 +                let id = if gfx_session > 0.0 && gfx_session <= f64::from(u32::MAX) {
@@ -2465,7 +3261,7 @@ index a47bd3d..ded719f 100644
              |enable_credssp: bool| { self.0.borrow_mut().enable_credssp = enable_credssp };
              |enable_server_pointer: bool| { self.0.borrow_mut().enable_server_pointer = enable_server_pointer };
              |legacy_graphics: bool| { self.0.borrow_mut().legacy_graphics = legacy_graphics };
-@@ -364,6 +988,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -364,6 +993,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name,
              outbound_message_size_limit,
              legacy_graphics,
@@ -2473,7 +3269,7 @@ index a47bd3d..ded719f 100644
          );
  
          {
-@@ -407,6 +1032,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -407,6 +1037,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name = inner.printer_driver_name.clone();
              outbound_message_size_limit = inner.outbound_message_size_limit;
              legacy_graphics = inner.legacy_graphics;
@@ -2481,7 +3277,7 @@ index a47bd3d..ded719f 100644
          }
  
          if pcb.is_some() && vmconnect.is_some() {
-@@ -422,10 +1048,14 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -422,10 +1053,14 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              client_name.clone(),
              desktop_size,
              legacy_graphics,
@@ -2496,27 +3292,29 @@ index a47bd3d..ded719f 100644
  
          let enable_server_pointer = self.0.borrow().enable_server_pointer;
          config.enable_server_pointer = enable_server_pointer;
-@@ -500,6 +1130,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -500,6 +1135,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
          }
  
          let use_display_control = self.0.borrow().use_display_control;
 +        let use_egfx = self.0.borrow().use_egfx;
 +        let avc420_webcodecs = self.0.borrow().avc420_webcodecs;
++        let avc420_only = self.0.borrow().avc420_only;
  
          let (connection_result, ws) = connect(ConnectParams {
              ws,
-@@ -516,6 +1148,10 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -516,6 +1154,11 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name,
              computer_name: client_name.clone(),
              use_display_control,
 +            use_egfx,
 +            avc420_webcodecs,
++            avc420_only,
 +            use_rdpsnd_audio,
 +            gfx_session_id: self.0.borrow().gfx_session_id,
          })
          .await?;
  
-@@ -542,6 +1178,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -542,6 +1185,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              connection_result: RefCell::new(Some(connection_result)),
              clipboard: RefCell::new(Some(clipboard)),
              printer: RefCell::new(Some(printer)),
@@ -2524,7 +3322,7 @@ index a47bd3d..ded719f 100644
          })
      }
  }
-@@ -562,6 +1199,8 @@ pub(crate) enum RdpInputEvent {
+@@ -562,6 +1206,8 @@ pub(crate) enum RdpInputEvent {
          scale_factor: Option<u32>,
          physical_size: Option<(u32, u32)>,
      },
@@ -2533,7 +3331,7 @@ index a47bd3d..ded719f 100644
      TerminateSession,
  }
  
-@@ -591,6 +1230,7 @@ pub(crate) struct Session {
+@@ -591,6 +1237,7 @@ pub(crate) struct Session {
      rdp_reader: RefCell<Option<ReadHalf<WebSocket>>>,
      clipboard: RefCell<Option<Option<WasmClipboard>>>,
      printer: RefCell<Option<Option<WasmPrinter>>>,
@@ -2541,7 +3339,7 @@ index a47bd3d..ded719f 100644
  }
  
  impl Session {
-@@ -658,6 +1298,9 @@ impl iron_remote_desktop::Session for Session {
+@@ -658,6 +1305,9 @@ impl iron_remote_desktop::Session for Session {
              .take()
              .expect("run called only once");
  
@@ -2551,7 +3349,7 @@ index a47bd3d..ded719f 100644
          let mut clipboard = self.clipboard.borrow_mut().take().expect("run called only once");
          let mut wasm_printer = self.printer.borrow_mut().take().expect("run called only once");
  
-@@ -688,6 +1331,17 @@ impl iron_remote_desktop::Session for Session {
+@@ -688,6 +1338,17 @@ impl iron_remote_desktop::Session for Session {
          // Reused across frames so per-region extraction doesn't allocate on every draw.
          let mut draw_buffer = WriteBuf::new();
  
@@ -2569,7 +3367,7 @@ index a47bd3d..ded719f 100644
          // We retain the factory to drive the Deactivation-Reactivation Sequence locally.
          let activation_factory = connection_result.activation_factory;
  
-@@ -703,11 +1357,25 @@ impl iron_remote_desktop::Session for Session {
+@@ -703,11 +1364,28 @@ impl iron_remote_desktop::Session for Session {
          }
          .build();
  
@@ -2592,11 +3390,14 @@ index a47bd3d..ded719f 100644
  
          let disconnect_reason = 'outer: loop {
 -            let outputs = select! {
++            // select equilibrado: un arrastre no puede dejar el socket sin leer.
++            // Con bitmap a medias, la rama de reanudación cede al navegador y sigue.
++            let graphics_pending = active_stage.egfx_backlog();
 +            let mut outputs = select! {
                  frame = framed.read_pdu().fuse() => {
                      let (action, payload) = frame.context("read frame")?;
                      trace!(?action, frame_length = payload.len(), "Frame received");
-@@ -874,6 +1542,48 @@ impl iron_remote_desktop::Session for Session {
+@@ -874,6 +1552,48 @@ impl iron_remote_desktop::Session for Session {
                                  Vec::new()
                              }
                          },
@@ -2645,7 +3446,7 @@ index a47bd3d..ded719f 100644
                          RdpInputEvent::Printer(message) => {
                              // The printer backend lives inside the Rdpdr SVC
                              // processor (Send-only); the front-end
-@@ -892,6 +1602,23 @@ impl iron_remote_desktop::Session for Session {
+@@ -892,6 +1612,23 @@ impl iron_remote_desktop::Session for Session {
                          }
                      }
                  }
@@ -2669,10 +3470,39 @@ index a47bd3d..ded719f 100644
                  _ = cleanup_interval.next() => {
                      // Drive clipboard lock timeout cleanup
                      if let Some(cliprdr) = active_stage.get_svc_processor_mut::<CliprdrClient>() {
-@@ -915,14 +1642,36 @@ impl iron_remote_desktop::Session for Session {
+@@ -913,20 +1650,53 @@ impl iron_remote_desktop::Session for Session {
+                         Vec::new()
+                     }
                  }
++                _ = async {
++                    if !graphics_pending {
++                        core::future::pending::<()>().await;
++                    }
++                    // Cede al bucle del navegador (ratón y pintura) sin el
++                    // suelo de 4 ms de setTimeout.
++                    yield_to_browser().await;
++                }
++                .fuse() => active_stage.resume_pending_graphics(&mut image).context("continuar bitmap EGFX")?,
              };
  
++            // Un frame KRDP son cientos de teselas. Ceder el hilo cada 24
++            // retrasa el EndFrame, que es el único blit. Se sigue decodificando
++            // hasta 12 ms y solo entonces se vuelve al navegador.
++            let budget_started = monotonic_ms();
++            let mut budget_slices = 0u32;
++            while active_stage.egfx_backlog() {
++                let elapsed = monotonic_ms() - budget_started;
++                if budget_slices > 0 && (elapsed >= GRAPHICS_BUDGET_MS || elapsed == 0.0 || budget_slices >= 64) {
++                    break;
++                }
++                outputs.extend(
++                    active_stage
++                        .resume_pending_graphics(&mut image)
++                        .context("continuar bitmap EGFX")?,
++                );
++                budget_slices += 1;
++            }
++
 +            if active_stage.reliable_udp_dvc_tunnel_in_use() {
 +                while let Some(payload) = pending_udp.pop_front() {
 +                    outputs.extend(apply_udp_payload(gfx_session_id, &mut active_stage, &mut image, &payload)?);
@@ -2681,7 +3511,8 @@ index a47bd3d..ded719f 100644
 +
 +            present_pending_avc(gfx_session_id, &mut active_stage, &mut image, &mut gui, &mut draw_buffer)?;
 +
-+            let mut graphics_updates: u16 = 0;
++            let mut pending_graphics: Vec<InclusiveRectangle> = Vec::new();
++            let mut blit_count: u16 = 0;
 +            let mut deferred_responses: Vec<Vec<u8>> = Vec::new();
              for out in outputs {
                  match out {
@@ -2692,45 +3523,62 @@ index a47bd3d..ded719f 100644
 +                        deferred_responses.push(frame);
                      }
                      ActiveStageOutput::GraphicsUpdate(region) => {
-+                        graphics_updates = graphics_updates.saturating_add(1);
-+                        // EGFX ResetGraphics changes the framebuffer without Deactivate All.
-+                        // The canvas would keep the previous backing store, so a shrink leaves
-+                        // the old taskbar and the right-hand strip. Setting width/height clears
-+                        // it; the full refresh that follows repaints the new image.
-+                        let image_width = u32::from(image.width());
-+                        let image_height = u32::from(image.height());
-+                        if image_width != gui.width() || image_height != gui.height() {
-+                            if let (Some(width), Some(height)) =
-+                                (NonZeroU32::new(image_width), NonZeroU32::new(image_height))
-+                            {
-+                                gui.resize(width, height);
-+                            }
-+                        }
-                         let region = extract_partial_image(&image, region, &mut draw_buffer);
-                         gui.draw(draw_buffer.filled_mut(), region)
-                             .context("draw updated region")?;
-@@ -1111,9 +1860,19 @@ impl iron_remote_desktop::Session for Session {
+-                        let region = extract_partial_image(&image, region, &mut draw_buffer);
+-                        gui.draw(draw_buffer.filled_mut(), region)
+-                            .context("draw updated region")?;
+-                        draw_buffer.clear();
++                        pending_graphics.push(region);
+                     }
+                     ActiveStageOutput::PointerDefault => {
+                         self.set_cursor_style(CursorStyle::Default)?;
+@@ -1038,6 +1808,12 @@ impl iron_remote_desktop::Session for Session {
+                         // Windowing orders are not meaningful to the protocol-agnostic web component.
+                     }
+                     ActiveStageOutput::DeactivateAll => {
++                        blit_count = blit_count.saturating_add(paint_coalesced_regions(
++                            &image,
++                            &mut gui,
++                            &mut draw_buffer,
++                            &mut pending_graphics,
++                        )?);
+                         // Execute the Deactivation-Reactivation Sequence:
+                         // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpbcgr/dfc234ce-481a-4674-9a5d-2a7bafb14432
+                         debug!("Received Server Deactivate All PDU, executing Deactivation-Reactivation Sequence");
+@@ -1111,9 +1887,32 @@ impl iron_remote_desktop::Session for Session {
                      ActiveStageOutput::SaveSessionInfo { logon_complete: false } => {
                          debug!("RDP session info notification");
                      }
 -                    ActiveStageOutput::Terminate(reason) => break 'outer reason,
 +                    ActiveStageOutput::Terminate(reason) => {
++                        paint_coalesced_regions(
++                            &image,
++                            &mut gui,
++                            &mut draw_buffer,
++                            &mut pending_graphics,
++                        )?;
 +                        flush_presented_responses(&mut active_stage, &self.writer_tx, &mut deferred_responses)?;
 +                        break 'outer reason;
 +                    }
                  }
              }
 +
-+            // Paint the whole frame, then acknowledge. A resize cache burst is
-+            // large enough to stall mouse input, so yield once after it is on screen.
++            // Pinta el frame ya fusionado y luego reconoce. Una ráfaga de teselas
++            // sueltas (resize) sigue cediendo el bucle una sola vez, ya en pantalla.
++            // Un arrastre KRDP colapsa a unos pocos spans y no cede en cada movimiento.
++            blit_count = blit_count.saturating_add(paint_coalesced_regions(
++                &image,
++                &mut gui,
++                &mut draw_buffer,
++                &mut pending_graphics,
++            )?);
 +            flush_presented_responses(&mut active_stage, &self.writer_tx, &mut deferred_responses)?;
-+            if graphics_updates >= 24 {
++            if blit_count >= 24 && !active_stage.egfx_backlog() {
 +                gloo_timers::future::TimeoutFuture::new(0).await;
 +            }
          };
  
          info!(%disconnect_reason, "RDP session terminated");
-@@ -1201,6 +1960,12 @@ impl iron_remote_desktop::Session for Session {
+@@ -1201,6 +2000,12 @@ impl iron_remote_desktop::Session for Session {
          }
      }
  
@@ -2743,7 +3591,7 @@ index a47bd3d..ded719f 100644
      fn supports_unicode_keyboard_shortcuts(&self) -> bool {
          // RDP does not support Unicode keyboard shortcuts.
          // When key combinations are executed, only plain scancode events are allowed to function correctly.
-@@ -1459,6 +2224,7 @@ fn build_config(
+@@ -1459,6 +2264,7 @@ fn build_config(
      client_name: String,
      desktop_size: DesktopSize,
      legacy_graphics: bool,
@@ -2751,7 +3599,7 @@ index a47bd3d..ded719f 100644
  ) -> connector::Config {
      // Win7-class servers need 32-bpp lossless bitmaps and no advertised codecs.
      let bitmap = if legacy_graphics {
-@@ -1468,10 +2234,15 @@ fn build_config(
+@@ -1468,10 +2274,15 @@ fn build_config(
              codecs: BitmapCodecs(Vec::new()),
          }
      } else {
@@ -2770,7 +3618,7 @@ index a47bd3d..ded719f 100644
          }
      };
  
-@@ -1484,7 +2255,9 @@ fn build_config(
+@@ -1484,7 +2295,9 @@ fn build_config(
          enable_standard_rdp_security: false,
          keyboard_type: ironrdp::pdu::gcc::KeyboardType::IBM_ENHANCED,
          keyboard_subtype: 0,
@@ -2781,7 +3629,7 @@ index a47bd3d..ded719f 100644
          keyboard_functional_keys_count: 12,
          connection_type: ironrdp::pdu::gcc::ConnectionType::Lan,
          ime_file_name: String::new(),
-@@ -1495,19 +2268,15 @@ fn build_config(
+@@ -1495,19 +2308,15 @@ fn build_config(
          },
          monitor_layout: None,
          bitmap: Some(bitmap),
@@ -2806,7 +3654,7 @@ index a47bd3d..ded719f 100644
          compression_type: None,
          enable_server_pointer: true,
          autologon: false,
-@@ -1515,10 +2284,21 @@ fn build_config(
+@@ -1515,10 +2324,21 @@ fn build_config(
          enable_audio_capture: false,
          request_data: None,
          pointer_software_rendering: false,
@@ -2831,18 +3679,19 @@ index a47bd3d..ded719f 100644
          hardware_id: None,
          license_cache: None,
          timezone_info: TimezoneInfo::default(),
-@@ -1584,6 +2364,10 @@ struct ConnectParams {
+@@ -1584,6 +2404,11 @@ struct ConnectParams {
      /// `computer_name` when constructing the `Rdpdr` processor.
      computer_name: String,
      use_display_control: bool,
 +    use_egfx: bool,
 +    avc420_webcodecs: bool,
++    avc420_only: bool,
 +    use_rdpsnd_audio: bool,
 +    gfx_session_id: u32,
  }
  
  fn default_printer_driver_name() -> String {
-@@ -1618,6 +2402,57 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
+@@ -1618,6 +2443,57 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
          .and_then(|major| major.parse().ok())
  }
  
@@ -2900,18 +3749,19 @@ index a47bd3d..ded719f 100644
  async fn connect(
      ConnectParams {
          ws,
-@@ -1634,6 +2469,10 @@ async fn connect(
+@@ -1634,6 +2510,11 @@ async fn connect(
          printer_driver_name,
          computer_name,
          use_display_control,
 +        use_egfx,
 +        avc420_webcodecs,
++        avc420_only,
 +        use_rdpsnd_audio,
 +        gfx_session_id,
      }: ConnectParams,
  ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
      let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
-@@ -1647,11 +2486,15 @@ async fn connect(
+@@ -1647,11 +2528,15 @@ async fn connect(
          connector.attach_static_channel(CliprdrClient::new(Box::new(clipboard_backend)));
      }
  
@@ -2931,7 +3781,7 @@ index a47bd3d..ded719f 100644
          connector.attach_static_channel(
              Rdpdr::new(Box::new(printer_backend), computer_name).with_printer_driver(
                  printer_device_id,
-@@ -1661,10 +2504,202 @@ async fn connect(
+@@ -1661,10 +2546,216 @@ async fn connect(
          );
      }
  
@@ -2945,6 +3795,7 @@ index a47bd3d..ded719f 100644
 +    struct EgfxHandler {
 +        session_id: u32,
 +        webcodecs: bool,
++        avc420_only: bool,
 +        prefer_v101: bool,
 +    }
 +    impl GraphicsPipelineHandler for EgfxHandler {
@@ -2954,7 +3805,19 @@ index a47bd3d..ded719f 100644
 +                CapabilitiesV81Flags, CapabilitiesV8Flags, CapabilitySet,
 +            };
 +            let _ = self.prefer_v101;
-+            // Sin WebCodecs: AVC_DISABLED -> Progressive/ClearCodec (fallback 0x112f).
++            // KRDP exige AVC y YUV420 en el mismo capset. V8.1 con AVC420_ENABLED
++            // cumple eso y confirma 8.1, así que el stream es AVC420.
++            if self.webcodecs && self.avc420_only {
++                return vec![
++                    CapabilitySet::V8 {
++                        flags: CapabilitiesV8Flags::SMALL_CACHE,
++                    },
++                    CapabilitySet::V8_1 {
++                        flags: CapabilitiesV81Flags::AVC420_ENABLED | CapabilitiesV81Flags::SMALL_CACHE,
++                    },
++                ];
++            }
++            // Sin WebCodecs: AVC_DISABLED -> Progressive/ClearCodec (último peldaño).
 +            if !self.webcodecs {
 +                return vec![
 +                    CapabilitySet::V8 {
@@ -3121,6 +3984,7 @@ index a47bd3d..ded719f 100644
 +                Box::new(EgfxHandler {
 +                    session_id: gfx_session_id,
 +                    webcodecs: avc420_webcodecs,
++                    avc420_only,
 +                    prefer_v101,
 +                }),
 +                None,
@@ -3138,7 +4002,7 @@ index a47bd3d..ded719f 100644
      }
  
      let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
-@@ -1693,7 +2728,16 @@ async fn connect(
+@@ -1693,7 +2784,16 @@ async fn connect(
      )
      .await?;
  
@@ -3156,7 +4020,7 @@ index a47bd3d..ded719f 100644
          upgraded,
          connector,
          &mut framed,
-@@ -1701,6 +2745,9 @@ async fn connect(
+@@ -1701,6 +2801,9 @@ async fn connect(
          server_name,
          server_public_key,
          kerberos_config,
@@ -3166,8 +4030,134 @@ index a47bd3d..ded719f 100644
      )
      .await?;
  
+@@ -1920,6 +3023,88 @@ where
+     }
+ }
+ 
++/// Tope de decodificación antes de ceder el hilo. Cabe en un frame de 60 Hz
++/// y deja sitio al `putImageData` del EndFrame.
++const GRAPHICS_BUDGET_MS: f64 = 12.0;
++
++fn monotonic_ms() -> f64 {
++    #[cfg(target_arch = "wasm32")]
++    {
++        web_sys::window()
++            .and_then(|window| window.performance())
++            .map(|performance| performance.now())
++            .unwrap_or(0.0)
++    }
++    #[cfg(not(target_arch = "wasm32"))]
++    {
++        use std::sync::OnceLock;
++        static START: OnceLock<std::time::Instant> = OnceLock::new();
++        START.get_or_init(std::time::Instant::now).elapsed().as_secs_f64() * 1000.0
++    }
++}
++
++/// Suelta el hilo hasta el siguiente macrotask. `scheduler.yield` no está
++/// en web-sys; un `MessageChannel` hace lo mismo y no lo recorta el navegador
++/// a 4 ms como `setTimeout(0)`.
++async fn yield_to_browser() {
++    #[cfg(target_arch = "wasm32")]
++    {
++        use wasm_bindgen::closure::Closure;
++
++        let (sender, receiver) = futures_channel::oneshot::channel();
++        let Ok(channel) = web_sys::MessageChannel::new() else {
++            return;
++        };
++        let closure = Closure::once(move |_event: web_sys::MessageEvent| {
++            let _ = sender.send(());
++        });
++        let function = closure.into_js_value();
++        channel.port1().set_onmessage(Some(function.unchecked_ref()));
++        if channel.port2().post_message(&JsValue::NULL).is_err() {
++            return;
++        }
++        let _ = receiver.await;
++    }
++}
++
++/// Pinta las regiones de un frame fusionando teselas contiguas.
++///
++/// Devuelve cuántos blits quedaron. Un hueco entre teselas no se rellena.
++fn paint_coalesced_regions(
++    image: &DecodedImage,
++    gui: &mut Canvas,
++    draw_buffer: &mut WriteBuf,
++    pending: &mut Vec<InclusiveRectangle>,
++) -> anyhow::Result<u16> {
++    if pending.is_empty() {
++        return Ok(0);
++    }
++    let regions = coalesce_contiguous_rects(pending);
++    pending.clear();
++
++    // ResetGraphics cambia el framebuffer sin Deactivate All. El canvas
++    // conservaría el backing store anterior: un encogimiento deja la barra
++    // vieja y la franja derecha. Ajustar ancho/alto lo limpia; el refresco
++    // que sigue repinta la imagen nueva.
++    let image_width = u32::from(image.width());
++    let image_height = u32::from(image.height());
++    if image_width != gui.width() || image_height != gui.height() {
++        if let (Some(width), Some(height)) = (NonZeroU32::new(image_width), NonZeroU32::new(image_height)) {
++            gui.resize(width, height);
++        }
++    }
++
++    let mut blits: u16 = 0;
++    for region in regions {
++        let region = extract_partial_image(image, region, draw_buffer);
++        gui.draw(draw_buffer.filled_mut(), region)
++            .context("draw updated region")?;
++        draw_buffer.clear();
++        blits = blits.saturating_add(1);
++    }
++    Ok(blits)
++}
++
+ #[expect(clippy::as_conversions, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+ fn f64_to_u16_saturating_cast(value: f64) -> u16 {
+     value as u16
+diff --git a/web-client/iron-remote-desktop-rdp/package-lock.json b/web-client/iron-remote-desktop-rdp/package-lock.json
+index a60db55..2d828d7 100644
+--- a/web-client/iron-remote-desktop-rdp/package-lock.json
++++ b/web-client/iron-remote-desktop-rdp/package-lock.json
+@@ -1963,32 +1963,6 @@
+         "node": ">= 4"
+       }
+     },
+-    "node_modules/@typescript-eslint/parser": {
+-      "version": "8.58.0",
+-      "resolved": "https://registry.npmjs.org/@typescript-eslint/parser/-/parser-8.58.0.tgz",
+-      "integrity": "sha512-rLoGZIf9afaRBYsPUMtvkDWykwXwUPL60HebR4JgTI8mxfFe2cQTu3AGitANp4b9B2QlVru6WzjgB2IzJKiCSA==",
+-      "dev": true,
+-      "license": "MIT",
+-      "peer": true,
+-      "dependencies": {
+-        "@typescript-eslint/scope-manager": "8.58.0",
+-        "@typescript-eslint/types": "8.58.0",
+-        "@typescript-eslint/typescript-estree": "8.58.0",
+-        "@typescript-eslint/visitor-keys": "8.58.0",
+-        "debug": "^4.4.3"
+-      },
+-      "engines": {
+-        "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/typescript-eslint"
+-      },
+-      "peerDependencies": {
+-        "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0",
+-        "typescript": ">=4.8.4 <6.1.0"
+-      }
+-    },
+     "node_modules/@typescript-eslint/project-service": {
+       "version": "8.58.0",
+       "resolved": "https://registry.npmjs.org/@typescript-eslint/project-service/-/project-service-8.58.0.tgz",
 diff --git a/web-client/iron-remote-desktop-rdp/src/main.ts b/web-client/iron-remote-desktop-rdp/src/main.ts
-index acd28b2..394391d 100644
+index acd28b2..2f5bec9 100644
 --- a/web-client/iron-remote-desktop-rdp/src/main.ts
 +++ b/web-client/iron-remote-desktop-rdp/src/main.ts
 @@ -7,6 +7,20 @@ import wasm_init, {
@@ -3191,7 +4181,7 @@ index acd28b2..394391d 100644
  } from '../../../crates/ironrdp-web/pkg/ironrdp_web';
  
  export async function init(log_level: string) {
-@@ -65,6 +79,129 @@ export function legacyGraphics(enable: boolean): Extension {
+@@ -65,6 +79,134 @@ export function legacyGraphics(enable: boolean): Extension {
      return new Extension('legacy_graphics', enable);
  }
  
@@ -3213,6 +4203,11 @@ index acd28b2..394391d 100644
 +/** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
 +export function avc420Webcodecs(enable: boolean): Extension {
 +    return new Extension('avc420_webcodecs', enable);
++}
++
++/** Tras 0x112f: anunciar solo V8.1 AVC420 para que KRDP siga en H.264 YUV420. */
++export function avc420Only(enable: boolean): Extension {
++    return new Extension('avc420_only', enable);
 +}
 +
 +/** Opt-in: canal est├ö├Â┬úÔö£┬ítico rdpsnd (MS-RDPEA) con reproducci├ö├Â┬ú├ö├Â├®n PCM v├ö├Â┬úÔö¼├¡a Web Audio. */

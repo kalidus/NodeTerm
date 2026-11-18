@@ -14,8 +14,8 @@ const patch = fs.readFileSync(
   'utf8'
 );
 
-test('vendor WASM es egfx.41: CapsAdvertise V10.7 sin AVC_THINCLIENT', () => {
-  assert.equal(vendorPkg.version, '0.7.0-nodeterm-egfx.41');
+test('vendor WASM es egfx.52: CapsAdvertise V10.7 sin AVC_THINCLIENT', () => {
+  assert.equal(vendorPkg.version, '0.7.0-nodeterm-egfx.52');
   assert.match(patch, /CapabilitySet::V10_7/);
   assert.match(patch, /CapabilitiesV107Flags::SMALL_CACHE/);
   assert.match(patch, /sin AVC_THINCLIENT|sin thin-client|sin AVC_THIN/);
@@ -25,6 +25,22 @@ test('vendor WASM es egfx.41: CapsAdvertise V10.7 sin AVC_THINCLIENT', () => {
   );
   assert.doesNotMatch(patch, /should_pace_progressive/);
   assert.doesNotMatch(patch, /try_recv\(\)/);
+  assert.match(patch, /coalesce_contiguous_rects/);
+  assert.match(patch, /wts2:\{\},s2s:\{\},prog:\{\}/);
+  assert.match(patch, /blit_count >= 24/);
+  assert.match(patch, /const CHUNK: usize = 64 \* 1024/);
+  assert.match(patch, /select!/);
+  assert.doesNotMatch(patch, /select_biased!/);
+  assert.doesNotMatch(patch, /carried_damage/);
+  assert.match(patch, /pump_egfx/);
+  assert.match(patch, /struct BitCursor/);
+  assert.match(patch, /fn tiles_per_slice\(\) -> usize \{\r?\n\+        24/);
+  assert.match(patch, /yield_to_browser/);
+  assert.match(patch, /GRAPHICS_BUDGET_MS: f64 = 12\.0/);
+  assert.match(patch, /avc420_only/);
+  assert.doesNotMatch(patch, /set_superseded_absolute/);
+  assert.doesNotMatch(patch, /PROGRESSIVE_TILES_PER_SLICE/);
+  assert.doesNotMatch(patch, /graphics_updates >= 24/);
 });
 
 test('el estado grafico EGFX va por id de sesion', () => {

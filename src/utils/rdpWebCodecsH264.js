@@ -2,8 +2,8 @@
  * Decodificador H.264 AVC420 vía WebCodecs para frames EGFX.
  * Los NAL units llegan en formato AVC (prefijo longitud BE 4 bytes), no Annex B.
  *
- * Activo cuando VideoDecoder existe. Apagar con localStorage NODETERM_RDP_WEBCODECS=0
- * (o window.__NODETERM_RDP_WEBCODECS__ = false).
+ * Activo cuando VideoDecoder existe. Apagar en esta pestaña con
+ * window.__NODETERM_RDP_WEBCODECS__ = false.
  *
  * El frame de imagen se entrega a presentFrame (WebGPU) y se cierra ahí.
  * Antes del blit se lee I420 por copyTo para el croma AVC444; nunca después de
@@ -18,13 +18,7 @@ function isWebCodecsH264Available() {
 
 function isWebCodecsH264Enabled() {
   if (typeof window === 'undefined') return true;
-  if (window.__NODETERM_RDP_WEBCODECS__ === false) return false;
-  if (window.__NODETERM_RDP_WEBCODECS__ === true) return true;
-  try {
-    return window.localStorage?.getItem('NODETERM_RDP_WEBCODECS') !== '0';
-  } catch (_) {
-    return true;
-  }
+  return window.__NODETERM_RDP_WEBCODECS__ !== false;
 }
 
 function isRdpDebugEnabled() {

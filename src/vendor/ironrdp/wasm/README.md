@@ -36,7 +36,7 @@ Dependencia raíz (obligatoria):
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.41`
+`0.7.0-nodeterm-egfx.52`
 
 ## Regenerar (mantenimiento raro)
 

@@ -360,25 +360,11 @@ export function EnhancedRDPForm({
     return (
       <TerminalSwitchOption
         iconClass="pi-palette"
-        labelText={t('rdp.options.enableEgfx')}
+        labelText={t('rdp.options.enableEgfx', 'Gráficos modernos')}
         checked={formData.ironRdpGraphics === 'egfx'}
         onCheckedChange={(v) => handleInputChange('ironRdpGraphics', v ? 'egfx' : 'bitmap')}
         inputId={`${p}-${idSuffix}-egfx`}
-        helpText={t('rdp.help.ironRdpGraphics')}
-      />
-    );
-  };
-
-  const renderIronRdpH264Switch = (idSuffix = 'opt') => {
-    if (!isWebRdp || formData.ironRdpGraphics !== 'egfx') return null;
-    return (
-      <TerminalSwitchOption
-        iconClass="pi-video"
-        labelText={t('rdp.options.enableH264', 'Aceleración H.264')}
-        checked={formData.useH264 === true}
-        onCheckedChange={(v) => handleInputChange('useH264', !!v)}
-        inputId={`${p}-${idSuffix}-h264`}
-        helpText={t('rdp.help.enableH264', 'WebCodecs H.264 para vídeo/movimiento a 60 FPS. Desactivado por defecto (Progressive / ClearCodec) para latencia cero y máxima nitidez en terminales y texto.')}
+        helpText={t('rdp.help.ironRdpGraphics', 'Moderno negocia H.264 y baja de codec si el servidor no puede. Clásico es el modo compatible.')}
       />
     );
   };
@@ -684,7 +670,6 @@ export function EnhancedRDPForm({
             </div>
             <div className="terminal-options-grid">
               {renderIronRdpEgfxSwitch('opt')}
-              {renderIronRdpH264Switch('opt')}
               {renderBastionLogicalDesktopSwitch('opt')}
               <TerminalSwitchOption
                 iconClass="pi-copy"
@@ -1269,29 +1254,13 @@ export function EnhancedRDPForm({
                       onClick={() => {
                         const next = formData.ironRdpGraphics === 'egfx' ? 'bitmap' : 'egfx';
                         handleInputChange('ironRdpGraphics', next);
-                        setStatusMessage(`Gráficos IronRDP: ${next === 'egfx' ? 'EGFX' : 'Bitmap'}`);
+                        setStatusMessage(`Gráficos: ${next === 'egfx' ? 'Moderno' : 'Clásico'}`);
                       }}
-                      title={t('rdp.help.ironRdpGraphics')}
+                      title="Moderno negocia H.264 y baja de codec si el servidor no puede. Clásico es el modo compatible."
                     >
                       <i className={`pi ${formData.ironRdpGraphics === 'egfx' ? 'pi-palette' : 'pi-th-large'} hud-badge-icon`}></i>
                       <span className="hud-badge-label">Gráficos:</span>
-                      <span className="hud-badge-value">{formData.ironRdpGraphics === 'egfx' ? 'EGFX' : 'Bitmap'}</span>
-                    </div>
-                  )}
-
-                  {isWebRdp && formData.ironRdpGraphics === 'egfx' && (
-                    <div
-                      className={`hud-badge-pill ${formData.useH264 === true ? 'active' : ''}`}
-                      onClick={() => {
-                        const next = formData.useH264 !== true;
-                        handleInputChange('useH264', next);
-                        setStatusMessage(`Aceleración H.264: ${next ? 'SÍ (Vídeo 60 FPS)' : 'NO (Progressive / Terminal)'}`);
-                      }}
-                      title="Códec de vídeo: Progressive por defecto (latencia cero en terminales) / H.264 para 60 FPS continuo"
-                    >
-                      <i className={`pi ${formData.useH264 === true ? 'pi-video' : 'pi-bolt'} hud-badge-icon`}></i>
-                      <span className="hud-badge-label">Códec:</span>
-                      <span className="hud-badge-value">{formData.useH264 === true ? 'H.264' : 'Progressive'}</span>
+                      <span className="hud-badge-value">{formData.ironRdpGraphics === 'egfx' ? 'Moderno' : 'Clásico'}</span>
                     </div>
                   )}
                 </>
