@@ -10,6 +10,7 @@ import { ensureIronRdpInitialized } from '../utils/ironRdpWarmup';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 import { parseResolutionValue } from '../utils/rdpScreenConfig';
 import { mapTerminationReason } from '../utils/rdpTerminationReasons';
+import { planRdpKeepAlive, RDP_KEEP_ALIVE_INTERVAL_MS } from '../utils/rdpKeepAlive';
 import { installCanvasDrawProbe } from '../utils/rdpCanvasProbe';
 import {
   isWebCodecsH264Available,
@@ -292,6 +293,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
   const isFileTransferArmedRef = useRef(false);
+  const lastUserInputAtRef = useRef(Date.now());
+  const lastKeepAlivePosRef = useRef(null);
+  const pointerDownRef = useRef(false);
   const localClipboardCacheRef = useRef('');
   const clipboardChainRef = useRef(Promise.resolve());
   const pendingClipboardSendRef = useRef(null);
@@ -2140,12 +2144,50 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     // tabId + reconnectTrigger: no reciclar WASM si el padre cambia la referencia de rdpConfig
   }, [tabId, reconnectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const markUserInput = (pos) => {
+    lastUserInputAtRef.current = Date.now();
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      lastKeepAlivePosRef.current = { x: pos.x, y: pos.y };
+    }
+  };
+
   // Manejo de enfoque dinámico del canvas al activar pestaña
   useEffect(() => {
     if (connectionState === 'connected' && isActive && canvasRef.current) {
       canvasRef.current.focus();
     }
   }, [connectionState, isActive]);
+
+  // Input sintético si el escritorio está quieto. Mismo camino FastPath en directo y bastión.
+  // No depende de isActive: la pestaña sigue montada en segundo plano.
+  useEffect(() => {
+    if (connectionState !== 'connected') {
+      pointerDownRef.current = false;
+      return;
+    }
+    lastUserInputAtRef.current = Date.now();
+    const timer = setInterval(() => {
+      const session = sessionRef.current;
+      if (!session) return;
+      const pos = lastKeepAlivePosRef.current;
+      const plan = planRdpKeepAlive({
+        idleMs: Date.now() - (lastUserInputAtRef.current || 0),
+        x: pos?.x,
+        y: pos?.y,
+        pointerDown: pointerDownRef.current,
+        fileTransferArmed: isFileTransferArmedRef.current
+      });
+      if (!plan) return;
+      try {
+        const transaction = new Backend.InputTransaction();
+        for (const point of plan.points) {
+          transaction.addEvent(Backend.DeviceEvent.mouseMove(point.x, point.y));
+        }
+        session.applyInputs(transaction);
+      } catch (_) {}
+    }, RDP_KEEP_ALIVE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [connectionState]);
 
   // Sincronización controlada por interacción del portapapeles Local -> Remoto
   useEffect(() => {
@@ -2277,6 +2319,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (!sessionRef.current) return;
       lastKnownMousePos = { x, y };
       lastSentMoveTime = performance.now();
+      markUserInput({ x, y });
       try {
         const transaction = new Backend.InputTransaction();
         transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
@@ -2343,8 +2386,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
 
       isMouseDown = true;
+      pointerDownRef.current = true;
       mouseDownPos = { x, y };
       hasDragged = false;
+      markUserInput({ x, y });
 
       // Click atómico: posicionar el cursor y pulsar el botón en la misma transacción de red
       try {
@@ -2356,7 +2401,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
 
     const handleMouseUp = (e) => {
-      if (!sessionRef.current || !isMouseDown) return;
+      if (!isMouseDown) return;
+      pointerDownRef.current = false;
+      if (!sessionRef.current) {
+        isMouseDown = false;
+        mouseDownPos = null;
+        hasDragged = false;
+        return;
+      }
       e.preventDefault();
 
       if (mouseThrottleTimer != null) {
@@ -2377,6 +2429,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       isMouseDown = false;
       mouseDownPos = null;
       hasDragged = false;
+      markUserInput({ x: releaseX, y: releaseY });
 
       try {
         const transaction = new Backend.InputTransaction();
@@ -2397,6 +2450,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const delta = isVertical ? -e.deltaY : -e.deltaX;
       // 0 = Pixel (trackpads macOS / touchpads de precisión), 1 = Line (ruedas de ratón estándar), 2 = Page
       const unit = e.deltaMode === 1 ? 1 : (e.deltaMode === 2 ? 2 : 0);
+      markUserInput();
       try {
         const transaction = new Backend.InputTransaction();
         transaction.addEvent(Backend.DeviceEvent.wheelRotations(isVertical, delta, unit));
@@ -2420,6 +2474,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
 
       e.preventDefault();
+      markUserInput();
 
       // Sincronización proactiva de Ctrl+V / Cmd+V:
       // Como e.preventDefault() cancela el evento 'paste' nativo del navegador,
@@ -2462,6 +2517,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         return;
       }
       e.preventDefault();
+      markUserInput();
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
         const transaction = new Backend.InputTransaction();
@@ -2489,6 +2545,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
 
       if (text && !isFileTransferArmedRef.current) {
+        markUserInput();
         lastReceivedClipboardTextRef.current = text;
         enqueueClipboardSend(text, 'evento paste');
       }
@@ -2678,6 +2735,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE053));
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x38));
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x1D));
+        markUserInput();
         sessionRef.current.applyInputs(transaction);
         toastRef.current?.show({
           severity: 'info',
@@ -2697,6 +2755,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const transaction = new Backend.InputTransaction();
         transaction.addEvent(Backend.DeviceEvent.keyPressed(0xE05B)); // Tecla Windows izquierda extendida
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05B));
+        markUserInput();
         sessionRef.current.applyInputs(transaction);
         toastRef.current?.show({
           severity: 'info',
@@ -3642,6 +3701,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               }
               localClipboardCacheRef.current = text;
               await enqueueClipboardSend(text, 'diálogo manual');
+              markUserInput();
 
               const transaction = new Backend.InputTransaction();
               for (const char of text) {
