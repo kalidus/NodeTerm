@@ -148,7 +148,7 @@ const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
 const APP_CATALOG = [
   { id: 'guacamole', category: 'services', name: 'Guacamole', short: 'GU', color: '#059669', description: 'Proxy RDP/VNC con Docker, WSL o nativo.' },
-  { id: 'cygwin', category: 'services', name: 'Cygwin Terminal', short: 'CY', color: '#00AA00', description: 'Runtime Unix portable para Windows.' },
+  { id: 'cygwin', category: 'services', name: 'Cygwin Terminal', short: 'CY', color: '#00AA00', description: 'LITE embebido (bash, ssh, curl) en Windows; ampliar desde Apps.' },
   { id: 'browser', category: 'services', name: 'Navegador Web', short: 'WB', color: '#38bdf8', description: 'Navegador integrado en pestañas.' },
   { id: 'claude', category: 'cli', name: 'Claude Code', short: 'CL', color: '#f59e0b', description: 'CLI de Anthropic con terminal dedicada.' },
   { id: 'opencode', category: 'cli', name: 'OpenCode', short: 'OC', color: '#6366f1', description: 'Agente open-source multi-proveedor.' },
@@ -675,9 +675,12 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
     if (picked.apps) return picked.apps;
     try {
       const parsed = JSON.parse(localStorage.getItem(AI_CLIENTS_STORAGE_KEY) || '{}');
+      const isWin = typeof window !== 'undefined' && window.electron?.platform === 'win32';
       return {
         guacamole: !!parsed.guacamole,
-        cygwin: !!parsed.cygwin,
+        cygwin: Object.prototype.hasOwnProperty.call(parsed, 'cygwin')
+          ? !!parsed.cygwin
+          : isWin,
         browser: parsed.browser !== false,
         claude: !!parsed.claude,
         opencode: !!parsed.opencode,

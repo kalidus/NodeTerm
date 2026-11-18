@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { normalizeSplashStyle } from './splashStyles';
+import '../../styles/components/splash-screen.css';
+import '../../styles/components/unlock-screen.css';
 
 const STEPS = [
   { percent: 25, text: 'Iniciando NodeTerm' },

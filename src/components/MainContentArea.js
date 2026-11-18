@@ -618,7 +618,7 @@ const MainContentArea = ({
 
   // Estado para controlar la visibilidad de las opciones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
-    cygwin: false,
+    cygwin: (typeof window !== 'undefined' && window.electron?.platform === 'win32'),
     claude: false,
     opencode: false,
     codexcli: false,
@@ -640,7 +640,7 @@ const MainContentArea = ({
   });
 
   const defaultAiClientsEnabled = React.useMemo(() => ({
-    cygwin: false,
+    cygwin: (typeof window !== 'undefined' && window.electron?.platform === 'win32'),
     claude: false,
     opencode: false,
     codexcli: false,
@@ -663,8 +663,15 @@ const MainContentArea = ({
         return;
       }
       const parsed = JSON.parse(config);
+      const isWin = window.electron?.platform === 'win32';
       const normalized = Object.keys(defaultAiClientsEnabled).reduce((acc, key) => {
-        acc[key] = parsed?.[key] === true;
+        if (key === 'cygwin') {
+          acc[key] = Object.prototype.hasOwnProperty.call(parsed, 'cygwin')
+            ? parsed.cygwin === true
+            : isWin;
+        } else {
+          acc[key] = parsed?.[key] === true;
+        }
         return acc;
       }, {});
       setAiClientsEnabled(normalized);

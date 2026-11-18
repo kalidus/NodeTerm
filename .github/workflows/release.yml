@@ -59,6 +59,12 @@ jobs:
       - name: Cleanup native dependencies
         run: npm run rm-cpu-features
 
+      - name: Prune devDependencies before pack
+        run: npm prune --no-audit --no-fund
+
+      - name: Verify packaging exclusions
+        run: npm run verify-packaging
+
       - name: Extract Release Notes from CHANGELOG
         if: matrix.os == 'ubuntu-latest'
         run: node scripts/extract-changelog-notes.js > RELEASE_NOTES_BODY.md

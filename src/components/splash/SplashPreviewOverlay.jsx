@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { Button } from 'primereact/button';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
 import { normalizeSplashStyle } from './splashStyles';
+import '../../styles/components/splash-screen.css';
+import '../../styles/components/unlock-screen.css';
 import SplashLivePreview from './SplashLivePreview';
 
 /**

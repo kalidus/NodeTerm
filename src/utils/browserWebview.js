@@ -4,6 +4,22 @@ export const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 const FALLBACK_CHROME_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36';
 
+export function isWindowsAiClientsHost() {
+  return (typeof window !== 'undefined' && window.electron?.platform === 'win32') ||
+    (typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent || ''));
+}
+
+/**
+ * Cygwin ON por defecto en Windows si la clave no existe (LITE embebido).
+ * Respeta cygwin:false explícito.
+ */
+export function isCygwinClientEnabled(parsed) {
+  if (!isWindowsAiClientsHost()) return false;
+  if (!parsed || typeof parsed !== 'object') return true;
+  if (!Object.prototype.hasOwnProperty.call(parsed, 'cygwin')) return true;
+  return parsed.cygwin === true;
+}
+
 /** Navegador integrado: ON por defecto si la clave no existe (compat). */
 export function isIntegratedBrowserEnabled() {
   try {

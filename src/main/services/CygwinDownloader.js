@@ -9,8 +9,9 @@ const { URL } = require('url');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 
 /**
- * Instala Cygwin portable desde la web oficial (setup-x86_64.exe + mirror).
- * Destino: %APPDATA%/nodeterm/cygwin64
+ * Amplía Cygwin desde la web oficial (setup-x86_64.exe + mirror).
+ * Destino upgrade: %APPDATA%/nodeterm/cygwin64
+ * El LITE embebido vive en process.resourcesPath/cygwin64 (Windows).
  */
 
 const CYGWIN_SETUP_URL = 'https://cygwin.com/setup-x86_64.exe';
@@ -41,14 +42,14 @@ const TIER_META = {
     label: 'Minimal',
     packages: MINIMAL_PACKAGES,
     sizeHint: '~50-100 MB',
-    description: 'bash + coreutils basicos'
+    description: 'bash + coreutils basicos (AppData)'
   },
   medium: {
     id: 'medium',
     label: 'Medium',
     packages: MEDIUM_PACKAGES,
     sizeHint: '~150-300 MB',
-    description: 'Minimal + git, ssh, curl, vim, rsync...'
+    description: 'LITE + git, vim, nano, tar, rsync...'
   },
   full: {
     id: 'full',
@@ -58,6 +59,17 @@ const TIER_META = {
     description: 'Medium + gcc, make, cmake y herramientas de desarrollo'
   }
 };
+
+function getBundledCygwinRoot() {
+  try {
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, 'cygwin64');
+    }
+    return path.join(app.getAppPath(), 'resources', 'cygwin64');
+  } catch {
+    return null;
+  }
+}
 
 function normalizeTier(tier) {
   const key = String(tier || 'medium').toLowerCase();
@@ -106,17 +118,33 @@ function getAvailableTiers() {
 }
 
 function getInstallStatus() {
-  const root = getCygwinInstallRoot();
-  const installed = isInstalledAt(root);
-  const meta = installed ? readMeta(root) : null;
+  const appdataRoot = getCygwinInstallRoot();
+  const bundledRoot = getBundledCygwinRoot();
+  const appdataInstalled = isInstalledAt(appdataRoot);
+  const bundledInstalled = bundledRoot ? isInstalledAt(bundledRoot) : false;
+  const installed = appdataInstalled || bundledInstalled;
+  const activeRoot = appdataInstalled ? appdataRoot : (bundledInstalled ? bundledRoot : null);
+  const meta = appdataInstalled
+    ? readMeta(appdataRoot)
+    : (bundledInstalled ? readMeta(bundledRoot) : null);
+  const source = appdataInstalled
+    ? (meta?.source || 'cygwin.com')
+    : (bundledInstalled ? 'bundled' : null);
+  const tier = appdataInstalled
+    ? (meta?.tier || null)
+    : (bundledInstalled ? (meta?.tier || 'lite') : null);
+
   return {
     installed,
-    root: installed ? root : null,
-    path: installed ? getBashPath(root) : null,
-    tier: meta?.tier || null,
-    packageVersion: meta?.tier || null,
-    source: meta?.source || 'cygwin.com',
-    installedAt: meta?.installedAt || null,
+    available: installed,
+    root: activeRoot,
+    path: activeRoot ? getBashPath(activeRoot) : null,
+    tier,
+    packageVersion: tier,
+    source,
+    bundled: bundledInstalled,
+    upgraded: appdataInstalled,
+    installedAt: meta?.installedAt || meta?.builtAt || null,
     tiers: getAvailableTiers()
   };
 }
@@ -463,6 +491,7 @@ module.exports = {
   CYGWIN_MIRROR,
   TIER_META,
   getCygwinInstallRoot,
+  getBundledCygwinRoot,
   getInstallStatus,
   getAvailableTiers,
   isInstalledAt,

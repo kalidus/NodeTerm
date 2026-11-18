@@ -186,10 +186,12 @@ function registerPlatformTerminalHandlers(dependencies = {}) {
       const { getInstallStatus } = require('../services/CygwinDownloader');
       const downloadStatus = getInstallStatus();
       const detect = Cygwin.CygwinHandlers.detect();
+      const available = detect.available === true || downloadStatus.installed === true;
       return {
         success: true,
         ...downloadStatus,
-        available: detect.available === true,
+        installed: available,
+        available,
         path: detect.path || downloadStatus.path,
         root: detect.root || downloadStatus.root,
         installing: cygwinInstalling

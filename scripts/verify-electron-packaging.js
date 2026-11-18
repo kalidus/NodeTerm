@@ -116,8 +116,17 @@ function verifyIronRdpVendor(rootPkg) {
 
   const unpack = (rootPkg.build && rootPkg.build.asarUnpack) || [];
   const unpackStr = unpack.join('\n');
-  if (!unpackStr.includes('.wasm')) {
-    errors.push('build.asarUnpack debe incluir **/*.wasm (fetch de WASM desde asar falla)');
+  if (!unpackStr.includes('.wasm') && !unpackStr.includes('dist/*.wasm')) {
+    errors.push('build.asarUnpack debe incluir dist/*.wasm (fetch de WASM desde asar falla)');
+  }
+
+  const buildFiles = (rootPkg.build && rootPkg.build.files) || [];
+  const buildFilesJoined = buildFiles.map(String).join('\n');
+  if (!buildFilesJoined.includes('node-pty/build')) {
+    errors.push('build.files debe excluir node_modules/node-pty/build/** (artefactos nativos ~80+ MB)');
+  }
+  if (!buildFilesJoined.includes('@xterm')) {
+    errors.push('build.files debe excluir node_modules/@xterm/** (ya va en dist/)');
   }
 
   return errors;
@@ -142,6 +151,12 @@ function main() {
 
   const vendorErrors = verifyIronRdpVendor(pkg);
 
+  const cygwinBash = path.join(REPO_ROOT, 'resources', 'cygwin64', 'bin', 'bash.exe');
+  const cygwinOk = fs.existsSync(cygwinBash);
+  const buildingWin = process.platform === 'win32' ||
+    process.env.ELECTRON_BUILDER_PLATFORM === 'win' ||
+    (process.env.npm_config_platform || '') === 'win32';
+
   console.log('\n📦 Verificación de empaquetado NodeTerm\n');
   console.log('Rutas runtime requeridas:');
   for (const rel of REQUIRED_PATHS) {
@@ -162,6 +177,12 @@ function main() {
     vendorErrors.forEach((m) => console.log(`  ❌ ${m}`));
   }
 
+  console.log('\nCygwin LITE embebido (Windows):');
+  console.log(`  ${cygwinOk ? '✅' : '❌'} resources/cygwin64/bin/bash.exe`);
+  if (!cygwinOk) {
+    console.log('  → Genera con: .\\scripts\\create-cygwin-portable.ps1');
+  }
+
   if (unpackGaps.length) {
     console.log('\n⚠️  Posibles huecos en build.files:');
     unpackGaps.forEach((m) => console.log(`  - ${m}`));
@@ -179,6 +200,12 @@ function main() {
 
   if (vendorErrors.length) {
     console.error('\n❌ Vendor IronRDP incompleto o no congelado. Releases deben usar file:src/vendor/ironrdp/wasm.');
+    process.exit(1);
+  }
+
+  if (buildingWin && !cygwinOk) {
+    console.error('\n❌ Falta Cygwin LITE embebido para el instalador Windows.');
+    console.error('   Ejecuta: .\\scripts\\create-cygwin-portable.ps1');
     process.exit(1);
   }
 

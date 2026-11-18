@@ -271,9 +271,11 @@ const SettingsContent = ({
   const [cygwinClientEnabled, setCygwinClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
-      return cfg.cygwin === true;
+      const isWin = (window.electron?.platform || 'unknown') === 'win32';
+      if (Object.prototype.hasOwnProperty.call(cfg, 'cygwin')) return cfg.cygwin === true;
+      return isWin;
     } catch {
-      return false;
+      return (window.electron?.platform || 'unknown') === 'win32';
     }
   });
 
@@ -376,7 +378,10 @@ const SettingsContent = ({
     const onAiClientsConfigChanged = () => {
       try {
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
-        setCygwinClientEnabled(cfg.cygwin === true);
+        const isWin = (window.electron?.platform || platform) === 'win32';
+        setCygwinClientEnabled(
+          Object.prototype.hasOwnProperty.call(cfg, 'cygwin') ? cfg.cygwin === true : isWin
+        );
         setClaudeClientEnabled(cfg.claude === true);
         setOpenCodeClientEnabled(cfg.opencode === true);
         setCodexCliClientEnabled(cfg.codexcli === true);

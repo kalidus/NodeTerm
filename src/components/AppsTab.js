@@ -60,10 +60,10 @@ const AppsTab = ({
   const toast = useRef(null);
   const isWindows = isWindowsPlatform();
 
-  // Estado para cada cliente/servicio (Guacamole off; browser ON por defecto)
+  // Estado para cada cliente/servicio (Guacamole off; browser ON; cygwin ON en Windows)
   const [clients, setClients] = useState({
     guacamole: false,
-    cygwin: false,
+    cygwin: isWindows,
     browser: true,
     claude: false,
     opencode: false,
@@ -134,14 +134,16 @@ const AppsTab = ({
     path: null,
     tier: null,
     packageVersion: null,
+    source: null,
+    bundled: false,
+    upgraded: false,
     progressPhase: null,
     progressPercent: 0,
     error: null
   });
   const [cygwinTier, setCygwinTier] = useState('medium');
   const cygwinTierOptions = [
-    { label: 'Minimal (~50-100 MB) - bash basico', value: 'minimal' },
-    { label: 'Medium (~150-300 MB) - git, ssh, curl... (recomendado)', value: 'medium' },
+    { label: 'Medium (~150-300 MB) - + git, vim, tar, rsync...', value: 'medium' },
     { label: 'Full (~500-800 MB) - + gcc, make, cmake', value: 'full' }
   ];
 
@@ -164,15 +166,37 @@ const AppsTab = ({
       try {
         const parsed = JSON.parse(saved);
         const { geminicli: _removedGeminiCli, ...rest } = parsed;
-        // browser: clave ausente → ON (compatibilidad con configs previas)
-        setClients(prev => ({
-          ...prev,
+        // browser: clave ausente → ON; cygwin ausente en Windows → ON (LITE embebido)
+        const next = {
           ...rest,
-          browser: rest.browser !== false
-        }));
+          browser: rest.browser !== false,
+          cygwin: Object.prototype.hasOwnProperty.call(rest, 'cygwin')
+            ? rest.cygwin === true
+            : isWindows
+        };
+        setClients(prev => ({ ...prev, ...next }));
+        if (!Object.prototype.hasOwnProperty.call(parsed, 'cygwin') && isWindows) {
+          try {
+            localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify({ ...parsed, cygwin: true }));
+            window.dispatchEvent(new CustomEvent('ai-clients-config-changed', {
+              detail: { config: { ...parsed, cygwin: true } }
+            }));
+          } catch { /* ignore */ }
+        }
       } catch (error) {
         console.warn('[AppsTab] Error al cargar configuración:', error);
       }
+    } else if (isWindows) {
+      setClients(prev => {
+        const updated = { ...prev, cygwin: true };
+        try {
+          localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('ai-clients-config-changed', {
+            detail: { config: updated }
+          }));
+        } catch { /* ignore */ }
+        return updated;
+      });
     }
 
     const syncGuacamoleEnabled = async () => {
@@ -612,10 +636,16 @@ const AppsTab = ({
         path: result?.path || null,
         tier: result?.tier || null,
         packageVersion: result?.tier || result?.packageVersion || null,
+        source: result?.source || null,
+        bundled: !!result?.bundled,
+        upgraded: !!result?.upgraded,
         progressPhase: result?.installing ? prev.progressPhase : null,
         progressPercent: result?.installing ? prev.progressPercent : 0,
         error: result?.success === false ? (result?.error || 'No se pudo verificar Cygwin') : null
       }));
+      if (result?.tier === 'lite' || result?.source === 'bundled') {
+        setCygwinTier('medium');
+      }
     } catch (error) {
       setCygwinStatus((prev) => ({
         ...prev,
@@ -680,11 +710,11 @@ const AppsTab = ({
       await checkCygwinStatus();
       toast.current?.show({
         severity: 'success',
-        summary: 'Cygwin desinstalado',
-        detail: 'Se elimino el runtime portable de AppData',
+        summary: 'Ampliacion Cygwin eliminada',
+        detail: 'Se quito AppData; el LITE embebido sigue disponible',
         life: 4000
       });
-      window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: false } }));
+      window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: true } }));
       return true;
     } catch (error) {
       setCygwinStatus((prev) => ({
@@ -918,7 +948,8 @@ const AppsTab = ({
         return;
       }
       const willEnable = !clients.cygwin;
-      if (willEnable && !cygwinStatus.installed) {
+      // LITE embebido ya cuenta como instalado; no forzar descarga al activar
+      if (willEnable && !cygwinStatus.installed && !cygwinStatus.bundled) {
         const ok = await installCygwinApp();
         if (!ok) return;
       }
@@ -1204,12 +1235,12 @@ const AppsTab = ({
       name: 'Cygwin Terminal', shortName: 'Cygwin',
       color: '#00AA00',
       description: isWindows
-        ? 'Runtime Unix portable. Se instala bajo demanda desde cygwin.com (Minimal / Medium / Full) en AppData; no va en el instalador de NodeTerm.'
+        ? 'Runtime Unix LITE embebido (bash, coreutils, ssh, curl). Activado por defecto. Desde aqui puedes ampliar a Medium/Full en AppData.'
         : 'Cygwin solo esta disponible en Windows.',
-      features: ['Bash portable', 'Minimal / Medium / Full', 'Mirror oficial', 'Sin admin'],
+      features: ['LITE embebido', 'ssh + curl', 'Upgrade Medium/Full', 'Sin admin'],
       badges: [
         { label: 'WINDOWS', severity: 'info' },
-        { label: 'OPCIONAL', severity: 'success' }
+        { label: 'LITE', severity: 'success' }
       ],
       requiresDocker: false,
       isCygwin: true
@@ -1401,7 +1432,9 @@ const AppsTab = ({
       }
       if (cygwinStatus.loading) return null;
       if (cygwinStatus.installed) {
-        const tier = cygwinStatus.tier ? ` ${cygwinStatus.tier}` : '';
+        const tier = cygwinStatus.bundled && !cygwinStatus.upgraded
+          ? ' lite'
+          : (cygwinStatus.tier ? ` ${cygwinStatus.tier}` : '');
         return <span className="ai-status-label installed">Instalado{tier}</span>;
       }
       return <span className="ai-status-label not-installed">No instalado</span>;
@@ -1632,6 +1665,14 @@ const AppsTab = ({
     const isInstalled = cygwinStatus.installed;
     const busy = cygwinStatus.installing || cygwinStatus.uninstalling;
     const brandColor = '#00AA00';
+    const isBundledOnly = !!cygwinStatus.bundled && !cygwinStatus.upgraded;
+    const statusLabel = cygwinStatus.installing
+      ? `ampliando (${cygwinStatus.progressPercent || 0}%)`
+      : isInstalled
+        ? (isBundledOnly
+          ? 'LITE embebido'
+          : `AppData (${cygwinStatus.tier || 'upgrade'})`)
+        : 'No disponible';
 
     return (
       <div className="apps-config-container">
@@ -1642,7 +1683,9 @@ const AppsTab = ({
             </div>
             <div className="apps-card-header-text">
               <h3>Estado de Cygwin</h3>
-              <p className="apps-card-subtitle">Instalacion oficial desde cygwin.com a AppData</p>
+              <p className="apps-card-subtitle">
+                LITE embebido en el instalador; Medium/Full opcional en AppData
+              </p>
             </div>
           </div>
 
@@ -1651,14 +1694,7 @@ const AppsTab = ({
               <div className="apps-status-main">
                 <span className={`apps-status-indicator ${isInstalled ? 'apps-status-active' : 'apps-status-inactive'}`} />
                 <span className="apps-status-text">
-                  Estado:{' '}
-                  <strong>
-                    {cygwinStatus.installing
-                      ? `instalando (${cygwinStatus.progressPercent || 0}%)`
-                      : isInstalled
-                        ? `Listo${cygwinStatus.tier ? ` (${cygwinStatus.tier})` : ''}`
-                        : 'No instalado'}
-                  </strong>
+                  Estado: <strong>{statusLabel}</strong>
                 </span>
               </div>
               {cygwinStatus.root && (
@@ -1670,10 +1706,10 @@ const AppsTab = ({
             </div>
 
             <div className="apps-param-field" style={{ marginTop: '0.75rem' }}>
-              <label htmlFor="cygwin-tier">Nivel de instalacion</label>
+              <label htmlFor="cygwin-tier">Ampliar paquetes (descarga)</label>
               <Dropdown
                 id="cygwin-tier"
-                value={cygwinTier}
+                value={cygwinTier === 'minimal' || cygwinTier === 'lite' ? 'medium' : cygwinTier}
                 options={cygwinTierOptions}
                 onChange={(e) => setCygwinTier(e.value)}
                 disabled={busy}
@@ -1692,35 +1728,23 @@ const AppsTab = ({
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-              {!isInstalled && (
+              <Button
+                label={cygwinStatus.upgraded ? 'Reinstalar / cambiar nivel' : 'Ampliar a Medium/Full'}
+                icon="pi pi-download"
+                className="apps-restart-btn p-button-sm"
+                onClick={installCygwinApp}
+                loading={cygwinStatus.installing}
+                disabled={busy}
+              />
+              {cygwinStatus.upgraded && (
                 <Button
-                  label="Instalar Cygwin"
-                  icon="pi pi-download"
-                  className="apps-restart-btn p-button-sm"
-                  onClick={installCygwinApp}
-                  loading={cygwinStatus.installing}
+                  label="Quitar ampliacion (volver a LITE)"
+                  icon="pi pi-trash"
+                  className="apps-restart-btn p-button-danger p-button-sm"
+                  onClick={uninstallCygwinApp}
+                  loading={cygwinStatus.uninstalling}
                   disabled={busy}
                 />
-              )}
-              {isInstalled && (
-                <>
-                  <Button
-                    label="Reinstalar"
-                    icon="pi pi-refresh"
-                    className="apps-restart-btn p-button-secondary p-button-sm"
-                    onClick={installCygwinApp}
-                    loading={cygwinStatus.installing}
-                    disabled={busy}
-                  />
-                  <Button
-                    label="Desinstalar"
-                    icon="pi pi-trash"
-                    className="apps-restart-btn p-button-danger p-button-sm"
-                    onClick={uninstallCygwinApp}
-                    loading={cygwinStatus.uninstalling}
-                    disabled={busy}
-                  />
-                </>
               )}
               <Button
                 label="Verificar Estado"
@@ -1733,7 +1757,7 @@ const AppsTab = ({
             </div>
 
             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.66rem', opacity: 0.8, color: 'var(--text-color-secondary)', lineHeight: 1.35 }}>
-              Descarga setup-x86_64.exe desde cygwin.com e instala paquetes desde el mirror oficial. Medium: 5-10 min. Full: mas tiempo.
+              El LITE (bash, coreutils, ssh, curl) viene en el instalador. Ampliar descarga setup-x86_64.exe a AppData y tiene prioridad sobre el embebido. Medium: 5-10 min.
             </p>
 
             {cygwinStatus.error && (
@@ -2103,7 +2127,14 @@ const AppsTab = ({
       extras.push(<Badge key="cli" value="CLI listo" severity="success" style={{ fontSize: '0.6rem' }} />);
     }
     if (client.isCygwin && cygwinStatus.installed) {
-      extras.push(<Badge key="cyg" value="Runtime listo" severity="success" style={{ fontSize: '0.6rem' }} />);
+      extras.push(
+        <Badge
+          key="cyg"
+          value={cygwinStatus.bundled && !cygwinStatus.upgraded ? 'LITE embebido' : 'Runtime listo'}
+          severity="success"
+          style={{ fontSize: '0.6rem' }}
+        />
+      );
     }
     return extras;
   };
@@ -2120,7 +2151,12 @@ const AppsTab = ({
         return { text: `Instalando ${cygwinStatus.progressPercent || 0}%`, className: 'stopped' };
       }
       if (cygwinStatus.loading) return { text: '…', className: 'stopped' };
-      if (cygwinStatus.installed) return { text: 'Instalado', className: 'installed' };
+      if (cygwinStatus.installed) {
+        return {
+          text: cygwinStatus.bundled && !cygwinStatus.upgraded ? 'LITE' : 'Instalado',
+          className: 'installed'
+        };
+      }
       return { text: 'No instalado', className: 'not-installed' };
     }
     if (client.isBrowser) {

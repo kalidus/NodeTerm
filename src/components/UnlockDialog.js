@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import UnlockScreen from './unlock/UnlockScreen';
 import { loadUnlockStyle } from './unlock/unlockStyles';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import '../styles/components/unlock-screen.css';
 
 /**
  * Desbloqueo del vault. La presentación la resuelve UnlockScreen según

@@ -8,6 +8,18 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+### Instalador mas ligero
+- Causa del Setup 1.8.0 (~176 MB): se empaquetaba `dist/win-unpacked` dentro del asar + basura nativa `node-pty/build`.
+- Filtro de `dist/` sin unpacked/artefactos; excluidos build nativos y deps ya en webpack; compresion `maximum`; prune en CI.
+- Setup medido con Cygwin LITE: **~97 MB** (vs ~88 MB en 1.7.9 sin Cygwin / ~176 MB en 1.8.0).
+- CSS unlock/splash fuera del critical path; previews unlock recomprimidas.
+
+### Cygwin LITE embebido (Windows)
+- Runtime LITE (bash, coreutils, ssh, curl) vuelve al instalador Windows (~36 MB en disco, ~16 MB comprimido; delta Setup similar a MobaXterm CygUtils64).
+- Activado por defecto; sin descarga para uso basico.
+- Apps > Cygwin permite ampliar a Medium/Full en AppData (prioridad sobre el embebido).
+- Generar antes de `npm run dist`: `npm run cygwin:portable` (o `scripts/create-cygwin-portable.ps1`).
+
 ## [1.8.0] - 2026-11-10
 
 ### Vaults independientes

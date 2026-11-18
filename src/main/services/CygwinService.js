@@ -8,8 +8,9 @@ const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 /**
- * Servicio para Cygwin portable instalado bajo demanda (Apps).
- * Prioridad: %APPDATA%/nodeterm/cygwin64, luego resources/cygwin64 en desarrollo.
+ * Servicio para Cygwin portable.
+ * Prioridad: %APPDATA%/nodeterm/cygwin64 (upgrade Apps) → LITE embebido
+ * (process.resourcesPath/cygwin64 empaquetado, o resources/cygwin64 en dev).
  */
 
 let cygwinProcesses = {};
@@ -22,10 +23,18 @@ function setAppQuitting(quittingRef) {
   if (quittingRef) isAppQuitting = quittingRef;
 }
 
+function getBundledCygwinRoot() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'cygwin64');
+  }
+  return path.join(app.getAppPath(), 'resources', 'cygwin64');
+}
+
 function candidateRoots() {
   const roots = [path.join(getNodeTermDataDir(), 'cygwin64')];
-  if (!app.isPackaged) {
-    roots.push(path.join(app.getAppPath(), 'resources', 'cygwin64'));
+  const bundled = getBundledCygwinRoot();
+  if (bundled && !roots.includes(bundled)) {
+    roots.push(bundled);
   }
   return roots;
 }
@@ -319,7 +328,7 @@ cd ~
     if (!isAppQuitting.value) {
       sendToRenderer(mainWindow, `cygwin:error:${tabId}`,
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
-        `Instalalo desde Ajustes > Apps > Cygwin.`
+        `En Windows el LITE deberia venir embebido. Si falta, regenera resources/cygwin64 o amplía desde Ajustes > Apps > Cygwin.`
       );
     }
   }
@@ -469,6 +478,7 @@ module.exports = {
   initializeCygwinPaths,
   resetCygwinPaths,
   isCygwinAvailable,
+  getBundledCygwinRoot,
   startCygwinSession,
   CygwinHandlers,
   cygwinProcesses

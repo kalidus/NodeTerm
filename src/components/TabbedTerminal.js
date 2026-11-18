@@ -69,7 +69,7 @@ const TabbedTerminal = forwardRef(({
 
     // Estado para clientes/apps habilitados (AppsTab -> ai_clients_enabled)
     const [aiClientsEnabled, setAiClientsEnabled] = useState({
-        cygwin: false,
+        cygwin: (typeof window !== 'undefined' && window.electron?.platform === 'win32'),
         claude: false,
         opencode: false,
         codexcli: false,
@@ -81,8 +81,11 @@ const TabbedTerminal = forwardRef(({
         const syncAiClients = () => {
             try {
                 const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+                const isWin = window.electron?.platform === 'win32';
                 setAiClientsEnabled({
-                    cygwin: cfg.cygwin === true,
+                    cygwin: Object.prototype.hasOwnProperty.call(cfg, 'cygwin')
+                        ? cfg.cygwin === true
+                        : isWin,
                     claude: cfg.claude === true,
                     opencode: cfg.opencode === true,
                     codexcli: cfg.codexcli === true,

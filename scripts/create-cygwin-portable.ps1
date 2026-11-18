@@ -30,42 +30,39 @@ Write-Host ""
 $CYGWIN_URL = "https://cygwin.com/setup-x86_64.exe"
 $SETUP_FILE = Join-Path $ProjectRoot "cygwin-setup-temp.exe"
 
-# Paquetes minimos
+# Paquetes minimos (shell + coreutils)
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 
-# Paquetes MEDIUM (básicos + red + utilidades básicas - versión optimizada)
-# Incluye: básicos + red esencial (wget,curl,netcat,openssh) + utilidades (tar,gzip,git,vim,nano) + sistema (procps-ng,net-tools)
-# SIN: tcpdump, strace, lsof (muy pesados con muchas dependencias), telnet (menos usado)
-# SIN compiladores, lenguajes de programación, documentación pesada ni herramientas redundantes
-# NOTA: nmap/htop/ping no se incluyen porque no están disponibles en Cygwin de forma oficial
-$MEDIUM_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,procps-ng,netcat,net-tools,bind-utils,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip"
+# LITE embebido: Minimal + ssh + curl (objetivo ~12-15 MB en el Setup de NodeTerm)
+$LITE_PACKAGES = "$MINIMAL_PACKAGES,curl,openssh,openssl,ca-certificates,libcurl4"
+
+# Paquetes MEDIUM (upgrade opcional desde Apps)
+$MEDIUM_PACKAGES = "$LITE_PACKAGES,wget,git,vim,nano,tar,gzip,procps-ng,netcat,net-tools,bind-utils,libssh2,rsync,unzip,zip"
 
 # Paquetes completos (MEDIUM + desarrollo)
-# Incluye: MEDIUM + compiladores y herramientas de desarrollo (gcc,g++,make,cmake)
 $FULL_PACKAGES = "$MEDIUM_PACKAGES,gcc,g++,make,cmake,autoconf,automake,libtool,pkg-config,binutils"
 
-# Paquetes ultra completos (FULL + lenguajes de programación + herramientas adicionales)
+# Paquetes ultra completos (FULL + lenguajes)
 $ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,tree,psmisc,util-linux,time,parallel,gnuplot,graphviz,imagemagick,ffmpeg,python3,pip,nodejs,npm,yarn,ruby,perl,php,go,rust,java-openjdk"
 
-# Lógica de selección: MEDIUM es el modo por defecto (cuando no se especifica ningún parámetro)
-$PACKAGES = if ($Minimal) { 
-    $MINIMAL_PACKAGES 
+# Por defecto: LITE (embebido). -Minimal = solo coreutils sin ssh/curl.
+$PACKAGES = if ($Minimal) {
+    $MINIMAL_PACKAGES
 }
-elseif ($Full) { 
-    $FULL_PACKAGES 
+elseif ($Full) {
+    $FULL_PACKAGES
 }
-elseif ($UltraComplete) { 
-    $ULTRA_COMPLETE_PACKAGES 
+elseif ($UltraComplete) {
+    $ULTRA_COMPLETE_PACKAGES
 }
-elseif ($NoUltraComplete) { 
-    $FULL_PACKAGES  # NoUltraComplete = Full (sin lenguajes)
+elseif ($NoUltraComplete) {
+    $FULL_PACKAGES
 }
-elseif ($Medium) { 
-    $MEDIUM_PACKAGES 
+elseif ($Medium) {
+    $MEDIUM_PACKAGES
 }
-else { 
-    # Por defecto: MEDIUM (sin parámetros)
-    $MEDIUM_PACKAGES 
+else {
+    $LITE_PACKAGES
 }
 
 # Si UseTemp, instalar en directorio temporal
@@ -79,12 +76,15 @@ if ($UseTemp) {
 }
 
 # Determinar modo
-$mode = if ($Minimal) { 'Minimal' } 
-elseif ($Full) { 'Full' } 
+$mode = if ($Minimal) { 'Minimal' }
+elseif ($Full) { 'Full' }
 elseif ($UltraComplete) { 'Ultra Complete' }
 elseif ($NoUltraComplete) { 'Full (NoUltraComplete)' }
-elseif ($Medium) { 'Medium' } 
-else { 'Medium (por defecto)' }
+elseif ($Medium) { 'Medium' }
+else { 'Lite (embebido, por defecto)' }
+
+# Techo de tamaño para el artefacto embebido (sin comprimir)
+$MaxLiteSizeMB = 40
 
 Write-Host "Configuracion:" -ForegroundColor Yellow
 Write-Host "   Proyecto: $ProjectRoot"
@@ -151,14 +151,21 @@ Write-Host ""
 Write-Host "Instalando Cygwin portable..." -ForegroundColor Cyan
 Write-Host "   Esto puede tomar varios minutos..." -ForegroundColor Yellow
 
+$localPkgDir = Join-Path $env:TEMP "nodeterm-cygwin-packages"
+New-Item -ItemType Directory -Path $localPkgDir -Force | Out-Null
 $installArgs = @(
     "--quiet-mode",
     "--root", (Resolve-Path $OutputDir).Path,
     "--site", "https://mirrors.kernel.org/sourceware/cygwin/",
+    "--only-site",
+    "--local-package-dir", $localPkgDir,
     "--packages", $PACKAGES,
+    "--no-admin",
+    "--wait",
     "--no-shortcuts",
     "--no-desktop",
-    "--no-startmenu"
+    "--no-startmenu",
+    "--no-write-registry"
 )
 
 try {
@@ -323,12 +330,14 @@ echo "Welcome to NodeTerm Cygwin Terminal"
 
 $etcProfilePath = Join-Path $OutputDir "etc\profile.d"
 New-Item -ItemType Directory -Path $etcProfilePath -Force | Out-Null
-$cygwinrc | Out-File -FilePath "$etcProfilePath\nodeterm.sh" -Encoding ASCII
+# LF puro (bash en Cygwin falla con CRLF)
+$cygwinrcLf = ($cygwinrc -replace "`r`n", "`n" -replace "`r", "`n")
+[System.IO.File]::WriteAllText("$etcProfilePath\nodeterm.sh", $cygwinrcLf, [System.Text.Encoding]::ASCII)
 Write-Host "   Configuracion creada" -ForegroundColor Green
 
-# Crear versión LITE (solo binarios esenciales) al estilo MobaXterm
+# Crear versión LITE (bash + coreutils + ssh + curl) al estilo MobaXterm
 Write-Host ""
-Write-Host "Creando version LITE (solo binarios esenciales)..." -ForegroundColor Cyan
+Write-Host "Creando version LITE (bash + coreutils + ssh + curl)..." -ForegroundColor Cyan
 Write-Host "   Se reemplazara la instalacion completa por la version reducida." -ForegroundColor Yellow
 
 $liteDir = Join-Path $ProjectRoot "resources\cygwin64-lite-temp"
@@ -337,27 +346,25 @@ if (Test-Path $liteDir) {
 }
 New-Item -ItemType Directory -Path $liteDir -Force | Out-Null
 
-# Binarios esenciales basados en MEDIUM (sin nmap/htop)
+# Binarios esenciales del runtime embebido (sin git/vim/wget/tar)
 $essentialBinaries = @(
     "bash.exe", "sh.exe", "dash.exe",
     "ls.exe", "grep.exe", "sed.exe", "awk.exe", "gawk.exe",
     "find.exe", "which.exe", "less.exe", "tput.exe", "clear.exe", "stty.exe",
-    "wget.exe", "curl.exe", "git.exe",
-    "vim.exe", "nano.exe",
-    "ssh.exe", "scp.exe", "sftp.exe", "ssh-keygen.exe",
-    "tar.exe", "gzip.exe", "gunzip.exe", "zip.exe", "unzip.exe",
-    "nc.exe", "netcat.exe",
-    "ps.exe", "top.exe",
-    "rsync.exe", "cp.exe", "mv.exe", "rm.exe", "mkdir.exe", "rmdir.exe",
+    "curl.exe",
+    "ssh.exe", "scp.exe", "sftp.exe", "ssh-keygen.exe", "ssh-add.exe", "ssh-agent.exe",
+    "cp.exe", "mv.exe", "rm.exe", "mkdir.exe", "rmdir.exe",
     "cat.exe", "echo.exe", "head.exe", "tail.exe", "sort.exe", "uniq.exe",
-    "chmod.exe", "chown.exe", "ln.exe"
+    "chmod.exe", "chown.exe", "ln.exe", "pwd.exe", "env.exe", "printenv.exe",
+    "tr.exe", "cut.exe", "wc.exe", "tee.exe", "date.exe", "uname.exe", "id.exe", "whoami.exe",
+    "openssl.exe"
 )
 
 # Estructura mínima necesaria
 $essentialDirs = @(
-    "bin", "lib", "etc", "home",
-    "usr\bin", "usr\lib", "usr\share\terminfo", "usr\share\procps-ng",
-    "var", "var\run", "var\log"
+    "bin", "etc", "etc\ssh", "home",
+    "usr\share\terminfo", "usr\ssl",
+    "var", "var\run", "var\log", "tmp"
 )
 foreach ($dir in $essentialDirs) {
     $fullPath = Join-Path $liteDir $dir
@@ -440,67 +447,52 @@ foreach ($bin in $essentialBinaries) {
     }
 }
 
-# Crear binarios alternativos (gunzip desde gzip, netcat desde nc)
-$alternativeMappings = @{
-    "gunzip.exe" = "gzip.exe"
-    "netcat.exe" = "nc.exe"
-}
-
-foreach ($altBin in $alternativeMappings.Keys) {
-    $sourceBin = $alternativeMappings[$altBin]
-    $sourcePath = Join-Path $liteDir "bin\$sourceBin"
-    $destPath = Join-Path $liteDir "bin\$altBin"
-    if (Test-Path $sourcePath) {
-        Copy-Item $sourcePath $destPath -Force -ErrorAction SilentlyContinue
-        $copiedBinaries++
-        $missingBinaries = $missingBinaries | Where-Object { $_ -ne $altBin }
-    }
-}
-
-# Integrar ping.exe desde Windows si está disponible
-$pingDest = Join-Path $liteDir "bin\ping.exe"
-if (-not (Test-Path $pingDest)) {
-    $windowsPing = "C:\Windows\System32\ping.exe"
-    if (Test-Path $windowsPing) {
-        Copy-Item $windowsPing $pingDest -Force -ErrorAction SilentlyContinue
-        $copiedBinaries++
-    }
-}
-
 # Reportar faltantes (informativo)
-$missingReport = $missingBinaries | Where-Object { $_ -ne "ping.exe" }
-if ($missingReport.Count -gt 0) {
-    Write-Host "   Binarios no encontrados (se omitiran en LITE): $($missingReport -join ', ')" -ForegroundColor Yellow
+if ($missingBinaries.Count -gt 0) {
+    Write-Host "   Binarios no encontrados (se omitiran en LITE): $($missingBinaries -join ', ')" -ForegroundColor Yellow
 }
 
-# Copiar DLLs de lib y bin (enfoque seguro)
-Write-Host "   Copiando DLLs..." -ForegroundColor Gray
+# Copiar solo DLLs referenciadas por los .exe/.dll LITE (escaneo de strings PE)
+Write-Host "   Resolviendo DLLs por dependencia (sin volcar todo bin/)..." -ForegroundColor Gray
 $copiedDlls = 0
-$libDlls = Get-ChildItem (Join-Path $OutputDir "lib") -Filter "*.dll" -ErrorAction SilentlyContinue
-foreach ($dll in $libDlls) {
-    $dllDest = Join-Path $liteDir "lib\$($dll.Name)"
-    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
+$dllNeeded = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$dllQueue = New-Object System.Collections.Generic.Queue[string]
+$dllRx = [regex]'cyg[A-Za-z0-9_+\-.]+\.dll'
+Get-ChildItem (Join-Path $liteDir "bin") -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+    [void]$dllNeeded.Add($_.Name)
+    $dllQueue.Enqueue($_.Name)
+}
+$srcBin = Join-Path $OutputDir "bin"
+while ($dllQueue.Count -gt 0) {
+    $cur = $dllQueue.Dequeue()
+    $curPath = Join-Path $srcBin $cur
+    if (-not (Test-Path $curPath)) {
+        $curPath = Join-Path $liteDir "bin\$cur"
+    }
+    if (-not (Test-Path $curPath)) { continue }
+    try {
+        $ascii = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($curPath))
+    } catch {
+        continue
+    }
+    foreach ($m in $dllRx.Matches($ascii)) {
+        $dllName = $m.Value
+        $dllSrc = Join-Path $srcBin $dllName
+        if (-not (Test-Path $dllSrc)) { continue }
+        if ($dllNeeded.Add($dllName)) {
+            $dllQueue.Enqueue($dllName)
+        }
+    }
+}
+foreach ($dllName in $dllNeeded) {
+    if (-not $dllName.EndsWith('.dll')) { continue }
+    $dllSrc = Join-Path $srcBin $dllName
+    if (-not (Test-Path $dllSrc)) { continue }
+    $dllDest = Join-Path $liteDir "bin\$dllName"
+    Copy-Item $dllSrc $dllDest -Force -ErrorAction SilentlyContinue
     $copiedDlls++
 }
-$binDlls = Get-ChildItem (Join-Path $OutputDir "bin") -Filter "*.dll" -ErrorAction SilentlyContinue
-foreach ($dll in $binDlls) {
-    $dllDest = Join-Path $liteDir "bin\$($dll.Name)"
-    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
-    $copiedDlls++
-}
-# DLLs en usr\bin y usr\lib (algunas dependencias adicionales)
-$usrBinDlls = Get-ChildItem (Join-Path $OutputDir "usr\bin") -Filter "*.dll" -ErrorAction SilentlyContinue
-foreach ($dll in $usrBinDlls) {
-    $dllDest = Join-Path $liteDir "usr\bin\$($dll.Name)"
-    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
-    $copiedDlls++
-}
-$usrLibDlls = Get-ChildItem (Join-Path $OutputDir "usr\lib") -Filter "*.dll" -ErrorAction SilentlyContinue
-foreach ($dll in $usrLibDlls) {
-    $dllDest = Join-Path $liteDir "usr\lib\$($dll.Name)"
-    Copy-Item $dll.FullName $dllDest -Force -ErrorAction SilentlyContinue
-    $copiedDlls++
-}
+Write-Host "   DLLs por dependencia: $copiedDlls" -ForegroundColor Gray
 
 # Copiar configuración esencial
 $etcFiles = @("fstab", "nsswitch.conf", "profile")
@@ -521,21 +513,32 @@ if (Test-Path "$OutputDir\etc\profile.d") {
     }
 }
 
+# OpenSSH host/config y certificados SSL (curl/ssh)
+if (Test-Path "$OutputDir\etc\ssh") {
+    Write-Host "   Copiando etc/ssh..." -ForegroundColor Gray
+    Copy-Item "$OutputDir\etc\ssh\*" (Join-Path $liteDir "etc\ssh") -Recurse -Force -ErrorAction SilentlyContinue
+}
+foreach ($sslSrc in @("$OutputDir\usr\ssl", "$OutputDir\etc\pki", "$OutputDir\etc\ssl")) {
+    if (Test-Path $sslSrc) {
+        $sslName = Split-Path $sslSrc -Leaf
+        $sslParent = if ($sslSrc -like "*\usr\*") { "usr" } else { "etc" }
+        $sslDestParent = Join-Path $liteDir $sslParent
+        New-Item -ItemType Directory -Path $sslDestParent -Force | Out-Null
+        Write-Host "   Copiando $sslParent/$sslName..." -ForegroundColor Gray
+        Copy-Item $sslSrc (Join-Path $sslDestParent $sslName) -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # Copiar home (estructura)
 if (Test-Path "$OutputDir\home") {
     Copy-Item "$OutputDir\home" "$liteDir\" -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# Terminfo completo (para evitar problemas con top/ncurses)
+# Terminfo (ncurses/less/clear)
 if (Test-Path "$OutputDir\usr\share\terminfo") {
-    Write-Host "   Copiando terminfo completo..." -ForegroundColor Gray
+    Write-Host "   Copiando terminfo..." -ForegroundColor Gray
+    New-Item -ItemType Directory -Path (Join-Path $liteDir "usr\share") -Force | Out-Null
     Copy-Item "$OutputDir\usr\share\terminfo" (Join-Path $liteDir "usr\share") -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-# Datos de procps-ng (top) si existen
-if (Test-Path "$OutputDir\usr\share\procps-ng") {
-    Write-Host "   Copiando datos de procps-ng..." -ForegroundColor Gray
-    Copy-Item "$OutputDir\usr\share\procps-ng" (Join-Path $liteDir "usr\share") -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # Archivos utmp/wtmp para top/ps (vacíos)
@@ -639,7 +642,23 @@ Write-Host "Ubicacion: $OutputDir" -ForegroundColor White
 Write-Host "Tamano final: $([math]::Round($size, 2)) MB" -ForegroundColor White
 Write-Host "Bash: $bashPath" -ForegroundColor White
 Write-Host ""
-Write-Host "Siguiente paso: Compilar la aplicacion con Electron Builder" -ForegroundColor Yellow
-$msgFinal = "   La carpeta resources sera incluida automaticamente"
-Write-Host $msgFinal -ForegroundColor Yellow
+
+if ($size -gt $MaxLiteSizeMB) {
+    Write-Host "ERROR: LITE supera el techo de $MaxLiteSizeMB MB ($([math]::Round($size, 2)) MB)." -ForegroundColor Red
+    Write-Host "   Reduce DLLs/paquetes antes de empaquetar en el instalador." -ForegroundColor Red
+    exit 2
+}
+
+# Meta para el runtime / Apps
+$meta = @{
+    tier        = "lite"
+    source      = "bundled"
+    builtAt     = (Get-Date).ToString("o")
+    sizeMB      = [math]::Round($size, 2)
+    mode        = $mode
+}
+$meta | ConvertTo-Json | Set-Content -Path (Join-Path $OutputDir "nodeterm-cygwin-meta.json") -Encoding UTF8
+
+Write-Host "Siguiente paso: electron-builder (extraResources -> cygwin64 en Windows)" -ForegroundColor Yellow
+Write-Host "   Genera resources\cygwin64 ANTES de npm run dist; no va en git." -ForegroundColor Yellow
 Write-Host ""
