@@ -143,8 +143,8 @@ const AppsTab = ({
   });
   const [cygwinTier, setCygwinTier] = useState('medium');
   const cygwinTierOptions = [
-    { label: 'Medium (~150-300 MB) - + git, vim, tar, rsync...', value: 'medium' },
-    { label: 'Full (~500-800 MB) - + gcc, make, cmake', value: 'full' }
+    { label: 'Cygwin Medium (~150-300 MB) - + git, vim, tar, rsync...', value: 'medium' },
+    { label: 'Cygwin Full (~500-800 MB) - + gcc, make, cmake', value: 'full' }
   ];
 
   // Estados para configuración detallada de los CLIs
@@ -674,8 +674,8 @@ const AppsTab = ({
       await checkCygwinStatus();
       toast.current?.show({
         severity: 'success',
-        summary: 'NodeTerm Terminal ampliado',
-        detail: `${result.tier || cygwinTier} en ${result.root || 'AppData'}`,
+        summary: 'NodeTerm (cygwin) ampliado',
+        detail: `Cygwin ${result.tier || cygwinTier} en ${result.root || 'AppData'}`,
         life: 4000
       });
       window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: true } }));
@@ -690,7 +690,7 @@ const AppsTab = ({
       }));
       toast.current?.show({
         severity: 'error',
-        summary: 'Error ampliando NodeTerm Terminal',
+        summary: 'Error ampliando NodeTerm (cygwin)',
         detail: error.message || 'Error desconocido',
         life: 7000
       });
@@ -711,7 +711,7 @@ const AppsTab = ({
       toast.current?.show({
         severity: 'success',
         summary: 'Ampliacion eliminada',
-        detail: 'Se quito AppData; NodeTerm Terminal LITE sigue disponible',
+        detail: 'Se quito AppData; NodeTerm (cygwin) LITE sigue disponible',
         life: 4000
       });
       window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: true } }));
@@ -941,7 +941,7 @@ const AppsTab = ({
       if (!isWindows) {
         toast.current?.show({
           severity: 'warn',
-          summary: 'NodeTerm',
+          summary: 'NodeTerm (cygwin)',
           detail: 'Solo disponible en Windows.',
           life: 4000
         });
@@ -1232,15 +1232,15 @@ const AppsTab = ({
     },
     {
       key: 'cygwin', category: 'services',
-      name: 'NodeTerm Terminal', shortName: 'NodeTerm',
+      name: 'NodeTerm (cygwin)', shortName: 'NodeTerm (cygwin)',
       color: '#00AA00',
       description: isWindows
-        ? 'NodeTerm Terminal LITE embebido (bash, coreutils, ssh, curl). Activado por defecto. Desde aqui puedes ampliar a Medium/Full en AppData.'
-        : 'NodeTerm Terminal solo esta disponible en Windows.',
-      features: ['LITE embebido', 'ssh + curl', 'Upgrade Medium/Full', 'Sin admin'],
+        ? 'Runtime Cygwin LITE embebido (bash, coreutils, ssh, curl). Activado por defecto. Desde aqui puedes ampliar a Medium/Full (Cygwin) en AppData.'
+        : 'NodeTerm (cygwin) solo esta disponible en Windows.',
+      features: ['Cygwin LITE', 'ssh + curl', 'Upgrade Medium/Full', 'Sin admin'],
       badges: [
         { label: 'WINDOWS', severity: 'info' },
-        { label: 'LITE', severity: 'success' }
+        { label: 'CYGWIN', severity: 'success' }
       ],
       requiresDocker: false,
       isCygwin: true
@@ -1682,9 +1682,9 @@ const AppsTab = ({
               <i className="pi pi-info-circle apps-card-icon" />
             </div>
             <div className="apps-card-header-text">
-              <h3>Estado de NodeTerm Terminal</h3>
+              <h3>Estado de NodeTerm (cygwin)</h3>
               <p className="apps-card-subtitle">
-                LITE embebido en el instalador; Medium/Full opcional en AppData
+                Runtime Cygwin LITE embebido; Medium/Full opcional desde mirrors de Cygwin en AppData
               </p>
             </div>
           </div>
@@ -1706,7 +1706,7 @@ const AppsTab = ({
             </div>
 
             <div className="apps-param-field" style={{ marginTop: '0.75rem' }}>
-              <label htmlFor="cygwin-tier">Ampliar paquetes (descarga)</label>
+              <label htmlFor="cygwin-tier">Ampliar paquetes Cygwin (descarga)</label>
               <Dropdown
                 id="cygwin-tier"
                 value={cygwinTier === 'minimal' || cygwinTier === 'lite' ? 'medium' : cygwinTier}
@@ -1757,7 +1757,7 @@ const AppsTab = ({
             </div>
 
             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.66rem', opacity: 0.8, color: 'var(--text-color-secondary)', lineHeight: 1.35 }}>
-              El LITE (bash, coreutils, ssh, curl) viene en el instalador. Ampliar descarga setup-x86_64.exe a AppData y tiene prioridad sobre el embebido. Medium: 5-10 min.
+              El LITE Cygwin (bash, coreutils, ssh, curl) viene en el instalador. Ampliar descarga setup-x86_64.exe desde cygwin.com a AppData y tiene prioridad sobre el embebido. Medium: 5-10 min.
             </p>
 
             {cygwinStatus.error && (
@@ -2440,7 +2440,7 @@ const AppsTab = ({
     const advancedTitle = (client.isGuacamole || client.isRdp)
       ? 'Backend y conexión'
       : client.isCygwin
-        ? 'Instalacion y runtime'
+        ? 'Instalacion Cygwin y runtime'
         : client.requiresDocker
           ? 'Docker y actualizaciones'
           : 'Opciones avanzadas';
