@@ -40,6 +40,7 @@ import {
 } from '../utils/tabHibernation';
 import { useTabBarChrome } from '../hooks/useTabBarChrome';
 import { setLauncherSidebarProps } from '../utils/launcherSidebarBridge';
+import NodeTermAppIcon from './NodeTermAppIcon';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
@@ -875,9 +876,9 @@ const MainContentArea = ({
         return <FaRedhat style={{ fontSize: `${baseIconSize}px`, color: distroInfo?.color || getColorForCategory('redhat'), marginRight: iconMarginRight }} />;
       }
 
-      // Cygwin
-      if (terminalType === 'cygwin' || lowerLabel.includes('cygwin')) {
-        return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, color: '#00FF00', fontWeight: 'bold', marginRight: iconMarginRight }}></i>;
+      // NodeTerm (cygwin) — icono de la aplicación
+      if (terminalType === 'cygwin' || lowerLabel.includes('cygwin') || lowerLabel.includes('nodeterm')) {
+        return <NodeTermAppIcon size={baseIconSize} style={{ marginRight: iconMarginRight }} />;
       }
 
       // Docker

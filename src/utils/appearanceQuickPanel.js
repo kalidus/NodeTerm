@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import QuickPanelSettingsHost from '../components/settings/QuickPanelSettingsHost';
+import appIcon from '../assets/app-icon.png';
 import { themeManager } from './themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from './presetManager';
@@ -1470,8 +1471,23 @@ export function openAppearanceQuickPanel(anchorEl, options = {}) {
           card.type = 'button';
           card.style.setProperty('--aqp-app-color', app.color);
           const top = el('div', 'aqp-app-top');
-          const badge = el('span', 'aqp-app-badge', app.short);
-          badge.style.background = app.color;
+          let badge;
+          if (app.id === 'cygwin') {
+            badge = el('span', 'aqp-app-badge');
+            badge.style.background = 'transparent';
+            badge.style.padding = '0';
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.justifyContent = 'center';
+            const img = document.createElement('img');
+            img.src = appIcon;
+            img.alt = '';
+            img.style.cssText = 'width:18px;height:18px;object-fit:contain;border-radius:3px;display:block;';
+            badge.appendChild(img);
+          } else {
+            badge = el('span', 'aqp-app-badge', app.short);
+            badge.style.background = app.color;
+          }
           const copy = el('div', 'aqp-app-copy');
           copy.append(el('span', 'aqp-app-name', app.name));
           copy.append(el('span', 'aqp-app-desc', app.description));

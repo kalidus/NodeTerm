@@ -31,6 +31,7 @@ import {
 } from '../utils/defaultLocalTerminal';
 import { appConfirm } from './ui/AppConfirm';
 import LauncherQuickActions from './home/LauncherQuickActions';
+import NodeTermAppIcon from './NodeTermAppIcon';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -1320,7 +1321,7 @@ const TabbedTerminal = forwardRef(({
                 shells.push({
                     label: cygwinAvailable ? 'NodeTerm' : 'NodeTerm (instalar)',
                     value: 'cygwin',
-                    icon: <FaLinux style={{ color: '#FCC624' }} />
+                    icon: <NodeTermAppIcon size={14} />
                 });
             }
         } else {
@@ -1856,10 +1857,11 @@ const TabbedTerminal = forwardRef(({
                                         <FaUbuntu className="cyber-tab-icon" style={{ color: '#E95420' }} />
                                     ) : tab.type === 'debian' ? (
                                         <SiDebian className="cyber-tab-icon" style={{ color: '#D70A53' }} />
+                                    ) : tab.type === 'cygwin' ? (
+                                        <NodeTermAppIcon size={14} className="cyber-tab-icon" />
                                     ) : (
                                         <i
                                             className={tab.type === 'wsl' || tab.type === 'wsl-distro' ? 'pi pi-server cyber-tab-icon' :
-                                                tab.type === 'cygwin' ? 'pi pi-code cyber-tab-icon' :
                                                     tab.type === 'claude' ? 'pi pi-comments cyber-tab-icon' :
                                                     tab.type === 'opencode' ? 'pi pi-code cyber-tab-icon' :
                                                     tab.type === 'codexcli' ? 'pi pi-bolt cyber-tab-icon' :

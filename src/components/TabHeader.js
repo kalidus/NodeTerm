@@ -12,6 +12,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import { getUiFontSizePx } from '../utils/sidebarFontStack';
 import { isSecretEntry } from '../services/terminalAgentState';
+import NodeTermAppIcon from './NodeTermAppIcon';
 
 /** tabIds SSH de una pestaña terminal o de las hojas de un split */
 function collectTabTerminalIds(tab) {
@@ -362,9 +363,9 @@ const TabHeader = React.memo(({
       return <FaRedhat style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('redhat'), flexShrink: 0 }} />;
     }
 
-    // Cygwin
-    if (terminalType === 'cygwin' || label.includes('cygwin')) {
-      return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#00FF00', fontWeight: 'bold', flexShrink: 0 }}></i>;
+    // NodeTerm (cygwin) — icono de la aplicación
+    if (terminalType === 'cygwin' || label.includes('cygwin') || label.includes('nodeterm')) {
+      return <NodeTermAppIcon size={baseIconSize} style={{ marginRight: '6px' }} />;
     }
 
     // Docker

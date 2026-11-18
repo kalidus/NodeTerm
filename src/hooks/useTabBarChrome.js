@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from '../components/AIClientBrandIcon';
+import NodeTermAppIcon from '../components/NodeTermAppIcon';
 import LauncherQuickActions from '../components/home/LauncherQuickActions';
 import LauncherEmbeddedSidebar from '../components/home/LauncherEmbeddedSidebar';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -610,7 +611,7 @@ export function useTabBarChrome({
         const g = (groupLabel || '').toLowerCase();
         const i = (itemLabel || '').toLowerCase();
         if (i.includes('powershell')) return { subtitle: 'SHELL · WIN' };
-        if (i.includes('cygwin')) return { subtitle: 'SHELL · POSIX' };
+        if (i.includes('cygwin') || i.includes('nodeterm')) return { subtitle: 'SHELL · POSIX' };
         if (i.includes('ubuntu') || i.includes('debian') || i.includes('kali')) return { subtitle: 'WSL · DISTRO' };
         if (g.includes('shell')) return { subtitle: 'LOCAL' };
         if (g.includes('ai') || i.includes('codex') || i.includes('gemini') || i.includes('claude') || i.includes('opencode')) return { subtitle: 'AI · CLI' };
@@ -629,6 +630,11 @@ export function useTabBarChrome({
       const resolveLauncherIconElement = (item, groupLabel, accent) => {
         const gl = (groupLabel || '').toLowerCase();
         const lb = (item.label || '').toLowerCase();
+
+        // NodeTerm shell: siempre el icono de la app (label "NodeTerm", no "cygwin")
+        if (lb.includes('nodeterm') || lb.includes('cygwin')) {
+          return <NodeTermAppIcon size={18} style={{ display: 'block', marginRight: 0 }} />;
+        }
 
         if (React.isValidElement(item.icon)) {
           const prev = item.icon.props?.style || {};
@@ -657,7 +663,6 @@ export function useTabBarChrome({
           return <SiDocker style={{ fontSize: 20, color: accent }} />;
         }
         if (lb.includes('powershell')) return <FaWindows style={{ fontSize: 18, color: '#0078D4' }} />;
-        if (lb.includes('cygwin')) return <FaLinux style={{ fontSize: 17, color: '#FCC624' }} />;
         if (lb.includes('ubuntu')) return <FaUbuntu style={{ fontSize: 19, color: '#E95420' }} />;
         if (lb.includes('debian')) return <SiDebian style={{ fontSize: 18, color: '#D70A53' }} />;
         if (lb.includes('kali')) return <FaLinux style={{ fontSize: 18, color: '#2196F3' }} />;

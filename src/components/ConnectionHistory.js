@@ -24,6 +24,7 @@ import NotesCyberPanels from './home/NotesCyberPanels';
 import ToolsCyberPanels from './home/ToolsCyberPanels';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
+import NodeTermAppIcon from './NodeTermAppIcon';
 
 // Modular connection-history package
 import {
@@ -439,7 +440,11 @@ const ConnectionHistory = ({
 						try {
 							const result = await window.electronAPI.invoke('cygwin:detect');
 							if (result && result.available) {
-								shells.push({ label: 'NodeTerm', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
+								shells.push({
+									label: 'NodeTerm',
+									value: 'cygwin',
+									icon: <NodeTermAppIcon size={14} />
+								});
 							}
 						} catch (e) { /* ignore */ }
 					}

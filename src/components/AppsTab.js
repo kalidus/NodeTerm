@@ -10,6 +10,7 @@ import { Accordion, AccordionTab } from 'primereact/accordion';
 import { Toast } from 'primereact/toast';
 import { ProgressBar } from 'primereact/progressbar';
 import AIClientBrandIcon from './AIClientBrandIcon';
+import NodeTermAppIcon from './NodeTermAppIcon';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/ai-clients-tab.css';
 import '../styles/components/apps-tab.css';
@@ -2106,7 +2107,7 @@ const AppsTab = ({
       return <i className="pi pi-server" style={{ fontSize: size, color: client.color }} />;
     }
     if (client.isCygwin) {
-      return <i className="pi pi-code" style={{ fontSize: size, color: client.color }} />;
+      return <NodeTermAppIcon size={size} />;
     }
     if (client.isBrowser) {
       return <i className="pi pi-globe" style={{ fontSize: size, color: client.color }} />;
