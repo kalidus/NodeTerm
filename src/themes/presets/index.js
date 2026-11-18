@@ -192,8 +192,8 @@ const presetSpecs = [
     uiFontSize: '13',
     monoFont: 'Victor Mono',
     monoFontSize: '13',
-    iconTheme: 'ocean',
-    sessionIcons: 'glass',
+    iconTheme: 'ghostOcean',
+    sessionIcons: 'classic',
     actionBar: 'glass'
   },
   {
