@@ -444,6 +444,47 @@ body.layout-unified-app-rounded .title-bar {
   box-shadow: none !important;
 }
 
+/* =========================================
+   LAYOUT: UNIFIED COMPACTO (titlebar densa)
+   Hereda Unified vía clase layout-unified en body.
+   ========================================= */
+body.layout-unified-compact .title-bar {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  padding: 0 2px !important;
+}
+
+body.layout-unified-compact .title-bar-actions,
+body.layout-unified-compact .title-bar-action-group {
+  gap: 0;
+}
+
+body.layout-unified-compact .title-bar-action-sep {
+  height: 12px;
+  margin: 0 2px;
+}
+
+body.layout-unified-compact .title-bar-icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+}
+
+body.layout-unified-compact .title-bar-icon-btn i {
+  font-size: 0.78rem;
+}
+
+body.layout-unified-compact .title-bar .app-search-field.app-search-input {
+  height: 22px;
+  border-radius: 0 !important;
+}
+
+body.layout-unified-compact .title-bar-vault-selector svg {
+  width: 15px;
+  height: 15px;
+}
+
 /* Color personalizado / paleta: prioridad sobre gradientes de temas animados */
 html[data-custom-titlebar="true"] .title-bar[data-animation] {
   background: var(--ui-titlebar-accent) !important;

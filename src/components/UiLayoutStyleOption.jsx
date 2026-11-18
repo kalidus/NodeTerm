@@ -19,6 +19,21 @@ function LayoutMiniPreview({ layoutId }) {
     );
   }
 
+  if (id === 'unified-compact') {
+    return (
+      <div className="layout-mini layout-mini--unified-compact">
+        <div className="layout-mini__bar layout-mini__bar--thin" />
+        <div className="layout-mini__body">
+          <div className="layout-mini__side" />
+          <div className="layout-mini__main">
+            <div className="layout-mini__tabs" />
+            <div className="layout-mini__pane" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (id === 'unified-rounded') {
     return (
       <div className="layout-mini layout-mini--unified-rounded">

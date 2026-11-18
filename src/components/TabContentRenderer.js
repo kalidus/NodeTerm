@@ -521,7 +521,7 @@ const TabContentRendererInner = React.memo(({
 
       // Adaptar estilos según el layout global de la UI
       const isCyberpunk = uiLayout === 'cyberpunk';
-      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-compact' || uiLayout === 'unified-app-rounded';
       const isUnifiedRounded = uiLayout === 'unified-rounded';
       
       let borderRadius = '12px';
@@ -756,7 +756,7 @@ const TabContentRendererInner = React.memo(({
       };
 
       const isCyberpunk = uiLayout === 'cyberpunk';
-      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-compact' || uiLayout === 'unified-app-rounded';
       const isUnifiedRounded = uiLayout === 'unified-rounded';
 
       const actionButtonStyle = {
@@ -961,8 +961,8 @@ const TabContentRendererInner = React.memo(({
         disabled={disabled}
         style={{
           padding: '8px 16px',
-          borderRadius: uiLayout === 'cyberpunk' || uiLayout === 'unified' || uiLayout === 'unified-app-rounded' ? 0 : (uiLayout === 'unified-rounded' ? 6 : 6),
-          border: uiLayout === 'unified' || uiLayout === 'unified-rounded' || uiLayout === 'unified-app-rounded' ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border)',
+          borderRadius: uiLayout === 'cyberpunk' || uiLayout === 'unified' || uiLayout === 'unified-compact' || uiLayout === 'unified-app-rounded' ? 0 : (uiLayout === 'unified-rounded' ? 6 : 6),
+          border: uiLayout === 'unified' || uiLayout === 'unified-compact' || uiLayout === 'unified-rounded' || uiLayout === 'unified-app-rounded' ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border)',
           background: disabled ? 'var(--ui-content-bg)' : 'var(--ui-button-secondary)',
           color: disabled ? 'var(--text-color-secondary)' : 'var(--ui-button-secondary-text)',
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -979,7 +979,7 @@ const TabContentRendererInner = React.memo(({
     );
 
     const isCyberpunk = uiLayout === 'cyberpunk';
-    const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+    const isUnified = uiLayout === 'unified' || uiLayout === 'unified-compact' || uiLayout === 'unified-app-rounded';
     const isUnifiedRounded = uiLayout === 'unified-rounded';
 
     return (

@@ -4,12 +4,13 @@ import { persistSyncedSetting } from './persistSyncedSetting';
 /** Clave localStorage del estilo de apariencia (layout global de la UI). */
 export const UI_LAYOUT_STORAGE_KEY = 'ui_layout';
 
-const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux', 'layout-islas', 'layout-dock', 'layout-tablero', 'layout-studio'];
+const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-unified-compact', 'layout-unified-rounded', 'layout-unified-app-rounded', 'layout-modern-custom', 'layout-atelier', 'layout-mux', 'layout-islas', 'layout-dock', 'layout-tablero', 'layout-studio'];
 
 /** Opciones de layout para selectores rápidos (titlebar, etc.). */
 export const UI_LAYOUT_OPTIONS = [
   { id: 'default', name: 'Default', icon: 'pi-box' },
   { id: 'unified', name: 'Unified', icon: 'pi-stop' },
+  { id: 'unified-compact', name: 'Unified Compacto', icon: 'pi-minus' },
   { id: 'unified-rounded', name: 'Unified Rounded', icon: 'pi-circle' },
   { id: 'unified-app-rounded', name: 'App Rounded', icon: 'pi-window-maximize' },
   { id: 'cyberpunk', name: 'Cyberpunk', icon: 'pi-bolt' },
@@ -30,6 +31,7 @@ function syncIconThemeForLayout(layoutId) {
     localStorage.setItem('iconThemeSidebar', 'fluent');
   } else if (
     layoutId === 'unified' ||
+    layoutId === 'unified-compact' ||
     layoutId === 'unified-rounded' ||
     layoutId === 'unified-app-rounded' ||
     layoutId === 'atelier' ||
@@ -74,7 +76,12 @@ export function applyUILayoutFromStorage() {
     localStorage.setItem(UI_LAYOUT_STORAGE_KEY, layoutId);
   }
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);
-  document.body.classList.add(`layout-${layoutId}`);
+  // Unified Compacto hereda todo el chrome de Unified + overrides densos.
+  if (layoutId === 'unified-compact') {
+    document.body.classList.add('layout-unified', 'layout-unified-compact');
+  } else {
+    document.body.classList.add(`layout-${layoutId}`);
+  }
   if (window.electronAPI && window.electronAPI.setWindowCorners) {
     window.electronAPI.setWindowCorners(layoutId);
   }
