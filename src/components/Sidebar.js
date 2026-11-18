@@ -3065,7 +3065,7 @@ const Sidebar = React.memo(({
             type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
-            title="Nueva carpeta"
+            title={documentsNotesLayout === 'notebook' ? 'Nueva libreta' : 'Nueva carpeta'}
           >
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>

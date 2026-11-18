@@ -265,22 +265,18 @@ export const NOTEBOOK_QUICK_KEY = 'quick_note';
 export const NOTEBOOK_NAV_STORAGE_KEY = 'documents_notebook_nav';
 
 /**
- * Nivel donde viven los cuadernos del usuario.
- * Si el árbol está envuelto en vaults, baja a sus hijos: el vault no es un cuaderno.
+ * Nivel plano de la biblioteca cuando el árbol no trae vaults.
+ * Con vaults, no mezcla sus hijos: cada vault es un grupo del selector.
  */
 export function libraryLevelNodes(nodes) {
   const list = Array.isArray(nodes) ? nodes : [];
   if (!list.some((node) => isVaultRoot(node))) return list;
-  const level = [];
-  list.forEach((node) => {
-    if (!node) return;
-    if (isVaultRoot(node)) {
-      if (!node.data?.locked) level.push(...(node.children || []));
-      return;
-    }
-    level.push(node);
-  });
-  return level;
+  return list.filter((node) => node && !isVaultRoot(node));
+}
+
+/** Clave de la entrada «Páginas» de un vault. En un árbol plano se usa «Sueltas». */
+export function notebookPagesKey(parentKey) {
+  return parentKey ? `${NOTEBOOK_PAGES_KEY}:${parentKey}` : NOTEBOOK_LOOSE_KEY;
 }
 
 /** Carpeta donde deben caer las notas sueltas y el primer cuaderno, si hay vault. */
@@ -314,18 +310,18 @@ function isUserFolder(node) {
   return isManagedFolder(node) && !isVaultRoot(node);
 }
 
-/** Cuadernos: carpetas del nivel de biblioteca, más «Sueltas» si hay notas fuera de ellas. */
-export function listNotebooks(nodes) {
+function notebooksFromLevel(children, pagesParentKey, looseLabel, looseKey) {
   const notebooks = [];
   let loose = false;
-  libraryLevelNodes(nodes).forEach((node) => {
-    if (!node || isQuickNotesGroup(node)) return;
+  (children || []).forEach((node) => {
+    if (!node || isQuickNotesGroup(node) || isVaultRoot(node)) return;
     if (isUserFolder(node)) {
       notebooks.push({
         key: node.key,
         label: node.label || 'Cuaderno',
         synthetic: false,
-        node
+        node,
+        pagesParentKey: null
       });
       return;
     }
@@ -333,13 +329,57 @@ export function listNotebooks(nodes) {
   });
   if (loose) {
     notebooks.push({
-      key: NOTEBOOK_LOOSE_KEY,
-      label: 'Sueltas',
+      key: looseKey,
+      label: looseLabel,
       synthetic: true,
-      node: null
+      node: null,
+      pagesParentKey: pagesParentKey || null
     });
   }
   return notebooks;
+}
+
+/**
+ * Grupos del selector. Cada vault-root es un grupo, también si está bloqueado.
+ * Sin vaults en el árbol, un único grupo sin título.
+ */
+export function listNotebookMenu(nodes) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  const vaults = list.filter((node) => isVaultRoot(node));
+  if (!vaults.length) {
+    return [{
+      key: null,
+      label: null,
+      locked: false,
+      notebooks: notebooksFromLevel(list, null, 'Sueltas', NOTEBOOK_LOOSE_KEY)
+    }];
+  }
+  const groups = vaults.map((vault) => {
+    const locked = Boolean(vault.data?.locked);
+    return {
+      key: vault.key,
+      label: vault.label || 'Vault',
+      locked,
+      notebooks: locked
+        ? []
+        : notebooksFromLevel(vault.children, vault.key, 'Páginas', notebookPagesKey(vault.key))
+    };
+  });
+  const stray = list.filter((node) => node && !isVaultRoot(node));
+  if (stray.length) {
+    groups.push({
+      key: null,
+      label: null,
+      locked: false,
+      notebooks: notebooksFromLevel(stray, null, 'Sueltas', NOTEBOOK_LOOSE_KEY)
+    });
+  }
+  return groups;
+}
+
+/** Cuadernos elegibles: los de cada grupo, sin los vaults bloqueados. */
+export function listNotebooks(nodes) {
+  return listNotebookMenu(nodes).flatMap((group) => group.notebooks);
 }
 
 function collectFolderSections(children, depth, ancestors, out) {
@@ -401,7 +441,11 @@ export function listSectionPages(nodes, notebook, sectionKey) {
   }
   if (!notebook || !sectionKey) return [];
   if (sectionKey === NOTEBOOK_PAGES_KEY) {
-    if (notebook.synthetic) return libraryLevelNodes(nodes).filter(isNote);
+    if (notebook.synthetic) {
+      if (!notebook.pagesParentKey) return libraryLevelNodes(nodes).filter(isNote);
+      const vault = (nodes || []).find((node) => node && node.key === notebook.pagesParentKey);
+      return (vault?.children || []).filter(isNote);
+    }
     return (notebook.node?.children || []).filter(isNote);
   }
   const folder = findFolderByKey(notebook.node, sectionKey);
@@ -448,10 +492,27 @@ export function notebookPageParentKey(nodes, saved) {
   const { notebook, sectionKey } = resolveNotebookNav(nodes, saved);
   if (!sectionKey || sectionKey === NOTEBOOK_QUICK_KEY) return null;
   if (sectionKey === NOTEBOOK_PAGES_KEY) {
-    if (!notebook || notebook.synthetic) return looseNotesParentKey(nodes);
+    if (!notebook || notebook.synthetic) return notebook?.pagesParentKey || null;
     return notebook.key;
   }
   return sectionKey;
+}
+
+/** Vault donde crear un cuaderno nuevo, o null si el árbol es plano. */
+export function notebookVaultKey(nodes, saved) {
+  const { notebook } = resolveNotebookNav(nodes, saved);
+  const list = Array.isArray(nodes) ? nodes : [];
+  if (!list.some((node) => isVaultRoot(node))) return null;
+  if (notebook?.pagesParentKey) return notebook.pagesParentKey;
+  if (notebook && !notebook.synthetic) {
+    const owner = list.find((node) => (
+      isVaultRoot(node)
+      && !node.data?.locked
+      && findFolderByKey(node, notebook.key)
+    ));
+    if (owner) return owner.key;
+  }
+  return looseNotesParentKey(nodes);
 }
 
 export function notesSubtitle(node) {

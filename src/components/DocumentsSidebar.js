@@ -64,7 +64,8 @@ import {
   looseNotesParentKey,
   readNotebookNavState,
   resolveNotebookNav,
-  notebookPageParentKey
+  notebookPageParentKey,
+  notebookVaultKey
 } from './notes/notesBrowse';
 import { useLibraryIngest } from './library/useLibraryIngest';
 import LibraryFolderPropertiesDialog from './library/LibraryFolderPropertiesDialog';
@@ -564,6 +565,7 @@ const DocumentsSidebar = ({
   }, []);
 
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [folderDialogKind, setFolderDialogKind] = useState('folder');
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [parentKeyForNew, setParentKeyForNew] = useState(null);
@@ -925,11 +927,13 @@ const DocumentsSidebar = ({
       const currentNotebookKey = resolved.notebook && !resolved.notebook.synthetic
         ? resolved.notebook.key
         : null;
+      const parentNode = parentKey ? findNodeInTree(documentNodes, parentKey) : null;
+      const parentIsVault = Boolean(parentNode && isVaultRoot(parentNode));
       setNotebookNav((prev) => {
         if (currentNotebookKey && parentKey === currentNotebookKey) {
           return { ...prev, notebookKey: currentNotebookKey, sectionKey: newFolder.key };
         }
-        if (!parentKey || parentKey === looseNotesParentKey(documentNodes)) {
+        if (!parentKey || parentIsVault || parentKey === looseNotesParentKey(documentNodes)) {
           return { ...prev, notebookKey: newFolder.key, sectionKey: null };
         }
         return { ...prev, sectionKey: newFolder.key };
@@ -1975,18 +1979,22 @@ const DocumentsSidebar = ({
     return () => window.removeEventListener('document-icon-updated', handler);
   }, []);
 
-  const openNewFolderDialog = (asSection) => {
+  const openNewFolderDialog = (asSection, vaultKey) => {
     const sectionInsideNotebook = asSection === true;
+    const explicitVault = typeof vaultKey === 'string' ? vaultKey : null;
     if (notesLayout === 'notebook' && sectionInsideNotebook) {
       const resolved = resolveNotebookNav(documentNodesRef.current, notebookNavRef.current);
       const parent = resolved.notebook && !resolved.notebook.synthetic
         ? resolved.notebook.key
-        : looseNotesParentKey(documentNodesRef.current);
+        : (explicitVault || notebookVaultKey(documentNodesRef.current, notebookNavRef.current));
       setParentKeyForNew(parent);
+      setFolderDialogKind('section');
     } else if (notesLayout === 'notebook') {
-      setParentKeyForNew(looseNotesParentKey(documentNodesRef.current));
+      setParentKeyForNew(explicitVault || notebookVaultKey(documentNodesRef.current, notebookNavRef.current));
+      setFolderDialogKind('libreta');
     } else {
       setParentKeyForNew(notesLayout !== 'tree' && browseStack.length ? browseStack[browseStack.length - 1] : null);
+      setFolderDialogKind('folder');
     }
     setNewItemName('');
     setShowNewFolderDialog(true);
@@ -2352,7 +2360,7 @@ const DocumentsSidebar = ({
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={openNewFolderDialog}
-              tooltip="Nueva carpeta"
+              tooltip={notesLayout === 'notebook' ? 'Nueva libreta' : 'Nueva carpeta'}
               tooltipOptions={{ position: 'bottom' }}
               style={DOC_HEADER_GLASS_BTN}
             >
@@ -2500,6 +2508,7 @@ const DocumentsSidebar = ({
               return { ...prev, collapsed: nextCollapsed };
             })}
             onAddSection={() => openNewFolderDialog(true)}
+            onAddNotebook={(vaultKey) => openNewFolderDialog(false, vaultKey)}
             onAddPage={handleCreateNewNote}
             onActivate={activateNotesItem}
             onContextMenu={onBrowserContextMenu}
@@ -2672,7 +2681,7 @@ const DocumentsSidebar = ({
 
       {/* New Folder Dialog */}
       <AppDialog
-        headerTitle="Nueva carpeta"
+        headerTitle={folderDialogKind === 'libreta' ? 'Nueva libreta' : folderDialogKind === 'section' ? 'Nueva sección' : 'Nueva carpeta'}
         headerIcon="pi pi-folder-plus"
         visible={showNewFolderDialog}
         onHide={() => setShowNewFolderDialog(false)}
@@ -2683,12 +2692,14 @@ const DocumentsSidebar = ({
         onConfirm={handleCreateFolder}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la carpeta</label>
+          <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+            {folderDialogKind === 'libreta' ? 'Nombre de la libreta' : folderDialogKind === 'section' ? 'Nombre de la sección' : 'Nombre de la carpeta'}
+          </label>
           <InputText
             id="notebook-name"
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Mi carpeta..."
+            placeholder={folderDialogKind === 'libreta' ? 'Mi libreta...' : folderDialogKind === 'section' ? 'Mi sección...' : 'Mi carpeta...'}
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
           />

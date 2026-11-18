@@ -1,15 +1,30 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   NOTEBOOK_QUICK_KEY,
   findQuickNotesGroup,
+  listNotebookMenu,
   listNotebookSections,
   listSectionPages,
+  notebookSpineColor,
   resolveNotebookNav
 } from './notesBrowse';
 import '../../styles/components/notes-layouts.css';
 
 function labelMatches(label, query) {
   return String(label || '').toLowerCase().includes(query);
+}
+
+const NOTEBOOK_SPLIT_KEY = 'documents_notebook_split';
+const MIN_SECTION_WIDTH = 96;
+const MIN_PAGE_WIDTH = 80;
+
+function readSplitWidth() {
+  try {
+    const width = Number(localStorage.getItem(NOTEBOOK_SPLIT_KEY));
+    return Number.isFinite(width) && width >= MIN_SECTION_WIDTH ? width : null;
+  } catch {
+    return null;
+  }
 }
 
 function NotebookNavigator({
@@ -25,6 +40,7 @@ function NotebookNavigator({
   onSelectSection,
   onToggleCollapsed,
   onAddSection,
+  onAddNotebook,
   onAddPage,
   onActivate,
   onContextMenu
@@ -36,6 +52,15 @@ function NotebookNavigator({
     [nodes, notebookKey, sectionKey]
   );
   const { notebooks, notebook } = resolved;
+  const menu = useMemo(() => listNotebookMenu(nodes), [nodes]);
+  const hasMenu = menu.some((group) => group.label || group.notebooks.length);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const switcherRef = useRef(null);
+  const columnsRef = useRef(null);
+  const sectionWidthRef = useRef(null);
+  const [sectionWidth, setSectionWidth] = useState(readSplitWidth);
+  const [splitDrag, setSplitDrag] = useState(false);
+  sectionWidthRef.current = sectionWidth;
   const activeSectionKey = resolved.sectionKey;
   const sections = useMemo(
     () => (notebook ? listNotebookSections(notebook, nodes) : []),
@@ -92,28 +117,142 @@ function NotebookNavigator({
 
   const canAddPage = Boolean(activeSectionKey);
 
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onPointer = (event) => {
+      if (switcherRef.current && switcherRef.current.contains(event.target)) return;
+      setMenuOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  const chooseNotebook = (key) => {
+    onSelectNotebook?.(key);
+    setMenuOpen(false);
+  };
+
+  const addNotebook = (vaultKey) => {
+    setMenuOpen(false);
+    onAddNotebook?.(vaultKey);
+  };
+
+  const onSplitPointerDown = (event) => {
+    const columns = columnsRef.current;
+    const handle = event.currentTarget;
+    if (!columns) return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    setSplitDrag(true);
+
+    const applyWidth = (clientX) => {
+      const rect = columns.getBoundingClientRect();
+      const max = Math.max(MIN_SECTION_WIDTH, rect.width - MIN_PAGE_WIDTH - 6);
+      const next = Math.min(Math.max(Math.round(clientX - rect.left), MIN_SECTION_WIDTH), max);
+      sectionWidthRef.current = next;
+      setSectionWidth(next);
+    };
+
+    const onMove = (ev) => applyWidth(ev.clientX);
+    const onUp = (ev) => {
+      if (handle.hasPointerCapture?.(ev.pointerId)) handle.releasePointerCapture(ev.pointerId);
+      setSplitDrag(false);
+      const width = sectionWidthRef.current;
+      if (width != null) {
+        try { localStorage.setItem(NOTEBOOK_SPLIT_KEY, String(width)); } catch { /* ignore */ }
+      }
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+    };
+
+    applyWidth(event.clientX);
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  };
+
   return (
     <div className="notebook-nav" style={fontStyle}>
-      {notebooks.length > 0 ? (
-        <label className="notebook-nav-switcher">
-          <span className="notebook-nav-switcher-label">Cuaderno</span>
-          <select
-            className="notebook-nav-select"
-            value={notebook?.key || ''}
+      {hasMenu ? (
+        <div className="notebook-nav-switcher" ref={switcherRef}>
+          <button
+            type="button"
+            className={`notebook-nav-trigger${menuOpen ? ' is-open' : ''}`}
             aria-label="Cuaderno"
-            onChange={(event) => onSelectNotebook?.(event.target.value)}
+            aria-haspopup="listbox"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
           >
-            {notebooks.map((item) => (
-              <option key={item.key} value={item.key}>{item.label}</option>
-            ))}
-          </select>
-        </label>
+            <i className="pi pi-book notebook-nav-trigger-icon" aria-hidden="true" />
+            <span className="notebook-nav-trigger-label">{notebook?.label || 'Sin cuadernos'}</span>
+            <i className={`pi ${menuOpen ? 'pi-chevron-up' : 'pi-chevron-down'} notebook-nav-trigger-chevron`} aria-hidden="true" />
+          </button>
+          {menuOpen && (
+            <div className="notebook-nav-menu" role="listbox" aria-label="Cuadernos">
+              {menu.map((group) => (
+                <div key={group.key || 'flat'} className="notebook-nav-menu-group">
+                  {group.label && (
+                    <div className={`notebook-nav-menu-vault${group.locked ? ' is-locked' : ''}`}>
+                      {group.locked && <i className="pi pi-lock" aria-hidden="true" />}
+                      <span>{group.label}</span>
+                    </div>
+                  )}
+                  {group.notebooks.map((item) => {
+                    const selected = item.key === notebook?.key;
+                    const spine = notebookSpineColor(item.node || { key: item.key, label: item.label });
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        className={`notebook-nav-menu-item${selected ? ' is-selected' : ''}`}
+                        style={{ '--notebook-spine': spine }}
+                        title={item.label}
+                        onClick={() => chooseNotebook(item.key)}
+                      >
+                        <span className="notebook-nav-spine" aria-hidden="true" />
+                        <span className="notebook-nav-label">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                  {!group.locked && (
+                    <button
+                      type="button"
+                      className="notebook-nav-menu-add"
+                      onClick={() => addNotebook(group.key)}
+                    >
+                      + Agregar libreta
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="notebook-nav-switcher notebook-nav-switcher--empty">Sin cuadernos</div>
+        <div className="notebook-nav-switcher">
+          <button type="button" className="notebook-nav-menu-add" onClick={() => onAddNotebook?.(null)}>
+            + Agregar libreta
+          </button>
+        </div>
       )}
 
-      <div className="notebook-nav-columns">
-        <div className="notebook-nav-col notebook-nav-col--sections" role="listbox" aria-label="Secciones">
+      <div className={`notebook-nav-columns${splitDrag ? ' is-dragging' : ''}`} ref={columnsRef}>
+        <div
+          className="notebook-nav-col notebook-nav-col--sections"
+          role="listbox"
+          aria-label="Secciones"
+          style={sectionWidth != null ? { width: sectionWidth, flex: '0 0 auto', maxWidth: 'none' } : undefined}
+        >
           <button type="button" className="notebook-nav-add" onClick={() => onAddSection?.()}>
             + Agregar sección
           </button>
@@ -122,7 +261,7 @@ function NotebookNavigator({
               role="option"
               tabIndex={0}
               aria-selected={activeSectionKey === NOTEBOOK_QUICK_KEY}
-              className={`notebook-nav-row notebook-nav-row--quick${activeSectionKey === NOTEBOOK_QUICK_KEY ? ' is-selected' : ''}`}
+              className={`notebook-nav-row${activeSectionKey === NOTEBOOK_QUICK_KEY ? ' is-selected' : ''}`}
               title="Notas rápidas"
               onClick={() => onSelectSection?.(NOTEBOOK_QUICK_KEY)}
               onKeyDown={(event) => {
@@ -133,21 +272,24 @@ function NotebookNavigator({
               }}
               onContextMenu={(event) => openContext(event, quickGroup)}
             >
-              <i className="pi pi-bolt notebook-nav-quick-icon" aria-hidden="true" />
+              <span className="notebook-nav-mark">
+                <span className="notebook-nav-tab" style={{ '--notebook-spine': '#5b7fc7' }} aria-hidden="true" />
+              </span>
               <span className="notebook-nav-label">Notas rápidas</span>
             </div>
           )}
           {visibleSections.map((section) => {
             const selected = section.key === activeSectionKey;
             const isCollapsed = Boolean(collapsed[section.key]);
+            const spine = notebookSpineColor(section.node || { key: section.key, label: section.label });
             return (
               <div
                 key={section.key}
                 role="option"
                 tabIndex={0}
                 aria-selected={selected}
-                className={`notebook-nav-row${selected ? ' is-selected' : ''}`}
-                style={{ paddingLeft: `${6 + section.depth * 12}px` }}
+                className={`notebook-nav-row${selected ? ' is-selected' : ''}${section.hasChildren ? ' is-group' : ''}`}
+                style={{ paddingLeft: `${8 + section.depth * 14}px` }}
                 title={section.label}
                 onClick={() => onSelectSection?.(section.key)}
                 onKeyDown={(event) => {
@@ -158,21 +300,23 @@ function NotebookNavigator({
                 }}
                 onContextMenu={(event) => openContext(event, section.node)}
               >
-                {section.hasChildren ? (
-                  <button
-                    type="button"
-                    className="notebook-nav-chevron"
-                    aria-label={isCollapsed ? 'Expandir sección' : 'Plegar sección'}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onToggleCollapsed?.(section.key);
-                    }}
-                  >
-                    <i className={`pi ${isCollapsed ? 'pi-chevron-right' : 'pi-chevron-down'}`} aria-hidden="true" />
-                  </button>
-                ) : (
-                  <span className="notebook-nav-chevron notebook-nav-chevron--spacer" aria-hidden="true" />
-                )}
+                <span className="notebook-nav-mark">
+                  {section.hasChildren ? (
+                    <button
+                      type="button"
+                      className="notebook-nav-chevron"
+                      aria-label={isCollapsed ? 'Expandir sección' : 'Plegar sección'}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleCollapsed?.(section.key);
+                      }}
+                    >
+                      <i className={`pi ${isCollapsed ? 'pi-chevron-right' : 'pi-chevron-down'}`} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <span className="notebook-nav-tab" style={{ '--notebook-spine': spine }} aria-hidden="true" />
+                  )}
+                </span>
                 <span className="notebook-nav-label">{section.label}</span>
               </div>
             );
@@ -181,7 +325,13 @@ function NotebookNavigator({
             <div className="notebook-nav-empty">Crea una carpeta para empezar.</div>
           )}
         </div>
-
+        <div
+          className={`notebook-nav-split${splitDrag ? ' is-dragging' : ''}`}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Redimensionar secciones"
+          onPointerDown={onSplitPointerDown}
+        />
         <div className="notebook-nav-col notebook-nav-col--pages" role="listbox" aria-label="Páginas">
           <button
             type="button"
