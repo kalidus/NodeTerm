@@ -235,6 +235,7 @@
    ======================================== */
 
 .general-settings-section {
+  flex-shrink: 0;
   margin-bottom: 1rem;
   background: var(--ui-content-bg);
   opacity: 1;
