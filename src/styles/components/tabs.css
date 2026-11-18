@@ -88,8 +88,8 @@
 }
 
 .p-tabview .p-tabview-nav li {
-  flex: 1 1 200px !important; /* Comportamiento MobaXterm: crecen hasta 200px y encogen */
-  min-width: 80px !important; /* Mínimo para que el icono sea visible */
+  flex: 1 0 200px !important; /* Crecen con espacio; no encogen para preservar overflow + flechas */
+  min-width: 118px !important; /* Ancho usable con título + cerrar */
   max-width: 220px !important; /* Máximo profesional */
   margin-bottom: 0;
   padding-bottom: 0;
@@ -876,8 +876,8 @@
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  flex: 1 1 200px;
-  min-width: 80px;
+  flex: 1 0 200px;
+  min-width: 118px;
   max-width: 220px;
   box-shadow: var(--tab-box-shadow, none);
   transition: var(--tab-transition, all 0.2s ease);
@@ -2166,7 +2166,7 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
 
 /* Pestañas de sesión y utilidades en modo Termius */
 :root[data-tab-layout="termius"] .p-tabview .p-tabview-nav li:not(.home-tab) {
-  flex: 0 1 220px !important;
+  flex: 0 0 220px !important;
   min-width: 110px !important;
   max-width: 240px !important;
   height: 26px !important;
