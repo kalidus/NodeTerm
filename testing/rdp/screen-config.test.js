@@ -6,7 +6,8 @@ const {
   parseResolutionValue,
   resolveRdpScreenDimensions,
   buildRdpPresetFormPatch,
-  normalizeRdpColorDepth
+  normalizeRdpColorDepth,
+  mapPointerToInputSpace
 } = require('../../src/utils/rdpScreenConfig');
 
 test('parseResolutionValue', async (t) => {
@@ -65,5 +66,36 @@ test('normalizeRdpColorDepth', async (t) => {
     assert.equal(normalizeRdpColorDepth('16'), 16);
     assert.equal(normalizeRdpColorDepth(8, 32), 32);
     assert.equal(normalizeRdpColorDepth(null, 32), 32);
+  });
+});
+
+test('mapPointerToInputSpace', async (t) => {
+  await t.test('el mismo tamaño no escala', () => {
+    assert.deepEqual(
+      mapPointerToInputSpace(100, 50, 1920, 1080, 1920, 1080),
+      { x: 100, y: 50 }
+    );
+  });
+
+  await t.test('framebuffer 3840x2160 contra negociado 1920x1080 reduce a la mitad', () => {
+    assert.deepEqual(
+      mapPointerToInputSpace(1000, 400, 3840, 2160, 1920, 1080),
+      { x: 500, y: 200 }
+    );
+    assert.deepEqual(
+      mapPointerToInputSpace(3839, 2159, 3840, 2160, 1920, 1080),
+      { x: 1919, y: 1079 }
+    );
+  });
+
+  await t.test('recorta coordenadas fuera de rango', () => {
+    assert.deepEqual(
+      mapPointerToInputSpace(-20, 5000, 3840, 2160, 1920, 1080),
+      { x: 0, y: 1079 }
+    );
+    assert.deepEqual(
+      mapPointerToInputSpace(-1, 2000, 1920, 1080, 1920, 1080),
+      { x: 0, y: 1079 }
+    );
   });
 });

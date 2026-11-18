@@ -175,6 +175,25 @@ function getRdpScreenPreset(presetId) {
   return RDP_SCREEN_PRESETS[presetId] || null;
 }
 
+// Píxeles del framebuffer (lo que se ve) → espacio en el que el servidor golpea.
+// Mismo tamaño: no escala. Si difieren, el clic sigue al cursor hasta que el
+// Monitor Layout iguala ambos. Fuera de rango se recorta al escritorio de entrada.
+function mapPointerToInputSpace(x, y, bitmapWidth, bitmapHeight, inputWidth, inputHeight) {
+  const bitmapW = Math.max(1, Math.floor(Number(bitmapWidth) || 0));
+  const bitmapH = Math.max(1, Math.floor(Number(bitmapHeight) || 0));
+  const inputW = Math.max(1, Math.floor(Number(inputWidth) || 0));
+  const inputH = Math.max(1, Math.floor(Number(inputHeight) || 0));
+  const sameSpace = bitmapW === inputW && bitmapH === inputH;
+  const sourceX = Number.isFinite(x) ? x : 0;
+  const sourceY = Number.isFinite(y) ? y : 0;
+  const mappedX = sameSpace ? Math.floor(sourceX) : Math.floor((sourceX * inputW) / bitmapW);
+  const mappedY = sameSpace ? Math.floor(sourceY) : Math.floor((sourceY * inputH) / bitmapH);
+  return {
+    x: Math.max(0, Math.min(inputW - 1, mappedX)),
+    y: Math.max(0, Math.min(inputH - 1, mappedY))
+  };
+}
+
 module.exports = {
   RDP_COLOR_DEPTHS,
   RDP_RESOLUTION_VALUES,
@@ -183,5 +202,6 @@ module.exports = {
   parseResolutionValue,
   resolveRdpScreenDimensions,
   buildRdpPresetFormPatch,
-  getRdpScreenPreset
+  getRdpScreenPreset,
+  mapPointerToInputSpace
 };

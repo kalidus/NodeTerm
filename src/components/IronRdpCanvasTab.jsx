@@ -8,7 +8,7 @@ import { Toast } from 'primereact/toast';
 import * as IronRdpRdp from '@devolutions/iron-remote-desktop-rdp';
 import { ensureIronRdpInitialized } from '../utils/ironRdpWarmup';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
-import { parseResolutionValue } from '../utils/rdpScreenConfig';
+import { parseResolutionValue, mapPointerToInputSpace } from '../utils/rdpScreenConfig';
 import { mapTerminationReason } from '../utils/rdpTerminationReasons';
 import { planRdpKeepAlive, RDP_KEEP_ALIVE_INTERVAL_MS } from '../utils/rdpKeepAlive';
 import { installCanvasDrawProbe } from '../utils/rdpCanvasProbe';
@@ -301,6 +301,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const pendingClipboardSendRef = useRef(null);
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
   const lastRequestedDesktopRef = useRef({ width: 0, height: 0 });
+  // Espacio en el que el servidor golpea. Empieza en el tamaño negociado y pasa
+  // al framebuffer solo cuando el Monitor Layout de KRDP se ha encolado de verdad.
+  const pointerSpaceRef = useRef({ width: 0, height: 0 });
+  const krdpInputSyncRef = useRef(null);
+  const krdpLayoutRetryRef = useRef(null);
+  const krdpLayoutAnnounceRef = useRef({ width: 0, height: 0, count: 0 });
   const resizeAckTimerRef = useRef(null);
   const resizeInFlightRef = useRef(false);
   const pendingResizeRef = useRef(null);
@@ -821,6 +827,50 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     return true;
   };
 
+  // KRDP guarda el tamaño del Client Core Data antes de crear el stream de
+  // PipeWire, así que ese tamaño no llega a size(). El puntero hace
+  // x / size() * logicalSize y cae fuera hasta que un Monitor Layout
+  // renegocia el stream. mstsc lo manda al mostrar o cambiar la ventana;
+  // aquí se manda al conectar y se repite una vez, cuando el stream ya existe.
+  const announceKrdpLayout = (width, height) => {
+    const w = Math.round(Number(width) || 0);
+    const h = Math.round(Number(height) || 0);
+    if (w <= 0 || h <= 0 || !supportsDisplayControlRef.current) return false;
+    if (!sessionRef.current?.resize) {
+      krdpInputSyncRef.current = { width: w, height: h };
+      return false;
+    }
+    const prev = krdpLayoutAnnounceRef.current;
+    const same = prev.width === w && prev.height === h;
+    if (same && prev.count >= 2) return false;
+    const sent = requestSessionResize(w, h, { force: true, scaleFactor: 100 });
+    if (!sent) {
+      krdpInputSyncRef.current = { width: w, height: h };
+      return false;
+    }
+    krdpInputSyncRef.current = null;
+    const count = same ? prev.count + 1 : 1;
+    krdpLayoutAnnounceRef.current = { width: w, height: h, count };
+    if (count < 2) {
+      if (krdpLayoutRetryRef.current) clearTimeout(krdpLayoutRetryRef.current);
+      krdpLayoutRetryRef.current = setTimeout(() => {
+        krdpLayoutRetryRef.current = null;
+        const canvas = canvasRef.current;
+        announceKrdpLayout(
+          canvas?.width > 0 ? canvas.width : w,
+          canvas?.height > 0 ? canvas.height : h
+        );
+      }, 500);
+    }
+    return true;
+  };
+
+  const flushKrdpInputSync = () => {
+    const pending = krdpInputSyncRef.current;
+    if (!pending) return false;
+    return announceKrdpLayout(pending.width, pending.height);
+  };
+
   const refreshLocalClipboardCache = async () => {
     const text = await readLocalClipboardText();
     localClipboardCacheRef.current = typeof text === 'string' ? text : '';
@@ -1252,6 +1302,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         currentDesktopSizeRef.current = { width, height };
         lastRequestedDesktopRef.current = { width, height };
+        pointerSpaceRef.current = { width, height };
+        krdpInputSyncRef.current = null;
+        krdpLayoutAnnounceRef.current = { width: 0, height: 0, count: 0 };
+        if (krdpLayoutRetryRef.current) {
+          clearTimeout(krdpLayoutRetryRef.current);
+          krdpLayoutRetryRef.current = null;
+        }
         setDesktopDimensions({ width, height });
 
         if (canvasRef.current) {
@@ -1432,6 +1489,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 canvas.style.cursor = lastCursorStyleRef.current;
               }
               currentDesktopSizeRef.current = { width: w, height: h };
+              pointerSpaceRef.current = { width: w, height: h };
               lastRequestedDesktopRef.current = {
                 width: w,
                 height: h,
@@ -1443,11 +1501,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           })
           .extension(enableCredssp(useCredssp));
 
-        // DisplayControl SOLO para conexiones directas Windows con NLA/CredSSP (HYBRID / HYBRID_EX).
-        // En bastiones y proxies RDP (Wallix, CyberArk, etc.) el proxy no habla DisplayControl:
-        // un DVC_CREATE sin respuesta cuelga el banner y el salto. EGFX declara drdynvc por su cuenta.
-        const isProxyOrBastionProtocol = selectedProtocol === 0x01 || selectedProtocol === 0x00;
-        const supportsDisplayControl = !isBastionSession && useCredssp && !isProxyOrBastionProtocol;
+        // DisplayControl en conexiones directas. KRDP negocia TLS (0x01) o NLA.
+        // En bastiones y RDP clásico (0x00) el proxy no contesta el canal y cuelga el salto.
+        const isRawRdp = selectedProtocol === 0x00;
+        const supportsDisplayControl = !isBastionSession && !isRawRdp && (useCredssp || selectedProtocol === 0x01);
         supportsDisplayControlRef.current = supportsDisplayControl;
         setSupportsDisplayControl(supportsDisplayControl);
 
@@ -1499,11 +1556,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               const w = Math.round(Number(width) || 0);
               const h = Math.round(Number(height) || 0);
               if (w > 0 && h > 0) {
-                const reqW = lastRequestedDesktopRef.current.width || 0;
-                const reqH = lastRequestedDesktopRef.current.height || 0;
-                const mismatchedRequest = reqW > 0 && reqH > 0
-                  && (Math.abs(w - reqW) > 8 || Math.abs(h - reqH) > 8);
                 currentDesktopSizeRef.current = { width: w, height: h };
+                pointerSpaceRef.current = { width: w, height: h };
                 lastRequestedDesktopRef.current = {
                   width: w,
                   height: h,
@@ -1511,16 +1565,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 };
                 setDesktopDimensions({ width: w, height: h });
                 queueMicrotask(() => updateCanvasRectRef.current?.());
-                // Si el servidor (p.ej. KRDP en KDE Wayland) ignora el tamaño solicitado y
-                // emite su monitor físico fijo (p.ej. 3840x2160), sincronizar una sola vez
-                // DisplayControl a (w, h) para alinear el InputHandler del servidor con el
-                // framebuffer real y desactivar futuros resizes automáticos.
-                if (mismatchedRequest && supportsDisplayControlRef.current) {
-                  supportsDisplayControlRef.current = false;
-                  try {
-                    sessionRef.current?.resize?.(w, h, 100);
-                  } catch (_) {}
-                }
+                // Aunque coincida con lo negociado: el stream de KRDP aún no existía
+                // cuando se aplicó el Client Core Data. El layout tiene que repetirse ya.
+                announceKrdpLayout(w, h);
               }
               clearResizeAckTimer();
               completeResizeInFlight();
@@ -2012,6 +2059,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         // para que DisplayControl procese la escala.
         const runPromise = currentSession.run();
 
+        // El bucle ya lee DisplayControl. Si ResetGraphics llegó durante connect(),
+        // la sesión aún no existía y el layout quedó pendiente: enviarlo ahora, sin debounce.
+        flushKrdpInputSync();
+        if (!krdpLayoutAnnounceRef.current.count) {
+          announceKrdpLayout(
+            currentDesktopSizeRef.current.width || width,
+            currentDesktopSizeRef.current.height || height
+          );
+        }
+
         // El escritorio inicial ya coincide con el medido, así que un resize por
         // tamaño se descartaría. En HiDPI hay que anunciar la escala igual, salvo que
         // el servidor (p.ej. KRDP) ya haya impuesto una resolución física distinta via ResetGraphics.
@@ -2120,6 +2177,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           });
         } catch (_) {}
         if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
+        if (krdpLayoutRetryRef.current) {
+          clearTimeout(krdpLayoutRetryRef.current);
+          krdpLayoutRetryRef.current = null;
+        }
         finishEgfxJournal('ok');
       } catch (_) { /* noop */ }
       if (currentFileTransferProvider) {
@@ -2279,27 +2340,42 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let cachedScaleX = 1;
     let cachedScaleY = 1;
 
+    let cachedBitmapW = 0;
+    let cachedBitmapH = 0;
+    let cachedClientW = 0;
+    let cachedClientH = 0;
+
     const updateCanvasRect = () => {
       if (!canvas) return;
       cachedRect = canvas.getBoundingClientRect();
       cachedScaleX = cachedRect.width > 0 ? canvas.width / cachedRect.width : 1;
       cachedScaleY = cachedRect.height > 0 ? canvas.height / cachedRect.height : 1;
+      cachedBitmapW = canvas.width;
+      cachedBitmapH = canvas.height;
+      cachedClientW = canvas.clientWidth;
+      cachedClientH = canvas.clientHeight;
     };
 
     updateCanvasRectRef.current = updateCanvasRect;
     updateCanvasRect();
 
     const getCanvasPos = (e) => {
-      // El CSS y el framebuffer cambian al conectar, en resize, scroll y DisplayControl
-      // (ya suscritos a updateCanvasRect). Solo recalcular si la caché aún no existe para
-      // evitar un reflow síncrono (getBoundingClientRect) en cada mousemove a 120Hz.
-      if (!cachedRect) updateCanvasRect();
+      // El bitmap (canvas.width) no dispara ResizeObserver. Si la caché se queda
+      // con el tamaño de antes del primer frame, el clic cae fuera del marco.
+      if (
+        !cachedRect
+        || canvas.width !== cachedBitmapW
+        || canvas.height !== cachedBitmapH
+        || canvas.clientWidth !== cachedClientW
+        || canvas.clientHeight !== cachedClientH
+      ) {
+        updateCanvasRect();
+      }
       const rawX = Math.floor((e.clientX - cachedRect.left) * cachedScaleX);
       const rawY = Math.floor((e.clientY - cachedRect.top) * cachedScaleY);
-      return {
-        x: Math.max(0, Math.min(canvas.width - 1, rawX)),
-        y: Math.max(0, Math.min(canvas.height - 1, rawY))
-      };
+      const bitmapW = canvas.width || currentDesktopSizeRef.current.width || 1;
+      const bitmapH = canvas.height || currentDesktopSizeRef.current.height || 1;
+      return mapPointerToInputSpace(rawX, rawY, bitmapW, bitmapH, bitmapW, bitmapH);
     };
 
     let pendingMousePos = null;
