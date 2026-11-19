@@ -80,6 +80,16 @@ const IconSearch = () => (
   </svg>
 );
 
+const IconQuickNote = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 2.2h6.1L12 5.1V7" />
+    <path d="M9.1 2.2V5.1H12" />
+    <path d="M3 2.2A.8.8 0 0 0 2.2 3v10a.8.8 0 0 0 .8.8H7.6" />
+    <path d="M4.8 7.2h4.4M4.8 9.6h2.6" />
+    <path d="M9 13.9 13.2 9.7l1.35 1.35-4.2 4.2H9v-1.35z" />
+  </svg>
+);
+
 const IconMinimal = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
     <rect x="2" y="2" width="12" height="12" rx="1.5" {...LAYOUT_STROKE} />
@@ -666,6 +676,19 @@ const TitleBar = ({
         />
       </div>
       <div className="title-bar-actions">
+        <div className="title-bar-action-group">
+          <TitleBarIconButton
+            title={t('quickNotes.newNote', 'Nueva nota rápida')}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('documents-sidebar:new-quick-note'));
+            }}
+          >
+            <IconQuickNote />
+          </TitleBarIconButton>
+        </div>
+
+        <div className="title-bar-action-sep" aria-hidden="true" />
+
         <VaultSelector
           visibleVaultIds={visibleVaultIds}
           onToggleVault={onToggleVault}

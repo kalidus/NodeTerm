@@ -2000,6 +2000,15 @@ const DocumentsSidebar = ({
     setShowNewFolderDialog(true);
   };
 
+  // TitleBar / global: always create under quick_note (not gated on hideHeader)
+  useEffect(() => {
+    const onNewQuickNote = () => createNewQuickNote();
+    window.addEventListener('documents-sidebar:new-quick-note', onNewQuickNote);
+    return () => {
+      window.removeEventListener('documents-sidebar:new-quick-note', onNewQuickNote);
+    };
+  }, [createNewQuickNote]);
+
   // Listen to events from the unified sidebar toolbar when hideHeader=true
   useEffect(() => {
     if (!hideHeader) return;
