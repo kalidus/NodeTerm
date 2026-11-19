@@ -15,6 +15,7 @@ import {
 } from '../utils/appearanceLayout';
 import { getCurrentTerminalFrameStyle } from '../utils/terminalFrameStyle';
 import { STORAGE_KEYS } from '../utils/constants';
+import { getPlatformDefaultTerminalType } from '../utils/defaultLocalTerminal';
 import { presetManager } from '../utils/presetManager';
 import UiLayoutStyleOption from './UiLayoutStyleOption';
 import PresetStyleOption from './PresetStyleOption';
@@ -87,6 +88,14 @@ const IconQuickNote = () => (
     <path d="M3 2.2A.8.8 0 0 0 2.2 3v10a.8.8 0 0 0 .8.8H7.6" />
     <path d="M4.8 7.2h4.4M4.8 9.6h2.6" />
     <path d="M9 13.9 13.2 9.7l1.35 1.35-4.2 4.2H9v-1.35z" />
+  </svg>
+);
+
+const IconQuickShell = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="1.5" y="2" width="13" height="12" rx="1.5" {...LAYOUT_STROKE} strokeWidth={1.25} />
+    <path d="M4.2 6.1 6.6 8 4.2 9.9" {...LAYOUT_STROKE} strokeWidth={1.35} />
+    <path d="M7.6 10h4.2" {...LAYOUT_STROKE} strokeWidth={1.35} />
   </svg>
 );
 
@@ -660,21 +669,38 @@ const TitleBar = ({
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
-        <TitleBarSearch
-          sidebarFilter={sidebarFilter}
-          setSidebarFilter={setSidebarFilter}
-          allNodes={allNodes}
-          masterKey={masterKey}
-          secureStorage={secureStorage}
-          onOpenSSHConnection={onOpenSSHConnection}
-          onOpenRdpConnection={onOpenRdpConnection}
-          onOpenVncConnection={onOpenVncConnection}
-          openEditSSHDialog={openEditSSHDialog}
-          openEditRdpDialog={openEditRdpDialog}
-          sidebarCallbacksRef={sidebarCallbacksRef}
-        />
+      {/* Centrado óptico respecto a la ventana, no al hueco entre left/right */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 0,
+          bottom: 0,
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          WebkitAppRegion: 'no-drag',
+          zIndex: 1,
+          pointerEvents: 'none'
+        }}
+      >
+        <div style={{ pointerEvents: 'auto' }}>
+          <TitleBarSearch
+            sidebarFilter={sidebarFilter}
+            setSidebarFilter={setSidebarFilter}
+            allNodes={allNodes}
+            masterKey={masterKey}
+            secureStorage={secureStorage}
+            onOpenSSHConnection={onOpenSSHConnection}
+            onOpenRdpConnection={onOpenRdpConnection}
+            onOpenVncConnection={onOpenVncConnection}
+            openEditSSHDialog={openEditSSHDialog}
+            openEditRdpDialog={openEditRdpDialog}
+            sidebarCallbacksRef={sidebarCallbacksRef}
+          />
+        </div>
       </div>
+      <div style={{ flex: 1, minWidth: 0 }} aria-hidden="true" />
       <div className="title-bar-actions">
         <div className="title-bar-action-group">
           <TitleBarIconButton
@@ -684,6 +710,18 @@ const TitleBar = ({
             }}
           >
             <IconQuickNote />
+          </TitleBarIconButton>
+          <TitleBarIconButton
+            title={t('quickShell.newTerminal', 'Nueva shell local')}
+            onClick={() => {
+              const terminalType = localStorage.getItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL)
+                || getPlatformDefaultTerminalType();
+              window.dispatchEvent(new CustomEvent('create-local-terminal', {
+                detail: { terminalType, openAsTab: true }
+              }));
+            }}
+          >
+            <IconQuickShell />
           </TitleBarIconButton>
         </div>
 

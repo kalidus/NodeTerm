@@ -539,11 +539,11 @@ const MainContentArea = ({
   // Escuchar eventos para crear terminales desde el dock de Home
   useEffect(() => {
     const handleCreateLocalTerminal = (event) => {
-      const { terminalType, distroInfo } = event.detail;
+      const { terminalType, distroInfo, openAsTab } = event.detail || {};
 
       // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
       const isAIClient = ['opencode', 'codexcli', 'antigravitycli', 'hermescli', 'claude'].includes(terminalType);
-      if (isAIClient) {
+      if (isAIClient || openAsTab) {
         createLocalTerminalTab(terminalType, distroInfo);
         return;
       }
