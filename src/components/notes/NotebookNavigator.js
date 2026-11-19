@@ -189,11 +189,13 @@ function NotebookNavigator({
             aria-label="Cuaderno"
             aria-haspopup="listbox"
             aria-expanded={menuOpen}
+            style={notebook ? { '--notebook-spine': notebookSpineColor(notebook) } : undefined}
             onClick={() => setMenuOpen((open) => !open)}
           >
+            {notebook && <span className="notebook-nav-spine notebook-nav-spine--trigger" aria-hidden="true" />}
             <i className="pi pi-book notebook-nav-trigger-icon" aria-hidden="true" />
             <span className="notebook-nav-trigger-label">{notebook?.label || 'Sin cuadernos'}</span>
-            <i className={`pi ${menuOpen ? 'pi-chevron-up' : 'pi-chevron-down'} notebook-nav-trigger-chevron`} aria-hidden="true" />
+            <i className="pi pi-chevron-down notebook-nav-trigger-chevron" aria-hidden="true" />
           </button>
           {menuOpen && (
             <div className="notebook-nav-menu" role="listbox" aria-label="Cuadernos">
@@ -221,6 +223,7 @@ function NotebookNavigator({
                       >
                         <span className="notebook-nav-spine" aria-hidden="true" />
                         <span className="notebook-nav-label">{item.label}</span>
+                        {selected && <i className="pi pi-check notebook-nav-menu-check" aria-hidden="true" />}
                       </button>
                     );
                   })}
@@ -230,7 +233,8 @@ function NotebookNavigator({
                       className="notebook-nav-menu-add"
                       onClick={() => addNotebook(group.key)}
                     >
-                      + Agregar libreta
+                      <i className="pi pi-plus" aria-hidden="true" />
+                      Agregar libreta
                     </button>
                   )}
                 </div>
@@ -241,7 +245,8 @@ function NotebookNavigator({
       ) : (
         <div className="notebook-nav-switcher">
           <button type="button" className="notebook-nav-menu-add" onClick={() => onAddNotebook?.(null)}>
-            + Agregar libreta
+            <i className="pi pi-plus" aria-hidden="true" />
+            Agregar libreta
           </button>
         </div>
       )}

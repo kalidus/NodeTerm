@@ -329,7 +329,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* visible so the switcher menu can overlay columns without clipping */
+  overflow: visible;
   color: var(--ui-sidebar-text, inherit);
   background: var(--ui-sidebar-bg, transparent);
   letter-spacing: -0.02em;
@@ -342,7 +343,8 @@
   flex-direction: column;
   flex-shrink: 0;
   margin: 8px 8px 6px;
-  z-index: 4;
+  z-index: 6;
+  overflow: visible;
 }
 
 .notebook-nav-switcher--empty {
@@ -357,9 +359,9 @@
   gap: 8px;
   width: 100%;
   min-width: 0;
-  min-height: 34px;
-  padding: 6px 8px 6px 10px;
-  border-radius: 8px;
+  min-height: 36px;
+  padding: 7px 10px 7px 10px;
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 14%, transparent);
   background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 4%, transparent);
   color: var(--ui-sidebar-text, inherit);
@@ -367,18 +369,24 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.notebook-nav-trigger:hover,
-.notebook-nav-trigger.is-open {
+.notebook-nav-trigger:hover {
   border-color: color-mix(in srgb, var(--ui-sidebar-text, #fff) 22%, transparent);
   background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 8%, transparent);
 }
 
+.notebook-nav-trigger.is-open {
+  border-color: color-mix(in srgb, var(--ui-sidebar-text, #fff) 28%, transparent);
+  background: color-mix(in srgb, var(--ui-sidebar-text, #fff) 10%, transparent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
 .notebook-nav-trigger-icon {
   flex-shrink: 0;
-  font-size: 0.9rem;
-  opacity: 0.8;
+  font-size: 0.85rem;
+  opacity: 0.55;
 }
 
 .notebook-nav-trigger-label {
@@ -393,40 +401,45 @@
 .notebook-nav-trigger-chevron {
   flex-shrink: 0;
   font-size: 0.7rem;
-  opacity: 0.55;
+  opacity: 0.5;
+  transition: transform 0.18s ease;
+}
+
+.notebook-nav-trigger.is-open .notebook-nav-trigger-chevron {
+  transform: rotate(180deg);
 }
 
 .notebook-nav-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 5;
-  max-height: min(280px, 55vh);
+  z-index: 8;
+  max-height: min(300px, 55vh);
   overflow: auto;
-  padding: 4px;
-  border-radius: 12px;
+  padding: 6px;
+  border-radius: 10px;
   border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.12));
-  background: var(--ui-sidebar-bg, #1e1e1e);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  background: color-mix(in srgb, var(--ui-sidebar-bg, #1e1e1e) 92%, #000 8%);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .notebook-nav-menu-group + .notebook-nav-menu-group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.12)) 80%, transparent);
 }
 
 .notebook-nav-menu-vault {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px 4px;
+  padding: 8px 10px 6px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .notebook-nav-menu-vault.is-locked {
@@ -442,8 +455,8 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 30px;
-  padding: 4px 8px;
+  min-height: 34px;
+  padding: 6px 10px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -451,6 +464,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background 0.12s ease;
 }
 
 .notebook-nav-menu-item:hover {
@@ -461,31 +475,50 @@
   background: color-mix(in srgb, var(--primary-color, #2196f3) 18%, transparent);
 }
 
+.notebook-nav-menu-check {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--primary-color, #2196f3);
+  opacity: 0.9;
+}
+
 .notebook-nav-spine {
   flex-shrink: 0;
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
   background: var(--notebook-spine, var(--primary-color, #2196f3));
+}
+
+.notebook-nav-spine--trigger {
+  height: 16px;
 }
 
 .notebook-nav-menu-add {
   display: flex;
   align-items: center;
+  gap: 6px;
   width: 100%;
-  min-height: 28px;
-  margin-top: 2px;
-  padding: 4px 8px;
+  min-height: 30px;
+  margin-top: 4px;
+  padding: 5px 10px;
   border: none;
   border-radius: 8px;
   background: transparent;
   color: var(--ui-button-primary, var(--primary-color, currentColor));
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   text-align: left;
   cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.notebook-nav-menu-add .pi-plus {
+  font-size: 0.7rem;
+  opacity: 0.9;
 }
 
 .notebook-nav-menu-add:hover {
@@ -495,8 +528,12 @@
 .notebook-nav-columns {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
+  overflow: hidden;
   border-top: 1px solid color-mix(in srgb, var(--ui-sidebar-text, #fff) 8%, transparent);
+  position: relative;
+  z-index: 1;
 }
 
 .notebook-nav-col {
