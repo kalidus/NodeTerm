@@ -332,6 +332,8 @@
   overflow: hidden;
   color: var(--ui-sidebar-text, inherit);
   background: var(--ui-sidebar-bg, transparent);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .notebook-nav-switcher {
@@ -385,6 +387,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 .notebook-nav-trigger-chevron {
@@ -478,8 +481,9 @@
   background: transparent;
   color: var(--ui-button-primary, var(--primary-color, currentColor));
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
   text-align: left;
   cursor: pointer;
 }
@@ -558,21 +562,24 @@
 }
 
 .notebook-nav-row {
-  min-height: 32px;
+  min-height: 28px;
   margin: 1px 6px;
-  padding: 4px 8px;
+  padding: 2px 8px;
   width: calc(100% - 12px);
   border-radius: 8px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .notebook-nav-add {
   flex-shrink: 0;
   width: 100%;
-  min-height: 34px;
-  padding: 8px 12px;
+  min-height: 30px;
+  padding: 6px 12px;
   color: var(--ui-button-primary, var(--primary-color, currentColor));
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .notebook-nav-add:hover:not(:disabled) {
@@ -617,6 +624,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .notebook-nav-chevron {
