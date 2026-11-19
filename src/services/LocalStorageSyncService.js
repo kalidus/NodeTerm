@@ -15,7 +15,12 @@ import {
     VAULT_ALLOW_SHRINK_KEYS_META
 } from '../shared/vault-shrink-guard';
 import { isTinyVaultPayload, VAULT_STAMPS_LS } from '../shared/vault-write';
-import { isConnectionVaultStorageKey } from '../shared/vault-connection-trees';
+import { DEFAULT_VAULT_ID, isConnectionVaultStorageKey } from '../shared/vault-connection-trees';
+import { MULTI_VAULT_FLAG_KEY } from '../utils/multiVaultFlag';
+import {
+    ACTIVE_CONNECTION_VAULT_KEY,
+    VISIBLE_CONNECTION_VAULTS_KEY
+} from '../utils/activeConnectionVault';
 
 const EXTRA_FETCH_ROUNDS = 2;
 const EXTRA_FETCH_DELAY_MS = 300;
@@ -402,6 +407,42 @@ class LocalStorageSyncService {
         const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
         if (docKeys.some((k) => normalized[k] !== undefined && normalized[k] !== null)) {
             window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+        }
+
+        const wroteMultiVaultKeys = writtenKeys.some(
+            (k) =>
+                k === MULTI_VAULT_FLAG_KEY ||
+                k === VISIBLE_CONNECTION_VAULTS_KEY ||
+                k === ACTIVE_CONNECTION_VAULT_KEY
+        );
+        if (wroteMultiVaultKeys) {
+            if (writtenKeys.includes(MULTI_VAULT_FLAG_KEY)) {
+                window.dispatchEvent(
+                    new CustomEvent('multi-vault-flag-changed', {
+                        detail: { enabled: localStorage.getItem(MULTI_VAULT_FLAG_KEY) === 'true' }
+                    })
+                );
+            }
+            let vaultIds = null;
+            try {
+                const raw = localStorage.getItem(VISIBLE_CONNECTION_VAULTS_KEY);
+                const parsed = raw ? JSON.parse(raw) : null;
+                if (Array.isArray(parsed) && parsed.length) {
+                    vaultIds = parsed.map(String);
+                }
+            } catch (_) {
+                /* noop */
+            }
+            if (!vaultIds) {
+                const legacy = localStorage.getItem(ACTIVE_CONNECTION_VAULT_KEY);
+                vaultIds = legacy ? [String(legacy)] : [DEFAULT_VAULT_ID];
+            }
+            window.dispatchEvent(
+                new CustomEvent('visible-connection-vaults-changed', {
+                    detail: { vaultIds }
+                })
+            );
+            window.dispatchEvent(new CustomEvent('extra-vaults-reload'));
         }
     }
 

@@ -99,5 +99,6 @@ function registerVaultHandlers() {
 
 module.exports = {
   registerVaultHandlers,
+  notifyVaultsChanged,
   EXPERIMENTAL_FLAG_KEY
 };

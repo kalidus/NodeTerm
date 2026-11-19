@@ -149,7 +149,12 @@ const SYNC_KEYS = [
 
   // Herramientas de red (Wake on LAN y escaneos de red guardados)
   'nodeterm_wol_devices',
-  'nodeterm_saved_network_scans'
+  'nodeterm_saved_network_scans',
+
+  // Multi-vault (flag + visibles; necesario en instancias secundarias con LS vacío)
+  'nodeterm_experimental_multi_vault',
+  'nodeterm_visible_connection_vaults',
+  'nodeterm_active_connection_vault'
   // nodeterm_network_tools_history: local-only (resultados grandes; no multi-instancia)
 ];
 

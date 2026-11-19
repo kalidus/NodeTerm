@@ -42,6 +42,7 @@ let watcher = null;
 let vaultWatcher = null;
 let watchFallbackTimer = null;
 let watchNotifyTimer = null;
+let vaultsNotifyTimer = null;
 let watchStarted = false;
 
 function getAppDataMtime() {
@@ -156,6 +157,19 @@ function scheduleWatchNotify() {
   }, 120);
 }
 
+function scheduleVaultsRegistryNotify() {
+  if (vaultsNotifyTimer) clearTimeout(vaultsNotifyTimer);
+  vaultsNotifyTimer = setTimeout(() => {
+    vaultsNotifyTimer = null;
+    try {
+      // Lazy require: evita acoplar el arranque de appdata a vault-handlers
+      require('./vault-handlers').notifyVaultsChanged();
+    } catch (_) {
+      /* noop */
+    }
+  }, 120);
+}
+
 function startWatchFallback() {
   if (watchFallbackTimer) return;
   watchFallbackTimer = setInterval(() => {
@@ -169,6 +183,10 @@ function startWatchFallback() {
 function isWatchedAppDataName(name) {
   if (!name) return true;
   return name === 'app-data.json' || name.startsWith('app-data.');
+}
+
+function isWatchedVaultsRegistryName(name) {
+  return name === 'vaults.json' || name.startsWith('vaults.');
 }
 
 function isWatchedVaultName(name) {
@@ -188,6 +206,10 @@ function startAppDataWatch() {
     }
     watcher = fs.watch(APP_DATA_DIR, { persistent: false }, (_event, filename) => {
       const name = filename ? String(filename) : '';
+      if (name && isWatchedVaultsRegistryName(name)) {
+        scheduleVaultsRegistryNotify();
+        return;
+      }
       if (name && !isWatchedAppDataName(name) && name !== 'vault') {
         return;
       }

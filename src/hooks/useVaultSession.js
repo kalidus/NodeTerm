@@ -163,6 +163,23 @@ export function useVaultSession({ setIsAppReady, toast }) {
   }, []);
 
   useEffect(() => {
+    const syncVisibleFromStorage = (event) => {
+      const fromEvent = event?.detail?.vaultIds;
+      const next = Array.isArray(fromEvent) && fromEvent.length
+        ? fromEvent.map(String)
+        : getVisibleConnectionVaultIds();
+      setVisibleVaultIds(next);
+      visibleVaultIdsRef.current = next;
+    };
+    window.addEventListener('visible-connection-vaults-changed', syncVisibleFromStorage);
+    window.addEventListener('extra-vaults-reload', syncVisibleFromStorage);
+    return () => {
+      window.removeEventListener('visible-connection-vaults-changed', syncVisibleFromStorage);
+      window.removeEventListener('extra-vaults-reload', syncVisibleFromStorage);
+    };
+  }, []);
+
+  useEffect(() => {
     const library = window.electron?.library;
     if (!library) return undefined;
     const announce = (unlocked) => {
