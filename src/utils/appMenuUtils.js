@@ -532,11 +532,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     // Agregar shortcut si existe
     if (item.shortcut) {
       const shortcut = document.createElement('span');
-      shortcut.style.cssText = `
-        font-size: calc(var(--ui-font-size, 14px) - 2px);
-        color: var(--ui-sidebar-text, #aaa);
-        margin-left: 20px;
-      `;
+      shortcut.className = 'context-kbd';
       shortcut.textContent = item.shortcut;
       menuItem.appendChild(shortcut);
     }

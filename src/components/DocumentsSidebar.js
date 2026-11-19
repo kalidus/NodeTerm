@@ -1099,7 +1099,7 @@ const DocumentsSidebar = ({
     { separator: true },
     {
       label: 'Enlazar archivos sueltos…',
-      icon: 'pi pi-file',
+      icon: 'pi pi-link',
       command: () => pickAndAddFiles(folderKey, { saveCopy: false })
     },
     {
@@ -1457,6 +1457,7 @@ const DocumentsSidebar = ({
           {
             label: 'Quitar montaje',
             icon: 'pi pi-times',
+            className: 'p-menuitem-danger',
             command: () => handleDelete(node)
           }
         );
@@ -1488,6 +1489,7 @@ const DocumentsSidebar = ({
           {
             label: 'Quitar enlace',
             icon: 'pi pi-times',
+            className: 'p-menuitem-danger',
             command: () => handleDelete(node)
           }
         );
@@ -1556,7 +1558,12 @@ const DocumentsSidebar = ({
               setShowRenameDialog(true);
             }
           },
-          { label: 'Eliminar', icon: 'pi pi-trash', command: () => handleDelete(node) }
+          {
+            label: 'Eliminar',
+            icon: 'pi pi-trash',
+            className: 'p-menuitem-danger',
+            command: () => handleDelete(node)
+          }
         );
       }
       setContextMenuItems(items);
@@ -1568,7 +1575,7 @@ const DocumentsSidebar = ({
       items.push(
         {
           label: 'Nueva nota',
-          icon: 'pi pi-file',
+          icon: 'pi pi-file-plus',
           command: () => {
             if (notesLayout !== 'notebook') {
               createNewDocumentInTree(node.key);
@@ -1599,7 +1606,16 @@ const DocumentsSidebar = ({
           }
         },
         { separator: true },
-        ...buildIngestMenuItems(node.key, node.label),
+        {
+          label: 'Añadir o importar…',
+          icon: 'pi pi-cloud-upload',
+          items: buildIngestMenuItems(node.key, node.label)
+        },
+        {
+          label: 'Pegar del portapapeles',
+          icon: 'pi pi-clipboard',
+          command: () => pasteIntoLibrary(node.key)
+        },
         { separator: true },
         {
           label: 'Cambiar icono',
@@ -1666,6 +1682,7 @@ const DocumentsSidebar = ({
       {
         label: 'Eliminar',
         icon: 'pi pi-trash',
+        className: 'p-menuitem-danger',
         command: () => handleDelete(node)
       }
     );
@@ -1688,7 +1705,7 @@ const DocumentsSidebar = ({
     const items = [
       {
         label: 'Nueva nota',
-        icon: 'pi pi-file',
+        icon: 'pi pi-file-plus',
         command: () => handleCreateNewNote()
       },
       {
@@ -1701,7 +1718,16 @@ const DocumentsSidebar = ({
         }
       },
       { separator: true },
-      ...buildIngestMenuItems(targetKey, targetLabel)
+      {
+        label: 'Añadir o importar…',
+        icon: 'pi pi-cloud-upload',
+        items: buildIngestMenuItems(targetKey, targetLabel)
+      },
+      {
+        label: 'Pegar del portapapeles',
+        icon: 'pi pi-clipboard',
+        command: () => pasteIntoLibrary(targetKey)
+      }
     ];
 
     setContextMenuItems(items);
@@ -2681,7 +2707,11 @@ const DocumentsSidebar = ({
         items={libraryAddMenuModel}
         onClose={() => setLibraryAddAnchor(null)}
       />
-      <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
+      <ContextMenu
+        model={contextMenuItems}
+        ref={contextMenuRef}
+        appendTo={typeof document !== 'undefined' ? document.body : undefined}
+      />
       <TreeContextMenu
         treeContextMenu={quickNotesCtxMenu}
         onClose={() => setQuickNotesCtxMenu(null)}

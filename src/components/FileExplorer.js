@@ -1803,7 +1803,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
             });
             items.push({
                 label: 'Nueva carpeta',
-                icon: 'pi pi-plus',
+                icon: 'pi pi-folder-plus',
                 command: () => {
                     setSelection(node.key);
                     openCreateFolderDialog(node, sideHint);
@@ -2351,6 +2351,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                 model={contextItems}
                 ref={contextMenuRef}
                 autoZIndex={true}
+                appendTo={typeof document !== 'undefined' ? document.body : undefined}
             />
 
             {!isStandaloneTab && (

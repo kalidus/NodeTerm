@@ -24,14 +24,6 @@ export function showNotesEditorContextMenu(point, items) {
     left: ${Math.round(point.clientX || 0)}px;
     top: ${Math.round(point.clientY || 0)}px;
     z-index: 2147483000;
-    min-width: 220px;
-    background: var(--ui-context-bg, #1e222d);
-    border: 1px solid var(--ui-context-border, rgba(255,255,255,0.12));
-    box-shadow: 0 8px 24px var(--ui-context-shadow, rgba(0,0,0,0.45));
-    border-radius: 8px;
-    padding: 4px 0;
-    font-size: var(--ui-font-size, 13px);
-    color: var(--ui-context-text, #e2e8f0);
     user-select: none;
     pointer-events: auto;
   `;
@@ -41,7 +33,7 @@ export function showNotesEditorContextMenu(point, items) {
   items.forEach((item, index) => {
     if (item.separator) {
       const sep = document.createElement('div');
-      sep.style.cssText = 'height:1px;margin:4px 8px;background:var(--ui-context-border,rgba(255,255,255,0.1));';
+      sep.className = 'menu-separator';
       menu.appendChild(sep);
       return;
     }
@@ -58,10 +50,6 @@ export function showNotesEditorContextMenu(point, items) {
       border: none;
       background: transparent;
       text-align: left;
-      padding: 8px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
       cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
       opacity: ${item.disabled ? 0.45 : 1};
       color: inherit;
@@ -70,17 +58,10 @@ export function showNotesEditorContextMenu(point, items) {
     `;
 
     row.innerHTML = `
-      <i class="${item.icon || 'pi pi-circle'}" style="width:16px;text-align:center;pointer-events:none;"></i>
+      <i class="${item.icon || 'pi pi-circle'}" style="pointer-events:none;"></i>
       <span style="flex:1;pointer-events:none;">${item.label || ''}</span>
-      ${item.shortcut ? `<span style="opacity:0.45;font-size:0.75em;margin-left:12px;pointer-events:none;">${item.shortcut}</span>` : ''}
+      ${item.shortcut ? `<span class="context-kbd" style="pointer-events:none;">${item.shortcut}</span>` : ''}
     `;
-
-    row.addEventListener('mouseenter', () => {
-      if (!item.disabled) row.style.background = 'var(--ui-context-hover, rgba(255,255,255,0.1))';
-    });
-    row.addEventListener('mouseleave', () => {
-      row.style.background = 'transparent';
-    });
 
     menu.appendChild(row);
   });

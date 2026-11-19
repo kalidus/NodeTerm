@@ -88,12 +88,6 @@ const EditorContextMenu = ({ treeContextMenu, onClose, items = [] }) => {
         left: Math.round(treeContextMenu.x || 0),
         top: Math.round(treeContextMenu.y || 0),
         zIndex: 1000000,
-        minWidth: '210px',
-        background: 'var(--ui-context-bg, #1e222d)',
-        border: '1px solid var(--ui-context-border, rgba(255, 255, 255, 0.12))',
-        boxShadow: '0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45))',
-        borderRadius: '8px',
-        padding: '4px 0',
         userSelect: 'none'
       }}
       onContextMenu={(e) => {
@@ -106,11 +100,7 @@ const EditorContextMenu = ({ treeContextMenu, onClose, items = [] }) => {
           return (
             <div
               key={`sep-${idx}`}
-              style={{
-                height: '1px',
-                margin: '4px 0',
-                background: 'var(--ui-context-border, rgba(255,255,255,0.1))'
-              }}
+              className="menu-separator"
             />
           );
         }
@@ -119,14 +109,10 @@ const EditorContextMenu = ({ treeContextMenu, onClose, items = [] }) => {
             key={idx}
             className="tree-menu-item"
             style={{
-              padding: '8px 12px',
               cursor: item.disabled ? 'not-allowed' : 'pointer',
               opacity: item.disabled ? 0.5 : 1,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: 'var(--ui-font-size, 13px)',
-              color: 'var(--ui-context-text, #e2e8f0)',
               userSelect: 'none'
             }}
             onMouseDown={(e) => {
@@ -135,10 +121,10 @@ const EditorContextMenu = ({ treeContextMenu, onClose, items = [] }) => {
               runItem(e, item);
             }}
           >
-            {item.icon && <i className={item.icon} style={{ width: '16px', fontSize: '1em' }} />}
+            {item.icon && <i className={item.icon} />}
             <span>{item.label}</span>
             {item.shortcut && (
-              <span style={{ marginLeft: 'auto', opacity: 0.45, fontSize: '0.75em' }}>
+              <span className="context-kbd">
                 {item.shortcut}
               </span>
             )}

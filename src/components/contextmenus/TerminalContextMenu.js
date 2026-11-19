@@ -251,6 +251,7 @@ const TerminalContextMenu = ({
         >
           <i className="pi pi-copy" style={{ width: '16px' }}></i>
           Copiar selección
+          <span className="context-kbd">Ctrl+Shift+C</span>
         </div>
         <div
           className="menu-item"
@@ -263,8 +264,9 @@ const TerminalContextMenu = ({
           }}
           onClick={handlePaste}
         >
-          <i className="pi pi-clone" style={{ width: '16px' }}></i>
+          <i className="pi pi-clipboard" style={{ width: '16px' }}></i>
           Pegar
+          <span className="context-kbd">Ctrl+Shift+V</span>
         </div>
         <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
         <div
@@ -295,7 +297,7 @@ const TerminalContextMenu = ({
         >
           <i className="pi pi-search" style={{ width: '16px' }}></i>
           Buscar
-          <span style={{ marginLeft: 'auto', opacity: 0.55, fontSize: '0.75rem' }}>Ctrl+F</span>
+          <span className="context-kbd">Ctrl+F</span>
         </div>
         <div
           className="menu-item"
@@ -308,7 +310,7 @@ const TerminalContextMenu = ({
           }}
           onClick={handleClear}
         >
-          <i className="pi pi-trash" style={{ width: '16px' }}></i>
+          <i className="pi pi-eraser" style={{ width: '16px' }}></i>
           Limpiar terminal
         </div>
         {terminalContextMenu?.tabKey && (() => {

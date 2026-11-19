@@ -37,35 +37,26 @@ const SubMenuItem = ({ item, onClose }) => {
       }}
       style={{
         position: 'relative',
-        padding: '8px 12px',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        fontSize: 'var(--ui-font-size, 13px)',
-        color: 'var(--ui-context-text, #e2e8f0)',
         userSelect: 'none'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {item.icon && <i className={item.icon} style={{ width: '16px', fontSize: '1em' }} />}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+        {item.icon && <i className={item.icon} />}
         <span>{item.label}</span>
       </div>
-      <i className="pi pi-angle-right" style={{ fontSize: 'calc(var(--ui-font-size, 13px) - 2px)', opacity: 0.7 }} />
+      <i className="pi pi-angle-right" />
 
       {isOpen && item.items && item.items.length > 0 && (
         <div
           className="tree-context-menu tree-submenu-flyout"
           style={{
             position: 'absolute',
-            top: -4,
-            [flyoutLeft ? 'left' : 'right']: '100%',
-            minWidth: '200px',
-            background: 'var(--ui-context-bg, #1e222d)',
-            border: '1px solid var(--ui-context-border, rgba(255, 255, 255, 0.12))',
-            boxShadow: '0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45))',
-            borderRadius: '8px',
-            padding: '4px 0',
+            top: -5,
+            [flyoutLeft ? 'left' : 'right']: 'calc(100% + 2px)',
             zIndex: 1000002
           }}
           onPointerDown={(e) => e.stopPropagation()}
@@ -76,30 +67,24 @@ const SubMenuItem = ({ item, onClose }) => {
               return (
                 <div
                   key={`sep-${idx}`}
-                  style={{
-                    height: '1px',
-                    margin: '4px 0',
-                    background: 'var(--ui-context-border, rgba(255,255,255,0.1))'
-                  }}
+                  className="menu-separator"
                 />
               );
             }
             if (subItem.items && subItem.items.length > 0) {
               return <SubMenuItem key={idx} item={subItem} onClose={onClose} />;
             }
+            const isSubDanger = subItem.className && subItem.className.includes('p-menuitem-danger');
             return (
               <div
                 key={idx}
-                className="tree-menu-item"
+                className={`tree-menu-item ${subItem.className || ''}`}
                 style={{
-                  padding: '8px 12px',
                   cursor: subItem.disabled ? 'not-allowed' : 'pointer',
                   opacity: subItem.disabled ? 0.5 : 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontSize: 'var(--ui-font-size, 13px)',
-                  color: 'var(--ui-context-text, #e2e8f0)',
+                  color: isSubDanger ? 'var(--red-400, #f87171)' : undefined,
                   userSelect: 'none'
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -117,8 +102,11 @@ const SubMenuItem = ({ item, onClose }) => {
                   }
                 }}
               >
-                {subItem.icon && <i className={subItem.icon} style={{ width: '16px', fontSize: '1em' }} />}
+                {subItem.icon && <i className={subItem.icon} />}
                 <span>{subItem.label}</span>
+                {subItem.shortcut && (
+                  <span className="context-kbd">{subItem.shortcut}</span>
+                )}
               </div>
             );
           })}
@@ -253,12 +241,6 @@ const TreeContextMenu = ({
         left: initialLeft,
         top: initialTop,
         zIndex: 1000000,
-        minWidth: '210px',
-        background: 'var(--ui-context-bg, #1e222d)',
-        border: '1px solid var(--ui-context-border, rgba(255, 255, 255, 0.12))',
-        boxShadow: '0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45))',
-        borderRadius: '8px',
-        padding: '4px 0',
         userSelect: 'none'
       }}
       onPointerDown={(e) => e.stopPropagation()}
@@ -269,11 +251,7 @@ const TreeContextMenu = ({
           return (
             <div
               key={`sep-${idx}`}
-              style={{
-                height: '1px',
-                margin: '4px 0',
-                background: 'var(--ui-context-border, rgba(255,255,255,0.1))'
-              }}
+              className="menu-separator"
             />
           );
         }
@@ -289,14 +267,11 @@ const TreeContextMenu = ({
             key={idx}
             className={`tree-menu-item ${item.className || ''}`}
             style={{
-              padding: '8px 12px',
               cursor: item.disabled ? 'not-allowed' : 'pointer',
               opacity: item.disabled ? 0.5 : 1,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: 'var(--ui-font-size, 13px)',
-              color: isDanger ? 'var(--red-400, #f87171)' : 'var(--ui-context-text, #e2e8f0)',
+              color: isDanger ? 'var(--red-400, #f87171)' : undefined,
               userSelect: 'none'
             }}
             onPointerDown={(e) => e.stopPropagation()}
@@ -314,17 +289,11 @@ const TreeContextMenu = ({
               }
             }}
           >
-            {item.icon && (
-              <i
-                className={item.icon}
-                style={{
-                  width: '16px',
-                  fontSize: '1em',
-                  color: isDanger ? 'var(--red-400, #f87171)' : undefined
-                }}
-              />
-            )}
+            {item.icon && <i className={item.icon} />}
             <span>{item.label}</span>
+            {item.shortcut && (
+              <span className="context-kbd">{item.shortcut}</span>
+            )}
           </div>
         );
       })}

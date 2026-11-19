@@ -1,20 +1,77 @@
-/* --- Component: Menus --- */
+/* --- Component: Menus (Unified Modern Glassmorphism Design System) --- */
 
-/* Menú contextual de PrimeReact (usado para terminal, etc.) */
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   1. SUPERFICIE UNIFICADA DE MENÚS CONTEXTUALES (Glassmorphism & Elevation)
+   ========================================================================== */
+.p-contextmenu,
+.context-menu-themed.p-contextmenu,
+.p-contextmenu .p-submenu-list,
+.context-menu-themed.p-contextmenu .p-submenu-list,
+.p-menu.p-menu-overlay,
+.tree-context-menu,
+.tree-submenu-flyout,
+.terminal-context-menu,
+.tab-context-menu,
+.editor-context-menu,
+.notes-editor-context-menu,
+.app-menu-surface,
+.app-context-menu,
+.app-submenu,
+.app-context-menu-unified,
+.app-context-menu-unified-submenu,
+.library-add-menu {
+  width: max-content !important;
+  min-width: 224px !important;
+  max-width: 340px !important;
+  padding: 5px !important;
+  border-radius: 11px !important;
+  background: var(--ui-context-bg, #181c26) !important;
+  background-color: color-mix(in srgb, var(--ui-context-bg, #181c26) 86%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-context-border, rgba(255, 255, 255, 0.14)) 85%, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow:
+    0 16px 38px -6px rgba(0, 0, 0, 0.55),
+    0 6px 16px -3px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+  color: var(--ui-context-text, #e2e8f0) !important;
+  font-family: var(--ui-font-family, var(--font-family, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)) !important;
+  font-size: var(--ui-font-size, 13px) !important;
+  user-select: none !important;
+  animation: contextMenuFadeIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.p-contextmenu,
+.context-menu-themed.p-contextmenu {
+  z-index: 1000000 !important;
+}
+
 .p-menu.p-menu-overlay {
-  min-width: 180px !important;
-  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  border-radius: 6px !important;
-  background: var(--ui-context-bg) !important;
-  font-family: var(--ui-font-family, inherit) !important;
-  font-size: var(--ui-font-size, 14px) !important;
   z-index: 9999 !important;
-  animation: none !important;
   position: fixed !important;
-  transform: none !important;
   margin: 0 !important;
-  opacity: 1 !important;
 }
 
 /* Asegurar que elementos ocultos no interfieran */
@@ -24,89 +81,334 @@
   pointer-events: none !important;
 }
 
-@keyframes contextMenuFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* Limpiar fondos internos de listas de PrimeReact para que luzca el cristal y el padding */
+.p-contextmenu ul,
+.p-contextmenu li,
+.p-contextmenu .p-menuitem,
+.p-contextmenu .p-menuitem-content,
+.context-menu-themed.p-contextmenu ul,
+.context-menu-themed.p-contextmenu li,
+.context-menu-themed.p-contextmenu .p-menuitem,
+.context-menu-themed.p-contextmenu .p-menuitem-content,
+.p-menu ul,
+.p-menu li,
+.p-menu .p-menuitem,
+.p-menu .p-menuitem-content {
+  background: transparent !important;
+  background-color: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.p-menu .p-menuitem-link {
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: none;
-  border-radius: 4px;
-  margin: 2px 4px;
+.p-contextmenu .p-submenu-list,
+.context-menu-themed.p-contextmenu .p-submenu-list {
+  padding: 5px !important;
+  min-width: 220px !important;
+  max-height: min(72vh, 480px) !important;
+  overflow-y: auto !important;
 }
 
-.p-menu .p-menuitem-link:hover {
-  background-color: var(--ui-context-hover) !important;
-}
-
-.p-menu .p-menuitem-icon {
-  width: 1rem;
-  text-align: center;
-  color: var(--ui-context-text) !important;
-  opacity: 0.8;
-}
-
-.p-menu .p-menuitem-link:hover .p-menuitem-icon {
-  opacity: 1;
-}
-
-.p-menu .p-menuitem-text {
-  color: var(--ui-context-text) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-  font-weight: 500;
-}
-
-.p-menu .p-separator {
-  margin: 0.25rem 0;
-  border-top: 1px solid var(--ui-context-border) !important;
-  opacity: 0.5;
-}
-
-/* Estilos para el menú personalizado de la aplicación (sidebar, etc.) */
-.app-context-menu,
-.app-submenu {
-  font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif)) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-  color: var(--ui-text-primary) !important;
-  background: var(--ui-sidebar-bg) !important;
-  border: 1px solid var(--ui-sidebar-border) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  user-select: none;
-}
-
+/* ==========================================================================
+   2. ÍTEMS DE MENÚ (Píldoras modernas, una sola línea, columna fija de icono)
+   ========================================================================== */
+.p-contextmenu .p-menuitem-link,
+.context-menu-themed.p-contextmenu .p-menuitem-link,
+.p-menu .p-menuitem-link,
+.tree-context-menu .tree-menu-item,
+.terminal-context-menu .menu-item,
+.tab-context-menu .menu-item,
+.app-menu-surface .app-menu-item,
+.app-menu-surface .menu-item,
+.app-menu-surface .menu-item-unified,
 .app-context-menu .menu-item,
-.app-submenu .menu-item {
-  transition: none !important;
+.app-submenu .menu-item,
+.notes-editor-context-menu button[role="menuitem"],
+.library-add-menu button[role="menuitem"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 7px 11px !important;
+  margin: 1px 0 !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--ui-context-text, #e2e8f0) !important;
+  font-family: var(--ui-font-family, var(--font-family, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)) !important;
+  font-size: calc(var(--ui-font-size, 14px) - 1px) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+  transition: background-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease !important;
   position: relative;
+  box-sizing: border-box !important;
 }
 
+/* Hover tipo píldora luminosa */
+.p-contextmenu .p-menuitem-link:hover,
+.p-contextmenu .p-menuitem.p-menuitem-active > .p-menuitem-content > .p-menuitem-link,
+.p-contextmenu .p-menuitem.p-menuitem-active > .p-menuitem-link,
+.context-menu-themed.p-contextmenu .p-menuitem-link:hover,
+.p-menu .p-menuitem-link:hover,
+.tree-context-menu .tree-menu-item:hover:not([style*="not-allowed"]),
+.terminal-context-menu .menu-item:hover,
+.tab-context-menu .menu-item:hover,
+.app-menu-surface .app-menu-item:hover,
+.app-menu-surface .app-menu-item.is-hover,
+.app-menu-surface .menu-item:hover,
+.app-menu-surface .menu-item-unified:hover,
 .app-context-menu .menu-item:hover,
-.app-submenu .menu-item:hover {
-  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+.app-submenu .menu-item:hover,
+.notes-editor-context-menu button[role="menuitem"]:hover:not(:disabled),
+.library-add-menu button[role="menuitem"]:hover {
+  background: color-mix(in srgb, var(--ui-button-primary, #6366f1) 16%, var(--ui-context-hover, rgba(255, 255, 255, 0.08))) !important;
+  background-color: color-mix(in srgb, var(--ui-button-primary, #6366f1) 16%, var(--ui-context-hover, rgba(255, 255, 255, 0.08))) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-button-primary, #6366f1) 24%, rgba(255, 255, 255, 0.06)) !important;
 }
 
-.app-context-menu .menu-item:active,
-.app-submenu .menu-item:active {
-  background: var(--ui-active-bg, rgba(255, 255, 255, 0.2)) !important;
+/* Texto del ítem */
+.p-contextmenu .p-menuitem-text,
+.context-menu-themed.p-contextmenu .p-menuitem-text,
+.p-menu .p-menuitem-text,
+.tree-context-menu .tree-menu-item span:not(.menu-shortcut):not(.context-kbd),
+.app-menu-item-label {
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
 }
 
-.app-context-menu .menu-item[data-has-submenu="true"]:hover {
-  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+.context-menu-themed.p-contextmenu .terminal-profile-menu-group > .p-menuitem-link .p-menuitem-text {
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
 }
 
-.app-submenu {
-  animation: none !important;
+/* ==========================================================================
+   3. COLUMNA FIJA DE ICONOS Y COLORES SEMÁNTICOS
+   ========================================================================== */
+.p-contextmenu .p-menuitem-icon,
+.context-menu-themed.p-contextmenu .p-menuitem-icon,
+.p-menu .p-menuitem-icon,
+.tree-context-menu .tree-menu-item i:not(.pi-angle-right),
+.terminal-context-menu .menu-item > i:first-child,
+.tab-context-menu .menu-item > i:first-child,
+.app-menu-surface .app-menu-item > i:first-child,
+.app-menu-surface .app-menu-item .app-menu-item-icon,
+.app-menu-surface .menu-item > i:first-child,
+.app-menu-surface .menu-item-unified i:not(.pi-angle-right),
+.app-context-menu .menu-item > i:first-child,
+.app-submenu .menu-item > i:first-child,
+.notes-editor-context-menu button[role="menuitem"] > i:first-child,
+.library-add-menu button[role="menuitem"] > i:first-child {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  margin-right: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: 13.5px !important;
+  color: var(--ui-context-text, #e2e8f0);
+  opacity: 0.85;
+  flex-shrink: 0 !important;
+  transition: transform 0.12s ease, opacity 0.12s ease, color 0.12s ease !important;
+}
+
+.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon,
+.p-menu .p-menuitem-link:hover .p-menuitem-icon,
+.tree-context-menu .tree-menu-item:hover i:not(.pi-angle-right),
+.terminal-context-menu .menu-item:hover > i:first-child,
+.tab-context-menu .menu-item:hover > i:first-child,
+.app-menu-surface .app-menu-item:hover > i:first-child,
+.app-menu-surface .menu-item:hover > i:first-child,
+.app-menu-surface .menu-item-unified:hover i:not(.pi-angle-right),
+.notes-editor-context-menu button[role="menuitem"]:hover > i:first-child,
+.library-add-menu button[role="menuitem"]:hover > i:first-child {
+  opacity: 1 !important;
+  transform: scale(1.06);
+}
+
+/* --- Acentos cromáticos semánticos por tipo de acción --- */
+/* Creación / Añadir */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-plus, .pi-plus-circle, .pi-file-plus, .pi-folder-plus) {
+  color: #60a5fa !important;
+  opacity: 0.95;
+}
+
+/* Carpetas / Explorador */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-folder, .pi-folder-open) {
+  color: #fbbf24 !important;
+  opacity: 0.95;
+}
+
+/* Nube / Nextcloud / Red / Web */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-cloud, .pi-cloud-download, .pi-cloud-upload, .pi-globe, .pi-share-alt, .pi-wifi) {
+  color: #38bdf8 !important;
+  opacity: 0.95;
+}
+
+/* Favoritos */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-star, .pi-star-fill) {
+  color: #f59e0b !important;
+  opacity: 0.95;
+}
+
+/* Seguridad / Contraseñas / Llaves / Billeteras */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-key, .pi-lock, .pi-lock-open, .pi-wallet, .pi-shield) {
+  color: #a78bfa !important;
+  opacity: 0.95;
+}
+
+/* Edición / Personalización / Propiedades */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-pencil, .pi-file-edit, .pi-image, .pi-sliders-h, .pi-cog, .pi-tags) {
+  color: #818cf8 !important;
+  opacity: 0.92;
+}
+
+/* Portapapeles / Enlaces / Transferencia */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-copy, .pi-clone, .pi-clipboard, .pi-link, .pi-external-link, .pi-download, .pi-upload, .pi-save) {
+  color: #2dd4bf !important;
+  opacity: 0.92;
+}
+
+/* Monitor / Auditoría / Split / Acciones rápidas */
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface, .library-add-menu)
+  :is(.pi-video, .pi-chart-bar, .pi-search, .pi-arrows-v, .pi-arrows-h, .pi-window-maximize, .pi-bolt, .pi-refresh) {
+  color: #34d399 !important;
+  opacity: 0.92;
+}
+
+/* ==========================================================================
+   4. ACCIONES DESTRUCTIVAS (Eliminar / Quitar)
+   ========================================================================== */
+.p-contextmenu .p-menuitem.p-menuitem-danger > .p-menuitem-content > .p-menuitem-link,
+.p-contextmenu .p-menuitem.p-menuitem-danger > .p-menuitem-link,
+.p-contextmenu .p-menuitem-link:has(.pi-trash),
+.tree-context-menu .tree-menu-item.p-menuitem-danger,
+.tree-context-menu .tree-menu-item:has(.pi-trash),
+.terminal-context-menu .menu-item.p-menuitem-danger,
+.tab-context-menu .menu-item.p-menuitem-danger,
+.tab-context-menu .menu-item:has(.pi-trash),
+.app-menu-surface .menu-item.p-menuitem-danger {
+  color: #f87171 !important;
+}
+
+.p-contextmenu .p-menuitem.p-menuitem-danger .p-menuitem-text,
+.p-contextmenu .p-menuitem.p-menuitem-danger .p-menuitem-icon,
+.p-contextmenu .p-menuitem-link:has(.pi-trash) .p-menuitem-text,
+.p-contextmenu .p-menuitem-link:has(.pi-trash) .p-menuitem-icon,
+.tree-context-menu .tree-menu-item.p-menuitem-danger span,
+.tree-context-menu .tree-menu-item.p-menuitem-danger i,
+.tree-context-menu .tree-menu-item:has(.pi-trash) span,
+.tree-context-menu .tree-menu-item:has(.pi-trash) i,
+.tab-context-menu .menu-item:has(.pi-trash) i,
+:is(.p-contextmenu, .p-menu, .tree-context-menu, .terminal-context-menu, .tab-context-menu, .app-menu-surface) .pi-trash {
+  color: #f87171 !important;
+  opacity: 1 !important;
+}
+
+.p-contextmenu .p-menuitem.p-menuitem-danger > .p-menuitem-content > .p-menuitem-link:hover,
+.p-contextmenu .p-menuitem.p-menuitem-danger > .p-menuitem-link:hover,
+.p-contextmenu .p-menuitem-link:has(.pi-trash):hover,
+.tree-context-menu .tree-menu-item.p-menuitem-danger:hover:not([style*="not-allowed"]),
+.tree-context-menu .tree-menu-item:has(.pi-trash):hover:not([style*="not-allowed"]),
+.terminal-context-menu .menu-item.p-menuitem-danger:hover,
+.tab-context-menu .menu-item.p-menuitem-danger:hover,
+.tab-context-menu .menu-item:has(.pi-trash):hover,
+.app-menu-surface .menu-item.p-menuitem-danger:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+}
+
+/* ==========================================================================
+   5. SEPARADORES, CABECERAS Y ATAJOS DE TECLADO (KBD BADGES)
+   ========================================================================== */
+.p-contextmenu .p-separator,
+.p-contextmenu .p-menuitem-separator,
+.p-menu .p-separator,
+.p-menu .p-menuitem-separator,
+.tree-context-menu .menu-separator,
+.terminal-context-menu .menu-separator,
+.tab-context-menu .menu-separator,
+.app-menu-surface .menu-separator,
+.app-menu-surface .app-menu-separator,
+.app-context-menu .menu-separator,
+.app-submenu .menu-separator,
+.library-add-menu hr {
+  height: 1px !important;
+  margin: 5px 8px !important;
+  border: none !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--ui-context-border, rgba(255, 255, 255, 0.16)) 90%, rgba(255, 255, 255, 0.1)) 10%,
+    color-mix(in srgb, var(--ui-context-border, rgba(255, 255, 255, 0.16)) 90%, rgba(255, 255, 255, 0.1)) 90%,
+    transparent
+  ) !important;
+  opacity: 0.85 !important;
+}
+
+/* Flecha de submenú */
+.p-contextmenu .p-submenu-icon,
+.tree-context-menu .tree-menu-item .pi-angle-right,
+.app-menu-surface .menu-item-unified .pi-angle-right {
+  margin-left: auto !important;
+  padding-left: 12px !important;
+  font-size: 11px !important;
+  opacity: 0.6 !important;
+  color: var(--ui-context-text, #e2e8f0) !important;
+  transition: transform 0.14s ease, opacity 0.14s ease !important;
+}
+
+.p-contextmenu .p-menuitem-link:hover .p-submenu-icon,
+.tree-context-menu .tree-menu-item:hover .pi-angle-right,
+.app-menu-surface .menu-item-unified:hover .pi-angle-right {
+  opacity: 1 !important;
+  transform: translateX(2px);
+}
+
+/* Badges de atajos de teclado */
+.menu-shortcut,
+.context-kbd {
+  margin-left: auto !important;
+  padding: 1px 6px !important;
+  border-radius: 5px !important;
+  font-size: 10.5px !important;
+  font-family: var(--ui-font-family, system-ui, sans-serif) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  color: var(--ui-context-text, #cbd5e1) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  opacity: 0.72 !important;
+  line-height: 1.35 !important;
+  pointer-events: none;
+}
+
+/* Cabeceras de sección dentro del menú */
+.menu-header,
+.context-menu-header {
+  padding: 6px 11px 4px 11px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--ui-context-text, #94a3b8) !important;
+  opacity: 0.6 !important;
+  user-select: none;
 }
 
 /* Área de hover extendida para mejorar la UX del submenú */
@@ -121,86 +423,18 @@
   z-index: 10001;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.app-context-menu .menu-separator,
-.app-submenu .menu-separator {
-  height: 1px;
-  background: var(--ui-sidebar-border) !important;
-  margin: 4px 8px;
-  opacity: 0.5;
-}
-
-.menu-shortcut {
-  font-size: calc(var(--ui-font-size, 14px) - 2px) !important;
-  color: var(--ui-text-secondary, #888) !important;
-  font-weight: normal !important;
-}
-
-.app-context-menu .menu-item i,
-.app-submenu .menu-item i {
-  color: var(--ui-text-secondary, #888) !important;
-  transition: none;
-}
-
-.app-context-menu .menu-item:hover i,
-.app-submenu .menu-item:hover i {
-  color: var(--ui-text-primary) !important;
-}
-
-/* Puente invisible para mejorar la transición entre menú y submenú */
 .menu-bridge {
   pointer-events: auto;
   user-select: none;
 }
 
-/* Reducir animaciones cuando está activado */
-[data-ui-reduced-motion="true"] .app-context-menu,
-[data-ui-reduced-motion="true"] .app-submenu {
-  animation: none !important;
-  transition: none !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .app-context-menu,
-  .app-submenu {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* Menú contextual de PrimeReact (ContextMenu) - FORZAR tema */
-.p-contextmenu {
-  background: var(--ui-context-bg) !important;
-  background-color: var(--ui-context-bg) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
-  border-radius: var(--ui-radius-md, 8px) !important;
-  padding: var(--ui-space-1, 4px) 0 !important;
-  font-family: var(--ui-font-family, inherit) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-  z-index: 99999 !important;
-}
-
-/* OverlayPanel / Menu Prime: misma superficie */
-.p-overlaypanel,
-.p-menu.p-menu-overlay {
+/* OverlayPanel Prime: misma superficie */
+.p-overlaypanel {
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
   border: 1px solid var(--ui-dialog-border) !important;
-  box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
-  border-radius: var(--ui-radius-md, 8px) !important;
+  box-shadow: 0 12px 32px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.35)) !important;
+  border-radius: var(--ui-radius-md, 10px) !important;
 }
 
 .p-overlaypanel .p-overlaypanel-content {
@@ -208,166 +442,49 @@
   color: var(--ui-dialog-text) !important;
 }
 
-.p-contextmenu ul,
-.p-contextmenu li,
-.p-contextmenu .p-menuitem,
-.p-contextmenu .p-menuitem-content {
-  background: var(--ui-context-bg) !important;
-  background-color: var(--ui-context-bg) !important;
-}
-
-.p-contextmenu .p-menuitem-link {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: var(--ui-context-text) !important;
-  transition: background-color 0.15s ease;
-}
-
-.p-contextmenu .p-menuitem-link:hover {
-  background: var(--ui-context-hover) !important;
-  background-color: var(--ui-context-hover) !important;
-}
-
-.p-contextmenu .p-menuitem-icon {
-  color: var(--ui-context-text) !important;
-  opacity: 0.8;
-}
-
-.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
-  opacity: 1;
-}
-
-.p-contextmenu .p-menuitem-text {
-  color: var(--ui-context-text) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-}
-
-.p-contextmenu .p-separator {
-  border-top: 1px solid var(--ui-context-border) !important;
-  opacity: 0.5;
-}
-
-/* Menú contextual de selección de terminales - FORZAR tema */
-.context-menu-themed.p-contextmenu {
-  background: var(--ui-context-bg) !important;
-  background-color: var(--ui-context-bg) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
-  border-radius: 6px !important;
-  opacity: 1 !important;
-}
-
-.context-menu-themed.p-contextmenu ul,
-.context-menu-themed.p-contextmenu li,
-.context-menu-themed.p-contextmenu .p-menuitem,
-.context-menu-themed.p-contextmenu .p-menuitem-content {
-  background: var(--ui-context-bg) !important;
-  background-color: var(--ui-context-bg) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-link {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: var(--ui-context-text) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-link:hover {
-  background: var(--ui-context-hover) !important;
-  background-color: var(--ui-context-hover) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-icon {
-  color: var(--ui-context-text) !important;
-}
-
-.context-menu-themed.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
-  opacity: 1;
-}
-
-/* Submenús del selector de perfil (agrupación tipo tiered) */
-.context-menu-themed.p-contextmenu .p-submenu-list {
-  background: var(--ui-context-bg) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 10px 28px var(--ui-context-shadow, rgba(0, 0, 0, 0.35)) !important;
-  padding: 6px 0 !important;
-  min-width: 220px !important;
-  max-height: min(70vh, 480px) !important;
-  overflow-y: auto !important;
-}
-
-.context-menu-themed.p-contextmenu .terminal-profile-menu-group > .p-menuitem-link .p-menuitem-text {
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-/* Custom Terminal / Tab / Tree Context Menu */
-.tree-context-menu,
-.terminal-context-menu,
-.tab-context-menu {
-  background: var(--ui-context-bg) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  color: var(--ui-context-text) !important;
-  border-radius: var(--ui-radius-md, 8px) !important;
-  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
-  font-family: var(--ui-font-family, inherit) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.tree-context-menu .tree-menu-item,
-.terminal-context-menu .menu-item,
-.tab-context-menu .menu-item,
-.app-menu-surface .menu-item,
-.app-menu-surface .menu-item-unified {
-  font-size: var(--ui-font-size, 14px) !important;
-  transition: background-color 0.15s ease, color 0.15s ease;
-  color: var(--ui-context-text) !important;
-}
-
-.tree-context-menu .tree-menu-item:hover:not([style*="not-allowed"]),
-.terminal-context-menu .menu-item:hover,
-.tab-context-menu .menu-item:hover,
-.app-menu-surface .menu-item:hover,
-.app-menu-surface .menu-item-unified:hover {
-  background-color: var(--ui-context-hover) !important;
-}
-
-.tree-context-menu .tree-menu-item.p-menuitem-danger:hover:not([style*="not-allowed"]) {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-}
-
-.terminal-context-menu .menu-separator,
-.tab-context-menu .menu-separator,
-.app-menu-surface .menu-separator {
-  background-color: var(--ui-context-border) !important;
-}
-
-.app-context-menu-unified,
-.app-context-menu-unified-submenu {
-  background: var(--ui-context-bg) !important;
-  color: var(--ui-context-text) !important;
-  border: 1px solid var(--ui-context-border) !important;
-  border-radius: var(--ui-radius-md, 8px) !important;
-  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
-  font-family: var(--ui-font-family, inherit) !important;
-  font-size: var(--ui-font-size, 14px) !important;
-}
-
 /* Custom Scrollbar for context menus */
-.terminal-context-menu::-webkit-scrollbar {
-  width: 4px;
+.terminal-context-menu::-webkit-scrollbar,
+.p-contextmenu .p-submenu-list::-webkit-scrollbar {
+  width: 5px;
 }
 
-.terminal-context-menu::-webkit-scrollbar-track {
+.terminal-context-menu::-webkit-scrollbar-track,
+.p-contextmenu .p-submenu-list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.terminal-context-menu::-webkit-scrollbar-thumb {
+.terminal-context-menu::-webkit-scrollbar-thumb,
+.p-contextmenu .p-submenu-list::-webkit-scrollbar-thumb {
   background: var(--ui-context-border, rgba(255, 255, 255, 0.2));
   border-radius: 10px;
 }
 
-.terminal-context-menu::-webkit-scrollbar-thumb:hover {
+.terminal-context-menu::-webkit-scrollbar-thumb:hover,
+.p-contextmenu .p-submenu-list::-webkit-scrollbar-thumb:hover {
   background: var(--ui-button-primary, #6366f1);
+}
+
+/* Reducir animaciones cuando está activado */
+[data-ui-reduced-motion="true"] .p-contextmenu,
+[data-ui-reduced-motion="true"] .tree-context-menu,
+[data-ui-reduced-motion="true"] .terminal-context-menu,
+[data-ui-reduced-motion="true"] .tab-context-menu,
+[data-ui-reduced-motion="true"] .app-menu-surface,
+[data-ui-reduced-motion="true"] .app-context-menu,
+[data-ui-reduced-motion="true"] .app-submenu {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-contextmenu,
+  .tree-context-menu,
+  .terminal-context-menu,
+  .tab-context-menu,
+  .app-menu-surface,
+  .app-context-menu,
+  .app-submenu {
+    animation: none !important;
+    transition: none !important;
+  }
 }

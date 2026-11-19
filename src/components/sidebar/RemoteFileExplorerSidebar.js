@@ -720,7 +720,7 @@ export default function RemoteFileExplorerSidebar({
       });
       items.push({
         label: t('remoteExplorer.newFolder'),
-        icon: 'pi pi-plus',
+        icon: 'pi pi-folder-plus',
         command: () => createFolder(currentPath)
       });
       items.push({
@@ -750,7 +750,7 @@ export default function RemoteFileExplorerSidebar({
       if (entry.type === 'directory') {
         items.push({
           label: t('remoteExplorer.newFolder'),
-          icon: 'pi pi-plus',
+          icon: 'pi pi-folder-plus',
           command: () => createFolder(entryPath)
         });
         items.push({
@@ -1000,7 +1000,11 @@ export default function RemoteFileExplorerSidebar({
           <div className="remote-explorer-drop-hint">{t('remoteExplorer.dropHint')}</div>
         )}
       </div>
-      <ContextMenu model={menuModel} ref={contextMenuRef} />
+      <ContextMenu
+        model={menuModel}
+        ref={contextMenuRef}
+        appendTo={typeof document !== 'undefined' ? document.body : undefined}
+      />
     </div>
   );
 }

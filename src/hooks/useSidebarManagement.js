@@ -1455,7 +1455,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       items.push({ separator: true });
       items.push({
         label: 'Nueva Carpeta',
-        icon: 'pi pi-folder',
+        icon: 'pi pi-folder-plus',
         command: () => {
           if (sidebarCallbacksRef.current?.createFolder) {
             sidebarCallbacksRef.current.createFolder(node.key);
@@ -1574,7 +1574,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const items = [
       {
         label: 'Nueva Carpeta',
-        icon: 'pi pi-folder',
+        icon: 'pi pi-folder-plus',
         command: () => {
           if (sidebarCallbacksRef.current?.createFolder) {
             sidebarCallbacksRef.current.createFolder(null); // null = crear en raíz
