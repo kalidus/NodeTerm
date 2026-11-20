@@ -38,6 +38,12 @@ import {
 } from '../utils/resolveTerminalFontFamily';
 import { getAvailableFonts } from '../utils/fontsList';
 import { isSessionHandoff } from '../utils/sessionHandoff';
+import {
+    ensureLocalTerminalBuffer,
+    stashTerminalScreen,
+    registerScreenStashHook,
+    unregisterScreenStashHook
+} from '../utils/terminalScreenHandoff';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -329,7 +335,16 @@ const TerminalComponent = forwardRef(({
     }));
 
     useEffect(() => {
-        if (!tabId || !xtermLib) return;
+        if (!tabId || !xtermLib) return undefined;
+        let disposed = false;
+        let cleanup = () => {};
+
+        (async () => {
+        try {
+            await ensureLocalTerminalBuffer(tabId);
+        } catch (_) { /* sin stash */ }
+        if (disposed) return;
+
         const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SerializeAddon, SearchAddon } = xtermLib;
 
         // Cancelar timer de desconexi??n pendiente si existe
@@ -440,6 +455,60 @@ const TerminalComponent = forwardRef(({
                 serializeAddon = null;
             }
         }
+
+        const captureScreenBuffer = () => {
+            if (!term.current) return null;
+            try {
+                const buffer = term.current.buffer.active;
+                let serialized = '';
+                try {
+                    if (serializeAddon) serialized = serializeAddon.serialize() || '';
+                } catch (_) {
+                    serialized = '';
+                }
+                const lines = [];
+                if (!serialized) {
+                    const linesToSave = 1500;
+                    const startLine = Math.max(0, buffer.length - linesToSave);
+                    for (let i = startLine; i < buffer.length; i++) {
+                        const line = buffer.getLine(i);
+                        if (line) lines.push(line.translateToString(true));
+                    }
+                    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+                }
+                const wasTui = !!(
+                    serialized
+                      ? (/\x1b\[\?(?:1049|1048|1047|47)h/.test(serialized) ||
+                         looksLikeTuiChrome(serialized) ||
+                         /\x1b\[(?:\d+;)*7(?:;\d+)*m/.test(serialized) ||
+                         /F1Help|F10Quit|\bPID\s+USER\s+(?:PRI|NI|VIRT)\b/.test(serialized))
+                      : looksLikeTuiSnapshot(lines)
+                );
+                return {
+                    serialized: serialized || undefined,
+                    lines,
+                    cols: term.current.cols,
+                    rows: term.current.rows,
+                    cursorX: buffer.cursorX,
+                    cursorY: buffer.cursorY,
+                    viewportY: buffer.viewportY,
+                    baseY: buffer.baseY,
+                    timestamp: Date.now(),
+                    hibernated: true,
+                    wasTui
+                };
+            } catch (_) {
+                return null;
+            }
+        };
+
+        registerScreenStashHook(tabId, () => {
+            const screenBuffer = captureScreenBuffer();
+            if (!screenBuffer) return;
+            if (!window.__terminalBuffers) window.__terminalBuffers = {};
+            window.__terminalBuffers[tabId] = screenBuffer;
+            stashTerminalScreen(tabId, screenBuffer);
+        });
 
         // Load image addon - Comentado temporalmente por errores de require
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
@@ -704,31 +773,18 @@ const TerminalComponent = forwardRef(({
             // Ahora s??, verificar y conectar DESPU??S de registrar los listeners
             // Verificar si ya existe una conexi??n SSH activa para este tabId
             // Esto evita reconectar cuando un terminal se convierte en parte de un split
-            const checkExistingConnection = async () => {
+            // Siempre ssh:connect: si la sesión ya existe, main la reutiliza y
+            // reasigna el destino IPC a este webContents (imprescindible al detach).
+            window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
+            setTimeout(() => {
                 try {
-                    const hasConnection = await window.electron.ipcRenderer.invoke('ssh:check-connection', tabId);
-
-                    if (!hasConnection) {
-                        // Solo conectar si no existe una conexi??n activa
-                        window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
-                    } else {
-                        // Si ya existe, solo enviar el evento ready localmente
-                        // para que el terminal se configure correctamente
-                        setTimeout(() => {
-                            window.electron.ipcRenderer.send('ssh:resize', {
-                                tabId,
-                                cols: term.current.cols,
-                                rows: term.current.rows
-                            });
-                        }, 100);
-                    }
-                } catch (error) {
-                    // En caso de error, intentar conectar de todas formas
-                    window.electron.ipcRenderer.send('ssh:connect', { tabId, config: sshConfig });
-                }
-            };
-
-            checkExistingConnection();
+                    window.electron.ipcRenderer.send('ssh:resize', {
+                        tabId,
+                        cols: term.current.cols,
+                        rows: term.current.rows
+                    });
+                } catch (_) { /* noop */ }
+            }, 120);
 
             // Handle user input (estilo clientes modernos: IPC inmediato, broadcast diferido)
             const dataHandler = term.current.onData(data => {
@@ -780,7 +836,8 @@ const TerminalComponent = forwardRef(({
             });
 
             // Cleanup on component unmount
-            return () => {
+            cleanup = () => {
+                unregisterScreenStashHook(tabId);
                 flushPending();
                 writeBufferRef.current?.flushSync();
                 try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
@@ -796,7 +853,8 @@ const TerminalComponent = forwardRef(({
                 if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
 
                 // Marcar hibernación ANTES de dispose para no perder stdout del gap
-                if (preserveSessionRef.current) {
+                // (preserveSession o arrastre a otra ventana / session handoff)
+                if (preserveSessionRef.current || isSessionHandoff()) {
                     try {
                         window.electron.ipcRenderer.send('terminal:set-hibernated', { tabId, hibernated: true });
                     } catch (_) { /* noop */ }
@@ -804,61 +862,14 @@ const TerminalComponent = forwardRef(({
 
                 // Preservar el buffer del terminal antes de desmontarlo
                 if (term.current) {
-                    try {
-                        const buffer = term.current.buffer.active;
-                        let serialized = '';
-                        try {
-                            if (serializeAddon) {
-                                serialized = serializeAddon.serialize() || '';
-                            }
-                        } catch (_) {
-                            serialized = '';
-                        }
-
-                        const lines = [];
-                        // Solo volcar líneas planas si no hay snapshot ANSI (legacy / fallback)
-                        if (!serialized) {
-                            const linesToSave = 1500;
-                            const startLine = Math.max(0, buffer.length - linesToSave);
-                            const endLine = buffer.length;
-
-                            for (let i = startLine; i < endLine; i++) {
-                                const line = buffer.getLine(i);
-                                if (line) {
-                                    lines.push(line.translateToString(true));
-                                }
-                            }
-
-                            while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
-                                lines.pop();
-                            }
-                        }
-
-                        const wasTui = !!(
-                            serialized
-                              ? (/\x1b\[\?(?:1049|1048|1047|47)h/.test(serialized) ||
-                                 looksLikeTuiChrome(serialized) ||
-                                 /\x1b\[(?:\d+;)*7(?:;\d+)*m/.test(serialized) ||
-                                 /F1Help|F10Quit|\bPID\s+USER\s+(?:PRI|NI|VIRT)\b/.test(serialized))
-                              : looksLikeTuiSnapshot(lines)
-                        );
-
+                    const screenBuffer = captureScreenBuffer();
+                    if (screenBuffer) {
+                        screenBuffer.hibernated = !!preserveSessionRef.current || isSessionHandoff();
                         if (!window.__terminalBuffers) window.__terminalBuffers = {};
-                        window.__terminalBuffers[tabId] = {
-                            serialized: serialized || undefined,
-                            lines,
-                            cols: term.current.cols,
-                            rows: term.current.rows,
-                            cursorX: buffer.cursorX,
-                            cursorY: buffer.cursorY,
-                            viewportY: buffer.viewportY,
-                            baseY: buffer.baseY,
-                            timestamp: Date.now(),
-                            hibernated: !!preserveSessionRef.current,
-                            wasTui
-                        };
-                    } catch (error) {
-                        // Silenciar error
+                        window.__terminalBuffers[tabId] = screenBuffer;
+                        if (isSessionHandoff() || preserveSessionRef.current) {
+                            stashTerminalScreen(tabId, screenBuffer);
+                        }
                     }
                 }
 
@@ -897,7 +908,8 @@ const TerminalComponent = forwardRef(({
         } else {
             term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicaci??n no funcionar??n.\x1b[0m');
             // Cleanup only the terminal if API is not ready
-            return () => {
+            cleanup = () => {
+                unregisterScreenStashHook(tabId);
                 try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
                 resizeObserver.disconnect();
                 try { detachSearch?.(); } catch (_) { /* noop */ }
@@ -910,6 +922,13 @@ const TerminalComponent = forwardRef(({
                 }
             };
         }
+        if (disposed) cleanup();
+        })();
+
+        return () => {
+            disposed = true;
+            cleanup();
+        };
     }, [tabId, sshConfig, xtermLib]);
 
     const sawLayoutSuspendRef = useRef(false);

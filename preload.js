@@ -358,6 +358,7 @@ contextBridge.exposeInMainWorld('electron', {
         'ssh:set-monitor-stats',
         'ssh:send-command',
         'terminal:set-hibernated',
+        'terminal:stash-screen',
         'terminal:flow',
         'terminal:secret-entry',
         'statusbar:set-polling-interval',

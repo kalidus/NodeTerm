@@ -7,7 +7,7 @@
 
 const path = require('path');
 const { BrowserWindow, WebContentsView, screen } = require('electron');
-const { setOutputTarget, clearOutputTarget } = require('./TabOutputTarget');
+const { clearOutputTarget } = require('./TabOutputTarget');
 
 const appRoot = path.join(__dirname, '..', '..', '..');
 
@@ -126,7 +126,8 @@ function ensure(tabKey, owner) {
 
   const view = new WebContentsView({ webPreferences: webPreferences() });
   attachNavigationGuard(view.webContents);
-  setOutputTarget(tabKey, view.webContents);
+  // No redirigir salida aquí: la vista aún no tiene xterm. register-tab-events / *:start
+  // desde TabHost llaman setOutputTarget cuando el listener ya existe.
   view.webContents.on('destroyed', () => {
     clearOutputTarget(tabKey);
     const current = tabs.get(tabKey);

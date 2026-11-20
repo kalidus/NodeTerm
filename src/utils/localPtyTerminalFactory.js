@@ -34,6 +34,12 @@ import {
   localPtyUnavailableMessage
 } from './localPtySession';
 import { isSessionHandoff } from './sessionHandoff';
+import {
+  ensureLocalTerminalBuffer,
+  stashTerminalScreen,
+  registerScreenStashHook,
+  unregisterScreenStashHook
+} from './terminalScreenHandoff';
 
 const GNOME_ANSI = {
   black: '#2E3436',
@@ -328,7 +334,16 @@ export function createLocalPtyTerminal(kind) {
 
     useEffect(() => {
       if (!xtermLib) return undefined;
-      const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SearchAddon } = xtermLib;
+      let disposed = false;
+      let cleanup = () => {};
+
+      (async () => {
+      try {
+        await ensureLocalTerminalBuffer(tabId);
+      } catch (_) { /* sin stash */ }
+      if (disposed) return;
+
+      const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon, SearchAddon, SerializeAddon } = xtermLib;
       ensureTerminalFontsLoaded();
 
       term.current = new Terminal({
@@ -361,10 +376,84 @@ export function createLocalPtyTerminal(kind) {
       term.current.loadAddon(new WebLinksAddon());
       attachUnicode11(term.current, Unicode11Addon);
       const detachSearch = attachTerminalSearch(term.current, tabId, SearchAddon);
+      let serializeAddon = null;
+      if (typeof SerializeAddon === 'function') {
+        try {
+          serializeAddon = new SerializeAddon();
+          term.current.loadAddon(serializeAddon);
+        } catch (_) {
+          serializeAddon = null;
+        }
+      }
       rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
       term.current.open(terminalRef.current);
       fitStable();
       term.current.focus();
+
+      const captureScreenBuffer = () => {
+        if (!term.current) return null;
+        try {
+          const buffer = term.current.buffer.active;
+          let serialized = '';
+          try {
+            if (serializeAddon) serialized = serializeAddon.serialize() || '';
+          } catch (_) {
+            serialized = '';
+          }
+          const lines = [];
+          if (!serialized) {
+            const start = Math.max(0, buffer.length - 1500);
+            for (let i = start; i < buffer.length; i++) {
+              const line = buffer.getLine(i);
+              if (line) lines.push(line.translateToString(true));
+            }
+            while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+          }
+          return {
+            serialized: serialized || undefined,
+            lines,
+            cols: term.current.cols,
+            rows: term.current.rows,
+            cursorX: buffer.cursorX,
+            cursorY: buffer.cursorY,
+            viewportY: buffer.viewportY,
+            baseY: buffer.baseY,
+            timestamp: Date.now(),
+            hibernated: true,
+            wasTui: false
+          };
+        } catch (_) {
+          return null;
+        }
+      };
+
+      registerScreenStashHook(tabId, () => {
+        const screenBuffer = captureScreenBuffer();
+        if (!screenBuffer) return;
+        if (!window.__terminalBuffers) window.__terminalBuffers = {};
+        window.__terminalBuffers[tabId] = screenBuffer;
+        stashTerminalScreen(tabId, screenBuffer);
+      });
+
+      const savedBuffer = window.__terminalBuffers && window.__terminalBuffers[tabId];
+      if (savedBuffer && (savedBuffer.hibernated || (Date.now() - (savedBuffer.timestamp || 0)) < 3000)) {
+        try {
+          if (savedBuffer.serialized) {
+            if (savedBuffer.cols > 0 && savedBuffer.rows > 0) {
+              try { term.current.resize(savedBuffer.cols, savedBuffer.rows); } catch (_) { /* noop */ }
+            }
+            term.current.write(savedBuffer.serialized);
+          } else if (Array.isArray(savedBuffer.lines) && savedBuffer.lines.length > 0) {
+            savedBuffer.lines.forEach((line, index) => {
+              term.current.write(line);
+              if (index < savedBuffer.lines.length - 1) term.current.write('\r\n');
+            });
+          }
+        } catch (_) { /* noop */ }
+        delete window.__terminalBuffers[tabId];
+      } else {
+        term.current.clear();
+      }
 
       let focusDisposable = null;
       try {
@@ -395,6 +484,7 @@ export function createLocalPtyTerminal(kind) {
       }
 
       const disposeTerminal = () => {
+        unregisterScreenStashHook(tabId);
         try { focusDisposable?.dispose?.(); } catch (_) { /* noop */ }
         resizeObserver.disconnect();
         if (profile.listenVisibility) {
@@ -412,10 +502,11 @@ export function createLocalPtyTerminal(kind) {
           sessionInfo: sessionInfoRef.current
         });
         term.current.writeln(`\x1b[31m${localPtyUnavailableMessage(kind, label)}\x1b[0m`);
-        return disposeTerminal;
+        cleanup = disposeTerminal;
+        if (disposed) cleanup();
+        return;
       }
 
-      term.current.clear();
       const channelAtStart = resolveLocalPtyChannel(kind, sessionInfoRef.current);
       const delay = localPtyStartDelayMs(kind, tabId);
       window.electron.ipcRenderer.send('register-tab-events', tabId);
@@ -468,11 +559,19 @@ export function createLocalPtyTerminal(kind) {
         term.current?.writeln(`\x1b[31m${label} Error: ${error}\x1b[0m`);
       });
 
-      return () => {
+      cleanup = () => {
         clearTimeout(startTimer);
         flushPending();
         if (profile.cleanupBuffer === 'flush') writeBufferRef.current?.flushSync();
         else writeBufferRef.current?.clear();
+        if (isSessionHandoff()) {
+          const screenBuffer = captureScreenBuffer();
+          if (screenBuffer) {
+            if (!window.__terminalBuffers) window.__terminalBuffers = {};
+            window.__terminalBuffers[tabId] = screenBuffer;
+            stashTerminalScreen(tabId, screenBuffer);
+          }
+        }
         if (!isSessionHandoff() && shouldSendLocalPtyStop(kind, {
           navigationType: performance.navigation?.type,
           readyState: document.readyState
@@ -486,6 +585,13 @@ export function createLocalPtyTerminal(kind) {
         dataHandler.dispose();
         resizeHandler.dispose();
         disposeTerminal();
+      };
+      if (disposed) cleanup();
+      })();
+
+      return () => {
+        disposed = true;
+        cleanup();
       };
       // El tema y la fuente se actualizan en efectos aparte, igual que antes.
       // sessionKey recrea la sesión si cambia la distro de Ubuntu.

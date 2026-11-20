@@ -4,6 +4,7 @@
  */
 
 const { parseDfOutput, parseNetDev, sendToRenderer } = require('../utils');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 class SSHStatsService {
   constructor() {
@@ -64,6 +65,12 @@ class SSHStatsService {
     if (tabId == null || tabId === '') return false;
     const id = String(tabId);
     if (this.monitorStatsTabIds.has(id)) return true;
+    try {
+      const registry = require('./TabViewRegistry');
+      const owner = registry.ownerOf && registry.ownerOf(id);
+      const main = registry.getMain && registry.getMain();
+      if (owner && main && owner !== main) return !this.hiddenStatusBarTabIds.has(id);
+    } catch (_) { /* sin registro de vistas */ }
     const pinned = this.pinnedStatsTabIds.has(id);
     const active = this.activeStatsTabId != null && String(this.activeStatsTabId) === id;
     if (!pinned && !active) return false;
@@ -885,7 +892,11 @@ class SSHStatsService {
       conn.finalDistroId = finalDistroId;
       this.clearStatsError(tabId);
 
-      sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
+      const statsTarget = resolveOutputSender(
+        tabId,
+        mainWindow && mainWindow.webContents ? mainWindow.webContents : mainWindow
+      );
+      sendToRenderer(statsTarget, `ssh-stats:update:${tabId}`, stats);
     } catch (e) {
       this.logStatsErrorOnce(tabId, e);
     } finally {

@@ -43,7 +43,9 @@ function isRendererSendable(sender) {
 function sendToRenderer(sender, eventName, ...args) {
   try {
     if (typeof eventName === 'string') {
-      const tabMatch = eventName.match(/^(?:ssh|powershell|wsl|ubuntu|cygwin|docker|claude|opencode|codexcli|antigravitycli|hermescli):(?:data|ready|error|exit):(.+)$/);
+      const tabMatch = eventName.match(/^(?:ssh|powershell|wsl|ubuntu|cygwin|docker|claude|opencode|codexcli|antigravitycli|hermescli):(?:data|ready|error|exit):(.+)$/)
+        || eventName.match(/^ssh-stats:update:(.+)$/)
+        || eventName.match(/^ssh:stats:(.+)$/);
       if (tabMatch) {
         try {
           const { resolveOutputSender } = require('../services/TabOutputTarget');

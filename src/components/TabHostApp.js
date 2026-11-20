@@ -8,6 +8,8 @@ import SecureStorage from '../services/SecureStorage';
 import { cloneForIpc } from '../utils/cloneForIpc';
 import { findNodeByKeyInTree } from '../utils/importIntoVaultTree';
 import { stopTabSession } from '../utils/stopTabSession';
+import { sshStatsStore } from '../services/SshStatsStore';
+import { EVENT_NAMES } from '../utils/constants';
 
 const LIST_SETTERS = {
   setSshTabs: 'sshTabs',
@@ -64,6 +66,31 @@ export default function TabHostApp({ tabKey }) {
       if (typeof offClose === 'function') offClose();
     };
   }, [tabKey]);
+
+  useEffect(() => {
+    if (!window.electron?.ipcRenderer) return undefined;
+    const tab = model && model.tab;
+    const isSsh = tab && (tab.type === 'terminal' || tab.sshConfig);
+    if (!isSsh) return undefined;
+
+    const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabKey}`;
+    const onStats = (stats) => {
+      if (stats) sshStatsStore.setStats(tabKey, stats);
+    };
+    const offStats = window.electron.ipcRenderer.on(eventName, onStats);
+    try {
+      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', tabKey);
+      window.electron.ipcRenderer.send('ssh:set-statusbar-visible', tabKey, true);
+    } catch (_) { /* noop */ }
+
+    return () => {
+      if (typeof offStats === 'function') offStats();
+      else {
+        try { window.electron.ipcRenderer.removeAllListeners(eventName); } catch (_) { /* noop */ }
+      }
+      sshStatsStore.removeTab(tabKey);
+    };
+  }, [tabKey, model?.tab?.type, !!model?.tab?.sshConfig]);
 
   const bindListSetter = useCallback((method, listName) => (updater) => {
     setModel((prev) => {

@@ -177,7 +177,15 @@ class TerminalIpcBatcher {
     }
 
     if (payload && payload.length > 0 && sender) {
-      sendToRenderer(sender, channel, payload);
+      let dest = sender;
+      try {
+        const tabId = sshTabIdFromChannel(channel);
+        if (tabId) {
+          const { resolveOutputSender } = require('./TabOutputTarget');
+          dest = resolveOutputSender(tabId, sender);
+        }
+      } catch (_) { /* destino original */ }
+      sendToRenderer(dest, channel, payload);
     }
     if (final) this.lastSenderByChannel.delete(channel);
   }

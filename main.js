@@ -1250,6 +1250,16 @@ ipcMain.handle('terminal:drain-stdout-ring', async (event, tabId) => {
   return terminalStdoutRingBuffer.drain(tabId) || '';
 });
 
+// Snapshot de pantalla xterm entre ventanas (detach de pestaña)
+const terminalScreenStore = require('./src/main/services/TerminalScreenStore');
+ipcMain.on('terminal:stash-screen', (_event, { tabId, buffer } = {}) => {
+  if (!tabId || !buffer) return;
+  terminalScreenStore.stash(tabId, buffer);
+});
+ipcMain.handle('terminal:take-screen', async (_event, tabId) => {
+  return terminalScreenStore.take(tabId);
+});
+
 // Modo contraseña: el renderer avisa para omitir recordInput (la escritura al PTY sigue).
 ipcMain.on('terminal:secret-entry', (event, { tabId, active } = {}) => {
   try {
