@@ -3034,8 +3034,7 @@ const App = () => {
     handleImportComplete, toast, masterKey, secureStorage, setNodes
   ]);
 
-  const { contentHostRef, hostedTabKeys } = useTabSurfaces({
-    tabsSignature: [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => tab.key).join('|'),
+  useTabSurfaces({
     getAllTabs,
     getFilteredTabs,
     activeTabIndex,
@@ -3460,8 +3459,6 @@ const App = () => {
 
           // Content renderer props
           memoizedContentRendererProps={memoizedContentRendererProps}
-          contentHostRef={contentHostRef}
-          hostedTabKeys={hostedTabKeys}
 
           // Context menu props
           tabContextMenu={tabContextMenu}

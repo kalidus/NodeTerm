@@ -179,8 +179,9 @@ function getState(tabKey) {
 
 function layout(owner, activeKey, bounds, visible) {
   if (!isAliveWindow(owner)) return;
-  for (const [tabKey, entry] of tabs) {
-    if (entry.owner !== owner) continue;
+  for (const tabKey of tabsForWindow(owner)) {
+    const entry = tabs.get(tabKey);
+    if (!entry) continue;
     if (!visible || tabKey !== activeKey) hideEntry(entry);
     else placeEntry(entry, bounds || {});
   }

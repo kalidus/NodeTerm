@@ -45,6 +45,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     if (tab.key) {
       e.dataTransfer.setData('application/x-nodeterm-tab-key', tab.key);
       window._nodetermDraggedTabKey = tab.key;
+      window._nodetermTabDropHandled = false;
     }
   };
 
@@ -107,6 +108,8 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     if (!isTabElement) {
       return;
     }
+    // Drop sobre la barra: no intentar detach en dragEnd.
+    window._nodetermTabDropHandled = true;
 
     // Verificar si se está arrastrando un nodo SSH desde la sidebar
     let sshNodeData = draggedSSHNodeRef.current ||
@@ -264,6 +267,8 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
 
   const handleTabDragEnd = () => {
     const tabKey = window._nodetermDraggedTabKey;
+    const dropHandled = !!window._nodetermTabDropHandled;
+    window._nodetermTabDropHandled = false;
     if (dragStartTimer) {
       clearTimeout(dragStartTimer);
       setDragStartTimer(null);
@@ -272,7 +277,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     setDragOverTabIndex(null);
     draggedSSHNodeRef.current = null;
     window._nodetermDraggedTabKey = null;
-    if (tabKey) requestTabDetach(tabKey);
+    if (tabKey && !dropHandled) requestTabDetach(tabKey);
   };
 
   return {

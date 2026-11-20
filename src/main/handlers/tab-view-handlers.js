@@ -2,7 +2,6 @@
 
 const { ipcMain, BrowserWindow, screen } = require('electron');
 const registry = require('../services/TabViewRegistry');
-const { registerOverlayMirror } = require('../services/OverlayMirror');
 
 function senderWindow(event) {
   try {
@@ -13,7 +12,6 @@ function senderWindow(event) {
 }
 
 function registerTabViewHandlers() {
-  registerOverlayMirror();
   ipcMain.handle('tab-views:ensure', (event, payload) => {
     const tabKey = payload && payload.tabKey;
     return { ok: registry.ensure(tabKey, senderWindow(event)) };

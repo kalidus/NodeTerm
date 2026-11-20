@@ -47,16 +47,21 @@ export default function DetachedShell() {
     if (!tabs.some((tab) => tab.key === activeKey)) setActiveKey(tabs[0].key);
   }, [tabs, activeKey]);
 
+  const layoutRafRef = useRef(0);
   const publishLayout = useCallback(() => {
-    const node = hostRef.current;
-    const tabKey = activeKey;
-    if (!node || !tabKey || !window.electron?.tabViews?.layout) return;
-    const rect = node.getBoundingClientRect();
-    window.electron.tabViews.layout({
-      activeKey: tabKey,
-      visible: true,
-      bounds: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
-    }).catch(() => {});
+    if (layoutRafRef.current) return;
+    layoutRafRef.current = requestAnimationFrame(() => {
+      layoutRafRef.current = 0;
+      const node = hostRef.current;
+      const tabKey = activeKey;
+      if (!node || !tabKey || !window.electron?.tabViews?.layout) return;
+      const rect = node.getBoundingClientRect();
+      window.electron.tabViews.layout({
+        activeKey: tabKey,
+        visible: true,
+        bounds: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+      }).catch(() => {});
+    });
   }, [activeKey]);
 
   useEffect(() => {
@@ -69,6 +74,10 @@ export default function DetachedShell() {
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', publishLayout);
+      if (layoutRafRef.current) {
+        cancelAnimationFrame(layoutRafRef.current);
+        layoutRafRef.current = 0;
+      }
     };
   }, [publishLayout]);
 

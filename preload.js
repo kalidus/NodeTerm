@@ -54,8 +54,7 @@ const VALID_LISTENER_CHANNELS = [
   /^linux-terminal:.*$/,
   /^appdata:changed$/,
   /^vaults:changed$/,
-  /^tab-views:.*$/,
-  /^overlay-mirror:.*$/
+  /^tab-views:.*$/
 ];
 
 function isAllowedListenerChannel(channel) {
@@ -376,9 +375,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^docker:(start|data|stop):.+$/,
         /^linux-terminal:data:.+$/,
         'tab-views:call-result',
-        'tab-views:terminal-cmd',
-        'overlay-mirror:input',
-        'overlay-mirror:dismiss'
+        'tab-views:terminal-cmd'
       ];
       const allowed = validSendChannels.some((rule) =>
         typeof rule === 'string' ? rule === channel : rule.test(channel)
@@ -444,8 +441,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^openclaw:.*$/,
         /^opennotebook:.*$/,
         /^vnc:.*$/,
-        /^tab-views:.*$/,
-        /^overlay-mirror:.*$/
+        /^tab-views:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

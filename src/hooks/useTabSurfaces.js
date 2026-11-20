@@ -3,6 +3,13 @@ import { cloneForIpc } from '../utils/cloneForIpc';
 import { getTabSurfaceRuntime, getTabSurfaceHandler } from '../utils/tabSurfaceRuntime';
 
 const SKIP_CLONE_KEYS = new Set(['toast', 'sessionManager', 'secureStorage', 'terminalRefs']);
+const EMPTY_LISTS = {
+  homeTabs: [],
+  sshTabs: [],
+  rdpTabs: [],
+  guacamoleTabs: [],
+  fileExplorerTabs: []
+};
 
 function splitBag(source) {
   const data = {};
@@ -37,13 +44,26 @@ function listNameFor(tab, grouped) {
   return 'sshTabs';
 }
 
+function listsForTab(tab, listName, grouped, allTabs) {
+  const lists = { ...EMPTY_LISTS };
+  if (grouped && Array.isArray(grouped[listName])) {
+    lists[listName] = cloneForIpc(grouped[listName]);
+    return lists;
+  }
+  if (listName === 'homeTabs') {
+    lists.homeTabs = cloneForIpc((allTabs || []).filter((item) => item && item.type === 'home'));
+  } else {
+    lists[listName] = cloneForIpc([tab]);
+  }
+  return lists;
+}
+
 /**
  * No crea vistas al abrir pestañas. La copia nativa solo existe al arrastrar
  * una pestaña fuera de la ventana.
  */
 export function useTabSurfaces({
   enabled,
-  tabsSignature,
   getAllTabs,
   getFilteredTabs,
   activeTabIndex,
@@ -60,6 +80,7 @@ export function useTabSurfaces({
   const releasedRef = useRef(new Set());
   const apiRef = useRef({});
   const propsRef = useRef({});
+  const prepareDetachRef = useRef(null);
 
   propsRef.current = {
     getAllTabs,
@@ -77,7 +98,63 @@ export function useTabSurfaces({
 
   const apiReady = enabled !== false && typeof window !== 'undefined' && !!window.electron?.tabViews;
 
-  const contentHostRef = useCallback(() => {}, []);
+  const syncApi = useCallback(() => {
+    const current = propsRef.current;
+    apiRef.current = {
+      ...(current.contentProps || {}),
+      ...(current.extraHandlers || {}),
+      patchTab: (tab) => {
+        const patch = current.extraHandlers && current.extraHandlers.patchTab;
+        if (typeof patch === 'function') patch(tab);
+      }
+    };
+    Object.keys(current.settingsTabProps || {}).forEach((key) => {
+      const value = current.settingsTabProps[key];
+      if (typeof value === 'function') apiRef.current[`settings:${key}`] = value;
+    });
+  }, []);
+
+  const prepareDetach = useCallback(async (tabKey) => {
+    if (!apiReady || !tabKey || !window.electron?.tabViews) return;
+    syncApi();
+    const current = propsRef.current;
+    const tabs = (current.getAllTabs ? current.getAllTabs() : []).filter((tab) => tab && tab.key && !tab.embedInHome);
+    const tab = tabs.find((item) => item.key === tabKey);
+    if (!tab) return;
+    const runtime = getTabSurfaceRuntime();
+    const contentBag = splitBag(current.contentProps);
+    const settingsBag = splitBag(current.settingsTabProps);
+    const all = current.getAllTabs ? current.getAllTabs() : [];
+    const grouped = current.extraHandlers?.groupedTabs;
+    const listName = listNameFor(tab, grouped);
+    const lists = listsForTab(tab, listName, grouped, all);
+    const state = {
+      tab: cloneForIpc(tab),
+      listName,
+      isActive: true,
+      ...lists,
+      contentProps: contentBag.data,
+      contentMethods: contentBag.methods,
+      settingsProps: settingsBag.data,
+      settingsMethods: settingsBag.methods,
+      masterKey: current.contentProps?.masterKey || null,
+      flags: {
+        fileExplorerTabId: runtime.fileExplorerTabId,
+        systemMonitorTabId: runtime.systemMonitorTabId,
+        contentBlocked: false,
+        isRecording: typeof current.isRecordingTab === 'function' ? !!current.isRecordingTab(tab.key) : false,
+        isMinimalMode: !!current.isMinimalMode,
+        titleBarCollapsed: !!current.titleBarCollapsed,
+        tabBarCollapsed: !!current.tabBarCollapsed
+      }
+    };
+    const created = await window.electron.tabViews.ensure(tab.key);
+    if (!created || created.ok === false) return;
+    knownRef.current.add(tab.key);
+    await window.electron.tabViews.updateState(tab.key, state);
+  }, [apiReady, syncApi]);
+
+  prepareDetachRef.current = prepareDetach;
 
   useEffect(() => {
     if (!apiReady) return undefined;
@@ -111,90 +188,21 @@ export function useTabSurfaces({
       const adopt = propsRef.current.extraHandlers && propsRef.current.extraHandlers.adoptTab;
       if (typeof adopt === 'function') adopt(payload.tab, payload.listName);
     };
+    const prepareFn = (tabKey) => {
+      const fn = prepareDetachRef.current;
+      return typeof fn === 'function' ? fn(tabKey) : undefined;
+    };
+    window.__nodetermPrepareDetach = prepareFn;
     const offCall = window.electron.ipcRenderer.on('tab-views:call', onCall);
     const offReleased = window.electron.ipcRenderer.on('tab-views:released', onReleased);
     const offAdopted = window.electron.ipcRenderer.on('tab-views:adopted', onAdopted);
     return () => {
+      if (window.__nodetermPrepareDetach === prepareFn) delete window.__nodetermPrepareDetach;
       if (typeof offCall === 'function') offCall();
       if (typeof offReleased === 'function') offReleased();
       if (typeof offAdopted === 'function') offAdopted();
     };
   }, [apiReady]);
 
-  const syncApi = useCallback(() => {
-    const current = propsRef.current;
-    apiRef.current = {
-      ...(current.contentProps || {}),
-      ...(current.extraHandlers || {}),
-      patchTab: (tab) => {
-        const patch = current.extraHandlers && current.extraHandlers.patchTab;
-        if (typeof patch === 'function') patch(tab);
-      }
-    };
-    Object.keys(current.settingsTabProps || {}).forEach((key) => {
-      const value = current.settingsTabProps[key];
-      if (typeof value === 'function') apiRef.current[`settings:${key}`] = value;
-    });
-  }, []);
-
-  const prepareDetach = useCallback(async (tabKey) => {
-    if (!apiReady || !tabKey || !window.electron?.tabViews) return;
-    syncApi();
-    const current = propsRef.current;
-    const tabs = (current.getAllTabs ? current.getAllTabs() : []).filter((tab) => tab && tab.key && !tab.embedInHome);
-    const tab = tabs.find((item) => item.key === tabKey);
-    if (!tab) return;
-    const runtime = getTabSurfaceRuntime();
-    const contentBag = splitBag(current.contentProps);
-    const settingsBag = splitBag(current.settingsTabProps);
-    const all = current.getAllTabs ? current.getAllTabs() : [];
-    const grouped = current.extraHandlers?.groupedTabs;
-    const lists = grouped ? {
-      homeTabs: cloneForIpc(grouped.homeTabs || []),
-      sshTabs: cloneForIpc(grouped.sshTabs || []),
-      rdpTabs: cloneForIpc(grouped.rdpTabs || []),
-      guacamoleTabs: cloneForIpc(grouped.guacamoleTabs || []),
-      fileExplorerTabs: cloneForIpc(grouped.fileExplorerTabs || [])
-    } : {
-      homeTabs: cloneForIpc(all.filter((item) => item && item.type === 'home')),
-      sshTabs: cloneForIpc(all.filter((item) => item && item.type !== 'home')),
-      rdpTabs: [],
-      guacamoleTabs: [],
-      fileExplorerTabs: []
-    };
-    const state = {
-      tab: cloneForIpc(tab),
-      listName: listNameFor(tab, grouped),
-      isActive: true,
-      ...lists,
-      contentProps: contentBag.data,
-      contentMethods: contentBag.methods,
-      settingsProps: settingsBag.data,
-      settingsMethods: settingsBag.methods,
-      masterKey: current.contentProps?.masterKey || null,
-      flags: {
-        fileExplorerTabId: runtime.fileExplorerTabId,
-        systemMonitorTabId: runtime.systemMonitorTabId,
-        contentBlocked: false,
-        isRecording: typeof current.isRecordingTab === 'function' ? !!current.isRecordingTab(tab.key) : false,
-        isMinimalMode: !!current.isMinimalMode,
-        titleBarCollapsed: !!current.titleBarCollapsed,
-        tabBarCollapsed: !!current.tabBarCollapsed
-      }
-    };
-    const created = await window.electron.tabViews.ensure(tab.key);
-    if (!created || created.ok === false) return;
-    knownRef.current.add(tab.key);
-    await window.electron.tabViews.updateState(tab.key, state);
-  }, [apiReady, syncApi]);
-
-  useEffect(() => {
-    syncApi();
-    window.__nodetermPrepareDetach = prepareDetach;
-    return () => {
-      if (window.__nodetermPrepareDetach === prepareDetach) delete window.__nodetermPrepareDetach;
-    };
-  }, [syncApi, prepareDetach, contentProps, settingsTabProps, extraHandlers]);
-
-  return { contentHostRef, hostedTabKeys: [], apiReady };
+  return { apiReady };
 }

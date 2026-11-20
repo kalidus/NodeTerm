@@ -37,12 +37,6 @@ export default function TabHostApp({ tabKey }) {
   tabRef.current = model && model.tab;
 
   useEffect(() => {
-    const dismiss = () => window.electron?.ipcRenderer?.send('overlay-mirror:dismiss');
-    document.addEventListener('pointerdown', dismiss);
-    return () => document.removeEventListener('pointerdown', dismiss);
-  }, []);
-
-  useEffect(() => {
     let unsubscribe = () => {};
     const apply = (state) => {
       if (state && state.tab) setModel(state);

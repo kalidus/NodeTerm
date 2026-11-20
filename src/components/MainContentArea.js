@@ -88,8 +88,6 @@ const MainContentArea = ({
   // Content renderer props
   memoizedContentRendererProps,
   settingsTabProps,
-  contentHostRef,
-  hostedTabKeys,
   openInSplit,
   openLocalInSplit,
 
@@ -291,8 +289,6 @@ const MainContentArea = ({
   const [sshFileExplorerTabId, setSshFileExplorerTabId] = useState(null);
   const handleShowFileExplorer = useCallback((tabKey) => setSshFileExplorerTabId(tabKey), []);
   const handleCloseFileExplorer = useCallback(() => setSshFileExplorerTabId(null), []);
-  const hostedSet = useMemo(() => new Set(hostedTabKeys || []), [hostedTabKeys]);
-  const homeHosted = (homeTabs || []).some((tab) => hostedSet.has(tab.key));
 
   useEffect(() => {
     setTabSurfaceHandlers({
@@ -2356,7 +2352,6 @@ const MainContentArea = ({
                 </div>
 
                 <div
-                  ref={contentHostRef}
                   style={{
                   flexGrow: 1,
                   position: 'relative',
@@ -2384,7 +2379,6 @@ const MainContentArea = ({
                   {(() => {
                     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
                       if (tab.embedInHome) return null;
-                      if (hostedSet.has(tab.key)) return null;
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
                       const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
@@ -2469,7 +2463,6 @@ const MainContentArea = ({
                       );
                     });
                   })()}
-                  {!homeHosted && (
                   <HomeEmbeddedSessions
                     sshTabs={sshTabs}
                     rdpTabs={rdpTabs}
@@ -2488,7 +2481,6 @@ const MainContentArea = ({
                     onShowFileExplorer={handleShowFileExplorer}
                     onToggleBroadcast={handleToggleBroadcast}
                   />
-                  )}
                 </div>
               </div>
             ) : (

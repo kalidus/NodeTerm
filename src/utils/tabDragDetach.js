@@ -16,12 +16,16 @@ export function requestTabDetach(tabKey) {
     }
     if (!probe || probe.reason !== 'outside') return;
 
-    beginSessionHandoff();
+    beginSessionHandoff(800);
     const prepare = window.__nodetermPrepareDetach;
     try {
       if (typeof prepare === 'function') await prepare(tabKey);
       const result = await window.electron.tabViews.detach({ tabKey });
-      if (!result || result.ok === false) endSessionHandoff();
+      if (!result || result.ok === false) {
+        endSessionHandoff();
+        return;
+      }
+      setTimeout(() => endSessionHandoff(), 400);
     } catch (err) {
       endSessionHandoff();
       console.warn('[TabViews] Error al soltar la pestaña:', err?.message || err);
