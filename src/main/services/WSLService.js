@@ -3,6 +3,7 @@ const os = require('os');
 const pty = require('node-pty');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 /**
  * Servicio para gestión de WSL (Windows Subsystem for Linux)
@@ -313,6 +314,7 @@ function getLinuxShell() {
  */
 function startWSLSession(tabId, { cols, rows }) {
   try {
+    if (wslProcesses[tabId]) return;
     const shell = getLinuxShell();
     const platform = os.platform();
 
@@ -332,7 +334,7 @@ function startWSLSession(tabId, { cols, rows }) {
 
     wslProcesses[tabId].on('data', (data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `wsl:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `wsl:data:${tabId}`, data);
       }
     });
 
@@ -340,7 +342,7 @@ function startWSLSession(tabId, { cols, rows }) {
       terminalIpcBatcher.flush(`wsl:data:${tabId}`);
       if (!isAppQuitting.value) {
         const exitCodeStr = exitCode ? exitCode.toString() : '0';
-        sendToRenderer(mainWindow, `wsl:exit:${tabId}`, exitCodeStr);
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `wsl:exit:${tabId}`, exitCodeStr);
       }
       delete wslProcesses[tabId];
     });
@@ -358,7 +360,7 @@ function startWSLSession(tabId, { cols, rows }) {
 
   } catch (error) {
     console.error(`Error starting WSL for tab ${tabId}:`, error);
-    sendToRenderer(mainWindow, `wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
   }
 }
 
@@ -374,7 +376,7 @@ const WSLHandlers = {
         wslProcesses[tabId].write(data);
       } catch (error) {
         console.error(`Error writing to WSL ${tabId}:`, error);
-        sendToRenderer(mainWindow, `wsl:error:${tabId}`, `Write error: ${error.message}`);
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `wsl:error:${tabId}`, `Write error: ${error.message}`);
       }
     } else {
       console.warn(`No WSL process found for ${tabId}`);

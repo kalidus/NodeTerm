@@ -2,6 +2,7 @@ const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let codexCliProcesses = {};
 let mainWindow = null;
@@ -117,7 +118,7 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `codexcli:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `codexcli:data:${tabId}`, data);
       }
     });
 
@@ -129,15 +130,15 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
 
       if (intentional || isAppQuitting.value) return;
       if (typeof exitCode !== 'number' || exitCode === 0) return;
-      sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
     });
 
-    sendToRenderer(mainWindow, `codexcli:ready:${tabId}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:ready:${tabId}`);
     if (usedCommand) {
-      sendToRenderer(mainWindow, `codexcli:data:${tabId}`, `\r\n[Codex CLI] usando comando: ${usedCommand}\r\n`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:data:${tabId}`, `\r\n[Codex CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `No se pudo iniciar Codex CLI: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:error:${tabId}`, `No se pudo iniciar Codex CLI: ${error.message}`);
   }
 }
 
@@ -146,7 +147,7 @@ function writeToCodexCli(tabId, data) {
   try {
     codexCliProcesses[tabId].write(data);
   } catch (error) {
-    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Error enviando datos: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -155,7 +156,7 @@ function resizeCodexCli(tabId, { cols, rows }) {
   try {
     codexCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `codexcli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

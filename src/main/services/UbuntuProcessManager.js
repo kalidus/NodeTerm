@@ -6,6 +6,7 @@
 const os = require('os');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let ubuntuProcesses = {};
 let isAppQuitting = { value: false };
@@ -45,6 +46,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   }
 
   try {
+    if (ubuntuProcesses[tabId]) return;
     // Kill existing process if any
     if (ubuntuProcesses[tabId]) {
       try {
@@ -104,7 +106,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     // Handle Ubuntu output
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `ubuntu:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `ubuntu:data:${tabId}`, data);
       }
     });
 
@@ -130,7 +132,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
         // Silenciar el mensaje de error si estamos cerrando la aplicación
         if (!isAppQuitting.value) {
           console.log(`Ubuntu ${tabId} terminó con error (código ${actualExitCode})`);
-          sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Ubuntu process exited with code ${actualExitCode}`);
+          sendToRenderer(resolveOutputSender(tabId, mainWindow), `ubuntu:error:${tabId}`, `Ubuntu process exited with code ${actualExitCode}`);
         }
       }
 
@@ -141,11 +143,11 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     });
 
     // Send ready signal
-    sendToRenderer(mainWindow, `ubuntu:ready:${tabId}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `ubuntu:ready:${tabId}`);
 
   } catch (error) {
     console.error(`Error starting Ubuntu session for tab ${tabId}:`, error);
-    sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Failed to start Ubuntu: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `ubuntu:error:${tabId}`, `Failed to start Ubuntu: ${error.message}`);
   }
 }
 
@@ -158,7 +160,7 @@ function writeToUbuntu(tabId, data) {
       ubuntuProcesses[tabId].write(data);
     } catch (error) {
       console.error(`Error writing to Ubuntu ${tabId}:`, error);
-      sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Write error: ${error.message}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `ubuntu:error:${tabId}`, `Write error: ${error.message}`);
     }
   } else {
     console.warn(`No Ubuntu process found for ${tabId}`);

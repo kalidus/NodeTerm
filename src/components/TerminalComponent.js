@@ -37,6 +37,7 @@ import {
     readyTerminalFontFamily
 } from '../utils/resolveTerminalFontFamily';
 import { getAvailableFonts } from '../utils/fontsList';
+import { isSessionHandoff } from '../utils/sessionHandoff';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -861,8 +862,8 @@ const TerminalComponent = forwardRef(({
                     }
                 }
 
-                // Hibernación / preserveSession: no desconectar
-                if (preserveSessionRef.current) {
+                // Hibernación / preserveSession / arrastre a otra ventana: no desconectar
+                if (preserveSessionRef.current || isSessionHandoff()) {
                     // ya marcado hibernated arriba
                 } else {
                     // Delay para desconectar SSH en unmount temporal (splits legacy)

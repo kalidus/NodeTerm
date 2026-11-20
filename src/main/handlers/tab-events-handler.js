@@ -6,6 +6,16 @@
  */
 
 const { ipcMain } = require('electron');
+const { setOutputTarget } = require('../services/TabOutputTarget');
+
+function rememberTerminalOwner(tabId, event) {
+  try {
+    const sender = event && event.sender;
+    if (!tabId || !sender) return;
+    if (typeof sender.isDestroyed === 'function' && sender.isDestroyed()) return;
+    setOutputTarget(tabId, sender);
+  } catch (_) { /* noop */ }
+}
 
 // Set para trackear tabs con eventos registrados
 const registeredTabEvents = new Set();
@@ -103,6 +113,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`powershell:stop:${tabId}`);
 
   ipcMain.on(`powershell:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     PowerShell.PowerShellHandlers.start(tabId, data);
   });
 
@@ -126,6 +137,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`wsl:stop:${tabId}`);
 
   ipcMain.on(`wsl:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     WSL.WSLHandlers.start(tabId, data);
   });
 
@@ -149,6 +161,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`ubuntu:stop:${tabId}`);
 
   ipcMain.on(`ubuntu:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     startUbuntuSession(tabId, data);
   });
 
@@ -172,6 +185,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`wsl-distro:stop:${tabId}`);
 
   ipcMain.on(`wsl-distro:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     startWSLDistroSession(tabId, data);
   });
 
@@ -195,6 +209,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`cygwin:stop:${tabId}`);
 
   ipcMain.on(`cygwin:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     Cygwin.CygwinHandlers.start(tabId, data);
   });
 
@@ -218,6 +233,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`claude:stop:${tabId}`);
 
   ipcMain.on(`claude:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     Claude.ClaudeHandlers.start(tabId, data || {});
   });
 
@@ -241,6 +257,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`opencode:stop:${tabId}`);
 
   ipcMain.on(`opencode:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     OpenCode.OpenCodeHandlers.start(tabId, data || {});
   });
 
@@ -264,6 +281,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`codexcli:stop:${tabId}`);
 
   ipcMain.on(`codexcli:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     CodexCli.CodexCliHandlers.start(tabId, data || {});
   });
 
@@ -287,6 +305,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`antigravitycli:stop:${tabId}`);
 
   ipcMain.on(`antigravitycli:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     AntigravityCli.AntigravityCliHandlers.start(tabId, data || {});
   });
 
@@ -310,6 +329,7 @@ function registerTabEvents(tabId, dependencies) {
   ipcMain.removeAllListeners(`hermescli:stop:${tabId}`);
 
   ipcMain.on(`hermescli:start:${tabId}`, (event, data) => {
+    rememberTerminalOwner(tabId, event);
     HermesCli.HermesCliHandlers.start(tabId, data || {});
   });
 
@@ -335,6 +355,7 @@ function registerTabEvents(tabId, dependencies) {
     ipcMain.removeAllListeners(`docker:stop:${tabId}`);
 
     ipcMain.on(`docker:start:${tabId}`, (event, data) => {
+      rememberTerminalOwner(tabId, event);
       dockerSvc.DockerHandlers.start(tabId, data.containerName, data);
     });
 

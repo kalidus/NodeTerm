@@ -858,6 +858,45 @@ export const useTabManagement = (toast, {
     toggleInArray(homeTabs, setHomeTabs);
   }, [sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, homeTabs]);
 
+  const releaseTabByKey = useCallback((tabKey) => {
+    if (!tabKey) return;
+    const drop = (setter) => setter((prev) => (Array.isArray(prev) ? prev.filter((tab) => tab && tab.key !== tabKey) : prev));
+    drop(setHomeTabs);
+    drop(setSshTabs);
+    drop(setRdpTabs);
+    drop(setGuacamoleTabs);
+    drop(setFileExplorerTabs);
+    setOpenTabOrder((prev) => (Array.isArray(prev) ? prev.filter((key) => key !== tabKey) : prev));
+    setActiveTabIndex(0);
+  }, []);
+
+  const patchTabByKey = useCallback((tab) => {
+    if (!tab || !tab.key) return;
+    const patchList = (setter) => setter((prev) => {
+      if (!Array.isArray(prev) || !prev.some((item) => item && item.key === tab.key)) return prev;
+      return prev.map((item) => (item && item.key === tab.key ? { ...item, ...tab } : item));
+    });
+    patchList(setHomeTabs);
+    patchList(setSshTabs);
+    patchList(setRdpTabs);
+    patchList(setGuacamoleTabs);
+    patchList(setFileExplorerTabs);
+  }, []);
+
+  const adoptTab = useCallback((tab, listName) => {
+    if (!tab || !tab.key) return;
+    const add = (setter) => setter((prev) => {
+      if (!Array.isArray(prev) || prev.some((item) => item && item.key === tab.key)) return prev;
+      return [...prev, tab];
+    });
+    if (listName === 'homeTabs' || tab.type === 'home') add(setHomeTabs);
+    else if (listName === 'rdpTabs' || tab.type === 'rdp' || tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc' || tab.type === 'iron-rdp') add(setRdpTabs);
+    else if (listName === 'guacamoleTabs' || tab.type === 'guacamole') add(setGuacamoleTabs);
+    else if (listName === 'fileExplorerTabs' || tab.type === 'explorer') add(setFileExplorerTabs);
+    else add(setSshTabs);
+    setOpenTabOrder((prev) => (Array.isArray(prev) && prev.includes(tab.key) ? prev : [...(prev || []), tab.key]));
+  }, []);
+
   const handleToggleBroadcastTarget = useCallback((tabKey, targetId) => {
     const toggleInArray = (arr, setArr) => {
       let found = false;
@@ -922,6 +961,9 @@ export const useTabManagement = (toast, {
     handleTabClose,
     updateOpenTabOrderForHomeButton,
     handleToggleBroadcast,
-    handleToggleBroadcastTarget
+    handleToggleBroadcastTarget,
+    releaseTabByKey,
+    patchTabByKey,
+    adoptTab
   };
 };

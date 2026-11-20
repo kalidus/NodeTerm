@@ -42,6 +42,16 @@ function isRendererSendable(sender) {
  */
 function sendToRenderer(sender, eventName, ...args) {
   try {
+    if (typeof eventName === 'string') {
+      const tabMatch = eventName.match(/^(?:ssh|powershell|wsl|ubuntu|cygwin|docker|claude|opencode|codexcli|antigravitycli|hermescli):(?:data|ready|error|exit):(.+)$/);
+      if (tabMatch) {
+        try {
+          const { resolveOutputSender } = require('../services/TabOutputTarget');
+          sender = resolveOutputSender(tabMatch[1], sender);
+        } catch (_) { /* destino original */ }
+      }
+    }
+
     // Tabs SSH hibernadas: acumular stdout en ring (sin listener en renderer)
     if (typeof eventName === 'string' && eventName.startsWith('ssh:data:') && args.length > 0) {
       try {

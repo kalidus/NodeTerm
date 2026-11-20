@@ -414,9 +414,12 @@ export const useSessionManagement = (toast, {
         if (activeTab.rightTerminal && terminalRefs.current[activeTab.rightTerminal.key]) {
           terminalRefs.current[activeTab.rightTerminal.key].fit();
         }
-      } else if (activeTab.type === 'terminal' && terminalRefs.current[activeTab.key]) {
-        // Para terminales normales
-        terminalRefs.current[activeTab.key].fit();
+      } else if (activeTab.type === 'terminal') {
+        if (terminalRefs.current[activeTab.key]) {
+          terminalRefs.current[activeTab.key].fit();
+        } else {
+          window.electron?.tabViews?.terminalCmd(activeTab.key, 'fit');
+        }
       } else if (activeTab.type === 'rdp-guacamole' && terminalRefs.current[activeTab.key]) {
         terminalRefs.current[activeTab.key].fit();
       }

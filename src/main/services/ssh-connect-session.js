@@ -91,6 +91,16 @@ function registerSshConnectSession(deps) {
   // ── ssh:connect ────────────────────────────────────────────────────────────
   // IPC handler to establish an SSH connection
   ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
+    try {
+      const { setOutputTarget } = require('./TabOutputTarget');
+      setOutputTarget(tabId, event.sender);
+    } catch (_) { /* sin mapa de destino */ }
+    const existing = sshConnections[tabId];
+    if (existing && existing.stream && !existing.stream.destroyed) {
+      sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+      return;
+    }
+
     // Mostrar mensaje de conexión al inicio
     const hostName = config.name || config.label || config.host;
     sendToRenderer(event.sender, `ssh:data:${tabId}`, `Connecting to ${hostName}...\r\n`);

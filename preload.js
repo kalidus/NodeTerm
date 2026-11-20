@@ -53,7 +53,9 @@ const VALID_LISTENER_CHANNELS = [
   /^terminal:.*$/,
   /^linux-terminal:.*$/,
   /^appdata:changed$/,
-  /^vaults:changed$/
+  /^vaults:changed$/,
+  /^tab-views:.*$/,
+  /^overlay-mirror:.*$/
 ];
 
 function isAllowedListenerChannel(channel) {
@@ -373,6 +375,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^hermescli:(start|data|resize|stop):.+$/,
         /^docker:(start|data|stop):.+$/,
         /^linux-terminal:data:.+$/,
+        'tab-views:call-result',
+        'tab-views:terminal-cmd',
+        'overlay-mirror:input',
+        'overlay-mirror:dismiss'
       ];
       const allowed = validSendChannels.some((rule) =>
         typeof rule === 'string' ? rule === channel : rule.test(channel)
@@ -437,7 +443,9 @@ contextBridge.exposeInMainWorld('electron', {
         /^librechat:.*$/,
         /^openclaw:.*$/,
         /^opennotebook:.*$/,
-        /^vnc:.*$/
+        /^vnc:.*$/,
+        /^tab-views:.*$/,
+        /^overlay-mirror:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -563,6 +571,19 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
   // Update system APIs
+  tabViews: {
+    ensure: (tabKey) => ipcRenderer.invoke('tab-views:ensure', { tabKey }),
+    destroy: (tabKey) => ipcRenderer.invoke('tab-views:destroy', { tabKey }),
+    updateState: (tabKey, state) => ipcRenderer.invoke('tab-views:update-state', { tabKey, state }),
+    getState: (tabKey) => ipcRenderer.invoke('tab-views:get-state', { tabKey }),
+    layout: (payload) => ipcRenderer.invoke('tab-views:layout', payload),
+    detach: (payload) => ipcRenderer.invoke('tab-views:detach', payload),
+    close: (tabKey) => ipcRenderer.invoke('tab-views:close', { tabKey }),
+    pullAdopted: () => ipcRenderer.invoke('tab-views:pull-adopted'),
+    call: (tabKey, method, args) => ipcRenderer.invoke('tab-views:call', { tabKey, method, args }),
+    callResult: (payload) => ipcRenderer.send('tab-views:call-result', payload),
+    terminalCmd: (tabKey, cmd) => ipcRenderer.send('tab-views:terminal-cmd', { tabKey, cmd })
+  },
   updater: {
     checkForUpdates: () => ipcRenderer.invoke('updater:check'),
     downloadUpdate: () => ipcRenderer.invoke('updater:download'),

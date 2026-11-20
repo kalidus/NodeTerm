@@ -2,6 +2,7 @@ const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let claudeProcesses = {};
 let mainWindow = null;
@@ -51,12 +52,7 @@ function buildClaudeArgs(config = {}) {
 function startClaudeSession(tabId, options = {}) {
   const { cols = 120, rows = 30 } = options;
 
-  if (claudeProcesses[tabId]) {
-    try {
-      claudeProcesses[tabId].kill();
-    } catch (_) {}
-    delete claudeProcesses[tabId];
-  }
+  if (claudeProcesses[tabId]) return;
 
   try {
     const config = typeof getClaudeConfig === 'function' ? getClaudeConfig() : {};
@@ -119,7 +115,7 @@ function startClaudeSession(tabId, options = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `claude:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `claude:data:${tabId}`, data);
       }
     });
 
@@ -131,15 +127,15 @@ function startClaudeSession(tabId, options = {}) {
 
       if (intentional || isAppQuitting.value) return;
       if (typeof exitCode !== 'number' || exitCode === 0) return;
-      sendToRenderer(mainWindow, `claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
     });
 
-    sendToRenderer(mainWindow, `claude:ready:${tabId}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:ready:${tabId}`);
     if (usedCommand) {
-      sendToRenderer(mainWindow, `claude:data:${tabId}`, `\r\n[Claude] usando comando: ${usedCommand}\r\n`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:data:${tabId}`, `\r\n[Claude] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    sendToRenderer(mainWindow, `claude:error:${tabId}`, `No se pudo iniciar Claude Code: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:error:${tabId}`, `No se pudo iniciar Claude Code: ${error.message}`);
   }
 }
 
@@ -148,7 +144,7 @@ function writeToClaude(tabId, data) {
   try {
     claudeProcesses[tabId].write(data);
   } catch (error) {
-    sendToRenderer(mainWindow, `claude:error:${tabId}`, `Error enviando datos: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -157,7 +153,7 @@ function resizeClaude(tabId, { cols, rows }) {
   try {
     claudeProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    sendToRenderer(mainWindow, `claude:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `claude:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

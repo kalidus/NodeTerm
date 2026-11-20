@@ -128,6 +128,7 @@ logTiming('SSHWriteBufferService cargado');
 
 // Handler de registro de eventos de pestañas
 const { registerTabEvents, isTabRegistered, clearAllRegisteredTabs } = require('./src/main/handlers/tab-events-handler');
+const { setOutputTarget } = require('./src/main/services/TabOutputTarget');
 logTiming('Tab events handler cargado');
 
 try {
@@ -1512,6 +1513,7 @@ function getPty() {
 ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   const channel = event.senderFrame ? event.channel : arguments[1];
   const tabId = channel.split(':')[2];
+  if (tabId && event.sender) setOutputTarget(tabId, event.sender);
 
   // ✅ REFACTORIZADO: Registrar eventos para este tab si no estan registrados
   if (!isTabRegistered(tabId)) {
@@ -1605,6 +1607,7 @@ function registerTabEventsWrapper(tabId) {
 
 // Evento para registrar nuevas pestañas
 ipcMain.on('register-tab-events', (event, tabId) => {
+  if (tabId && event.sender) setOutputTarget(tabId, event.sender);
   registerTabEventsWrapper(tabId);
 });
 

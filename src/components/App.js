@@ -31,6 +31,7 @@ import { useFormHandlers } from '../hooks/useFormHandlers';
 import { useSplitManagement } from '../hooks/useSplitManagement';
 import { useTreeOperations } from '../hooks/useTreeOperations';
 import { useTabRendering } from '../hooks/useTabRendering';
+import { useTabSurfaces } from '../hooks/useTabSurfaces';
 import { getAllFolders } from '../utils/treeFolders';
 import { useRecordingManagement } from '../hooks/useRecordingManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
@@ -1290,7 +1291,8 @@ const App = () => {
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
     handleLoadGroupFromFavorites: handleLoadGroupFromFavoritesRaw,
     createNewGroup, deleteGroup, moveTabToGroup, groupTabsBySection, cleanupTabDistro,
-    handleTabContextMenu, handleTabClose, handleToggleBroadcast, handleToggleBroadcastTarget
+    handleTabContextMenu, handleTabClose, handleToggleBroadcast, handleToggleBroadcastTarget,
+    releaseTabByKey, patchTabByKey, adoptTab
   } = useTabManagement(toast, {
     cleanupTabDistro,
     setSshConnectionStatus,
@@ -3032,6 +3034,29 @@ const App = () => {
     handleImportComplete, toast, masterKey, secureStorage, setNodes
   ]);
 
+  const { contentHostRef, hostedTabKeys } = useTabSurfaces({
+    tabsSignature: [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => tab.key).join('|'),
+    getAllTabs,
+    getFilteredTabs,
+    activeTabIndex,
+    releaseTabByKey,
+    contentProps: memoizedContentRendererProps,
+    settingsTabProps,
+    isRecordingTab: isRecording,
+    isMinimalMode,
+    titleBarCollapsed,
+    tabBarCollapsed,
+    extraHandlers: {
+      onStartRecording: handleStartRecording,
+      onStopRecording: handleStopRecording,
+      handleTabClose,
+      patchTab: patchTabByKey,
+      adoptTab,
+      onToggleBroadcast: handleToggleBroadcast,
+      groupedTabs: { homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs }
+    }
+  });
+
   if (!isAppReady) {
     return <div style={{ background: '#1e1e1e', height: '100vh', width: '100vw' }} />;
   }
@@ -3435,6 +3460,8 @@ const App = () => {
 
           // Content renderer props
           memoizedContentRendererProps={memoizedContentRendererProps}
+          contentHostRef={contentHostRef}
+          hostedTabKeys={hostedTabKeys}
 
           // Context menu props
           tabContextMenu={tabContextMenu}

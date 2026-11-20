@@ -45,6 +45,7 @@ let _mcpApiHandlers = null;
 let _updaterHandlers = null;
 let _windowHandlers = null;
 let _platformTerminalHandlers = null;
+let _tabViewHandlers = null;
 
 function getBrowserImportHandlers() {
   if (!_browserImportHandlers) _browserImportHandlers = require('./browser-import-handlers');
@@ -69,6 +70,11 @@ function getWindowHandlers() {
 function getPlatformTerminalHandlers() {
   if (!_platformTerminalHandlers) _platformTerminalHandlers = require('./platform-terminal-handlers');
   return _platformTerminalHandlers;
+}
+
+function getTabViewHandlers() {
+  if (!_tabViewHandlers) _tabViewHandlers = require('./tab-view-handlers');
+  return _tabViewHandlers;
 }
 
 function getAppHandlers() {
@@ -339,6 +345,7 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('guacamole IPC', () => getGuacamoleHandlers().registerGuacamoleHandlers(dependencies));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('window chrome IPC', () => getWindowHandlers().registerWindowHandlers(dependencies));
+  runHandlerStep('tab views IPC', () => getTabViewHandlers().registerTabViewHandlers());
   runHandlerStep('platform terminal IPC', () => getPlatformTerminalHandlers().registerPlatformTerminalHandlers(dependencies));
   // UI llama updater:get-info al montar; debe estar antes de cargar el renderer
   runHandlerStep('updater IPC', () => getUpdaterHandlers().registerUpdaterHandlers(dependencies));

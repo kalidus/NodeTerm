@@ -2,6 +2,7 @@ const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let antigravityCliProcesses = {};
 let mainWindow = null;
@@ -122,7 +123,7 @@ async function startAntigravityCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `antigravitycli:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `antigravitycli:data:${tabId}`, data);
       }
     });
 
@@ -134,15 +135,15 @@ async function startAntigravityCliSession(tabId, { cols, rows } = {}) {
 
       if (intentional || isAppQuitting.value) return;
       if (typeof exitCode !== 'number' || exitCode === 0) return;
-      sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `Antigravity CLI finalizó con código ${exitCode}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:error:${tabId}`, `Antigravity CLI finalizó con código ${exitCode}`);
     });
 
-    sendToRenderer(mainWindow, `antigravitycli:ready:${tabId}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:ready:${tabId}`);
     if (usedCommand) {
-      sendToRenderer(mainWindow, `antigravitycli:data:${tabId}`, `\r\n[Antigravity CLI] usando comando: ${usedCommand}\r\n`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:data:${tabId}`, `\r\n[Antigravity CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `No se pudo iniciar Antigravity CLI: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:error:${tabId}`, `No se pudo iniciar Antigravity CLI: ${error.message}`);
   }
 }
 
@@ -151,7 +152,7 @@ function writeToAntigravityCli(tabId, data) {
   try {
     antigravityCliProcesses[tabId].write(data);
   } catch (error) {
-    sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `Error enviando datos: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -160,7 +161,7 @@ function resizeAntigravityCli(tabId, { cols, rows }) {
   try {
     antigravityCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    sendToRenderer(mainWindow, `antigravitycli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `antigravitycli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

@@ -264,8 +264,21 @@ function createMainWindow(deps) {
   });
 
   // Cierre de la ventana principal
+  try {
+    require('../services/TabViewRegistry').markMain(mainWindow);
+  } catch (err) {
+    console.warn('[TabViews] No se pudo marcar la ventana principal:', err?.message || err);
+  }
+
   mainWindow.on('close', () => {
     try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) { }
+    let detached = false;
+    try {
+      const tabViews = require('../services/TabViewRegistry');
+      detached = tabViews.hasDetachedShells();
+      if (detached) tabViews.destroyOwnedBy(mainWindow);
+    } catch (_) { /* sin vistas */ }
+    if (detached) return;
     isAppQuitting.value = true;
     app.quit();
   });

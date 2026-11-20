@@ -6,6 +6,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.global === 'undefined
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
+import TabHostApp from './components/TabHostApp';
+import DetachedShell from './components/DetachedShell';
 import { markStartup } from './utils/startup-renderer-profiler';
 import { applyFirstRunHomeTabDefaults, migrateMainFrameHeaderCollapsed } from './utils/homeTabDefaults';
 import { applyUILayoutFromStorage } from './utils/appearanceLayout';
@@ -231,10 +233,36 @@ import localStorageSyncService from './services/LocalStorageSyncService';
 const container = document.getElementById('root');
 const root = createRoot(container);
 
+const readHostRole = () => {
+  try {
+    const from = (raw) => new URLSearchParams(String(raw || '').replace(/^[?#]/, ''));
+    const search = from(window.location.search);
+    const hash = from(window.location.hash);
+    return {
+      role: search.get('nodetermRole') || hash.get('nodetermRole'),
+      tabKey: search.get('tabKey') || hash.get('tabKey')
+    };
+  } catch (_) {
+    return { role: null, tabKey: null };
+  }
+};
+
+const hideBootSplash = () => {
+  const splash = document.getElementById('boot-splash');
+  if (splash) splash.style.display = 'none';
+};
+
 const paintApp = () => {
   applyEarlyBootTheme();
   initializeGlobalThemes();
-  root.render(<App />);
+  const { role, tabKey } = readHostRole();
+  if (role === 'tab' && tabKey) {
+    hideBootSplash();
+    root.render(<TabHostApp tabKey={tabKey} />);
+  } else if (role === 'shell') {
+    hideBootSplash();
+    root.render(<DetachedShell />);
+  } else root.render(<App />);
   markStartup('React root.render');
 
   // La ventana sigue oculta. app:renderer-ready sale de App cuando el shell real está pintado.
@@ -265,6 +293,11 @@ const scheduleIdle = (fn) => {
 
 const initAndRender = async () => {
   markStartup('initAndRender inicio');
+  const { role } = readHostRole();
+  if (role === 'tab' || role === 'shell') {
+    paintApp();
+    return;
+  }
   const isSecondary = window.electron?.isSecondaryInstance === true;
 
   if (isSecondary) {

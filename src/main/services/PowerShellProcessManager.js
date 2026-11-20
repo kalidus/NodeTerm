@@ -6,6 +6,7 @@
 const os = require('os');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let powershellProcesses = {};
 let isAppQuitting = { value: false };
@@ -208,7 +209,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     // Handle PowerShell output
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `powershell:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `powershell:data:${tabId}`, data);
       }
     });
 
@@ -257,7 +258,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
           if (!isAppQuitting.value) {
             console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
             const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-            sendToRenderer(mainWindow, `powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+            sendToRenderer(resolveOutputSender(tabId, mainWindow), `powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
           }
         }
       }
@@ -276,7 +277,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
-    sendToRenderer(mainWindow, `powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
   }
 }
 

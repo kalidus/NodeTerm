@@ -5,6 +5,7 @@
 const os = require('os');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 let wslDistroProcesses = {};
 let isAppQuitting = { value: false };
@@ -43,14 +44,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
   }
 
   try {
-    // Kill existing process if it exists
-    if (wslDistroProcesses[tabId]) {
-      try {
-        wslDistroProcesses[tabId].kill();
-      } catch (e) {
-        console.error(`Error killing existing WSL distro process for tab ${tabId}:`, e);
-      }
-    }
+    if (wslDistroProcesses[tabId]) return;
 
     // Determine shell and arguments for WSL distribution
     let shell, args;
@@ -150,18 +144,18 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
       if (!isAppQuitting.value) {
         const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-        terminalIpcBatcher.send(mainWindow, `${channelName}:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `${channelName}:data:${tabId}`, data);
       }
     });
 
     // Send ready signal AFTER registering onData (consistent with Ubuntu manager)
     if (!isAppQuitting.value) {
       const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-      sendToRenderer(mainWindow, `${channelName}:ready:${tabId}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `${channelName}:ready:${tabId}`);
 
       // Enviar mensaje de bienvenida para confirmar que el backend está respondiendo
       const welcomeMsg = `\r\n\x1b[36m🚀 Starting ${distroInfo?.label || distroInfo?.name || 'WSL Distribution'}...\x1b[0m\r\n`;
-      terminalIpcBatcher.send(mainWindow, `${channelName}:data:${tabId}`, welcomeMsg);
+      terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `${channelName}:data:${tabId}`, welcomeMsg);
     }
 
     // Handle distribution exit  
@@ -202,7 +196,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
     console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
     if (!isAppQuitting.value) {
       const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-      sendToRenderer(mainWindow, `${channelName}:error:${tabId}`,
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `${channelName}:error:${tabId}`,
         `Failed to start ${distroInfo?.label || 'WSL Distribution'}: ${error.message}`);
     }
   }

@@ -247,6 +247,17 @@
   </head>
   <body>
     <div id="boot-splash"><div class="spinner"></div><div class="brand">NodeTerm</div></div>
+    <script>
+      (function () {
+        try {
+          var raw = (location.search || '') + '&' + String(location.hash || '').replace(/^#/, '');
+          if (/(^|[?&#])nodetermRole=(tab|shell)(&|$)/.test(raw)) {
+            var splash = document.getElementById('boot-splash');
+            if (splash) splash.style.display = 'none';
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
   </body>
 </html> 

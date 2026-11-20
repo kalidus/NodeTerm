@@ -2,6 +2,7 @@ const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 const path = require('path');
 
 let hermesCliProcesses = {};
@@ -149,7 +150,7 @@ async function startHermesCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        terminalIpcBatcher.send(mainWindow, `hermescli:data:${tabId}`, data);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `hermescli:data:${tabId}`, data);
       }
     });
 
@@ -161,15 +162,15 @@ async function startHermesCliSession(tabId, { cols, rows } = {}) {
 
       if (intentional || isAppQuitting.value) return;
       if (typeof exitCode !== 'number' || exitCode === 0) return;
-      sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Hermes CLI finalizó con código ${exitCode}`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:error:${tabId}`, `Hermes CLI finalizó con código ${exitCode}`);
     });
 
-    sendToRenderer(mainWindow, `hermescli:ready:${tabId}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:ready:${tabId}`);
     if (usedCommand) {
-      sendToRenderer(mainWindow, `hermescli:data:${tabId}`, `\r\n[Hermes CLI] usando comando: ${usedCommand}\r\n`);
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:data:${tabId}`, `\r\n[Hermes CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `No se pudo iniciar Hermes CLI: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:error:${tabId}`, `No se pudo iniciar Hermes CLI: ${error.message}`);
   }
 }
 
@@ -178,7 +179,7 @@ function writeToHermesCli(tabId, data) {
   try {
     hermesCliProcesses[tabId].write(data);
   } catch (error) {
-    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Error enviando datos: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -187,7 +188,7 @@ function resizeHermesCli(tabId, { cols, rows }) {
   try {
     hermesCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
+    sendToRenderer(resolveOutputSender(tabId, mainWindow), `hermescli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

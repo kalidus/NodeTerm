@@ -3,7 +3,7 @@
  * El ritmo del worker de estadísticas lo ajusta setWindowActivity en handlers/index.js.
  */
 
-const { ipcMain } = require('electron');
+const { ipcMain, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { getNodeTermDataDir } = require('../utils/file-utils');
@@ -127,30 +127,37 @@ function registerWindowHandlers(dependencies = {}) {
     return;
   }
 
-  safeHandle('window:minimize', () => {
-    const mainWindow = getMainWindow();
-    if (mainWindow) mainWindow.minimize();
+  const windowFromEvent = (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win && !win.isDestroyed()) return win;
+    } catch (_) { /* sender sin ventana */ }
+    return getMainWindow();
+  };
+
+  safeHandle('window:minimize', (event) => {
+    const win = windowFromEvent(event);
+    if (win) win.minimize();
   });
 
-  safeHandle('window:maximize', () => {
-    const mainWindow = getMainWindow();
-    if (mainWindow) mainWindow.maximize();
+  safeHandle('window:maximize', (event) => {
+    const win = windowFromEvent(event);
+    if (win) win.maximize();
   });
 
-  safeHandle('window:unmaximize', () => {
-    const mainWindow = getMainWindow();
-    if (mainWindow) mainWindow.unmaximize();
+  safeHandle('window:unmaximize', (event) => {
+    const win = windowFromEvent(event);
+    if (win) win.unmaximize();
   });
 
-  safeHandle('window:isMaximized', () => {
-    const mainWindow = getMainWindow();
-    if (mainWindow) return mainWindow.isMaximized();
-    return false;
+  safeHandle('window:isMaximized', (event) => {
+    const win = windowFromEvent(event);
+    return win ? win.isMaximized() : false;
   });
 
-  safeHandle('window:close', () => {
-    const mainWindow = getMainWindow();
-    if (mainWindow) mainWindow.close();
+  safeHandle('window:close', (event) => {
+    const win = windowFromEvent(event);
+    if (win) win.close();
   });
 
   safeHandle('window:set-corners', (_event, layoutId) => {

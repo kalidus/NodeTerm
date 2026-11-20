@@ -3,6 +3,7 @@ const pty = require('node-pty');
 const os = require('os');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 function dockerExecSync(args, options = {}) {
   return execFileSync('docker', args, {
@@ -297,7 +298,7 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
     dockerProcesses[tabId].onData((data) => {
       if (!isAppQuitting.value) {
         const dataStr = data.toString('utf8');
-        terminalIpcBatcher.send(mainWindow, `docker:data:${tabId}`, dataStr);
+        terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `docker:data:${tabId}`, dataStr);
       }
     });
 
@@ -306,20 +307,20 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
       terminalIpcBatcher.flush(`docker:data:${tabId}`);
       delete dockerProcesses[tabId];
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `docker:exit:${tabId}`, exitCode?.toString() || '0');
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `docker:exit:${tabId}`, exitCode?.toString() || '0');
       }
     });
 
     // Handle errors
     dockerProcesses[tabId].on('error', (error) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `docker:error:${tabId}`, error.message);
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `docker:error:${tabId}`, error.message);
       }
     });
   } catch (error) {
     console.error(`❌ Error iniciando Docker en '${containerName}': ${error.message}`);
     if (!isAppQuitting.value) {
-      sendToRenderer(mainWindow, `docker:error:${tabId}`,
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `docker:error:${tabId}`,
         `No se pudo iniciar sesión en '${containerName}': ${error.message}`
       );
     }

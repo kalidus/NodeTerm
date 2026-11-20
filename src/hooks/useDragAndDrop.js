@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { requestTabDetach } from '../utils/tabDragDetach';
 
 // Almacenamiento global para el nodo SSH que se está arrastrando desde la sidebar
 // Esto es necesario porque PrimeReact Tree no expone correctamente el dataTransfer
@@ -24,6 +25,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
 
     const filtered = getFilteredTabs();
     const tab = filtered[tabIndex];
+    window._nodetermDraggedTabKey = null;
     if (!tab) return;
 
     // Verificar si el botón de inicio está bloqueado
@@ -261,16 +263,16 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
   };
 
   const handleTabDragEnd = () => {
-    // Limpiar timer si existe
+    const tabKey = window._nodetermDraggedTabKey;
     if (dragStartTimer) {
       clearTimeout(dragStartTimer);
       setDragStartTimer(null);
     }
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
-    // Limpiar el nodo SSH arrastrado si existe
     draggedSSHNodeRef.current = null;
     window._nodetermDraggedTabKey = null;
+    if (tabKey) requestTabDetach(tabKey);
   };
 
   return {

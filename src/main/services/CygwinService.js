@@ -6,6 +6,7 @@ const { app } = require('electron');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
+const { resolveOutputSender } = require('./TabOutputTarget');
 
 /**
  * Servicio para Cygwin portable.
@@ -289,7 +290,7 @@ cd ~
         if (!listenerReady) {
           outputBuffer.push(data);
         } else {
-          terminalIpcBatcher.send(mainWindow, `cygwin:data:${tabId}`, data);
+          terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `cygwin:data:${tabId}`, data);
         }
       }
     });
@@ -299,7 +300,7 @@ cd ~
       listenerReady = true;
       if (outputBuffer.length > 0 && !isAppQuitting.value) {
         outputBuffer.forEach(data => {
-          terminalIpcBatcher.send(mainWindow, `cygwin:data:${tabId}`, data);
+          terminalIpcBatcher.send(resolveOutputSender(tabId, mainWindow), `cygwin:data:${tabId}`, data);
         });
         outputBuffer = [];
       }
@@ -311,7 +312,7 @@ cd ~
       console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `cygwin:exit:${tabId}`, exitCode?.toString() || '0');
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `cygwin:exit:${tabId}`, exitCode?.toString() || '0');
       }
     });
 
@@ -319,14 +320,14 @@ cd ~
     cygwinProcesses[tabId].on('error', (error) => {
       console.error(`❌ Cygwin ${tabId}: Error`);
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `cygwin:error:${tabId}`, error.message);
+        sendToRenderer(resolveOutputSender(tabId, mainWindow), `cygwin:error:${tabId}`, error.message);
       }
     });
 
   } catch (error) {
     console.error(`❌ Cygwin ${tabId}: Error de inicio`);
     if (!isAppQuitting.value) {
-      sendToRenderer(mainWindow, `cygwin:error:${tabId}`,
+      sendToRenderer(resolveOutputSender(tabId, mainWindow), `cygwin:error:${tabId}`,
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
         `En Windows el LITE deberia venir embebido. Si falta, regenera resources/cygwin64 o amplía desde Ajustes > Apps > Cygwin.`
       );

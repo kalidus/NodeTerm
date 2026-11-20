@@ -40,6 +40,7 @@ import {
 } from '../utils/tabHibernation';
 import { useTabBarChrome } from '../hooks/useTabBarChrome';
 import { setLauncherSidebarProps } from '../utils/launcherSidebarBridge';
+import { setTabSurfaceHandlers, setTabSurfaceRuntime } from '../utils/tabSurfaceRuntime';
 import NodeTermAppIcon from './NodeTermAppIcon';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
@@ -87,6 +88,8 @@ const MainContentArea = ({
   // Content renderer props
   memoizedContentRendererProps,
   settingsTabProps,
+  contentHostRef,
+  hostedTabKeys,
   openInSplit,
   openLocalInSplit,
 
@@ -288,6 +291,26 @@ const MainContentArea = ({
   const [sshFileExplorerTabId, setSshFileExplorerTabId] = useState(null);
   const handleShowFileExplorer = useCallback((tabKey) => setSshFileExplorerTabId(tabKey), []);
   const handleCloseFileExplorer = useCallback(() => setSshFileExplorerTabId(null), []);
+  const hostedSet = useMemo(() => new Set(hostedTabKeys || []), [hostedTabKeys]);
+  const homeHosted = (homeTabs || []).some((tab) => hostedSet.has(tab.key));
+
+  useEffect(() => {
+    setTabSurfaceHandlers({
+      onShowSystemMonitor: handleShowSystemMonitor,
+      onCloseSystemMonitor: handleCloseSystemMonitor,
+      onShowFileExplorer: handleShowFileExplorer,
+      onCloseFileExplorer: handleCloseFileExplorer
+    });
+  }, [handleShowSystemMonitor, handleCloseSystemMonitor, handleShowFileExplorer, handleCloseFileExplorer]);
+
+  useEffect(() => {
+    const groupEmpty = activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0;
+    setTabSurfaceRuntime({
+      fileExplorerTabId: sshFileExplorerTabId,
+      systemMonitorTabId: sshSystemMonitorTabId,
+      contentBlocked: groupEmpty
+    });
+  }, [sshFileExplorerTabId, sshSystemMonitorTabId, activeGroupId, getTabsInGroup]);
 
   // MRU de pestañas montadas (activa + N): hibernación SSH/locales sin matar sesión/PTY
   const [mruTabKeys, setMruTabKeys] = useState([]);
@@ -2332,7 +2355,9 @@ const MainContentArea = ({
                   />
                 </div>
 
-                <div style={{
+                <div
+                  ref={contentHostRef}
+                  style={{
                   flexGrow: 1,
                   position: 'relative',
                   background: 'var(--ui-content-bg, #1a1b26)'
@@ -2359,6 +2384,7 @@ const MainContentArea = ({
                   {(() => {
                     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
                       if (tab.embedInHome) return null;
+                      if (hostedSet.has(tab.key)) return null;
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
                       const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
@@ -2443,6 +2469,7 @@ const MainContentArea = ({
                       );
                     });
                   })()}
+                  {!homeHosted && (
                   <HomeEmbeddedSessions
                     sshTabs={sshTabs}
                     rdpTabs={rdpTabs}
@@ -2461,6 +2488,7 @@ const MainContentArea = ({
                     onShowFileExplorer={handleShowFileExplorer}
                     onToggleBroadcast={handleToggleBroadcast}
                   />
+                  )}
                 </div>
               </div>
             ) : (

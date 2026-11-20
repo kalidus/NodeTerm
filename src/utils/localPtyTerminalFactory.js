@@ -33,6 +33,7 @@ import {
   localPtyErrorLabel,
   localPtyUnavailableMessage
 } from './localPtySession';
+import { isSessionHandoff } from './sessionHandoff';
 
 const GNOME_ANSI = {
   black: '#2E3436',
@@ -472,7 +473,7 @@ export function createLocalPtyTerminal(kind) {
         flushPending();
         if (profile.cleanupBuffer === 'flush') writeBufferRef.current?.flushSync();
         else writeBufferRef.current?.clear();
-        if (shouldSendLocalPtyStop(kind, {
+        if (!isSessionHandoff() && shouldSendLocalPtyStop(kind, {
           navigationType: performance.navigation?.type,
           readyState: document.readyState
         })) {
