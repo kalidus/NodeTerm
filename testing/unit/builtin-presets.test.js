@@ -22,7 +22,7 @@ function readIconIds(relativePaths) {
   const ids = new Set();
   for (const relativePath of relativePaths) {
     for (const match of read(relativePath).matchAll(/"id": "([^"]+)"/g)) ids.add(match[1]);
-    for (const match of read(relativePath).matchAll(/^\s{4}id: '([^']+)'/gm)) ids.add(match[1]);
+    for (const match of read(relativePath).matchAll(/\bid:\s*['"]([^'"]+)['"]/g)) ids.add(match[1]);
   }
   return ids;
 }
