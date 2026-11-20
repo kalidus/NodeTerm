@@ -227,14 +227,19 @@ function isShellWindow(win) {
 
 function shellUnderPoint(screenX, screenY, except) {
   if (typeof screenX !== 'number' || typeof screenY !== 'number') return null;
+  const main = getMain();
+  let found = null;
   for (const win of BrowserWindow.getAllWindows()) {
     if (!isShellWindow(win) || win === except) continue;
     const bounds = win.getBounds();
     const inside = screenX >= bounds.x && screenX <= bounds.x + bounds.width
       && screenY >= bounds.y && screenY <= bounds.y + bounds.height;
-    if (inside) return win;
+    if (!inside) continue;
+    // Preferir main al reintegrar (ventanas solapadas).
+    if (main && win === main) return win;
+    if (!found) found = win;
   }
-  return null;
+  return found;
 }
 
 async function createDetachedShell(screenX, screenY) {
@@ -288,26 +293,69 @@ function closeShellIfEmpty(win) {
   }, 40);
 }
 
+function isDetachedShell(win) {
+  return isAliveWindow(win) && shellIds.has(win.id);
+}
+
 async function detach(tabKey, screenX, screenY) {
   const entry = tabs.get(tabKey);
   if (!entry) return { ok: false, error: 'La pestaña no tiene vista' };
   const source = entry.owner;
-  const target = shellUnderPoint(screenX, screenY, source) || await createDetachedShell(screenX, screenY);
+  const main = getMain();
+  const under = shellUnderPoint(screenX, screenY, source);
+
+  // Desde una ventana flotante solo se reintegra a main; nunca crear otra.
+  if (isDetachedShell(source)) {
+    if (!main || under !== main) return { ok: false, reason: 'no-main' };
+  }
+
+  const target = under || await createDetachedShell(screenX, screenY);
+  const returningToMain = !!(main && target === main);
+
+  const adoptedPayload = {
+    tabKey,
+    listName: entry.state && entry.state.listName,
+    tab: (entry.state && entry.state.tab) || summaryOf(entry.state) || { key: tabKey, label: 'Pestaña', type: 'terminal' }
+  };
+
+  if (returningToMain) {
+    // Stash + handoff EN TabHost (otro webContents) ANTES de quitar/destruir la vista.
+    try {
+      if (!entry.view.webContents.isDestroyed()) {
+        entry.view.webContents.send('tab-views:begin-handoff', { tabKey });
+        entry.view.webContents.send('tab-views:stash-now', { tabKey });
+      }
+    } catch (_) { /* noop */ }
+    try {
+      const { terminalStdoutRingBuffer } = require('./TerminalStdoutRingBuffer');
+      terminalStdoutRingBuffer.setHibernating(tabKey, true);
+    } catch (_) { /* noop */ }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    try {
+      if (isAliveWindow(source)) source.contentView.removeChildView(entry.view);
+    } catch (_) { /* noop */ }
+    if (isAliveWindow(source)) {
+      try { source.webContents.send('tab-views:released', { tabKey }); } catch (_) { /* noop */ }
+    }
+    // Main usa React inline: adoptar y destruir la WebContentsView.
+    queueAdopted(target, adoptedPayload);
+    destroy(tabKey);
+    closeShellIfEmpty(source);
+    return { ok: true, windowId: target.id, inline: true };
+  }
 
   try {
     if (isAliveWindow(source)) source.contentView.removeChildView(entry.view);
   } catch (_) { /* noop */ }
-  target.contentView.addChildView(entry.view);
-  entry.owner = target;
 
   if (isAliveWindow(source)) {
     try { source.webContents.send('tab-views:released', { tabKey }); } catch (_) { /* noop */ }
   }
-  queueAdopted(target, {
-    tabKey,
-    listName: entry.state && entry.state.listName,
-    tab: (entry.state && entry.state.tab) || summaryOf(entry.state) || { key: tabKey, label: 'Pestaña', type: 'terminal' }
-  });
+
+  target.contentView.addChildView(entry.view);
+  entry.owner = target;
+  queueAdopted(target, adoptedPayload);
   closeShellIfEmpty(source);
   return { ok: true, windowId: target.id };
 }
@@ -386,5 +434,7 @@ module.exports = {
   finishCall,
   ownerOf,
   sendToView,
-  tabsForWindow
+  tabsForWindow,
+  shellUnderPoint,
+  isDetachedShell
 };

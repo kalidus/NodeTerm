@@ -20,6 +20,43 @@ function ShellTabIcon({ tab, size = 14 }) {
   return <FaTerminal style={{ ...style, color: '#9aa4b2' }} />;
 }
 
+function DragTabChip({ tab, selected, onSelect, onDragEnd, compact }) {
+  return (
+    <button
+      type="button"
+      title="Arrastra a NodeTerm para reintegrar"
+      draggable
+      onClick={() => onSelect?.(tab.key)}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', tab.key);
+        try {
+          event.dataTransfer.setData('application/x-nodeterm-tab-key', tab.key);
+        } catch (_) { /* noop */ }
+      }}
+      onDragEnd={() => onDragEnd(tab.key)}
+      style={{
+        ...pillButton,
+        WebkitAppRegion: 'no-drag',
+        background: selected ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+        color: selected ? '#eef2f8' : '#9aa4b2',
+        maxWidth: compact ? 220 : 140,
+        height: compact ? 28 : 26,
+        padding: compact ? '0 12px' : '0 8px',
+        fontSize: compact ? 13 : 12,
+        fontWeight: compact ? 500 : 400,
+        letterSpacing: compact ? '0.02em' : undefined,
+        cursor: 'grab'
+      }}
+    >
+      <ShellTabIcon tab={tab} size={compact ? 15 : 12} />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {tab.label || 'Pestaña'}
+      </span>
+    </button>
+  );
+}
+
 export default function DetachedShell() {
   const [tabs, setTabs] = useState([]);
   const [activeKey, setActiveKey] = useState(null);
@@ -112,87 +149,51 @@ export default function DetachedShell() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0f1f', color: '#d7dde8' }}>
       <div
         style={{
-          position: 'relative',
           display: 'flex',
           alignItems: 'stretch',
           height: 40,
           flexShrink: 0,
           background: 'linear-gradient(180deg, #161d2e 0%, #121826 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          WebkitAppRegion: 'drag'
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}
       >
+        {/* Zona de mover ventana */}
+        <div style={{ width: 12, flexShrink: 0, WebkitAppRegion: 'drag' }} />
+
+        {/* Asa de pestaña siempre no-drag (HTML5 drag funciona en Windows) */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 4,
-            paddingLeft: 10,
             minWidth: 0,
-            flex: 1,
-            overflow: 'hidden'
+            flexShrink: 1,
+            overflow: 'hidden',
+            WebkitAppRegion: 'no-drag'
           }}
         >
-          {tabs.length > 1 && tabs.map((tab) => {
-            const selected = tab.key === activeKey;
-            return (
-              <button
+          {tabs.length > 1
+            ? tabs.map((tab) => (
+              <DragTabChip
                 key={tab.key}
-                type="button"
-                title={tab.label}
-                draggable
-                onClick={() => setActiveKey(tab.key)}
-                onDragStart={(event) => {
-                  event.dataTransfer.effectAllowed = 'move';
-                  event.dataTransfer.setData('text/plain', tab.key);
-                }}
-                onDragEnd={() => onDragEnd(tab.key)}
-                style={{
-                  ...pillButton,
-                  WebkitAppRegion: 'no-drag',
-                  background: selected ? 'rgba(255,255,255,0.08)' : 'transparent',
-                  color: selected ? '#eef2f8' : '#9aa4b2'
-                }}
-              >
-                <ShellTabIcon tab={tab} size={12} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 96 }}>
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
+                tab={tab}
+                selected={tab.key === activeKey}
+                onSelect={setActiveKey}
+                onDragEnd={onDragEnd}
+              />
+            ))
+            : (activeTab && (
+              <DragTabChip
+                tab={activeTab}
+                selected
+                onDragEnd={onDragEnd}
+                compact
+              />
+            ))}
         </div>
 
-        {activeTab && (
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              maxWidth: '46%',
-              pointerEvents: 'none',
-              color: '#eef2f8'
-            }}
-          >
-            <ShellTabIcon tab={activeTab} size={15} />
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                letterSpacing: '0.02em',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {activeTab.label || 'Pestaña'}
-            </span>
-          </div>
-        )}
+        {/* Relleno arrastrable para mover la ventana */}
+        <div style={{ flex: 1, minWidth: 24, WebkitAppRegion: 'drag' }} />
 
         <div style={{ display: 'flex', flexShrink: 0, WebkitAppRegion: 'no-drag' }}>
           <button type="button" aria-label="Minimizar" onClick={() => window.electronAPI?.minimize?.()} style={chromeButton}>–</button>

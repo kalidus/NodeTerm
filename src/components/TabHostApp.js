@@ -10,6 +10,8 @@ import { findNodeByKeyInTree } from '../utils/importIntoVaultTree';
 import { stopTabSession } from '../utils/stopTabSession';
 import { sshStatsStore } from '../services/SshStatsStore';
 import { EVENT_NAMES } from '../utils/constants';
+import { beginSessionHandoff } from '../utils/sessionHandoff';
+import { stashTabScreenNow } from '../utils/terminalScreenHandoff';
 
 const LIST_SETTERS = {
   setSshTabs: 'sshTabs',
@@ -61,9 +63,20 @@ export default function TabHostApp({ tabKey }) {
     const offClose = window.electron.ipcRenderer.on('tab-views:prepare-close', () => {
       stopTabSession(tabRef.current);
     });
+    const offHandoff = window.electron.ipcRenderer.on('tab-views:begin-handoff', (payload) => {
+      if (payload && payload.tabKey && payload.tabKey !== tabKey) return;
+      beginSessionHandoff(15000);
+    });
+    const offStash = window.electron.ipcRenderer.on('tab-views:stash-now', (payload) => {
+      if (payload && payload.tabKey && payload.tabKey !== tabKey) return;
+      beginSessionHandoff(15000);
+      stashTabScreenNow(tabKey);
+    });
     return () => {
       if (typeof offCmd === 'function') offCmd();
       if (typeof offClose === 'function') offClose();
+      if (typeof offHandoff === 'function') offHandoff();
+      if (typeof offStash === 'function') offStash();
     };
   }, [tabKey]);
 

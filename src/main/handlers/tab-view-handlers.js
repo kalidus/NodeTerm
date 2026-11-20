@@ -48,14 +48,27 @@ function registerTabViewHandlers() {
 
     const win = senderWindow(event);
     const point = screen.getCursorScreenPoint();
+    // Otra ventana NodeTerm bajo el cursor (p. ej. main), aunque el origen se solape.
+    const other = registry.shellUnderPoint(point.x, point.y, win);
+    const main = registry.getMain();
+    const fromShell = registry.isDetachedShell(win);
+
+    let outside = true;
     if (win && !win.isDestroyed()) {
       const bounds = win.getBounds();
-      const outside = point.x < bounds.x || point.y < bounds.y
+      outside = point.x < bounds.x || point.y < bounds.y
         || point.x > bounds.x + bounds.width
         || point.y > bounds.y + bounds.height;
-      if (!outside) return { ok: false, reason: 'inside' };
-    if (payload.dryRun) return { ok: true, reason: 'outside' };
     }
+    // Si el shell cubre main, el cursor puede seguir "dentro" del origen: permitir reintegrar.
+    if (!outside && !other) return { ok: false, reason: 'inside' };
+
+    // Desde flotante: solo reintegrar a main (dryRun y detach real).
+    if (fromShell && (!main || other !== main)) {
+      return { ok: false, reason: 'no-main' };
+    }
+
+    if (payload.dryRun) return { ok: true, reason: 'outside' };
 
     if (!registry.ownerOf(tabKey) && win) {
       try { registry.ensure(tabKey, win); } catch (err) {
@@ -65,7 +78,9 @@ function registerTabViewHandlers() {
 
     const result = await registry.detach(tabKey, point.x, point.y);
     if (!result || result.ok === false) {
-      console.warn('[TabViews] No se desprendió la pestaña', tabKey, result && result.error);
+      if (!(result && result.reason === 'no-main')) {
+        console.warn('[TabViews] No se desprendió la pestaña', tabKey, result && result.error);
+      }
     }
     return result;
   });

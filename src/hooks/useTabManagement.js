@@ -895,6 +895,8 @@ export const useTabManagement = (toast, {
     else if (listName === 'fileExplorerTabs' || tab.type === 'explorer') add(setFileExplorerTabs);
     else add(setSshTabs);
     setOpenTabOrder((prev) => (Array.isArray(prev) && prev.includes(tab.key) ? prev : [...(prev || []), tab.key]));
+    // Activar la pestaña reintegrada (App.js reacciona a onCreateActivateTabKey).
+    setOnCreateActivateTabKey(tab.key);
   }, []);
 
   const handleToggleBroadcastTarget = useCallback((tabKey, targetId) => {

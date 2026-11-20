@@ -196,11 +196,34 @@ export function useTabSurfaces({
     const offCall = window.electron.ipcRenderer.on('tab-views:call', onCall);
     const offReleased = window.electron.ipcRenderer.on('tab-views:released', onReleased);
     const offAdopted = window.electron.ipcRenderer.on('tab-views:adopted', onAdopted);
+
+    // Cursor "mover" al arrastrar una pastilla de shell sobre NodeTerm (HTML5 DnD).
+    const isTabChipDrag = (event) => {
+      const types = event.dataTransfer && event.dataTransfer.types
+        ? Array.from(event.dataTransfer.types)
+        : [];
+      return types.includes('application/x-nodeterm-tab-key') || types.includes('text/plain');
+    };
+    const onDragOver = (event) => {
+      if (!isTabChipDrag(event)) return;
+      event.preventDefault();
+      try { event.dataTransfer.dropEffect = 'move'; } catch (_) { /* noop */ }
+    };
+    const onDrop = (event) => {
+      if (!isTabChipDrag(event)) return;
+      // El reintegro real lo hace dragend + IPC; solo aceptamos el drop para el cursor.
+      event.preventDefault();
+    };
+    document.addEventListener('dragover', onDragOver, false);
+    document.addEventListener('drop', onDrop, false);
+
     return () => {
       if (window.__nodetermPrepareDetach === prepareFn) delete window.__nodetermPrepareDetach;
       if (typeof offCall === 'function') offCall();
       if (typeof offReleased === 'function') offReleased();
       if (typeof offAdopted === 'function') offAdopted();
+      document.removeEventListener('dragover', onDragOver, false);
+      document.removeEventListener('drop', onDrop, false);
     };
   }, [apiReady]);
 
