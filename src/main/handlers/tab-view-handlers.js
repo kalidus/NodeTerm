@@ -33,12 +33,24 @@ function registerTabViewHandlers() {
 
   ipcMain.handle('tab-views:layout', (event, payload) => {
     const win = senderWindow(event);
+    const activeKey = payload && payload.activeKey;
     registry.layout(
       win,
-      payload && payload.activeKey,
+      activeKey,
       payload && payload.bounds,
       payload ? payload.visible !== false : true
     );
+    // setBounds aún no ha refloweado el guest: varios fit diferidos + foco.
+    if (activeKey) {
+      const sendFit = () => {
+        registry.sendToView(activeKey, 'tab-views:terminal-cmd', { tabKey: activeKey, cmd: 'fit' });
+      };
+      sendFit();
+      [0, 50, 120, 250].forEach((ms) => setTimeout(sendFit, ms));
+      setTimeout(() => {
+        registry.sendToView(activeKey, 'tab-views:terminal-cmd', { tabKey: activeKey, cmd: 'focus' });
+      }, 160);
+    }
     return { ok: true };
   });
 

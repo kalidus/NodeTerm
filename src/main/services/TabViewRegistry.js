@@ -7,7 +7,64 @@
 
 const path = require('path');
 const { BrowserWindow, WebContentsView, screen } = require('electron');
-const { clearOutputTarget } = require('./TabOutputTarget');
+const { clearOutputTarget, setOutputTarget } = require('./TabOutputTarget');
+
+const SHELL_TITLE_HEIGHT = 40;
+
+function contentHostBounds(win) {
+  if (!isAliveWindow(win)) return null;
+  let width = 0;
+  let height = 0;
+  try {
+    const size = typeof win.getContentSize === 'function' ? win.getContentSize() : null;
+    if (Array.isArray(size) && size.length >= 2) {
+      width = size[0];
+      height = size[1];
+    } else {
+      const bounds = win.getBounds();
+      width = bounds.width;
+      height = bounds.height;
+    }
+  } catch (_) {
+    return null;
+  }
+  const hostHeight = Math.max(0, height - SHELL_TITLE_HEIGHT);
+  return {
+    x: 0,
+    y: SHELL_TITLE_HEIGHT,
+    width: Math.max(0, width),
+    height: hostHeight
+  };
+}
+
+function fitView(tabKey) {
+  try {
+    sendToView(tabKey, 'tab-views:terminal-cmd', { tabKey, cmd: 'fit' });
+  } catch (_) { /* noop */ }
+}
+
+function focusView(tabKey) {
+  const entry = tabs.get(tabKey);
+  if (!entry) return;
+  try {
+    if (!entry.view.webContents.isDestroyed()) {
+      entry.view.webContents.focus();
+    }
+  } catch (_) { /* noop */ }
+  try {
+    sendToView(tabKey, 'tab-views:terminal-cmd', { tabKey, cmd: 'focus' });
+  } catch (_) { /* noop */ }
+}
+
+function scheduleFitView(tabKey) {
+  fitView(tabKey);
+  [0, 50, 120, 250, 400].forEach((ms) => {
+    setTimeout(() => fitView(tabKey), ms);
+  });
+  // Tras el reparent el foco queda en el chrome del shell; recuperar cursor xterm.
+  setTimeout(() => focusView(tabKey), 80);
+  setTimeout(() => focusView(tabKey), 220);
+}
 
 const appRoot = path.join(__dirname, '..', '..', '..');
 
@@ -355,7 +412,15 @@ async function detach(tabKey, screenX, screenY) {
 
   target.contentView.addChildView(entry.view);
   entry.owner = target;
+  try {
+    if (!entry.view.webContents.isDestroyed()) {
+      setOutputTarget(tabKey, entry.view.webContents);
+    }
+  } catch (_) { /* noop */ }
+  const initial = contentHostBounds(target);
+  if (initial) placeEntry(entry, initial);
   queueAdopted(target, adoptedPayload);
+  scheduleFitView(tabKey);
   closeShellIfEmpty(source);
   return { ok: true, windowId: target.id };
 }

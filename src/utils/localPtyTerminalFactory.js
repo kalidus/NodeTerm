@@ -295,7 +295,10 @@ export function createLocalPtyTerminal(kind) {
 
     useImperativeHandle(ref, () => {
       const api = {
-        fit: () => { fitStable(); },
+        fit: () => {
+          invalidate();
+          fitStable();
+        },
         focus: () => { term.current?.focus(); },
         getSelection: () => term.current?.getSelection() || '',
         selectAll: () => { term.current?.selectAll(); },

@@ -109,6 +109,8 @@ const TerminalComponent = forwardRef(({
         if (typeof send !== 'function') return undefined;
         send('ssh:set-statusbar-visible', tabId, !hideStatusBar && localStatusBarVisible);
         return () => {
+            // En detach/handoff el TabHost sigue mostrando la barra: no marcar hidden.
+            if (preserveSessionRef.current || isSessionHandoff()) return;
             send('ssh:set-statusbar-visible', tabId, false);
         };
     }, [isLocalTerminal, tabId, hideStatusBar, localStatusBarVisible]);
@@ -272,6 +274,9 @@ const TerminalComponent = forwardRef(({
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
+            // Tras detach/reparent el tamaño CSS puede coincidir con el cacheado
+            // pero el canvas sigue mal: forzar fit real.
+            stableFitRef.current?.reset();
             fitStable();
         },
         focus: () => {

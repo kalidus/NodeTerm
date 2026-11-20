@@ -52,13 +52,36 @@ export default function TabHostApp({ tabKey }) {
     return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
   }, [tabKey]);
 
+  const fitTerminal = useCallback(() => {
+    const ref = terminalRefs.current[tabKey];
+    if (ref && typeof ref.fit === 'function') {
+      try { ref.fit(); } catch (_) { /* noop */ }
+    }
+  }, [tabKey]);
+
+  const focusTerminal = useCallback(() => {
+    const ref = terminalRefs.current[tabKey];
+    if (ref && typeof ref.focus === 'function') {
+      try { ref.focus(); } catch (_) { /* noop */ }
+    }
+  }, [tabKey]);
+
+  const scheduleFits = useCallback(() => {
+    fitTerminal();
+    const timers = [0, 32, 80, 160, 320].map((ms) => setTimeout(fitTerminal, ms));
+    const focusTimers = [100, 250].map((ms) => setTimeout(focusTerminal, ms));
+    return () => {
+      timers.forEach(clearTimeout);
+      focusTimers.forEach(clearTimeout);
+    };
+  }, [fitTerminal, focusTerminal]);
+
   useEffect(() => {
     if (!window.electron?.ipcRenderer?.on) return undefined;
     const offCmd = window.electron.ipcRenderer.on('tab-views:terminal-cmd', (payload) => {
       if (!payload || payload.tabKey !== tabKey) return;
-      const ref = terminalRefs.current[payload.targetKey || tabKey];
-      if (ref && payload.cmd === 'fit' && typeof ref.fit === 'function') ref.fit();
-      if (ref && payload.cmd === 'focus' && typeof ref.focus === 'function') ref.focus();
+      if (payload.cmd === 'fit') scheduleFits();
+      if (payload.cmd === 'focus') focusTerminal();
     });
     const offClose = window.electron.ipcRenderer.on('tab-views:prepare-close', () => {
       stopTabSession(tabRef.current);
@@ -78,7 +101,25 @@ export default function TabHostApp({ tabKey }) {
       if (typeof offHandoff === 'function') offHandoff();
       if (typeof offStash === 'function') offStash();
     };
-  }, [tabKey]);
+  }, [tabKey, scheduleFits, focusTerminal]);
+
+  // Tras reparent/setBounds el guest a veces no hace fit hasta un resize manual.
+  useEffect(() => {
+    if (!model?.tab) return undefined;
+    const cancel = scheduleFits();
+    const onResize = () => scheduleFits();
+    window.addEventListener('resize', onResize);
+    let observer = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => fitTerminal());
+      observer.observe(document.documentElement);
+    }
+    return () => {
+      cancel();
+      window.removeEventListener('resize', onResize);
+      if (observer) observer.disconnect();
+    };
+  }, [model?.tab, scheduleFits, fitTerminal]);
 
   useEffect(() => {
     if (!window.electron?.ipcRenderer) return undefined;
@@ -91,12 +132,18 @@ export default function TabHostApp({ tabKey }) {
       if (stats) sshStatsStore.setStats(tabKey, stats);
     };
     const offStats = window.electron.ipcRenderer.on(eventName, onStats);
-    try {
-      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', tabKey);
-      window.electron.ipcRenderer.send('ssh:set-statusbar-visible', tabKey, true);
-    } catch (_) { /* noop */ }
+    const claimStats = () => {
+      try {
+        window.electron.ipcRenderer.send('ssh:set-active-stats-tab', tabKey);
+        window.electron.ipcRenderer.send('ssh:set-statusbar-visible', tabKey, true);
+      } catch (_) { /* noop */ }
+    };
+    claimStats();
+    // Por si el cleanup de main marca hidden justo después del detach.
+    const retry = setTimeout(claimStats, 120);
 
     return () => {
+      clearTimeout(retry);
       if (typeof offStats === 'function') offStats();
       else {
         try { window.electron.ipcRenderer.removeAllListeners(eventName); } catch (_) { /* noop */ }

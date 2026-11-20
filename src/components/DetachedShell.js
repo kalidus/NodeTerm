@@ -116,22 +116,41 @@ export default function DetachedShell() {
       const tabKey = activeKey;
       if (!node || !tabKey || !window.electron?.tabViews?.layout) return;
       const rect = node.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return;
       window.electron.tabViews.layout({
         activeKey: tabKey,
         visible: true,
         bounds: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+      }).then(() => {
+        try { window.electron?.tabViews?.terminalCmd?.(tabKey, 'fit'); } catch (_) { /* noop */ }
       }).catch(() => {});
     });
   }, [activeKey]);
 
+  const publishLayoutRef = useRef(publishLayout);
+  publishLayoutRef.current = publishLayout;
+
+  const scheduleLayoutRetries = useCallback(() => {
+    publishLayoutRef.current();
+    const t0 = setTimeout(() => publishLayoutRef.current(), 0);
+    const t1 = setTimeout(() => publishLayoutRef.current(), 50);
+    const t2 = setTimeout(() => publishLayoutRef.current(), 150);
+    return () => {
+      clearTimeout(t0);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
   useEffect(() => {
-    publishLayout();
+    const cancel = scheduleLayoutRetries();
     const node = hostRef.current;
-    if (!node || typeof ResizeObserver === 'undefined') return undefined;
+    if (!node || typeof ResizeObserver === 'undefined') return cancel;
     const observer = new ResizeObserver(() => publishLayout());
     observer.observe(node);
     window.addEventListener('resize', publishLayout);
     return () => {
+      cancel();
       observer.disconnect();
       window.removeEventListener('resize', publishLayout);
       if (layoutRafRef.current) {
@@ -139,7 +158,12 @@ export default function DetachedShell() {
         layoutRafRef.current = 0;
       }
     };
-  }, [publishLayout]);
+  }, [publishLayout, scheduleLayoutRetries, tabs.length]);
+
+  useEffect(() => {
+    if (!activeKey) return undefined;
+    return scheduleLayoutRetries();
+  }, [activeKey, tabs.length, scheduleLayoutRetries]);
 
   const onDragEnd = (tabKey) => {
     requestTabDetach(tabKey);
