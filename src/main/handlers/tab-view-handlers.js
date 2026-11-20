@@ -2,6 +2,7 @@
 
 const { ipcMain, BrowserWindow, screen } = require('electron');
 const registry = require('../services/TabViewRegistry');
+const tabDragShield = require('../services/TabDragShield');
 
 function senderWindow(event) {
   try {
@@ -88,6 +89,9 @@ function registerTabViewHandlers() {
       }
     }
 
+    // Por si el dragend del renderer no llegó a endExternalDrag.
+    try { tabDragShield.end(); } catch (_) { /* noop */ }
+
     const result = await registry.detach(tabKey, point.x, point.y);
     if (!result || result.ok === false) {
       if (!(result && result.reason === 'no-main')) {
@@ -136,6 +140,16 @@ function registerTabViewHandlers() {
     if (!payload || !payload.tabKey) return;
     registry.sendToView(payload.tabKey, 'tab-views:terminal-cmd', payload);
   });
+
+  // Escudo DnD solo desde la ventana principal (no desde shells flotantes).
+  ipcMain.handle('tab-views:external-drag-begin', (event) => {
+    const win = senderWindow(event);
+    const main = registry.getMain();
+    if (!win || !main || win !== main) return { ok: false, reason: 'not-main' };
+    return tabDragShield.begin(main);
+  });
+
+  ipcMain.handle('tab-views:external-drag-end', () => tabDragShield.end());
 }
 
 module.exports = { registerTabViewHandlers };

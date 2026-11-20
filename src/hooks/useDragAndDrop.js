@@ -46,6 +46,8 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
       e.dataTransfer.setData('application/x-nodeterm-tab-key', tab.key);
       window._nodetermDraggedTabKey = tab.key;
       window._nodetermTabDropHandled = false;
+      // Escudo fullscreen: cursor "move" fuera de NodeTerm (no 🚫).
+      try { window.electron?.tabViews?.beginExternalDrag?.(); } catch (_) { /* noop */ }
     }
   };
 
@@ -277,6 +279,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     setDragOverTabIndex(null);
     draggedSSHNodeRef.current = null;
     window._nodetermDraggedTabKey = null;
+    try { window.electron?.tabViews?.endExternalDrag?.(); } catch (_) { /* noop */ }
     if (tabKey && !dropHandled) requestTabDetach(tabKey);
   };
 

@@ -579,7 +579,9 @@ contextBridge.exposeInMainWorld('electron', {
     pullAdopted: () => ipcRenderer.invoke('tab-views:pull-adopted'),
     call: (tabKey, method, args) => ipcRenderer.invoke('tab-views:call', { tabKey, method, args }),
     callResult: (payload) => ipcRenderer.send('tab-views:call-result', payload),
-    terminalCmd: (tabKey, cmd) => ipcRenderer.send('tab-views:terminal-cmd', { tabKey, cmd })
+    terminalCmd: (tabKey, cmd) => ipcRenderer.send('tab-views:terminal-cmd', { tabKey, cmd }),
+    beginExternalDrag: () => ipcRenderer.invoke('tab-views:external-drag-begin'),
+    endExternalDrag: () => ipcRenderer.invoke('tab-views:external-drag-end')
   },
   updater: {
     checkForUpdates: () => ipcRenderer.invoke('updater:check'),
