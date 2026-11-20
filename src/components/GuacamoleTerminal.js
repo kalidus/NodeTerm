@@ -6,6 +6,7 @@ import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
 import ErrorMapper from '../utils/guacamoleErrorMapper';
 import { normalizeRdpColorDepth } from '../utils/rdpScreenConfig';
+import { isSessionHandoff } from '../utils/sessionHandoff';
 
 const GuacamoleTerminal = forwardRef(({
     tabId = 'default',
@@ -1046,6 +1047,7 @@ const GuacamoleTerminal = forwardRef(({
 
         // Cleanup
         return () => {
+            if (isSessionHandoff()) return;
             try {
                 if (guacamoleClientRef.current) {
                     try { guacamoleClientRef.current.disconnect(); } catch { }

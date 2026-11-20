@@ -173,6 +173,8 @@ const TabContentRendererInner = React.memo(({
   titleBarCollapsed,
   tabBarCollapsed,
   settingsTabProps,
+  deferToSurfaceHost = false,
+  isTabSurfaceHosted = null,
   // Edit connection tab handlers
   handleSaveSshToSidebar,
   handleSaveRdpToSidebar,
@@ -1325,6 +1327,19 @@ const TabContentRendererInner = React.memo(({
   }
 
   if (tab.type === 'rdp') {
+    if (deferToSurfaceHost) {
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: 0,
+            background: 'var(--ui-content-bg, #0a0f1f)'
+          }}
+          aria-hidden
+        />
+      );
+    }
     return (
       <LazyRdpSessionTab
         rdpConfig={tab.rdpConfig}
@@ -1369,7 +1384,22 @@ const TabContentRendererInner = React.memo(({
     );
   }
 
-  if (tab.type === 'iron-rdp' || tab.type === 'rdp-iron' || tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc') {
+  if (tab.type === 'iron-rdp' || tab.type === 'rdp-iron' || tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc' || tab.type === 'rdp') {
+    // En main (deferToSurfaceHost) la sesión vive en WebContentsView: placeholder sin cliente.
+    if (deferToSurfaceHost) {
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: 0,
+            background: 'var(--ui-content-bg, #0a0f1f)'
+          }}
+          aria-hidden
+        />
+      );
+    }
+
     const isVnc = tab.type === 'vnc-guacamole' || tab.type === 'vnc';
     const clientType = tab.rdpConfig?.clientType || tab.vncConfig?.clientType;
     const isWebRdp = clientType === 'web-rdp' || tab.type === 'iron-rdp' || tab.type === 'rdp-iron';

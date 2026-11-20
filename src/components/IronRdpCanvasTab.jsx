@@ -20,6 +20,7 @@ import {
 import { createH264GpuPresenter } from '../utils/rdpH264GpuPresent';
 import { clipRdpClipboardText, RDP_CLIPBOARD_TEXT_MAX_CHARS } from '../utils/rdpClipboardLimit';
 import { createRdpWebAudioPlayer } from '../utils/rdpWebAudio';
+import { isSessionHandoff } from '../utils/sessionHandoff';
 
 const {
   Backend,
@@ -2145,6 +2146,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       aborted = true;
       isMounted = false;
       releaseSessionMediaRef.current = () => {};
+      // Handoff de pestaña: no tumbar la sesión (el WebContentsView se reparenta).
+      if (isSessionHandoff()) {
+        sessionRef.current = null;
+        return;
+      }
       if (disposeCanvasProbe) {
         try { disposeCanvasProbe(); } catch (_) {}
         disposeCanvasProbe = null;

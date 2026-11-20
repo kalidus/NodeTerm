@@ -3034,7 +3034,7 @@ const App = () => {
     handleImportComplete, toast, masterKey, secureStorage, setNodes
   ]);
 
-  useTabSurfaces({
+  const tabSurfaces = useTabSurfaces({
     getAllTabs,
     getFilteredTabs,
     activeTabIndex,
@@ -3419,6 +3419,9 @@ const App = () => {
           settingsTabProps={settingsTabProps}
           openInSplit={openInSplit}
           openLocalInSplit={openLocalInSplit}
+          setSurfaceHostNode={tabSurfaces.setSurfaceHostNode}
+          deferToSurfaceHost={tabSurfaces.deferToSurfaceHost}
+          isTabSurfaceHosted={tabSurfaces.isTabSurfaceHosted}
           // Sidebar props
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}

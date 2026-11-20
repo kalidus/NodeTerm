@@ -376,6 +376,34 @@ async function detach(tabKey, screenX, screenY) {
   };
 
   if (returningToMain) {
+    const tabType = adoptedPayload.tab && adoptedPayload.tab.type;
+    const keepView = tabType === 'iron-rdp' || tabType === 'rdp-iron'
+      || tabType === 'rdp-guacamole' || tabType === 'vnc-guacamole'
+      || tabType === 'vnc' || tabType === 'rdp';
+
+    if (keepView) {
+      // RDP/VNC viven en la WebContentsView: reparentar a main sin destruir (sin reconectar).
+      try {
+        if (isAliveWindow(source)) source.contentView.removeChildView(entry.view);
+      } catch (_) { /* noop */ }
+      if (isAliveWindow(source)) {
+        try { source.webContents.send('tab-views:released', { tabKey }); } catch (_) { /* noop */ }
+      }
+      target.contentView.addChildView(entry.view);
+      entry.owner = target;
+      try {
+        if (!entry.view.webContents.isDestroyed()) {
+          setOutputTarget(tabKey, entry.view.webContents);
+        }
+      } catch (_) { /* noop */ }
+      const initial = contentHostBounds(target);
+      if (initial) placeEntry(entry, initial);
+      queueAdopted(target, adoptedPayload);
+      scheduleFitView(tabKey);
+      closeShellIfEmpty(source);
+      return { ok: true, windowId: target.id, keepView: true };
+    }
+
     // Stash + handoff EN TabHost (otro webContents) ANTES de quitar/destruir la vista.
     try {
       if (!entry.view.webContents.isDestroyed()) {
@@ -395,7 +423,7 @@ async function detach(tabKey, screenX, screenY) {
     if (isAliveWindow(source)) {
       try { source.webContents.send('tab-views:released', { tabKey }); } catch (_) { /* noop */ }
     }
-    // Main usa React inline: adoptar y destruir la WebContentsView.
+    // SSH/local: adoptar en React inline y destruir la WebContentsView.
     queueAdopted(target, adoptedPayload);
     destroy(tabKey);
     closeShellIfEmpty(source);

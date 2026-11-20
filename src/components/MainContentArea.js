@@ -90,6 +90,9 @@ const MainContentArea = ({
   settingsTabProps,
   openInSplit,
   openLocalInSplit,
+  setSurfaceHostNode = null,
+  deferToSurfaceHost = false,
+  isTabSurfaceHosted = null,
 
   // Context menu props
   tabContextMenu,
@@ -2357,6 +2360,21 @@ const MainContentArea = ({
                   position: 'relative',
                   background: 'var(--ui-content-bg, #1a1b26)'
                 }}>
+                  {/* Host de bounds para WebContentsView RDP/VNC (sesión nativa sin remount). */}
+                  <div
+                    ref={(node) => {
+                      if (typeof setSurfaceHostNode === 'function') setSurfaceHostNode(node);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      pointerEvents: 'none',
+                      zIndex: 0
+                    }}
+                  />
                   {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
                   {/* Overlay para grupo vacío se muestra por encima */}
                   {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 && (
@@ -2421,6 +2439,8 @@ const MainContentArea = ({
                             isMinimalMode={isMinimalMode}
                             titleBarCollapsed={titleBarCollapsed}
                             tabBarCollapsed={tabBarCollapsed}
+                            deferToSurfaceHost={deferToSurfaceHost}
+                            isTabSurfaceHosted={isTabSurfaceHosted}
                             // Terminal props (específicas)
                             getAllTabs={getAllTabs}
                             // Nuevos manejadores para Quick Actions
