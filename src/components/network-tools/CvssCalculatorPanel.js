@@ -1192,7 +1192,7 @@ const CvssCalculatorPanel = () => {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', height: '100%', minHeight: 0, overflowY: 'auto', padding: '0.75rem 0.9rem 1rem' }}>
       <style>{`
         .cvss-accordion.p-accordion .p-accordion-header .p-accordion-header-link {
           background: rgba(255,255,255,0.04) !important;
