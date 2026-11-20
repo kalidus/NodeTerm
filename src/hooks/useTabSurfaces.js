@@ -197,7 +197,8 @@ export function useTabSurfaces({
     const offReleased = window.electron.ipcRenderer.on('tab-views:released', onReleased);
     const offAdopted = window.electron.ipcRenderer.on('tab-views:adopted', onAdopted);
 
-    // Cursor "mover" al arrastrar una pastilla de shell sobre NodeTerm (HTML5 DnD).
+    // Cursor "mover" al arrastrar una pastilla de shell sobre NodeTerm.
+    // Capture: xterm/canvas y otros no burbujean dragover hasta document.
     const isTabChipDrag = (event) => {
       const types = event.dataTransfer && event.dataTransfer.types
         ? Array.from(event.dataTransfer.types)
@@ -214,16 +215,20 @@ export function useTabSurfaces({
       // El reintegro real lo hace dragend + IPC; solo aceptamos el drop para el cursor.
       event.preventDefault();
     };
-    document.addEventListener('dragover', onDragOver, false);
-    document.addEventListener('drop', onDrop, false);
+    document.addEventListener('dragover', onDragOver, true);
+    document.addEventListener('drop', onDrop, true);
+    window.addEventListener('dragover', onDragOver, true);
+    window.addEventListener('drop', onDrop, true);
 
     return () => {
       if (window.__nodetermPrepareDetach === prepareFn) delete window.__nodetermPrepareDetach;
       if (typeof offCall === 'function') offCall();
       if (typeof offReleased === 'function') offReleased();
       if (typeof offAdopted === 'function') offAdopted();
-      document.removeEventListener('dragover', onDragOver, false);
-      document.removeEventListener('drop', onDrop, false);
+      document.removeEventListener('dragover', onDragOver, true);
+      document.removeEventListener('drop', onDrop, true);
+      window.removeEventListener('dragover', onDragOver, true);
+      window.removeEventListener('drop', onDrop, true);
     };
   }, [apiReady]);
 
