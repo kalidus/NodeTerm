@@ -1,6 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import TabHeader from './TabHeader';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FaLinux, FaTerminal, FaUbuntu, FaWindows } from 'react-icons/fa';
 import { requestTabDetach } from '../utils/tabDragDetach';
+
+function ShellTabIcon({ tab, size = 14 }) {
+  const terminalType = String(tab?.terminalType || '').toLowerCase();
+  const label = String(tab?.label || '').toLowerCase();
+  const category = String(tab?.distroInfo?.category || '').toLowerCase();
+  const style = { fontSize: size, flexShrink: 0, opacity: 0.95 };
+
+  if (terminalType === 'powershell') {
+    return <FaWindows style={{ ...style, color: '#0078D4' }} />;
+  }
+  if (category === 'ubuntu' || terminalType === 'ubuntu' || label.includes('ubuntu')) {
+    return <FaUbuntu style={{ ...style, color: '#E95420' }} />;
+  }
+  if (terminalType === 'wsl' || category || label.includes('linux')) {
+    return <FaLinux style={{ ...style, color: '#9aa4b2' }} />;
+  }
+  return <FaTerminal style={{ ...style, color: '#9aa4b2' }} />;
+}
 
 export default function DetachedShell() {
   const [tabs, setTabs] = useState([]);
@@ -47,6 +65,11 @@ export default function DetachedShell() {
     if (!tabs.some((tab) => tab.key === activeKey)) setActiveKey(tabs[0].key);
   }, [tabs, activeKey]);
 
+  const activeTab = useMemo(
+    () => tabs.find((tab) => tab.key === activeKey) || tabs[0] || null,
+    [tabs, activeKey]
+  );
+
   const layoutRafRef = useRef(0);
   const publishLayout = useCallback(() => {
     if (layoutRafRef.current) return;
@@ -81,35 +104,97 @@ export default function DetachedShell() {
     };
   }, [publishLayout]);
 
-  const onDragEnd = (_event, tabKey) => {
+  const onDragEnd = (tabKey) => {
     requestTabDetach(tabKey);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0f1f', color: '#d7dde8' }}>
-      <div style={{ display: 'flex', alignItems: 'stretch', height: 36, flexShrink: 0, background: '#121826' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', overflow: 'hidden', WebkitAppRegion: 'drag' }}>
-          {tabs.map((tab, idx) => (
-            <TabHeader
-              key={tab.key}
-              tab={tab}
-              idx={idx}
-              selected={tab.key === activeKey}
-              isDraggable
-              onTabClick={() => setActiveKey(tab.key)}
-              onTabDragStart={(event) => {
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', tab.key);
-              }}
-              onTabDragOver={(event) => event.preventDefault()}
-              onTabDragEnd={() => onDragEnd(null, tab.key)}
-              onTabClose={() => {
-                window.electron?.tabViews?.close(tab.key);
-              }}
-            />
-          ))}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'stretch',
+          height: 40,
+          flexShrink: 0,
+          background: 'linear-gradient(180deg, #161d2e 0%, #121826 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          WebkitAppRegion: 'drag'
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            paddingLeft: 10,
+            minWidth: 0,
+            flex: 1,
+            overflow: 'hidden'
+          }}
+        >
+          {tabs.length > 1 && tabs.map((tab) => {
+            const selected = tab.key === activeKey;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                title={tab.label}
+                draggable
+                onClick={() => setActiveKey(tab.key)}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', tab.key);
+                }}
+                onDragEnd={() => onDragEnd(tab.key)}
+                style={{
+                  ...pillButton,
+                  WebkitAppRegion: 'no-drag',
+                  background: selected ? 'rgba(255,255,255,0.08)' : 'transparent',
+                  color: selected ? '#eef2f8' : '#9aa4b2'
+                }}
+              >
+                <ShellTabIcon tab={tab} size={12} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 96 }}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <div style={{ display: 'flex', WebkitAppRegion: 'no-drag' }}>
+
+        {activeTab && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              maxWidth: '46%',
+              pointerEvents: 'none',
+              color: '#eef2f8'
+            }}
+          >
+            <ShellTabIcon tab={activeTab} size={15} />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {activeTab.label || 'Pestaña'}
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexShrink: 0, WebkitAppRegion: 'no-drag' }}>
           <button type="button" aria-label="Minimizar" onClick={() => window.electronAPI?.minimize?.()} style={chromeButton}>–</button>
           <button type="button" aria-label="Maximizar" onClick={() => window.electronAPI?.maximize?.()} style={chromeButton}>□</button>
           <button type="button" aria-label="Cerrar" onClick={() => window.electronAPI?.close?.()} style={chromeButton}>×</button>
@@ -126,5 +211,20 @@ const chromeButton = {
   border: 'none',
   background: 'transparent',
   color: 'inherit',
-  cursor: 'pointer'
+  cursor: 'pointer',
+  fontSize: 14
+};
+
+const pillButton = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  maxWidth: 140,
+  height: 26,
+  padding: '0 8px',
+  border: 'none',
+  borderRadius: 6,
+  cursor: 'pointer',
+  fontSize: 12,
+  lineHeight: 1
 };
