@@ -102,6 +102,473 @@ function ScoreBar({ score }) {
   );
 }
 
+const CVE_PATTERN = /^CVE-\d{4}-\d{4,7}$/;
+
+function detectVectorVersion(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  if (/^CVSS:3\.[01]\//i.test(text)) return '3.1';
+  if (/^CVSS:4\.0\//i.test(text)) return '4.0';
+  if (/(^|\/)(VC|VI|VA|AT|SC|SI|SA):/i.test(text)) return '4.0';
+  if (/(^|\/)(AV|AC|PR|UI|C|I|A):/i.test(text)) return '3.1';
+  return null;
+}
+
+function hostFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+function normalizeSeverityLabel(value) {
+  const key = String(value || '').trim().toLowerCase();
+  const map = { none: 'None', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
+  return map[key] || 'None';
+}
+
+function splitLead(text) {
+  const value = String(text || '');
+  const idx = value.indexOf(': ');
+  if (idx > 0 && idx < 72) {
+    return { lead: value.slice(0, idx), rest: value.slice(idx + 2) };
+  }
+  return { lead: '', rest: value };
+}
+
+function splitTags(value, separator) {
+  return String(value || '')
+    .split(separator)
+    .map((part) => part.trim())
+    .filter((part) => part && part !== 'N/A' && part !== 'Desconocido');
+}
+
+const IMPACT_META = {
+  N: { label: 'Ninguno', width: '12%', color: '#6b7280' },
+  L: { label: 'Limitado', width: '48%', color: '#f59e0b' },
+  H: { label: 'Alto', width: '100%', color: '#ef4444' }
+};
+
+function impactIndicators(version, metrics) {
+  const keys = version === '4.0'
+    ? [['Confidencialidad', 'VC'], ['Integridad', 'VI'], ['Disponibilidad', 'VA']]
+    : [['Confidencialidad', 'C'], ['Integridad', 'I'], ['Disponibilidad', 'A']];
+  return keys.map(([name, key]) => {
+    const value = metrics?.[key] || 'N';
+    const meta = IMPACT_META[value] || { label: value, width: '28%', color: '#94a3b8' };
+    return { name, level: meta.label, width: meta.width, color: meta.color };
+  });
+}
+
+const panelCardStyle = {
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '12px',
+  padding: '0.9rem 1rem'
+};
+
+function FieldLabel({ children }) {
+  return (
+    <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
+      {children}
+    </label>
+  );
+}
+
+function NumberedPoints({ items, accent }) {
+  if (!items?.length) {
+    return <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Sin datos para este vector.</div>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+      {items.map((text, index) => {
+        const { lead, rest } = splitLead(text);
+        return (
+          <div key={`${index}-${lead}`} style={{ display: 'grid', gridTemplateColumns: '1.45rem 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <span style={{
+              width: '1.45rem', height: '1.45rem', borderRadius: '999px',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: accent, color: '#0f172a', fontSize: '0.68rem', fontWeight: 800
+            }}>{index + 1}</span>
+            <div style={{ fontSize: '0.82rem', lineHeight: 1.45, color: '#e2e8f0' }}>
+              {lead ? <strong style={{ fontWeight: 700 }}>{lead}. </strong> : null}
+              <span style={{ color: '#cbd5e1' }}>{rest}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LookupBar({
+  cveInput, cveError, loadingCve, onCveChange, onCveLookup,
+  vectorInput, vectorError, onVectorChange, onImportVector
+}) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.7rem' }}>
+      <div style={panelCardStyle}>
+        <FieldLabel>Buscar por CVE</FieldLabel>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <InputText
+            value={cveInput}
+            onChange={(e) => onCveChange(e.target.value.toUpperCase())}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onCveLookup();
+              }
+            }}
+            placeholder="CVE-2021-44228"
+            style={{ flex: 1, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.02em' }}
+            aria-label="Identificador CVE"
+          />
+          <Button
+            label="Consultar NVD"
+            icon="pi pi-search"
+            onClick={onCveLookup}
+            loading={loadingCve}
+            size="small"
+          />
+        </div>
+        <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', lineHeight: 1.4, color: cveError ? '#f87171' : '#94a3b8' }}>
+          {cveError || 'Formato CVE-AAAA-NNNN. Pulsa Enter o Consultar NVD.'}
+        </div>
+      </div>
+      <div style={panelCardStyle}>
+        <FieldLabel>Importar vector</FieldLabel>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <InputText
+            value={vectorInput}
+            onChange={(e) => onVectorChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onImportVector();
+              }
+            }}
+            placeholder="CVSS:3.1/AV:N/AC:L/…"
+            style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }}
+            aria-label="Vector CVSS"
+          />
+          <Button
+            label="Aplicar vector"
+            icon="pi pi-check"
+            onClick={onImportVector}
+            disabled={!vectorInput.trim()}
+            size="small"
+            outlined
+          />
+        </div>
+        <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', lineHeight: 1.4, color: vectorError ? '#f87171' : '#94a3b8' }}>
+          {vectorError || 'Si el texto incluye CVSS:3.1 o CVSS:4.0, la versión cambia sola. El vector se queda visible.'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CveCard({ cveData }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!cveData) return null;
+  const severity = normalizeSeverityLabel(cveData.cvss?.baseSeverity);
+  const cfg = getSeverityConfig(severity);
+  const description = cveData.description || 'Sin descripción oficial.';
+  const longDescription = description.length > 180;
+  const platforms = cveData.affectedPlatforms || [];
+  const references = cveData.references || [];
+
+  return (
+    <div style={{ ...panelCardStyle, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 }}>
+            Ficha NVD
+          </div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginTop: '0.15rem' }}>{cveData.cveId}</div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {cveData.cvss?.version && (
+            <Tag value={`CVSS ${cveData.cvss.version}`} style={{ background: 'rgba(99,102,241,0.2)', color: '#c7d2fe' }} />
+          )}
+          {cveData.cvss?.baseScore != null && (
+            <Tag
+              value={`${Number(cveData.cvss.baseScore).toFixed(1)} ${severity}`}
+              style={{ background: cfg.bg, color: cfg.fg, border: `1px solid ${cfg.border}` }}
+            />
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: '#cbd5e1' }}>
+        <div style={expanded || !longDescription ? undefined : {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden'
+        }}>
+          {description}
+        </div>
+        {longDescription && (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            style={{ marginTop: '0.35rem', background: 'none', border: 'none', color: '#a5b4fc', cursor: 'pointer', padding: 0, fontSize: '0.75rem', fontWeight: 700 }}
+          >
+            {expanded ? 'Ver menos' : 'Ver descripción completa'}
+          </button>
+        )}
+      </div>
+      {platforms.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>Plataformas</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+            {platforms.slice(0, 12).map((platform, index) => (
+              <span key={`${platform.part}-${platform.name}-${index}`} style={{
+                fontSize: '0.72rem', color: '#e2e8f0', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '0.2rem 0.55rem'
+              }}>
+                {platform.part ? `${platform.part}: ` : ''}{platform.name}
+              </span>
+            ))}
+            {platforms.length > 12 && (
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', alignSelf: 'center' }}>+{platforms.length - 12}</span>
+            )}
+          </div>
+        </div>
+      )}
+      {references.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>Referencias</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+            {references.slice(0, 8).map((url) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={url}
+                style={{
+                  fontSize: '0.75rem', color: '#c7d2fe', textDecoration: 'none',
+                  background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.28)',
+                  borderRadius: '8px', padding: '0.28rem 0.5rem'
+                }}
+              >
+                {hostFromUrl(url)}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InsightScreens({
+  screen, onScreenChange, version, metrics, insights, cveData,
+  cveReady, onPocSearch, loadingPocs, pocSearchResults, onCopy
+}) {
+  const screens = [
+    { id: 'resumen', label: 'Resumen', icon: 'pi pi-chart-bar' },
+    { id: 'tecnico', label: 'Detalle técnico', icon: 'pi pi-cog' },
+    { id: 'verificacion', label: 'Verificación', icon: 'pi pi-code' }
+  ];
+  const indicators = impactIndicators(version, metrics);
+  const layers = splitTags(insights?.technicalDetails?.affectedLayers, /\s+y\s+/);
+  const cwes = splitTags(insights?.technicalDetails?.cwe, /,\s*/);
+  const platforms = cveData?.affectedPlatforms || [];
+  const references = cveData?.references || [];
+  const steps = insights?.technicalDetails?.verificationSteps || [];
+
+  return (
+    <div style={panelCardStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#94a3b8' }}>
+          Lectura del vector
+        </div>
+        <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: '9px', padding: '3px', flexWrap: 'wrap' }}>
+          {screens.map((item) => {
+            const active = screen === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onScreenChange(item.id)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                  border: 'none', cursor: 'pointer', borderRadius: '7px',
+                  padding: '0.38rem 0.7rem', fontSize: '0.78rem', fontWeight: 700,
+                  background: active ? 'rgba(99,102,241,0.8)' : 'transparent',
+                  color: active ? '#fff' : '#94a3b8'
+                }}
+              >
+                <i className={item.icon} style={{ fontSize: '0.75rem' }} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {screen === 'resumen' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', lineHeight: 1.4 }}>
+            {insights?.profile || 'Análisis del vector'}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.55rem' }}>
+            {indicators.map((item) => (
+              <div key={item.name} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.65rem 0.75rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.25rem' }}>{item.name}</div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: item.color, marginBottom: '0.4rem' }}>{item.level}</div>
+                <div style={{ height: '5px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{ width: item.width, height: '100%', background: item.color, borderRadius: '99px' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.16)', borderRadius: '10px', padding: '0.8rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fde68a', marginBottom: '0.7rem' }}>Cómo afecta</div>
+              <NumberedPoints items={insights?.exposure} accent="#fbbf24" />
+            </div>
+            <div style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.16)', borderRadius: '10px', padding: '0.8rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#6ee7b7', marginBottom: '0.7rem' }}>Qué hacer</div>
+              <NumberedPoints items={insights?.remediation} accent="#34d399" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {screen === 'tecnico' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>Capas</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              {(layers.length ? layers : ['Sin capa determinada']).map((layer) => (
+                <Tag key={layer} value={layer} style={{ background: 'rgba(99,102,241,0.16)', color: '#c7d2fe' }} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>CWE relacionados</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              {(cwes.length ? cwes : ['N/A']).map((cwe) => (
+                <Tag key={cwe} value={cwe} style={{ background: 'rgba(255,255,255,0.06)', color: '#e2e8f0' }} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>Plataformas y entornos</div>
+            {platforms.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {platforms.slice(0, 12).map((platform, index) => (
+                  <span key={`${platform.part}-${platform.name}-${index}`} style={{
+                    fontSize: '0.75rem', color: '#e2e8f0', background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '0.22rem 0.55rem'
+                  }}>
+                    {platform.name}
+                  </span>
+                ))}
+                {platforms.length > 12 && (
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', alignSelf: 'center' }}>+{platforms.length - 12}</span>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#cbd5e1' }}>{insights?.technicalDetails?.affectedOS}</div>
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.7rem' }}>
+            <div style={{ background: 'rgba(0,0,0,0.16)', borderRadius: '10px', padding: '0.75rem' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.3rem' }}>Mitigación</div>
+              <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#e2e8f0' }}>{insights?.technicalDetails?.possibleMitigations}</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.16)', borderRadius: '10px', padding: '0.75rem' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.3rem' }}>Impacto técnico</div>
+              <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#e2e8f0' }}>
+                {insights?.technicalDetails?.technicalImpact}
+              </div>
+            </div>
+          </div>
+          {references.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.35rem' }}>Referencias oficiales</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {references.slice(0, 6).map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noopener noreferrer" title={url} style={{ color: '#a5b4fc', fontSize: '0.8rem', textDecoration: 'none' }}>
+                    {hostFromUrl(url)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {screen === 'verificacion' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {steps.length > 0 ? (
+            steps.map((step) => (
+              <div key={step.title} style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '0.75rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>{step.title}</div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0.25rem 0 0.55rem', lineHeight: 1.4 }}>{step.desc}</div>
+                <div style={{ position: 'relative', background: '#090d16', borderRadius: '8px', padding: '0.7rem 2.2rem 0.7rem 0.7rem', fontFamily: 'ui-monospace, monospace', fontSize: '0.76rem', color: '#6ee7b7', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {step.cmd}
+                  <button
+                    type="button"
+                    title="Copiar comando"
+                    onClick={() => onCopy(step.cmd, 'Comando copiado.')}
+                    style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '0.25rem 0.4rem' }}
+                  >
+                    <i className="pi pi-copy" />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Ajusta las métricas base para obtener comandos de comprobación.</div>
+          )}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.85rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.55rem' }}>
+              <div>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#e2e8f0' }}>Guías y asesorías</div>
+                <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                  {cveReady
+                    ? 'Busca comprobaciones y avisos públicos para el CVE de la barra superior.'
+                    : 'Escribe un CVE válido arriba, por ejemplo CVE-2021-44228, para buscar guías.'}
+                </div>
+              </div>
+              <Button
+                label={loadingPocs ? 'Buscando…' : 'Buscar en la web'}
+                icon={loadingPocs ? 'pi pi-spin pi-spinner' : 'pi pi-search'}
+                onClick={onPocSearch}
+                disabled={!cveReady || loadingPocs}
+                size="small"
+              />
+            </div>
+            {pocSearchResults?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {pocSearchResults.map((result) => (
+                  <a
+                    key={result.url}
+                    href={result.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '0.7rem 0.8rem' }}
+                  >
+                    <div style={{ color: '#e0e7ff', fontWeight: 700, fontSize: '0.82rem' }}>{result.title}</div>
+                    {result.snippet && <div style={{ color: '#94a3b8', fontSize: '0.76rem', lineHeight: 1.4, marginTop: '0.25rem' }}>{result.snippet}</div>}
+                    <div style={{ color: '#818cf8', fontSize: '0.72rem', marginTop: '0.3rem' }}>{hostFromUrl(result.url)}</div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Tooltip de métrica ───────────────────────────────────────────────────────
 function MetricTooltipContent({ metricKey, currentValue, service }) {
   const desc = service.METRIC_DESCRIPTIONS?.[metricKey];
@@ -139,9 +606,10 @@ const CvssCalculatorPanel = () => {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [affectedVersions, setAffectedVersions] = useState('');
-  const [techDetailsExpanded, setTechDetailsExpanded] = useState(false);
-  const [exposureExpanded, setExposureExpanded] = useState(true);
-  const [auditorPanelExpanded, setAuditorPanelExpanded] = useState(true);
+  const [insightScreen, setInsightScreen] = useState('resumen');
+  const [cveInput, setCveInput] = useState('');
+  const [cveError, setCveError] = useState('');
+  const [vectorError, setVectorError] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [templateDesc, setTemplateDesc] = useState('');
   const [templates, setTemplates] = useState(() => cvssStore.getTemplates());
@@ -157,7 +625,6 @@ const CvssCalculatorPanel = () => {
 
   const [pocSearchResults, setPocSearchResults] = useState([]);
   const [loadingPocs, setLoadingPocs] = useState(false);
-  const [pocExpanded, setPocExpanded] = useState(false);
 
   const feedbackTimer = useRef(null);
 
@@ -194,53 +661,80 @@ const CvssCalculatorPanel = () => {
     setMetrics(prev => ({ ...prev, [key]: val }));
   }, [setMetrics]);
 
-  const handleCveLookup = async () => {
-    const cveId = title.trim().toUpperCase();
-    if (!cveId.match(/^CVE-\d{4}-\d{4,7}$/)) return;
+  const copyText = useCallback(async (text, okMessage) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showFeedback('success', okMessage || 'Copiado.');
+    } catch {
+      showFeedback('error', 'No se pudo copiar.');
+    }
+  }, [showFeedback]);
 
+  const applyVector = useCallback((raw, { quiet = false } = {}) => {
+    const text = String(raw || '').trim();
+    if (!text) {
+      setVectorError('Pega un vector CVSS para aplicarlo.');
+      return false;
+    }
+    const detected = detectVectorVersion(text);
+    const ver = detected || version;
+    const svc = ver === '3.1' ? cvssV31Service : cvssV4Service;
+    try {
+      const parsed = svc.parseVector(text);
+      const result = svc.calculate(parsed);
+      if (ver === '3.1') setMetrics31({ ...cvssV31Service.DEFAULT_METRICS, ...result.metrics });
+      else setMetrics40({ ...cvssV4Service.DEFAULT_METRICS, ...result.metrics });
+      if (detected && detected !== version) setVersion(detected);
+      setVectorInput(text);
+      setVectorError('');
+      if (!quiet) showFeedback('success', `Vector CVSS ${ver} aplicado.`);
+      return true;
+    } catch (error) {
+      setVectorError(error.message || 'Vector inválido.');
+      return false;
+    }
+  }, [showFeedback, version]);
+
+  const handleCveChange = (value) => {
+    setCveInput(value);
+    setCveError('');
+    const next = value.trim();
+    if (cveData && cveData.cveId !== next) setCveData(null);
+    setPocSearchResults([]);
+  };
+
+  const handleCveLookup = async () => {
+    const cveId = cveInput.trim().toUpperCase();
+    if (!CVE_PATTERN.test(cveId)) {
+      setCveError('El formato debe ser CVE-AAAA-NNNN, por ejemplo CVE-2021-44228.');
+      return;
+    }
+    setCveError('');
+    setCveInput(cveId);
     setLoadingCve(true);
     try {
       const res = await window?.electron?.ipcRenderer?.invoke('network-tools:get-cve-details', { cveId });
       if (res?.success) {
         setCveData(res);
-        showFeedback('success', `Datos de ${cveId} obtenidos de NVD.`);
-        
-        if (res.description) {
-          setNotes(res.description);
+        if (!title.trim()) setTitle(cveId);
+        if (!notes.trim() && res.description) setNotes(res.description);
+        if (!affectedVersions.trim() && res.affectedPlatforms?.length) {
+          setAffectedVersions(res.affectedPlatforms.map((p) => p.name).slice(0, 5).join(', '));
         }
-        
-        if (res.affectedPlatforms && res.affectedPlatforms.length > 0) {
-          const platformsText = res.affectedPlatforms
-            .map(p => p.name)
-            .slice(0, 5)
-            .join(', ');
-          setAffectedVersions(platformsText);
-        }
-
         if (res.cvss?.vectorString) {
-          try {
-            const ver = res.cvss.version === '4.0' ? '4.0' : '3.1';
-            setVersion(ver);
-            
-            // Esperar que setVersion se propague o usar el parser adecuado
-            const svc = ver === '3.1' ? cvssV31Service : cvssV4Service;
-            const parsed = svc.parseVector(res.cvss.vectorString);
-            
-            if (ver === '3.1') {
-              setMetrics31({ ...cvssV31Service.DEFAULT_METRICS, ...parsed });
-            } else {
-              setMetrics40({ ...cvssV4Service.DEFAULT_METRICS, ...parsed });
-            }
-            showFeedback('success', `Vector de CVSS ${ver} importado desde NVD.`);
-          } catch (e) {
-            console.warn('Error al auto-importar vector de CVE:', e);
-          }
+          const applied = applyVector(res.cvss.vectorString, { quiet: true });
+          showFeedback('success', applied
+            ? `Datos de ${cveId} obtenidos de NVD. Vector aplicado.`
+            : `Datos de ${cveId} obtenidos de NVD.`);
+        } else {
+          showFeedback('success', `Datos de ${cveId} obtenidos de NVD.`);
         }
       } else {
-        showFeedback('error', res?.error || 'No se pudieron obtener datos del CVE.');
+        setCveError(res?.error || 'No se pudieron obtener datos del CVE.');
       }
     } catch (error) {
-      showFeedback('error', 'Error al consultar NVD: ' + error.message);
+      setCveError('Error al consultar NVD: ' + error.message);
     } finally {
       setLoadingCve(false);
     }
@@ -252,19 +746,19 @@ const CvssCalculatorPanel = () => {
     setNotes('');
     setAffectedVersions('');
     setVectorInput('');
+    setVectorError('');
+    setCveInput('');
+    setCveError('');
     setCveData(null);
     setPocSearchResults([]);
+    setInsightScreen('resumen');
   };
 
   const handlePocSearch = async () => {
-    const cveId = title.trim().toUpperCase();
-    if (!cveId.match(/^CVE-\d{4}-\d{4,7}$/)) {
-      showFeedback('error', 'Ingrese un código de CVE válido (ej: CVE-2021-44228) en la parte superior para buscar.');
-      return;
-    }
-
+    const cveId = cveInput.trim().toUpperCase();
+    if (!CVE_PATTERN.test(cveId)) return;
+    setInsightScreen('verificacion');
     setLoadingPocs(true);
-    setPocExpanded(true);
     try {
       const res = await window?.electron?.ipcRenderer?.invoke('network-tools:search-cve-verification', { cveId });
       if (res?.success && res.results) {
@@ -280,18 +774,8 @@ const CvssCalculatorPanel = () => {
     }
   };
 
-
-
   const handleImportVector = () => {
-    try {
-      const parsed = service.parseVector(vectorInput);
-      const res = service.calculate(parsed);
-      setMetrics({ ...service.DEFAULT_METRICS, ...res.metrics });
-      showFeedback('success', 'Vector importado correctamente.');
-      setVectorInput('');
-    } catch (e) {
-      showFeedback('error', `Vector inválido: ${e.message}`);
-    }
+    applyVector(vectorInput);
   };
 
   const handleSaveToHistory = () => {
@@ -510,6 +994,20 @@ const CvssCalculatorPanel = () => {
   // ─── Tab: Métricas ────────────────────────────────────────────────────────
   const renderMetricsTab = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+      <LookupBar
+        cveInput={cveInput}
+        cveError={cveError}
+        loadingCve={loadingCve}
+        onCveChange={handleCveChange}
+        onCveLookup={handleCveLookup}
+        vectorInput={vectorInput}
+        vectorError={vectorError}
+        onVectorChange={(value) => {
+          setVectorInput(value);
+          if (vectorError) setVectorError('');
+        }}
+        onImportVector={handleImportVector}
+      />
       {/* Score header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '1.2rem', flexWrap: 'wrap',
@@ -548,449 +1046,58 @@ const CvssCalculatorPanel = () => {
             </div>
           </div>
           <ScoreBar score={computed.score || 0} />
-          <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-color-secondary)', wordBreak: 'break-all', marginTop: '0.1rem' }}>
-            {computed.error ? <span style={{ color: '#f87171' }}>{computed.error}</span> : computed.vector}
-          </div>
-          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.1rem' }}>
-            <InputText
-              value={vectorInput}
-              onChange={e => setVectorInput(e.target.value)}
-              placeholder="Pegar vector CVSS para importar…"
-              style={{ flex: 1, fontSize: '0.78rem' }}
-            />
-            <Button icon="pi pi-download" tooltip="Importar vector" tooltipOptions={{ position: 'top' }} onClick={handleImportVector} disabled={!vectorInput.trim()} outlined size="small" />
-          </div>
-        </div>
-      </div>
-
-      {/* Título y notas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
-        <div>
-          <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Título del hallazgo / CVE ID</label>
-          <div style={{ display: 'flex', gap: '0.35rem' }}>
-            <InputText 
-              value={title} 
-              onChange={e => {
-                setTitle(e.target.value);
-                if (cveData && !e.target.value.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/)) {
-                  setCveData(null);
-                }
-              }} 
-              onBlur={() => {
-                if (title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/) && (!cveData || cveData.cveId !== title.trim().toUpperCase())) {
-                  handleCveLookup();
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/)) {
-                    handleCveLookup();
-                  }
-                }
-              }}
-              placeholder="Ej: CVE-2026-46331 o SQL Injection" 
-              style={{ flex: 1 }} 
-            />
-            {title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/) && (
-              <Button icon="pi pi-search" tooltip="Buscar datos oficiales en NVD (NIST)" tooltipOptions={{ position: 'top' }} onClick={handleCveLookup} loading={loadingCve} outlined size="small" />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+            <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', color: 'var(--text-color-secondary)', wordBreak: 'break-all', flex: 1 }}>
+              {computed.error ? <span style={{ color: '#f87171' }}>{computed.error}</span> : computed.vector}
+            </div>
+            {!computed.error && computed.vector && (
+              <Button
+                icon="pi pi-copy"
+                text
+                size="small"
+                tooltip="Copiar vector"
+                tooltipOptions={{ position: 'top' }}
+                onClick={() => copyText(computed.vector, 'Vector copiado.')}
+              />
             )}
           </div>
         </div>
-        <div>
-          <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tecnologías y Versiones Afectadas</label>
-          <InputText value={affectedVersions} onChange={e => setAffectedVersions(e.target.value)} placeholder="Ej: Apache HTTP Server <= 2.4.49" style={{ width: '100%' }} />
+      </div>
+
+      <div style={panelCardStyle}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '0.55rem' }}>
+          Datos del hallazgo
         </div>
-        <div>
-          <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Notas del análisis</label>
-          <InputText value={notes} onChange={e => setNotes(e.target.value)} placeholder="Contexto, CVE, sistemas afectados…" style={{ width: '100%' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.55rem' }}>
+          <div>
+            <FieldLabel>Título</FieldLabel>
+            <InputText value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Inyección SQL en el login" style={{ width: '100%' }} />
+          </div>
+          <div>
+            <FieldLabel>Tecnologías y versiones</FieldLabel>
+            <InputText value={affectedVersions} onChange={e => setAffectedVersions(e.target.value)} placeholder="Ej: Apache HTTP Server <= 2.4.49" style={{ width: '100%' }} />
+          </div>
+          <div>
+            <FieldLabel>Notas</FieldLabel>
+            <InputText value={notes} onChange={e => setNotes(e.target.value)} placeholder="Contexto y sistemas afectados" style={{ width: '100%' }} />
+          </div>
         </div>
       </div>
 
-      {/* Información para el Auditor */}
-      {title.trim() && (
-        <div style={{
-          background: 'rgba(99, 102, 241, 0.04)',
-          border: '1px solid rgba(99, 102, 241, 0.15)',
-          borderRadius: '12px',
-          padding: '1rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.7rem'
-        }}>
-          <div 
-            onClick={() => setAuditorPanelExpanded(!auditorPanelExpanded)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              flexWrap: 'wrap', 
-              gap: '0.5rem',
-              cursor: 'pointer',
-              userSelect: 'none'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-shield" style={{ color: '#a5b4fc', fontSize: '1.1rem' }} />
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.02em' }}>
-                Diagnóstico del Auditor e Insights de Remediación
-              </span>
-              <i className={`pi pi-chevron-${auditorPanelExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.2rem' }} />
-            </div>
-            <span style={{
-              fontSize: '0.72rem',
-              background: 'rgba(99, 102, 241, 0.18)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              color: '#c7d2fe',
-              padding: '3px 8px',
-              borderRadius: '6px',
-              fontWeight: 600
-            }}>
-              {auditorInsights.profile}
-            </span>
-          </div>
-
-          {auditorPanelExpanded && (
-            <>
-              {/* Toggle para detalles técnicos avanzados */}
-              <div 
-                onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  borderRadius: '8px',
-                  padding: '0.6rem 0.8rem',
-                  cursor: 'pointer',
-                  marginBottom: techDetailsExpanded ? '0.4rem' : '0.8rem',
-                  transition: 'background 0.2s'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <i className="pi pi-cog" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
-                    Detalles Técnicos Avanzados (CWE, Capas, Mitigación y SO)
-                  </span>
-                </div>
-                <i className={`pi pi-chevron-${techDetailsExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
-              </div>
-
-              {techDetailsExpanded && (
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.04)',
-                  borderRadius: '8px',
-                  padding: '0.8rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.8rem',
-                  marginBottom: '0.8rem'
-                }}>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Capas Afectadas:</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.affectedLayers}</span>
-                  </div>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>CWEs Relacionados:</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.cwe}</span>
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Sistemas y Entornos Afectados:</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                      {cveData && cveData.affectedPlatforms && cveData.affectedPlatforms.length > 0
-                        ? cveData.affectedPlatforms.map(p => `[${p.part}] ${p.name}`).join(' | ')
-                        : auditorInsights.technicalDetails.affectedOS}
-                    </span>
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Mitigación Técnica del Sistema:</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                      {auditorInsights.technicalDetails.possibleMitigations}
-                    </span>
-                  </div>
-                  {cveData && cveData.references && cveData.references.length > 0 && (
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Referencias Oficiales:</strong>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '100px', overflowY: 'auto' }}>
-                        {cveData.references.slice(0, 5).map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#6366f1', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {url}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Impacto Técnico Profundo:</strong>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                      {cveData ? cveData.description : auditorInsights.technicalDetails.technicalImpact}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Nueva sección: Comprobación Técnica y Búsqueda de PoCs */}
-              <div 
-                onClick={() => setPocExpanded(!pocExpanded)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  borderRadius: '8px',
-                  padding: '0.6rem 0.8rem',
-                  cursor: 'pointer',
-                  marginBottom: pocExpanded ? '0.6rem' : '0.6rem',
-                  transition: 'background 0.2s'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <i className="pi pi-code" style={{ color: '#10b981', fontSize: '0.85rem' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
-                    Comprobación Técnica de Afectación & PoCs
-                  </span>
-                </div>
-                <i className={`pi pi-chevron-${pocExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
-              </div>
-
-              {pocExpanded && (
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.04)',
-                  borderRadius: '8px',
-                  padding: '0.8rem',
-                  marginBottom: '0.8rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.8rem'
-                }}>
-                  {/* Comandos Sugeridos Dinámicos */}
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '0.75rem', color: '#10b981', marginBottom: '0.5rem' }}>
-                      Comandos Sugeridos de Verificación Técnica:
-                    </strong>
-                    {auditorInsights.technicalDetails.verificationSteps && auditorInsights.technicalDetails.verificationSteps.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                        {auditorInsights.technicalDetails.verificationSteps.map((step, idx) => (
-                          <div key={idx} style={{
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            borderRadius: '6px',
-                            padding: '0.6rem'
-                          }}>
-                            <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '2px' }}>
-                              {step.title}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '6px', lineHeight: '1.3' }}>
-                              {step.desc}
-                            </div>
-                            <div style={{
-                              position: 'relative',
-                              background: '#090d16',
-                              border: '1px solid rgba(255, 255, 255, 0.07)',
-                              borderRadius: '4px',
-                              padding: '0.5rem',
-                              fontFamily: 'monospace',
-                              fontSize: '0.72rem',
-                              color: '#34d399',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-all'
-                            }}>
-                              {step.cmd}
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(step.cmd);
-                                  showFeedback('success', 'Comando copiado al portapapeles');
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  right: '5px',
-                                  top: '5px',
-                                  background: 'rgba(255,255,255,0.08)',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  color: '#cbd5e1',
-                                  cursor: 'pointer',
-                                  padding: '2px 5px',
-                                  fontSize: '0.65rem'
-                                }}
-                                title="Copiar comando"
-                              >
-                                <i className="pi pi-copy" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                        Configure el vector métrico en la calculadora para sugerir comandos específicos de auditoría.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Búsqueda Online de PoCs / Advisories */}
-                  <div style={{
-                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                    paddingTop: '0.8rem',
-                    marginTop: '0.2rem'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <strong style={{ fontSize: '0.75rem', color: '#818cf8' }}>
-                        Buscar Guías de Verificación y Asesorías Online:
-                      </strong>
-                      <button
-                        onClick={handlePocSearch}
-                        disabled={loadingPocs || !title.trim()}
-                        style={{
-                          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                          border: 'none',
-                          borderRadius: '6px',
-                          color: '#fff',
-                          padding: '0.35rem 0.7rem',
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          opacity: !title.trim() ? 0.5 : 1
-                        }}
-                      >
-                        {loadingPocs ? (
-                          <>
-                            <i className="pi pi-spin pi-spinner" />
-                            Buscando...
-                          </>
-                        ) : (
-                          <>
-                            <i className="pi pi-search" />
-                            Buscar en la Web
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {!title.trim() && (
-                      <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '0.5rem' }}>
-                        * Ingrese un identificador de vulnerabilidad (ej: CVE-2021-44228) en el título del CVE arriba para habilitar la búsqueda online de PoCs y mitigaciones detalladas.
-                      </div>
-                    )}
-
-                    {pocSearchResults && pocSearchResults.length > 0 && (
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem',
-                        maxHeight: '220px',
-                        overflowY: 'auto',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '6px',
-                        padding: '0.5rem',
-                        border: '1px solid rgba(255, 255, 255, 0.03)'
-                      }}>
-                        {pocSearchResults.map((result, index) => (
-                          <div key={index} style={{
-                            fontSize: '0.72rem',
-                            borderBottom: index < pocSearchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
-                            paddingBottom: index < pocSearchResults.length - 1 ? '0.4rem' : '0',
-                            marginBottom: index < pocSearchResults.length - 1 ? '0.4rem' : '0'
-                          }}>
-                            <a 
-                              href={result.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              style={{ color: '#a5b4fc', textDecoration: 'none', fontWeight: 600, display: 'block', marginBottom: '2px' }}
-                            >
-                              {result.title}
-                            </a>
-                            <div style={{ color: '#94a3b8', fontSize: '0.68rem', lineHeight: '1.3' }}>
-                              {result.snippet}
-                            </div>
-                            <span style={{ fontSize: '0.62rem', color: '#64748b', wordBreak: 'break-all' }}>
-                              {result.url}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Toggle para análisis de exposición y mitigación */}
-              <div 
-                onClick={() => setExposureExpanded(!exposureExpanded)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  borderRadius: '8px',
-                  padding: '0.6rem 0.8rem',
-                  cursor: 'pointer',
-                  marginBottom: exposureExpanded ? '0.6rem' : '0',
-                  transition: 'background 0.2s'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <i className="pi pi-list" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
-                    Análisis de Exposición y Mitigación (Cómo Afecta / Recomendaciones)
-                  </span>
-                </div>
-                <i className={`pi pi-chevron-${exposureExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
-              </div>
-
-
-              {exposureExpanded && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {/* Columna Exposición */}
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '8px',
-                    padding: '0.75rem'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <i className="pi pi-exclamation-triangle" style={{ color: '#fbbf24', fontSize: '0.8rem' }} />
-                      CÓMO AFECTA (EXPOSICIÓN & IMPACTO)
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      {auditorInsights.exposure.map((exp, idx) => (
-                        <li key={idx} style={{ lineHeight: '1.4' }}>{exp}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Columna Remediación */}
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '8px',
-                    padding: '0.75rem'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <i className="pi pi-check-circle" style={{ color: '#34d399', fontSize: '0.8rem' }} />
-                      RECOMENDACIONES DE MITIGACIÓN
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      {auditorInsights.remediation.map((rem, idx) => (
-                        <li key={idx} style={{ lineHeight: '1.4' }}>{rem}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      <CveCard key={cveData?.cveId || 'empty'} cveData={cveData} />
+      <InsightScreens
+        screen={insightScreen}
+        onScreenChange={setInsightScreen}
+        version={version}
+        metrics={metrics}
+        insights={auditorInsights}
+        cveData={cveData}
+        cveReady={CVE_PATTERN.test(cveInput.trim())}
+        onPocSearch={handlePocSearch}
+        loadingPocs={loadingPocs}
+        pocSearchResults={pocSearchResults}
+        onCopy={copyText}
+      />
 
       {/* Métricas */}
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '0.9rem' }}>
