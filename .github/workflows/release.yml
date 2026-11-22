@@ -62,6 +62,11 @@ jobs:
       - name: Prune devDependencies before pack
         run: npm prune --no-audit --no-fund
 
+      # resources/cygwin64 está en .gitignore; LITE se genera en CI para el Setup Windows
+      - name: Generate Cygwin LITE (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run cygwin:portable
+
       - name: Verify packaging exclusions
         run: npm run verify-packaging
 
