@@ -1605,6 +1605,7 @@ const MainContentArea = ({
   const [sidebarWidthPx, setSidebarWidthPx] = React.useState(readSidebarWidthPx);
   const sidebarWidthPxRef = React.useRef(sidebarWidthPx);
   sidebarWidthPxRef.current = sidebarWidthPx;
+  const rawSidebarPxRef = React.useRef(null);
   const [isTransitioningSidebar, setIsTransitioningSidebar] = React.useState(false);
   const prevCollapsedRef = React.useRef(sidebarCollapsed);
   const hasEverExpandedSplitterRef = React.useRef(!sidebarCollapsed);
@@ -1748,19 +1749,22 @@ const MainContentArea = ({
   const SIDEBAR_COLLAPSED_PADDING = '8px 0 8px 8px';
   const sidebarFullyHidden = isMinimalMode || !sidebarVisible;
 
-  const applyExpandedSidebarPx = React.useCallback((px) => {
+  const applyExpandedSidebarPx = React.useCallback((px, allowBelowMin = false) => {
     const splitterElement = document.querySelector('.main-splitter');
     if (!splitterElement) return;
     const panels = splitterElement.querySelectorAll(':scope > .p-splitter-panel');
     if (!panels || panels.length < 2) return;
-    const width = clampSidebarWidthPx(px, splitterElement.offsetWidth);
+    const minPx = allowBelowMin ? 0 : SIDEBAR_MIN_PX;
+    const width = allowBelowMin
+      ? Math.max(0, Math.min(SIDEBAR_MAX_PX, Math.round(px)))
+      : clampSidebarWidthPx(px, splitterElement.offsetWidth);
     const leftPanel = panels[0];
     const rightPanel = panels[1];
     leftPanel.style.display = '';
     leftPanel.style.flex = `0 0 ${width}px`;
     leftPanel.style.flexBasis = `${width}px`;
     leftPanel.style.width = `${width}px`;
-    leftPanel.style.minWidth = `${SIDEBAR_MIN_PX}px`;
+    leftPanel.style.minWidth = `${minPx}px`;
     leftPanel.style.maxWidth = `${SIDEBAR_MAX_PX}px`;
     leftPanel.style.padding = '';
     leftPanel.style.overflow = '';
@@ -1783,10 +1787,11 @@ const MainContentArea = ({
       const fromPercentPx = (splitterElement.offsetWidth * (e.sizes?.[0] || 0)) / 100;
       const measured = sidebarCollapsed
         ? fromPercentPx
-        : (leftPanel?.getBoundingClientRect?.().width || fromPercentPx || sidebarWidthPxRef.current);
+        : (rawSidebarPxRef.current ?? leftPanel?.getBoundingClientRect?.().width ?? fromPercentPx ?? sidebarWidthPxRef.current);
+      rawSidebarPxRef.current = null;
       const nextPx = clampSidebarWidthPx(measured, splitterElement.offsetWidth);
 
-      if (!sidebarCollapsed && hasRealDrag && nextPx <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
+      if (!sidebarCollapsed && hasRealDrag && measured <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
         requestAnimationFrame(() => setSidebarCollapsed(true));
       } else if (sidebarCollapsed && hasRealDrag && fromPercentPx > SIDEBAR_EXPAND_THRESHOLD_PX) {
         requestAnimationFrame(() => {
@@ -1869,14 +1874,19 @@ const MainContentArea = ({
     const onMove = (event) => {
       if (!dragging) return;
       const rect = splitterElement.getBoundingClientRect();
-      const nextPx = clampSidebarWidthPx(event.clientX - rect.left, splitterElement.offsetWidth);
+      const rawPx = event.clientX - rect.left;
+      rawSidebarPxRef.current = rawPx;
+      const nextPx = clampSidebarWidthPx(rawPx, splitterElement.offsetWidth);
       sidebarWidthPxRef.current = nextPx;
-      // Tras el frame del Splitter, imponer px para que el máximo 720px sea real
-      requestAnimationFrame(() => applyExpandedSidebarPx(nextPx));
+      // Tras el frame del Splitter, imponer px (permitiendo bajar hasta 0 para auto-colapsar al soltar)
+      requestAnimationFrame(() => applyExpandedSidebarPx(rawPx, true));
     };
     const onUp = () => {
       if (!dragging) return;
       dragging = false;
+      if (rawSidebarPxRef.current !== null && rawSidebarPxRef.current <= SIDEBAR_COLLAPSE_THRESHOLD_PX) {
+        return;
+      }
       const nextPx = sidebarWidthPxRef.current;
       setSidebarWidthPx(nextPx);
       try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(nextPx)); } catch { /* ignore */ }
@@ -1912,7 +1922,7 @@ const MainContentArea = ({
       >
         <SplitterPanel
           size={sidebarFullyHidden ? 0 : (sidebarCollapsed ? 5 : 30)}
-          minSize={sidebarFullyHidden ? 0 : (sidebarCollapsed ? 5 : 8)}
+          minSize={0}
           className="terminal-frame-container"
           style={sidebarFullyHidden
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
