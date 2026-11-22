@@ -1,6 +1,5 @@
 const { exec, spawn } = require('child_process');
 const os = require('os');
-const pty = require('node-pty');
 const { sendToRenderer } = require('../utils');
 const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 const { resolveOutputSender } = require('./TabOutputTarget');
@@ -11,6 +10,13 @@ const { resolveOutputSender } = require('./TabOutputTarget');
  * - Gestión de sesiones WSL
  * - Handlers para operaciones WSL
  */
+
+// Lazy: evitar cargar node-pty al importar (p.ej. detección WSL en Linux/macOS)
+let _pty = null;
+function getPty() {
+  if (!_pty) _pty = require('node-pty');
+  return _pty;
+}
 
 // Estado de procesos WSL
 let wslProcesses = {};
@@ -324,7 +330,7 @@ function startWSLSession(tabId, { cols, rows }) {
       args = ['--cd', '~']; // Iniciar en el directorio home de WSL
     }
 
-    wslProcesses[tabId] = pty.spawn(shell, args, {
+    wslProcesses[tabId] = getPty().spawn(shell, args, {
       name: 'xterm-color',
       cols: cols || 80,
       rows: rows || 24,

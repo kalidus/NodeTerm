@@ -47,6 +47,11 @@ function registerPlatformTerminalHandlers(dependencies = {}) {
   };
 
   safeHandle('detect-wsl-distributions', async () => {
+    // WSL solo existe en Windows; no cargar WSLService/node-pty fuera de win32
+    if (process.platform !== 'win32') {
+      return [];
+    }
+
     if (!wslDetectionLogged) {
       console.log('🚀 [MAIN] Detectando distribuciones WSL...');
       wslDetectionLogged = true;
@@ -69,6 +74,10 @@ function registerPlatformTerminalHandlers(dependencies = {}) {
   });
 
   safeHandle('detect-ubuntu-availability', async () => {
+    if (process.platform !== 'win32') {
+      return [];
+    }
+
     try {
       const distributions = await WSL.detectAllWSLDistributions();
       return distributions;
