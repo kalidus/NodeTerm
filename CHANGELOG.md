@@ -8,17 +8,57 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
-### Instalador mas ligero
+## [1.8.1] - 2026-11-22
+
+### Instalador más ligero (Windows)
 - Causa del Setup 1.8.0 (~176 MB): se empaquetaba `dist/win-unpacked` dentro del asar + basura nativa `node-pty/build`.
-- Filtro de `dist/` sin unpacked/artefactos; excluidos build nativos y deps ya en webpack; compresion `maximum`; prune en CI.
+- Filtro de `dist/` sin unpacked/artefactos; excluidos build nativos y deps ya en webpack; compresión `maximum`; prune en CI.
 - Setup medido con Cygwin LITE: **~97 MB** (vs ~88 MB en 1.7.9 sin Cygwin / ~176 MB en 1.8.0).
 - CSS unlock/splash fuera del critical path; previews unlock recomprimidas.
 
 ### Cygwin LITE embebido (Windows)
-- Runtime LITE (bash, coreutils, ssh, curl) vuelve al instalador Windows (~36 MB en disco, ~16 MB comprimido; delta Setup similar a MobaXterm CygUtils64).
-- Activado por defecto; sin descarga para uso basico.
+- Runtime LITE (bash, coreutils, ssh, curl) vuelve al instalador Windows (~36 MB en disco, ~16 MB comprimido).
+- Activado por defecto; sin descarga para uso básico.
 - Apps > Cygwin permite ampliar a Medium/Full en AppData (prioridad sobre el embebido).
-- Generar antes de `npm run dist`: `npm run cygwin:portable` (o `scripts/create-cygwin-portable.ps1`).
+- Generar antes de `npm run dist`: `npm run cygwin:portable`.
+
+### Pestañas en ventana aparte
+- Arrastrar pestañas a una ventana separada sin matar la sesión (SSH, shell, RDP/VNC).
+- Scrollback y sesión vivos al desacoplar; reattach a la ventana principal sin ventanas extra.
+- Status bar, layout y foco preservados; cursor de mover al arrastrar fuera/reattach.
+- Menos coste residual al desacoplar; title bar de ventanas detach limpia.
+
+### Notas — vista Cuaderno
+- Vista Cuaderno con secciones y páginas al estilo OneNote.
+- Selector de libretas/vaults, divisor y tipografía más compacta.
+- Botón de nota rápida en la TitleBar.
+
+### TitleBar, layouts y apariencia
+- Menú estilo “Customize Layout”: vistas, vaults y estilos desde la TitleBar.
+- Shell rápida y buscador centrado en la TitleBar.
+- Layout Unified Compacto con title bar densa; vistas reorganizadas al estilo Cursor.
+- Pro Ocean por defecto con Victor Mono; catálogo de presets/tipografía ampliado.
+- Menús contextuales unificados (glassmorphism, iconos semánticos).
+- Sidebar: ancho en píxeles, IconRail, drag izquierdo y auto-colapso en fullscreen.
+
+### Vaults
+- Selector de vaults en la TitleBar; iconografía tipo Termius.
+- Importaciones con vault destino; menos tono “experimental” en ajustes.
+- Fixes: wipe del Principal, persistencia Wallix, sync multi-instancia, hijos en vault-root.
+
+### RDP (IronRDP)
+- Negociación H.264 alineada a mstsc; gráficos unificados Moderno/Clásico.
+- Modo rellenar pantalla y selector de escala en sesión.
+- Sesiones vivas en inactividad; puntero KRDP alineado al conectar.
+
+### Marca y herramientas
+- Terminal embebida y pestaña etiquetadas como NodeTerm (antes Cygwin en UI).
+- CVSS: CVE lookup y panel de auditoría más legibles; scroll del calculador.
+
+### Rendimiento y estabilidad
+- Linux/Wayland: cambio de pestaña casi instantáneo.
+- Arranque: no recrear `~/.nodeterm` ni repetir migración en cada inicio.
+- Ajustes MCP: layout y scroll de la pestaña de integraciones.
 
 ## [1.8.0] - 2026-11-10
 
