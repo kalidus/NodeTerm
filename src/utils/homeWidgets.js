@@ -81,6 +81,19 @@ export const HOME_WIDGETS = [
     defaultHeight: 240
   },
   {
+    id: 'masterKey',
+    title: 'Clave maestra',
+    path: 'security',
+    icon: 'pi pi-shield',
+    required: false,
+    group: 'conexiones',
+    defaultVisible: false,
+    minWidth: 420,
+    minHeight: 520,
+    defaultWidth: 520,
+    defaultHeight: 720
+  },
+  {
     id: 'notes',
     title: 'Notas rapidas',
     path: 'notes',

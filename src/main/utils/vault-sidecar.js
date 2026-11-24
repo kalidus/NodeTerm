@@ -496,6 +496,41 @@ function deleteExtraVaultDir(vaultId) {
   return true;
 }
 
+/**
+ * Borra todos los sidecars del vault principal y los directorios de vaults extra.
+ * Usado al wipe destructivo de clave maestra (sin recuperación).
+ */
+function wipeAllVaultSidecarsOnDisk() {
+  for (const key of listAllVaultSidecarKeys()) {
+    deleteVaultSidecar(key);
+  }
+  const root = getVaultRootDir();
+  if (!fs.existsSync(root)) {
+    return { success: true, deletedExtras: 0 };
+  }
+  let deletedExtras = 0;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch (_) {
+    return { success: true, deletedExtras: 0 };
+  }
+  for (const ent of entries) {
+    if (ent.isDirectory()) {
+      if (deleteExtraVaultDir(ent.name)) deletedExtras += 1;
+      continue;
+    }
+    if (ent.isFile() && /\.bin$/i.test(ent.name)) {
+      try {
+        fs.unlinkSync(path.join(root, ent.name));
+      } catch (_) {
+        /* noop */
+      }
+    }
+  }
+  return { success: true, deletedExtras };
+}
+
 module.exports = {
   VAULT_SIDECAR_KEYS,
   VAULT_SIDECAR_FILES,
@@ -517,6 +552,7 @@ module.exports = {
   readVaultSidecar,
   deleteVaultSidecar,
   deleteExtraVaultDir,
+  wipeAllVaultSidecarsOnDisk,
   mergeVaultSidecarsIntoData,
   extractAndPersistVaultSidecars,
   migrateEmbeddedVaultToSidecars,

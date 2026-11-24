@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import UnlockScreen from './unlock/UnlockScreen';
 import { loadUnlockStyle } from './unlock/unlockStyles';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { appConfirm } from './ui/AppConfirm';
 import '../styles/components/unlock-screen.css';
 
 /**
@@ -22,6 +23,7 @@ const UnlockDialog = ({
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(true);
   const [preferenceReady, setPreferenceReady] = useState(previewMode);
   const [unlockStyle, setUnlockStyle] = useState(() => loadUnlockStyle());
@@ -31,6 +33,7 @@ const UnlockDialog = ({
 
     setPassword('');
     setError('');
+    setWiping(false);
     setUnlockStyle(previewStyle || loadUnlockStyle());
 
     if (previewMode) {
@@ -62,7 +65,7 @@ const UnlockDialog = ({
   }, [visible, previewMode, previewStyle]);
 
   const handleUnlock = async () => {
-    if (!preferenceReady) return;
+    if (!preferenceReady || wiping) return;
 
     if (previewMode) {
       onSuccess?.(password);
@@ -111,6 +114,37 @@ const UnlockDialog = ({
     }
   };
 
+  const handleStartFresh = async () => {
+    if (previewMode || wiping || loading) return;
+
+    const ok = await appConfirm({
+      message: t(
+        'dialogs.unlock.startFreshConfirm',
+        'Se borrarán permanentemente la clave maestra y todos los datos cifrados locales (conexiones, contraseñas, notas y sesiones). No se pueden recuperar. ¿Continuar?'
+      ),
+      header: t('dialogs.unlock.startFresh', 'Empezar de cero'),
+      severity: 'danger',
+      acceptLabel: t('common.buttons.accept', 'Aceptar'),
+      rejectLabel: t('common.buttons.cancel', 'Cancelar')
+    });
+    if (!ok) return;
+
+    setWiping(true);
+    setError('');
+    try {
+      // wipeAllVaultData dispara `vault-data-wiped` → useVaultSession pasa a setup
+      await secureStorage.wipeAllVaultData();
+    } catch (err) {
+      console.error('[UnlockDialog] Wipe fallido:', err);
+      setError(
+        err?.message ||
+        t('dialogs.unlock.errors.wipeFailed', 'No se pudieron borrar los datos del vault')
+      );
+    } finally {
+      setWiping(false);
+    }
+  };
+
   return (
     <UnlockScreen
       visible={visible}
@@ -122,8 +156,10 @@ const UnlockDialog = ({
       preferenceReady={preferenceReady}
       error={error}
       loading={loading}
+      wiping={wiping}
       onConfirm={handleUnlock}
       onHide={onHide}
+      onStartFresh={previewMode ? undefined : handleStartFresh}
       previewMode={previewMode}
       passwordId={previewMode ? 'unlock-password-preview' : 'unlock-password'}
     />

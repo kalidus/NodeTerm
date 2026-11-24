@@ -206,6 +206,15 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
     setMessage(null);
 
     try {
+      if (!window.__nodetermHasMasterKey) {
+        setMessage({
+          severity: 'warn',
+          summary: 'Sin clave maestra',
+          detail: 'Puedes sincronizar ajustes, pero el vault cifrado requiere crear la clave maestra en Home.'
+        });
+        window.dispatchEvent(new CustomEvent('focus-master-key-setup'));
+      }
+
       let result;
       let securityNotice = null;
       

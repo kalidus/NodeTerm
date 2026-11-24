@@ -226,7 +226,8 @@ contextBridge.exposeInMainWorld('electron', {
     getRememberPassword: (vaultId) => ipcRenderer.invoke('security:get-remember-password', vaultId),
     setRememberPassword: (remember, vaultId) =>
       ipcRenderer.invoke('security:set-remember-password', remember, vaultId),
-    clearMasterKey: (vaultId) => ipcRenderer.invoke('security:clear-master-key', vaultId)
+    clearMasterKey: (vaultId) => ipcRenderer.invoke('security:clear-master-key', vaultId),
+    wipeVaultData: () => ipcRenderer.invoke('security:wipe-vault-data')
   },
   vaults: {
     list: () => ipcRenderer.invoke('vaults:list'),

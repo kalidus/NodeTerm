@@ -142,6 +142,7 @@ const App = () => {
   const {
     secureStorage,
     needsUnlock,
+    needsMasterKeySetup,
     masterKey,
     showCloudRestoreMasterKey,
     setShowCloudRestoreMasterKey,
@@ -154,6 +155,7 @@ const App = () => {
     setVisibleVaultIds,
     visibleVaultIdsRef,
     handleUnlockSuccess,
+    handleMasterKeySetupSuccess,
     handleCloudRestoreMasterKeySuccess,
     handleMasterPasswordConfigured,
     handleMasterPasswordChanged
@@ -2924,6 +2926,8 @@ const App = () => {
     handleBroadcastData,
     masterKey,
     secureStorage,
+    needsMasterKeySetup,
+    onMasterKeySetupSuccess: handleMasterKeySetupSuccess,
     // Edit connection tab handlers
     onOpenFileConnection,
     handleSaveSshToSidebar,
@@ -2940,7 +2944,7 @@ const App = () => {
     handleTerminalContextMenu, showTerminalContextMenu,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
-    masterKey, secureStorage,
+    masterKey, secureStorage, needsMasterKeySetup, handleMasterKeySetupSuccess,
     handleSaveSshToSidebar, handleSaveRdpToSidebar, handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar, handleSaveSSHTunnelToSidebar, handleTabClose
   ]);

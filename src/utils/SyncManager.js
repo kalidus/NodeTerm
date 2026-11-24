@@ -5,7 +5,7 @@ import SessionManager from '../services/SessionManager';
 // Importar theme managers para recargar temas tras sincronización
 import { themeManager } from './themeManager';
 import { statusBarThemeManager } from './statusBarThemeManager';
-import { setVaultEncryptedItem } from '../shared/vault-write';
+import { setVaultEncryptedItem, isVaultWipePendingSetup } from '../shared/vault-write';
 import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
 import { requestLibrarySync } from './LibrarySyncService';
 import { isMultiVaultEnabled } from './multiVaultFlag';
@@ -64,6 +64,7 @@ function dispatchConnectionsSyncedFromCloud(detail = {}) {
 }
 
 function dispatchCloudRestoreRequiresMasterKey(detail = {}) {
+  if (isVaultWipePendingSetup()) return;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('cloud-restore-requires-master-key', { detail }));
   }
@@ -155,12 +156,14 @@ function ncBuildPayload(keys) {
 /** skipKey: mapa nombreClave -> () => true para no escribir esa clave */
 function ncApplyPayload(data, keys, skipKey = {}) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  const wipePending = isVaultWipePendingSetup();
   let applied = false;
   keys.forEach((k) => {
     if (!Object.prototype.hasOwnProperty.call(data, k) || data[k] == null) return;
     if (skipKey[k]?.()) return;
     const val = typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]);
-    if (VAULT_LOCAL_STORAGE_KEYS.includes(k)) {
+    if (VAULT_LOCAL_STORAGE_KEYS.includes(k) || /^[a-z]+_encrypted(__|$)/.test(k)) {
+      if (wipePending) return;
       const wrote = setVaultEncryptedItem(k, val);
       if (!wrote.ok) {
         console.error(`[SYNC] Apply vault ${k} rechazado:`, wrote.reason);
@@ -809,7 +812,9 @@ class SyncManager {
 
       // Bundles JSON dedicados (documentos, favoritos, metadatos passwords)
       try {
-        await ncDownloadJsonBundle(this.nextcloudService, 'nodeterm-documents.json', NC_BUNDLE_DOCUMENTS);
+        if (!isVaultWipePendingSetup()) {
+          await ncDownloadJsonBundle(this.nextcloudService, 'nodeterm-documents.json', NC_BUNDLE_DOCUMENTS);
+        }
       } catch (e) {
         console.warn('[SYNC] nodeterm-documents.json (descarga):', e.message);
       }
@@ -829,25 +834,33 @@ class SyncManager {
       // Vault de conexiones (cifrado con clave maestra del usuario; la clave no viaja a la nube)
       let connectionsResult = null;
       let connectionsVaultApplied = false;
+      const skipVaultHydrate = isVaultWipePendingSetup();
       try {
-        const connectionsData = await this.nextcloudService.downloadFile(NC_FILE_CONNECTIONS_VAULT);
-        if (connectionsData) {
-          const wrote = setVaultEncryptedItem('connections_encrypted', connectionsData);
-          if (!wrote.ok) {
-            console.error('[SYNC] Vault conexiones nube rechazado:', wrote.reason);
-            connectionsResult = { success: false, error: wrote.reason };
-          } else {
-            connectionsVaultApplied = true;
-            localStorage.removeItem('basicapp2_tree_data');
+        if (skipVaultHydrate) {
+          connectionsResult = {
+            success: true,
+            message: 'Vault de conexiones omitido: pendiente crear clave maestra tras wipe'
+          };
+        } else {
+          const connectionsData = await this.nextcloudService.downloadFile(NC_FILE_CONNECTIONS_VAULT);
+          if (connectionsData) {
+            const wrote = setVaultEncryptedItem('connections_encrypted', connectionsData);
+            if (!wrote.ok) {
+              console.error('[SYNC] Vault conexiones nube rechazado:', wrote.reason);
+              connectionsResult = { success: false, error: wrote.reason };
+            } else {
+              connectionsVaultApplied = true;
+              localStorage.removeItem('basicapp2_tree_data');
 
-            const masterKey = await this.secureStorage.getMasterKey();
-            connectionsResult = {
-              success: true,
-              message: masterKey
-                ? 'Conexiones descargadas desde vault cifrado'
-                : 'Vault de conexiones descargado; configura la misma clave maestra para ver credenciales'
-            };
-            dispatchConnectionsSyncedFromCloud({ unlocked: !!masterKey });
+              const masterKey = await this.secureStorage.getMasterKey();
+              connectionsResult = {
+                success: true,
+                message: masterKey
+                  ? 'Conexiones descargadas desde vault cifrado'
+                  : 'Vault de conexiones descargado; configura la misma clave maestra para ver credenciales'
+              };
+              dispatchConnectionsSyncedFromCloud({ unlocked: !!masterKey });
+            }
           }
         }
       } catch (error) {
@@ -904,6 +917,13 @@ class SyncManager {
       let passwordsResult = null;
       let passwordsVaultFileApplied = false;
       try {
+        if (skipVaultHydrate) {
+          passwordsResult = {
+            success: true,
+            passwordsImported: 0,
+            message: 'Vault de passwords omitido: pendiente crear clave maestra tras wipe'
+          };
+        } else {
         const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
         if (passwordsData) {
           const wrotePw = setVaultEncryptedItem('passwords_encrypted', passwordsData);
@@ -969,6 +989,7 @@ class SyncManager {
             message: 'No se encontró nodeterm-passwords.enc en la nube'
           };
         }
+        }
       } catch (error) {
         console.warn('Error sincronizando passwords desde la nube:', error);
         passwordsResult = {
@@ -980,6 +1001,9 @@ class SyncManager {
       // Metadatos, árbol plano y copia del vault en JSON (respaldo si falta el .enc)
       let passwordsMetaApplied = false;
       try {
+        if (skipVaultHydrate) {
+          passwordsMetaApplied = false;
+        } else {
         passwordsMetaApplied = await ncDownloadJsonBundle(
           this.nextcloudService,
           'nodeterm-passwords-meta.json',
@@ -994,12 +1018,13 @@ class SyncManager {
         } else if (passwordsMetaApplied && passwordsVaultFileApplied) {
           dispatchPasswordsSyncedFromCloud({ count: null, silent: true });
         }
+        }
       } catch (e) {
         console.warn('[SYNC] nodeterm-passwords-meta.json (descarga):', e.message);
       }
 
       let extraVaultsResult = null;
-      if (isMultiVaultEnabled()) {
+      if (isMultiVaultEnabled() && !skipVaultHydrate) {
         try {
           const manifest = await this.readCloudSyncManifest();
           extraVaultsResult = await downloadExtraVaultsFromCloud(this.nextcloudService, {

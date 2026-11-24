@@ -8,6 +8,7 @@ const SecuritySettingsTab = ({
   activeSubTab = 'clave-maestra',
   onMasterPasswordConfigured,
   onMasterPasswordChanged,
+  onMasterKeyWiped,
   showToast,
   toastRef,
   onHide,
@@ -52,6 +53,7 @@ const SecuritySettingsTab = ({
           <MasterKeySubTab
             onMasterPasswordConfigured={onMasterPasswordConfigured}
             onMasterPasswordChanged={onMasterPasswordChanged}
+            onMasterKeyWiped={onMasterKeyWiped}
             showToast={handleShowToast}
             toastRef={toastRef}
           />

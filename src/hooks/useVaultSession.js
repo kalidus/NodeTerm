@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import SecureStorage from '../services/SecureStorage';
 import { getVisibleConnectionVaultIds } from '../utils/activeConnectionVault';
+import {
+  isVaultWipePendingSetup,
+  setVaultWipePendingSetup
+} from '../shared/vault-write';
 
 let lastDecryptedDataStr = null;
 let lastDecryptedKey = null;
@@ -31,6 +35,7 @@ export function writeConnectionDecryptCache(patch = {}) {
 export function useVaultSession({ setIsAppReady, toast }) {
   const [secureStorage] = useState(() => new SecureStorage());
   const [needsUnlock, setNeedsUnlock] = useState(false);
+  const [needsMasterKeySetup, setNeedsMasterKeySetup] = useState(false);
   const [masterKey, setMasterKey] = useState(null);
   const [showCloudRestoreMasterKey, setShowCloudRestoreMasterKey] = useState(false);
   const [cloudRestoreVaults, setCloudRestoreVaults] = useState(null);
@@ -74,6 +79,7 @@ export function useVaultSession({ setIsAppReady, toast }) {
         if (savedMasterKey) {
           setMasterKey(savedMasterKey);
           setNeedsUnlock(false);
+          setNeedsMasterKeySetup(false);
           setIsAppReady(true);
           waitForSyncReady().then(async () => {
             try {
@@ -86,10 +92,17 @@ export function useVaultSession({ setIsAppReady, toast }) {
         }
 
         const hasKey = await secureStorage.checkHasSavedMasterKey();
-        if (hasKey) setNeedsUnlock(true);
+        if (hasKey) {
+          setNeedsUnlock(true);
+          setNeedsMasterKeySetup(false);
+        } else {
+          setNeedsMasterKeySetup(true);
+          setNeedsUnlock(false);
+        }
       } catch (err) {
         console.error('[App] Error inicializando unlock:', err);
         setNeedsUnlock(true);
+        setNeedsMasterKeySetup(false);
       }
 
       setIsAppReady(true);
@@ -111,11 +124,48 @@ export function useVaultSession({ setIsAppReady, toast }) {
     }
     setMasterKey(key);
     setNeedsUnlock(false);
+    setNeedsMasterKeySetup(false);
     window.dispatchEvent(new CustomEvent('encryption-data-synced'));
   }, []);
 
+  const handleMasterKeySetupSuccess = useCallback((key) => {
+    setVaultWipePendingSetup(false);
+    setMasterKey(key);
+    setNeedsMasterKeySetup(false);
+    setNeedsUnlock(false);
+    window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+    toast.current?.show({
+      severity: 'success',
+      summary: 'Vault configurado',
+      detail: 'Clave maestra creada. Tus credenciales quedarán cifradas.',
+      life: 4000
+    });
+  }, [toast]);
+
+  const handleVaultWipeSuccess = useCallback(() => {
+    setMasterKey(null);
+    setNeedsUnlock(false);
+    setNeedsMasterKeySetup(true);
+    setShowCloudRestoreMasterKey(false);
+    window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+    toast.current?.show({
+      severity: 'info',
+      summary: 'Vault borrado',
+      detail: 'Datos cifrados eliminados. Crea una nueva clave maestra.',
+      life: 4500
+    });
+  }, [toast]);
+
+  useEffect(() => {
+    const onWiped = () => handleVaultWipeSuccess();
+    window.addEventListener('vault-data-wiped', onWiped);
+    return () => window.removeEventListener('vault-data-wiped', onWiped);
+  }, [handleVaultWipeSuccess]);
+
   useEffect(() => {
     const onCloudRestoreNeedsKey = (e) => {
+      if (isVaultWipePendingSetup()) return;
+      if (needsMasterKeySetup) return;
       const { vaultsDownloaded } = e.detail || {};
       const hasVault =
         localStorage.getItem('connections_encrypted') ||
@@ -129,11 +179,12 @@ export function useVaultSession({ setIsAppReady, toast }) {
     };
     window.addEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
     return () => window.removeEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
-  }, []);
+  }, [needsMasterKeySetup]);
 
   const handleCloudRestoreMasterKeySuccess = useCallback((key) => {
     setMasterKey(key);
     setNeedsUnlock(false);
+    setNeedsMasterKeySetup(false);
     setShowCloudRestoreMasterKey(false);
     window.dispatchEvent(new CustomEvent('connections-synced-from-cloud', { detail: { unlocked: true } }));
     window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', { detail: { silent: false } }));
@@ -147,6 +198,7 @@ export function useVaultSession({ setIsAppReady, toast }) {
 
   const handleMasterPasswordConfigured = useCallback((key) => {
     setMasterKey(key);
+    setNeedsMasterKeySetup(false);
   }, []);
 
   const handleMasterPasswordChanged = useCallback((key) => {
@@ -180,6 +232,11 @@ export function useVaultSession({ setIsAppReady, toast }) {
   }, []);
 
   useEffect(() => {
+    try {
+      window.__nodetermHasMasterKey = Boolean(masterKey);
+    } catch (_) {
+      /* noop */
+    }
     const library = window.electron?.library;
     if (!library) return undefined;
     const announce = (unlocked) => {
@@ -202,6 +259,7 @@ export function useVaultSession({ setIsAppReady, toast }) {
   return {
     secureStorage,
     needsUnlock,
+    needsMasterKeySetup,
     masterKey,
     setMasterKey,
     showCloudRestoreMasterKey,
@@ -215,6 +273,8 @@ export function useVaultSession({ setIsAppReady, toast }) {
     setVisibleVaultIds,
     visibleVaultIdsRef,
     handleUnlockSuccess,
+    handleMasterKeySetupSuccess,
+    handleVaultWipeSuccess,
     handleCloudRestoreMasterKeySuccess,
     handleMasterPasswordConfigured,
     handleMasterPasswordChanged

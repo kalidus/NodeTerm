@@ -1683,7 +1683,21 @@ const Sidebar = React.memo(({
   // Eventos globales para acciones de acceso rápido desde Home
   useEffect(() => {
     if (embedded) return undefined;
-    const handleOpenPasswords = () => setViewMode('passwords');
+    const handleOpenPasswords = () => {
+      const hasMaster = Boolean(typeof window !== 'undefined' && window.__nodetermHasMasterKey);
+      if (!hasMaster && !localStorage.getItem('passwords_encrypted')) {
+        try {
+          window.toast?.current?.show?.({
+            severity: 'info',
+            summary: 'Clave maestra',
+            detail: 'Crea la clave maestra en Home para proteger el vault de contraseñas.',
+            life: 4500
+          });
+        } catch (_) { /* noop */ }
+        window.dispatchEvent(new CustomEvent('focus-master-key-setup'));
+      }
+      setViewMode('passwords');
+    };
     const handleOpenDocuments = () => {
       setViewMode('documents');
       setSidebarCollapsed(false);

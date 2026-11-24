@@ -327,15 +327,8 @@ const PasswordManagerSidebar = ({
           // savePasswordTree ya loguea; aviso solo si falla con master key
         }
         if (!ok && !masterKey) {
+          // Sin clave: omitir en silencio (setup/unlock gate evita spam de toasts al arrancar)
           console.warn('[PasswordVault] Guardado omitido: se requiere master key');
-          if (showToast) {
-            showToast({
-              severity: 'warn',
-              summary: 'Vault bloqueado',
-              detail: 'Desbloquea la master key para guardar contraseñas de forma segura',
-              life: 4000
-            });
-          }
         }
       } catch (error) {
         console.error('Error saving passwords:', error);

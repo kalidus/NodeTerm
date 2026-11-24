@@ -37,6 +37,7 @@ import {
 	HomeTerminalSplitPanel,
 	HomeSessionsPanel,
 	HomeVaultPanel,
+	HomeMasterKeySetupPanel,
 	HomeNotesPanel,
 	HomeGroupWorkspacePanel,
 	HomeReleaseNotesPanel,
@@ -60,6 +61,8 @@ const ConnectionHistory = ({
 	sidebarNodes = null,
 	masterKey = null,
 	secureStorage = null,
+	needsMasterKeySetup = false,
+	onMasterKeySetupSuccess = null,
 	terminalView = false,
 	onTerminalToggle = null,
 	localLinuxTerminalTheme,
@@ -1229,7 +1232,28 @@ const ConnectionHistory = ({
 					)}
 
 					{wrapHomePanel('sessions', '~/sessions', 'sessions · vivas', <HomeSessionsPanel />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-circle-fill" style={{ color: '#27c93f', fontSize: '0.7rem' }} /> })}
-					{wrapHomePanel('vault', '~/vault', 'vault · secretos', <HomeVaultPanel passwordNodes={passwordNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-lock" style={{ color: '#f59e0b', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel('vault', '~/vault', 'vault · secretos', (
+						<HomeVaultPanel
+							passwordNodes={passwordNodes}
+							needsMasterKeySetup={needsMasterKeySetup}
+						/>
+					), { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-lock" style={{ color: '#f59e0b', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel(
+						'masterKey',
+						'~/security',
+						'security · clave maestra',
+						(
+							<HomeMasterKeySetupPanel
+								secureStorage={secureStorage}
+								onSuccess={onMasterKeySetupSuccess}
+							/>
+						),
+						{
+							minWidth: 420,
+							minHeight: 520,
+							titleIcon: <i className="pi pi-shield" style={{ color: '#34d399', fontSize: '0.8rem' }} />
+						}
+					)}
 					{wrapHomePanel('notes', '~/notes', 'notes · rapidas', <HomeNotesPanel documentNodes={documentNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-file" style={{ color: '#64b5f6', fontSize: '0.8rem' }} /> })}
 					{wrapHomePanel('groups', '~/groups', 'groups · workspace', (
 						<HomeGroupWorkspacePanel

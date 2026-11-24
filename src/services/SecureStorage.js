@@ -8,7 +8,11 @@ import {
   createDerivedKeyCache,
   createStorageDecryptCache
 } from '../shared/vault-blob-encoding';
-import { setVaultEncryptedItem } from '../shared/vault-write';
+import {
+  setVaultEncryptedItem,
+  VAULT_STAMPS_LS,
+  setVaultWipePendingSetup
+} from '../shared/vault-write';
 
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
@@ -705,6 +709,58 @@ class SecureStorage {
     }
     this.masterKeyCache = null;
     this.clearTimeout();
+  }
+
+  /**
+   * Wipe destructivo: clave maestra + todos los vaults cifrados locales y sidecars.
+   * Tras esto la app debe mostrar MasterKeySetup (sin Unlock).
+   */
+  async wipeAllVaultData() {
+    setVaultWipePendingSetup(true);
+
+    const vaultKeys = listVaultStorageKeys();
+    for (const key of vaultKeys) {
+      try {
+        localStorage.removeItem(key);
+      } catch (_) {
+        /* noop */
+      }
+    }
+
+    const plaintextLeftovers = [
+      VAULT_STAMPS_LS,
+      'documentManagerNodes',
+      'passwordManagerNodes',
+      'basicapp2_tree_data',
+      'nodeterm_master_key',
+      'nodeterm_remember_password'
+    ];
+    for (const key of plaintextLeftovers) {
+      try {
+        localStorage.removeItem(key);
+      } catch (_) {
+        /* noop */
+      }
+    }
+
+    this.masterKeyCache = null;
+    this.clearTimeout();
+
+    let result = { success: true };
+    if (window.electron?.security?.wipeVaultData) {
+      result = await window.electron.security.wipeVaultData();
+      if (result && result.success === false) {
+        throw new Error(result.error || 'No se pudo borrar el vault en disco');
+      }
+    } else {
+      // Fallback web/tests: solo LS + clearMasterKey legacy
+      await this.clearMasterKey();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vault-data-wiped'));
+    }
+    return result || { success: true };
   }
 
   /**

@@ -3,7 +3,8 @@ import { flattenVaultNodes, VAULT_SECRET_TYPES } from '../../../../utils/homeWid
 
 export const HomeVaultPanel = ({
   passwordNodes = [],
-  onOpenVault
+  onOpenVault,
+  needsMasterKeySetup = false
 }) => {
   const secrets = useMemo(
     () => flattenVaultNodes(passwordNodes, VAULT_SECRET_TYPES).slice(0, 12),
@@ -16,18 +17,36 @@ export const HomeVaultPanel = ({
     }));
   };
 
+  const needsSetup = needsMasterKeySetup || !window.__nodetermHasMasterKey;
+
+  const openVaultOrSetup = () => {
+    if (needsSetup) {
+      try {
+        window.toast?.current?.show?.({
+          severity: 'info',
+          summary: 'Clave maestra',
+          detail: 'Crea la clave maestra en Home para usar el vault.',
+          life: 4000
+        });
+      } catch (_) { /* noop */ }
+      window.dispatchEvent(new CustomEvent('focus-master-key-setup'));
+      return;
+    }
+    if (onOpenVault) onOpenVault();
+    else window.dispatchEvent(new CustomEvent('open-password-manager'));
+  };
+
   return (
     <div className="home-widget-list">
       <div className="home-widget-list-scroll">
         {secrets.length === 0 && (
           <div className="home-widget-empty">
-            No hay secretos recientes.
+            {needsSetup
+              ? 'Crea la clave maestra para cifrar tus secretos.'
+              : 'No hay secretos recientes.'}
             <div>
-              <button type="button" onClick={() => {
-                if (onOpenVault) onOpenVault();
-                else window.dispatchEvent(new CustomEvent('open-password-manager'));
-              }}>
-                Abrir Vault
+              <button type="button" onClick={openVaultOrSetup}>
+                {needsSetup ? 'Configurar clave' : 'Abrir Vault'}
               </button>
             </div>
           </div>

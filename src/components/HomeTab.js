@@ -98,6 +98,30 @@ function placeIntroRecordingsPanel(layout, canvasW, canvasH) {
   };
 }
 
+function placeMasterKeySetupPanel(layout, canvasW, canvasH) {
+  const w = canvasW > 100 ? canvasW : 1200;
+  const h = canvasH > 100 ? canvasH : 800;
+  const pad = 16;
+  const width = Math.min(540, Math.max(460, Math.floor(w * 0.4)));
+  const height = Math.min(760, Math.max(620, Math.floor(h * 0.88)));
+  return {
+    ...layout,
+    masterKey: {
+      ...(layout.masterKey || {}),
+      visible: true,
+      x: Math.max(pad, Math.floor((w - width) / 2)),
+      y: Math.max(pad, Math.floor((h - height) / 2)),
+      width,
+      height,
+      minWidth: 420,
+      minHeight: 520,
+      zIndex: 28,
+      isMaximized: false,
+      isMinimized: false
+    }
+  };
+}
+
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
   const w = cWidth > 100 ? cWidth : 1200;
   const h = cHeight > 100 ? cHeight : 800;
@@ -343,6 +367,8 @@ const HomeTab = ({
   activeIds = new Set(),
   masterKey = null,
   secureStorage = null,
+  needsMasterKeySetup = false,
+  onMasterKeySetupSuccess = null,
   isMinimalMode = false,
   titleBarCollapsed = false,
   tabBarCollapsed = false,
@@ -581,6 +607,7 @@ const HomeTab = ({
   panelsLayoutRef.current = panelsLayout;
   const smartSnapRef = useRef(smartSnap);
   smartSnapRef.current = smartSnap;
+  const masterKeySetupDismissedRef = useRef(false);
   const [newPresetName, setNewPresetName] = useState('');
   const lastDisplayKeyRef = useRef(getCurrentDisplayKey());
   const layoutSyncLockRef = useRef(0);
@@ -946,8 +973,45 @@ const HomeTab = ({
   }, [commitAuthoredLayout]);
 
   const handleClosePanel = useCallback((panelId) => {
+    if (panelId === 'masterKey' && needsMasterKeySetup && !masterKey) {
+      masterKeySetupDismissedRef.current = true;
+    }
     handleTogglePanelVisibility(panelId, false);
-  }, [handleTogglePanelVisibility]);
+  }, [handleTogglePanelVisibility, needsMasterKeySetup, masterKey]);
+
+  // Soft setup: mostrar panel Home de clave maestra (no modal bloqueante)
+  useEffect(() => {
+    const showSetup = needsMasterKeySetup && !masterKey;
+    if (!showSetup) {
+      masterKeySetupDismissedRef.current = false;
+      if (masterKey && panelsLayoutRef.current?.masterKey?.visible) {
+        handleTogglePanelVisibility('masterKey', false);
+      }
+      return undefined;
+    }
+
+    const reveal = () => {
+      masterKeySetupDismissedRef.current = false;
+      setPanelsLayout((prev) => {
+        const cur = prev?.masterKey;
+        const needsResize = !cur?.visible
+          || Number(cur.width) < 460
+          || Number(cur.height) < 600;
+        if (cur?.visible && !needsResize) return prev;
+        const w = mainAreaRef.current?.offsetWidth || prev.canvasWidth || 1200;
+        const h = mainAreaRef.current?.offsetHeight || prev.canvasHeight || 800;
+        return commitAuthoredLayout(placeMasterKeySetupPanel(prev, w, h));
+      });
+    };
+
+    if (!masterKeySetupDismissedRef.current) {
+      reveal();
+    }
+
+    const onFocusSetup = () => reveal();
+    window.addEventListener('focus-master-key-setup', onFocusSetup);
+    return () => window.removeEventListener('focus-master-key-setup', onFocusSetup);
+  }, [needsMasterKeySetup, masterKey, handleTogglePanelVisibility, commitAuthoredLayout]);
 
   const handleToggleMaximizePanel = useCallback((panelId) => {
     setPanelsLayout((prev) => {
@@ -2324,6 +2388,8 @@ const HomeTab = ({
                   sidebarNodes={sidebarNodes}
                   masterKey={masterKey}
                   secureStorage={secureStorage}
+                  needsMasterKeySetup={needsMasterKeySetup}
+                  onMasterKeySetupSuccess={onMasterKeySetupSuccess}
                   isActiveTab={isActiveTab}
                   terminalView={terminalView}
                   onTerminalToggle={handleTerminalToggle}

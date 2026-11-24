@@ -18,7 +18,7 @@ const ImportWizardDialog = lazy(() => import('../ImportWizardDialog'));
  */
 export const AppModals = ({
   children,
-  // Unlock props
+  // Unlock / first-run setup props
   needsUnlock,
   handleUnlockSuccess,
   secureStorage,
@@ -69,7 +69,7 @@ export const AppModals = ({
 }) => {
   return (
     <>
-      {/* UnlockDialog - Pide master password al inicio si existe */}
+      {/* Unlock solo si ya hay vault cifrado. Setup de clave = panel Home (no modal). */}
       <UnlockDialog
         visible={needsUnlock && !showCloudRestoreMasterKey}
         onSuccess={handleUnlockSuccess}

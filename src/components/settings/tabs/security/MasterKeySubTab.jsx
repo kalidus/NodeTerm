@@ -10,6 +10,7 @@ import { appConfirm } from '../../../ui/AppConfirm';
 const MasterKeySubTab = ({
   onMasterPasswordConfigured,
   onMasterPasswordChanged,
+  onMasterKeyWiped,
   showToast
 }) => {
   const { t } = useTranslation('settings');
@@ -126,24 +127,28 @@ const MasterKeySubTab = ({
 
   const handleRemoveMasterKey = async () => {
     const ok = await appConfirm({
-      message: '¿Estás seguro de que quieres eliminar la clave maestra? Esto eliminará todas las sesiones guardadas de forma segura.',
-      header: 'Confirmar',
+      message:
+        'Se borrarán permanentemente la clave maestra y todos los datos cifrados locales (conexiones, contraseñas, notas y sesiones). No se pueden recuperar. ¿Continuar?',
+      header: 'Eliminar vault',
       severity: 'danger',
-      acceptLabel: 'Aceptar',
+      acceptLabel: 'Eliminar todo',
       rejectLabel: 'Cancelar'
     });
     if (!ok) return;
 
     try {
-      await secureStorage.clearMasterKey();
+      await secureStorage.wipeAllVaultData();
       setHasMasterKey(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-      showToast?.('info', 'Información', 'Clave maestra eliminada');
+      setMasterPassword('');
+      setConfirmPassword('');
+      // Toast + needsMasterKeySetup: evento vault-data-wiped (useVaultSession)
+      onMasterKeyWiped?.();
     } catch (error) {
       console.error('Error eliminando clave maestra:', error);
-      showToast?.('error', 'Error', 'Error al eliminar la clave maestra');
+      showToast?.('error', 'Error', error?.message || 'Error al eliminar la clave maestra');
     }
   };
 

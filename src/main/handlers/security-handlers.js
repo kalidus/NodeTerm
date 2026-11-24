@@ -1,9 +1,18 @@
 const { ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { getNodeTermDataDir } = require('../utils/file-utils');
+const {
+  getNodeTermDataDir,
+  serializeAppDataFile,
+  parseAppDataFileContent
+} = require('../utils/file-utils');
 const { VAULT_SECURITY_VERSION } = require('../services/vault-security-migrations');
 const { DEFAULT_VAULT_ID } = require('../../shared/vault-connection-trees');
+const {
+  wipeAllVaultSidecarsOnDisk,
+  stripVaultKeysFromObject,
+  listAllVaultSidecarKeys
+} = require('../utils/vault-sidecar');
 
 function getSecurityConfigPath() {
   if (process.env.NODETERM_TEST_DATA_DIR) {
@@ -349,6 +358,54 @@ function registerSecurityHandlers(dependencies) {
       return { success: true };
     } catch (error) {
       console.error('❌ [Security] Error borrando clave maestra:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  /**
+   * Wipe destructivo: clave maestra + sidecars + blobs embebidos en app-data.
+   * No recupera datos; deja la app lista para MasterKeySetup.
+   */
+  safeHandle('security:wipe-vault-data', async () => {
+    try {
+      const config = readSecurityConfig();
+      delete config.masterKey;
+      delete config.masterKeyEncrypted;
+      delete config.vaultVerifier;
+      delete config.rememberPassword;
+      delete config.vaults;
+      writeSecurityConfig(config);
+
+      const sidecarResult = wipeAllVaultSidecarsOnDisk();
+
+      const appDataPath = process.env.NODETERM_TEST_DATA_DIR
+        ? path.join(process.env.NODETERM_TEST_DATA_DIR, 'app-data.json')
+        : path.join(getNodeTermDataDir(), 'app-data.json');
+
+      if (fs.existsSync(appDataPath)) {
+        try {
+          const raw = fs.readFileSync(appDataPath, 'utf8');
+          const parsed = parseAppDataFileContent(raw) || {};
+          const cleaned = stripVaultKeysFromObject(parsed, listAllVaultSidecarKeys(parsed));
+          delete cleaned.nodeterm_vault_stamps;
+          delete cleaned.documentManagerNodes;
+          delete cleaned.passwordManagerNodes;
+          delete cleaned.basicapp2_tree_data;
+          delete cleaned.nodeterm_master_key;
+          delete cleaned.nodeterm_remember_password;
+          delete cleaned.nodeterm_secure_sessions;
+          fs.writeFileSync(appDataPath, serializeAppDataFile(cleaned), {
+            encoding: 'utf8',
+            mode: 0o600
+          });
+        } catch (appDataErr) {
+          console.warn('[Security] wipe app-data.json:', appDataErr.message || appDataErr);
+        }
+      }
+
+      return { success: true, sidecars: sidecarResult };
+    } catch (error) {
+      console.error('❌ [Security] Error en wipe-vault-data:', error);
       return { success: false, error: error.message };
     }
   });

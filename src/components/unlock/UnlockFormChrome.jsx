@@ -277,12 +277,18 @@ export function UnlockActions({
   canSubmit,
   onConfirm,
   previewMode,
-  onHide
+  onHide,
+  onStartFresh,
+  wiping = false
 }) {
   const { t } = useTranslation();
   const spec = CTA_COPY[variant] || CTA_COPY.classic;
   const confirmLabel = spec.key ? t(spec.key, spec.fallback) : spec.fallback;
   const closeLabel = t('common.buttons.close', 'Cerrar');
+  const startFreshLabel = t(
+    'dialogs.unlock.startFresh',
+    'Empezar de cero'
+  );
 
   return (
     <div className={`unlock-actions unlock-actions--${variant}`}>
@@ -296,13 +302,23 @@ export function UnlockActions({
         type="button"
         className={`unlock-cta unlock-cta--${variant}`}
         onClick={onConfirm}
-        disabled={!canSubmit || loading}
+        disabled={!canSubmit || loading || wiping}
       >
         {loading ? '…' : confirmLabel}
       </button>
       {previewMode && variant !== 'premium-card' ? (
         <button type="button" className="unlock-cta-ghost" onClick={onHide}>
           {closeLabel}
+        </button>
+      ) : null}
+      {!previewMode && typeof onStartFresh === 'function' ? (
+        <button
+          type="button"
+          className="unlock-cta-ghost unlock-start-fresh"
+          onClick={onStartFresh}
+          disabled={loading || wiping}
+        >
+          {wiping ? '…' : startFreshLabel}
         </button>
       ) : null}
     </div>
@@ -322,10 +338,12 @@ export function UnlockFormBlock(props) {
     error,
     loading,
     previewMode,
-    onHide
+    onHide,
+    onStartFresh,
+    wiping
   } = props;
 
-  const canSubmit = !!password && preferenceReady && !loading;
+  const canSubmit = !!password && preferenceReady && !loading && !wiping;
 
   return (
     <div className={`unlock-form unlock-form--${variant}`}>
@@ -335,7 +353,7 @@ export function UnlockFormBlock(props) {
         passwordId={passwordId}
         password={password}
         onPasswordChange={onPasswordChange}
-        preferenceReady={preferenceReady}
+        preferenceReady={preferenceReady && !wiping}
         onSubmit={onConfirm}
       />
       <UnlockRemember
@@ -343,7 +361,7 @@ export function UnlockFormBlock(props) {
         passwordId={passwordId}
         rememberPassword={rememberPassword}
         onRememberChange={onRememberChange}
-        preferenceReady={preferenceReady}
+        preferenceReady={preferenceReady && !wiping}
       />
       <UnlockActions
         variant={variant}
@@ -352,6 +370,8 @@ export function UnlockFormBlock(props) {
         onConfirm={onConfirm}
         previewMode={previewMode}
         onHide={onHide}
+        onStartFresh={onStartFresh}
+        wiping={wiping}
       />
     </div>
   );

@@ -44,7 +44,9 @@ export default function UnlockScreen({
   onConfirm,
   onHide,
   previewMode = false,
-  passwordId = 'unlock-password'
+  passwordId = 'unlock-password',
+  onStartFresh,
+  wiping = false
 }) {
   const styleId = normalizeUnlockStyle(styleProp);
 
@@ -72,7 +74,9 @@ export default function UnlockScreen({
     loading,
     previewMode,
     onHide,
-    passwordId
+    passwordId,
+    onStartFresh,
+    wiping
   };
 
   return <Layout {...shared} />;

@@ -11,8 +11,35 @@ const {
 
 const VAULT_STAMPS_LS = 'nodeterm_vault_stamps';
 
+/** Tras wipe destructivo: no rehidratar vaults desde sync hasta crear clave nueva. */
+const VAULT_WIPE_PENDING_SETUP_KEY = 'nodeterm_vault_wipe_pending_setup';
+
 /** Payload cifrado por debajo de esto se considera "tiny" (p. ej. encrypt([])). */
 const VAULT_TINY_PAYLOAD_CHARS = 2048;
+
+function isVaultWipePendingSetup() {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem(VAULT_WIPE_PENDING_SETUP_KEY) === '1';
+    }
+  } catch (_) {
+    /* noop */
+  }
+  return false;
+}
+
+function setVaultWipePendingSetup(pending) {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (pending) {
+      sessionStorage.setItem(VAULT_WIPE_PENDING_SETUP_KEY, '1');
+    } else {
+      sessionStorage.removeItem(VAULT_WIPE_PENDING_SETUP_KEY);
+    }
+  } catch (_) {
+    /* noop */
+  }
+}
 
 function isTinyVaultPayload(str) {
   return typeof str === 'string' && str.length > 0 && str.length < VAULT_TINY_PAYLOAD_CHARS;
@@ -74,8 +101,11 @@ function setVaultEncryptedItem(key, encStr, options = {}) {
 module.exports = {
   VAULT_TINY_PAYLOAD_CHARS,
   VAULT_STAMPS_LS,
+  VAULT_WIPE_PENDING_SETUP_KEY,
   isTinyVaultPayload,
   vaultLocalNeedsSyncWait,
   invalidateVaultStamp,
-  setVaultEncryptedItem
+  setVaultEncryptedItem,
+  isVaultWipePendingSetup,
+  setVaultWipePendingSetup
 };
