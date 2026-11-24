@@ -38,6 +38,7 @@ import {
 	HomeSessionsPanel,
 	HomeVaultPanel,
 	HomeMasterKeySetupPanel,
+	HomeUnlockPanel,
 	HomeNotesPanel,
 	HomeGroupWorkspacePanel,
 	HomeReleaseNotesPanel,
@@ -63,6 +64,9 @@ const ConnectionHistory = ({
 	secureStorage = null,
 	needsMasterKeySetup = false,
 	onMasterKeySetupSuccess = null,
+	needsUnlock = false,
+	onVaultUnlockSuccess = null,
+	unlockHint = '',
 	terminalView = false,
 	onTerminalToggle = null,
 	localLinuxTerminalTheme,
@@ -935,9 +939,9 @@ const ConnectionHistory = ({
 				onResizeEnd={onPanelResizeEnd}
 				minWidth={opts.minWidth || 220}
 				minHeight={opts.minHeight || 140}
-				hideHeader={hideNonTerminalHeaders}
+				hideHeader={opts.hideHeader != null ? opts.hideHeader : hideNonTerminalHeaders}
 				className={`recents-terminal-frame ${opts.className || ''}`}
-				frameBackground={panelFrameBg}
+				frameBackground={opts.frameBackground != null ? opts.frameBackground : panelFrameBg}
 			>
 				{content}
 			</HomePanelWrapper>
@@ -1252,6 +1256,26 @@ const ConnectionHistory = ({
 							minWidth: 420,
 							minHeight: 520,
 							titleIcon: <i className="pi pi-shield" style={{ color: '#34d399', fontSize: '0.8rem' }} />
+						}
+					)}
+					{wrapHomePanel(
+						'unlock',
+						'~/unlock',
+						'security · desbloquear',
+						(
+							<HomeUnlockPanel
+								secureStorage={secureStorage}
+								onSuccess={onVaultUnlockSuccess}
+								hint={unlockHint}
+							/>
+						),
+						{
+							minWidth: 420,
+							minHeight: 520,
+							hideHeader: true,
+							frameBackground: 'transparent',
+							className: 'home-panel-unlock',
+							titleIcon: <i className="pi pi-lock" style={{ color: '#38bdf8', fontSize: '0.8rem' }} />
 						}
 					)}
 					{wrapHomePanel('notes', '~/notes', 'notes · rapidas', <HomeNotesPanel documentNodes={documentNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-file" style={{ color: '#64b5f6', fontSize: '0.8rem' }} /> })}

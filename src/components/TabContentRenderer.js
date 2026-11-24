@@ -166,6 +166,9 @@ const TabContentRendererInner = React.memo(({
   secureStorage,
   needsMasterKeySetup,
   onMasterKeySetupSuccess,
+  needsUnlock,
+  onVaultUnlockSuccess,
+  unlockHint,
   // Para Quick Actions
   onStartRecording,
   onStopRecording,
@@ -223,6 +226,9 @@ const TabContentRendererInner = React.memo(({
         secureStorage={secureStorage}
         needsMasterKeySetup={needsMasterKeySetup}
         onMasterKeySetupSuccess={onMasterKeySetupSuccess}
+        needsUnlock={needsUnlock}
+        onVaultUnlockSuccess={onVaultUnlockSuccess}
+        unlockHint={unlockHint}
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         terminalRefs={terminalRefs}
       />

@@ -94,6 +94,19 @@ export const HOME_WIDGETS = [
     defaultHeight: 720
   },
   {
+    id: 'unlock',
+    title: 'Desbloquear',
+    path: 'unlock',
+    icon: 'pi pi-lock-open',
+    required: false,
+    group: 'conexiones',
+    defaultVisible: false,
+    minWidth: 420,
+    minHeight: 520,
+    defaultWidth: 520,
+    defaultHeight: 720
+  },
+  {
     id: 'notes',
     title: 'Notas rapidas',
     path: 'notes',

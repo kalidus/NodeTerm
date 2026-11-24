@@ -1636,6 +1636,61 @@ body.theme-transitioning .content-main {
   opacity: 0.3;
 }
 
+.sidebar-vault-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 1.25rem 1rem;
+  padding: 1rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(8, 17, 40, 0.55);
+  color: var(--text-color, #e5e7eb);
+}
+
+.sidebar-vault-locked-icon {
+  font-size: 1.4rem;
+  color: #38bdf8;
+}
+
+.sidebar-vault-locked p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.sidebar-vault-locked-cta {
+  margin-top: 0.35rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  background: rgba(56, 189, 248, 0.18);
+  color: inherit;
+}
+
+.home-unlock-panel,
+.home-unlock-embed {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 0.75rem 0.85rem 1rem;
+}
+
+.home-unlock-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.home-unlock-subtitle,
+.home-unlock-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  opacity: 0.8;
+}
+
 /* ═══════════════════════════════════════════════════════
    SIDEBAR RAIL SVG ICONS STYLING
    ═══════════════════════════════════════════════════════ */

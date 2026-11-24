@@ -2067,6 +2067,9 @@ const App = () => {
     await waitForVaultSyncIfNeeded('connections_encrypted', 5000);
 
     const encryptedData = localStorage.getItem('connections_encrypted');
+    if (!masterKey && encryptedData) {
+      return [];
+    }
     const cache = readConnectionDecryptCache();
     const isCacheHit =
       encryptedData &&
@@ -2252,12 +2255,19 @@ const App = () => {
     } catch (error) {
       console.error('Error loading nodes:', error);
       isExternalReloadRef.current = true;
-      setNodes(getDefaultNodes());
+      const locked = !masterKey && (
+        localStorage.getItem('connections_encrypted')
+        || localStorage.getItem('passwords_encrypted')
+        || localStorage.getItem('documents_encrypted')
+      );
+      setNodes(locked ? [] : getDefaultNodes());
       hasLoadedNodesRef.current = true;
     } finally {
-      const hasEncrypted = localStorage.getItem('connections_encrypted');
+      const hasEncrypted = localStorage.getItem('connections_encrypted')
+        || localStorage.getItem('passwords_encrypted')
+        || localStorage.getItem('documents_encrypted');
       if (hasEncrypted && !masterKey) {
-        // Seguir en skeleton hasta desbloquear
+        setIsLoadingConnections(false);
       } else if (
         window.electron?.appdata &&
         !localStorageSyncService._initialized &&
@@ -2808,6 +2818,7 @@ const App = () => {
     // Encriptación
     masterKey,
     secureStorage,
+    vaultLocked: Boolean((needsUnlock || showCloudRestoreMasterKey) && !masterKey),
 
     // Tema del árbol
     treeTheme,
@@ -2843,7 +2854,7 @@ const App = () => {
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,
 
     // Dependencias de encriptación
-    masterKey, secureStorage,
+    masterKey, secureStorage, needsUnlock, showCloudRestoreMasterKey,
 
     // Dependencias de diálogos
     setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard,
@@ -2928,6 +2939,13 @@ const App = () => {
     secureStorage,
     needsMasterKeySetup,
     onMasterKeySetupSuccess: handleMasterKeySetupSuccess,
+    needsUnlock: needsUnlock || showCloudRestoreMasterKey,
+    onVaultUnlockSuccess: showCloudRestoreMasterKey
+      ? handleCloudRestoreMasterKeySuccess
+      : handleUnlockSuccess,
+    unlockHint: showCloudRestoreMasterKey
+      ? 'Hay un backup cifrado. Usa la misma clave maestra para verlo.'
+      : '',
     // Edit connection tab handlers
     onOpenFileConnection,
     handleSaveSshToSidebar,
@@ -2945,6 +2963,7 @@ const App = () => {
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
     masterKey, secureStorage, needsMasterKeySetup, handleMasterKeySetupSuccess,
+    needsUnlock, showCloudRestoreMasterKey, handleUnlockSuccess, handleCloudRestoreMasterKeySuccess,
     handleSaveSshToSidebar, handleSaveRdpToSidebar, handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar, handleSaveSSHTunnelToSidebar, handleTabClose
   ]);

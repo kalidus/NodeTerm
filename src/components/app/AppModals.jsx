@@ -1,6 +1,4 @@
 import React, { Suspense, lazy } from 'react';
-import UnlockDialog from '../UnlockDialog';
-import CloudRestoreMasterKeyDialog from '../CloudRestoreMasterKeyDialog';
 import ConnectionSearchPalette from '../ConnectionSearchPalette';
 import WallixRefreshDialog from '../WallixRefreshDialog';
 import { ConfirmDialog } from 'primereact/confirmdialog';
@@ -18,14 +16,7 @@ const ImportWizardDialog = lazy(() => import('../ImportWizardDialog'));
  */
 export const AppModals = ({
   children,
-  // Unlock / first-run setup props
-  needsUnlock,
-  handleUnlockSuccess,
   secureStorage,
-  showCloudRestoreMasterKey,
-  cloudRestoreVaults,
-  handleCloudRestoreMasterKeySuccess,
-  setShowCloudRestoreMasterKey,
 
   // Connection search palette props
   connectionSearchPaletteOpen,
@@ -69,23 +60,8 @@ export const AppModals = ({
 }) => {
   return (
     <>
-      {/* Unlock solo si ya hay vault cifrado. Setup de clave = panel Home (no modal). */}
-      <UnlockDialog
-        visible={needsUnlock && !showCloudRestoreMasterKey}
-        onSuccess={handleUnlockSuccess}
-        secureStorage={secureStorage}
-      />
-
-      <CloudRestoreMasterKeyDialog
-        visible={showCloudRestoreMasterKey}
-        secureStorage={secureStorage}
-        vaultsDownloaded={cloudRestoreVaults}
-        onSuccess={handleCloudRestoreMasterKeySuccess}
-        onHide={() => setShowCloudRestoreMasterKey(false)}
-      />
-
       <ConnectionSearchPalette
-        open={connectionSearchPaletteOpen && !needsUnlock}
+        open={connectionSearchPaletteOpen}
         onClose={closeConnectionSearchPalette}
         sidebarFilter={sidebarFilter}
         setSidebarFilter={setSidebarFilter}

@@ -11,6 +11,7 @@ export { default as HomeJumpRow } from './components/HomeJumpRow';
 export { default as HomeSessionsPanel } from './components/HomeSessionsPanel';
 export { default as HomeVaultPanel } from './components/HomeVaultPanel';
 export { default as HomeMasterKeySetupPanel } from './components/HomeMasterKeySetupPanel';
+export { default as HomeUnlockPanel } from './components/HomeUnlockPanel';
 export { default as HomeNotesPanel } from './components/HomeNotesPanel';
 export { default as HomeGroupWorkspacePanel } from './components/HomeGroupWorkspacePanel';
 export { default as HomeReleaseNotesPanel } from './components/HomeReleaseNotesPanel';

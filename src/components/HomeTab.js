@@ -122,6 +122,30 @@ function placeMasterKeySetupPanel(layout, canvasW, canvasH) {
   };
 }
 
+function placeUnlockPanel(layout, canvasW, canvasH, zIndex) {
+  const w = canvasW > 100 ? canvasW : 1200;
+  const h = canvasH > 100 ? canvasH : 800;
+  const pad = 16;
+  const width = Math.min(540, Math.max(460, Math.floor(w * 0.4)));
+  const height = Math.min(760, Math.max(620, Math.floor(h * 0.88)));
+  return {
+    ...layout,
+    unlock: {
+      ...(layout.unlock || {}),
+      visible: true,
+      x: Math.max(pad, Math.floor((w - width) / 2)),
+      y: Math.max(pad, Math.floor((h - height) / 2)),
+      width,
+      height,
+      minWidth: 420,
+      minHeight: 520,
+      zIndex: zIndex || allocHomePanelZ(),
+      isMaximized: false,
+      isMinimized: false
+    }
+  };
+}
+
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
   const w = cWidth > 100 ? cWidth : 1200;
   const h = cHeight > 100 ? cHeight : 800;
@@ -369,6 +393,9 @@ const HomeTab = ({
   secureStorage = null,
   needsMasterKeySetup = false,
   onMasterKeySetupSuccess = null,
+  needsUnlock = false,
+  onVaultUnlockSuccess = null,
+  unlockHint = '',
   isMinimalMode = false,
   titleBarCollapsed = false,
   tabBarCollapsed = false,
@@ -608,6 +635,7 @@ const HomeTab = ({
   const smartSnapRef = useRef(smartSnap);
   smartSnapRef.current = smartSnap;
   const masterKeySetupDismissedRef = useRef(false);
+  const unlockDismissedRef = useRef(false);
   const [newPresetName, setNewPresetName] = useState('');
   const lastDisplayKeyRef = useRef(getCurrentDisplayKey());
   const layoutSyncLockRef = useRef(0);
@@ -976,8 +1004,11 @@ const HomeTab = ({
     if (panelId === 'masterKey' && needsMasterKeySetup && !masterKey) {
       masterKeySetupDismissedRef.current = true;
     }
+    if (panelId === 'unlock' && needsUnlock && !masterKey) {
+      unlockDismissedRef.current = true;
+    }
     handleTogglePanelVisibility(panelId, false);
-  }, [handleTogglePanelVisibility, needsMasterKeySetup, masterKey]);
+  }, [handleTogglePanelVisibility, needsMasterKeySetup, needsUnlock, masterKey]);
 
   // Soft setup: mostrar panel Home de clave maestra (no modal bloqueante)
   useEffect(() => {
@@ -1012,6 +1043,45 @@ const HomeTab = ({
     window.addEventListener('focus-master-key-setup', onFocusSetup);
     return () => window.removeEventListener('focus-master-key-setup', onFocusSetup);
   }, [needsMasterKeySetup, masterKey, handleTogglePanelVisibility, commitAuthoredLayout]);
+
+  useEffect(() => {
+    const showUnlock = needsUnlock && !masterKey;
+    if (!showUnlock) {
+      unlockDismissedRef.current = false;
+      if (masterKey && panelsLayoutRef.current?.unlock?.visible) {
+        handleTogglePanelVisibility('unlock', false);
+      }
+      return undefined;
+    }
+
+    const reveal = () => {
+      unlockDismissedRef.current = false;
+      setPanelsLayout((prev) => {
+        const cur = prev?.unlock;
+        const z = allocHomePanelZ();
+        const needsResize = !cur?.visible
+          || Number(cur.width) < 460
+          || Number(cur.height) < 600;
+        if (cur?.visible && !needsResize) {
+          return commitAuthoredLayout({
+            ...prev,
+            unlock: { ...cur, visible: true, zIndex: z, isMinimized: false }
+          });
+        }
+        const w = mainAreaRef.current?.offsetWidth || prev.canvasWidth || 1200;
+        const h = mainAreaRef.current?.offsetHeight || prev.canvasHeight || 800;
+        return commitAuthoredLayout(placeUnlockPanel(prev, w, h, z));
+      });
+    };
+
+    if (!unlockDismissedRef.current) {
+      reveal();
+    }
+
+    const onFocusUnlock = () => reveal();
+    window.addEventListener('focus-vault-unlock', onFocusUnlock);
+    return () => window.removeEventListener('focus-vault-unlock', onFocusUnlock);
+  }, [needsUnlock, masterKey, handleTogglePanelVisibility, commitAuthoredLayout]);
 
   const handleToggleMaximizePanel = useCallback((panelId) => {
     setPanelsLayout((prev) => {
@@ -2390,6 +2460,9 @@ const HomeTab = ({
                   secureStorage={secureStorage}
                   needsMasterKeySetup={needsMasterKeySetup}
                   onMasterKeySetupSuccess={onMasterKeySetupSuccess}
+                  needsUnlock={needsUnlock}
+                  onVaultUnlockSuccess={onVaultUnlockSuccess}
+                  unlockHint={unlockHint}
                   isActiveTab={isActiveTab}
                   terminalView={terminalView}
                   onTerminalToggle={handleTerminalToggle}

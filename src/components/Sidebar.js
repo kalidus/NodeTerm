@@ -76,6 +76,7 @@ import { requestNextVaultShrink } from '../utils/vaultAllowShrink';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
 import SidebarSkeleton from './sidebar/SidebarSkeleton';
+import SidebarVaultLocked from './sidebar/SidebarVaultLocked';
 import { getCachedIcon, clearSidebarIconCaches } from './sidebar/iconCache';
 import {
   modifySVGColors,
@@ -176,6 +177,7 @@ const Sidebar = React.memo(({
   // Encriptación
   masterKey,
   secureStorage,
+  vaultLocked = false,
 
 
   // Filtro de búsqueda desde TitleBar
@@ -3215,7 +3217,12 @@ const Sidebar = React.memo(({
           onDrop={stopTreeDragInteraction}
           onDragEnd={stopTreeDragInteraction}
         >
-          {isLoading ? (
+          {vaultLocked ? (
+            <SidebarVaultLocked
+              title="Conexiones cifradas"
+              detail="El árbol está cifrado. Desbloquea en Home para verlo."
+            />
+          ) : isLoading ? (
             <SidebarSkeleton />
           ) : connectionsLayout !== 'tree' ? (
             <ConnectionsBrowser
@@ -3410,6 +3417,12 @@ const Sidebar = React.memo(({
 
       {(viewMode === 'passwords' || mountedSidebarViews.has('passwords')) && (
       <div style={{ display: viewMode === 'passwords' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        {vaultLocked ? (
+          <SidebarVaultLocked
+            title="Contraseñas cifradas"
+            detail="El vault de secretos está cifrado. Desbloquea en Home."
+          />
+        ) : (
         <Suspense fallback={<TabChunkFallback />}>
           <LazyPasswordManagerSidebar
             nodes={nodes}
@@ -3439,11 +3452,18 @@ const Sidebar = React.memo(({
             onSessionOpened={notifySessionOpened}
           />
         </Suspense>
+        )}
       </div>
       )}
 
       {(viewMode === 'documents' || mountedSidebarViews.has('documents')) && (
       <div style={{ display: viewMode === 'documents' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        {vaultLocked ? (
+          <SidebarVaultLocked
+            title="Notas cifradas"
+            detail="Las notas están cifradas. Desbloquea en Home."
+          />
+        ) : (
         <Suspense fallback={<TabChunkFallback />}>
           <LazyDocumentsSidebar
             showToast={showToast}
@@ -3472,6 +3492,7 @@ const Sidebar = React.memo(({
             onSessionOpened={notifySessionOpened}
           />
         </Suspense>
+        )}
       </div>
       )}
 
