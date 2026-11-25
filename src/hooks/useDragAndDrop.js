@@ -1,5 +1,33 @@
 import { useState } from 'react';
 import { requestTabDetach } from '../utils/tabDragDetach';
+import { pointerLeftWindow } from '../utils/tabDragExit';
+
+function isLinuxDragHost() {
+  return typeof window !== 'undefined' && window.electron?.platform === 'linux';
+}
+
+let linuxExitListener = null;
+
+function clearLinuxExitWatch() {
+  if (typeof document !== 'undefined' && linuxExitListener) {
+    document.removeEventListener('dragleave', linuxExitListener, true);
+  }
+  linuxExitListener = null;
+}
+
+function watchLinuxTabExit() {
+  clearLinuxExitWatch();
+  if (!isLinuxDragHost() || typeof document === 'undefined') return;
+  linuxExitListener = (event) => {
+    const exit = pointerLeftWindow(event, {
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    if (!exit) return;
+    window._nodetermTabExit = exit;
+  };
+  document.addEventListener('dragleave', linuxExitListener, true);
+}
 
 // Almacenamiento global para el nodo SSH que se está arrastrando desde la sidebar
 // Esto es necesario porque PrimeReact Tree no expone correctamente el dataTransfer
@@ -21,6 +49,8 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
 
   // Funciones para drag & drop de pestañas
   const handleTabDragStart = (e, tabIndex) => {
+    clearLinuxExitWatch();
+    window._nodetermTabExit = null;
     if (!getFilteredTabs) return;
 
     const filtered = getFilteredTabs();
@@ -46,8 +76,11 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
       e.dataTransfer.setData('application/x-nodeterm-tab-key', tab.key);
       window._nodetermDraggedTabKey = tab.key;
       window._nodetermTabDropHandled = false;
-      // Escudo fullscreen: cursor "move" fuera de NodeTerm (no 🚫).
+      window._nodetermTabExit = null;
+      // Escudo fullscreen en Windows/macOS: cursor "move" fuera de NodeTerm.
+      // En Linux el drag muere al cruzar el borde; la salida se anota en dragleave.
       try { window.electron?.tabViews?.beginExternalDrag?.(); } catch (_) { /* noop */ }
+      watchLinuxTabExit();
     }
   };
 
@@ -270,7 +303,10 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
   const handleTabDragEnd = () => {
     const tabKey = window._nodetermDraggedTabKey;
     const dropHandled = !!window._nodetermTabDropHandled;
+    const exit = window._nodetermTabExit;
     window._nodetermTabDropHandled = false;
+    window._nodetermTabExit = null;
+    clearLinuxExitWatch();
     if (dragStartTimer) {
       clearTimeout(dragStartTimer);
       setDragStartTimer(null);
@@ -280,7 +316,14 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     draggedSSHNodeRef.current = null;
     window._nodetermDraggedTabKey = null;
     try { window.electron?.tabViews?.endExternalDrag?.(); } catch (_) { /* noop */ }
-    if (tabKey && !dropHandled) requestTabDetach(tabKey);
+    if (tabKey && !dropHandled) {
+      requestTabDetach(tabKey, exit ? {
+        forceOutside: true,
+        edge: exit.edge,
+        clientX: exit.clientX,
+        clientY: exit.clientY
+      } : undefined);
+    }
   };
 
   return {

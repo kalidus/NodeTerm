@@ -3,6 +3,7 @@
 const { ipcMain, BrowserWindow, screen } = require('electron');
 const registry = require('../services/TabViewRegistry');
 const tabDragShield = require('../services/TabDragShield');
+const { resolveDetachPoint } = require('../../utils/tabDragExit');
 
 function senderWindow(event) {
   try {
@@ -65,14 +66,19 @@ function registerTabViewHandlers() {
     const other = registry.shellUnderPoint(point.x, point.y, win);
     const main = registry.getMain();
     const fromShell = registry.isDetachedShell(win);
+    // En Linux el cursor global sigue dentro al cruzar el borde. Solo la ventana
+    // principal puede crear un shell con ese atajo; un flotante sigue el hit-test.
+    const honorForce = !!(payload && payload.forceOutside) && !fromShell;
 
+    let bounds = null;
     let outside = true;
     if (win && !win.isDestroyed()) {
-      const bounds = win.getBounds();
+      bounds = win.getBounds();
       outside = point.x < bounds.x || point.y < bounds.y
         || point.x > bounds.x + bounds.width
         || point.y > bounds.y + bounds.height;
     }
+    if (honorForce) outside = true;
     // Si el shell cubre main, el cursor puede seguir "dentro" del origen: permitir reintegrar.
     if (!outside && !other) return { ok: false, reason: 'inside' };
 
@@ -92,7 +98,8 @@ function registerTabViewHandlers() {
     // Por si el dragend del renderer no llegó a endExternalDrag.
     try { tabDragShield.end(); } catch (_) { /* noop */ }
 
-    const result = await registry.detach(tabKey, point.x, point.y);
+    const place = honorForce ? resolveDetachPoint(bounds, point, payload) : point;
+    const result = await registry.detach(tabKey, place.x, place.y);
     if (!result || result.ok === false) {
       if (!(result && result.reason === 'no-main')) {
         console.warn('[TabViews] No se desprendió la pestaña', tabKey, result && result.error);
@@ -142,10 +149,13 @@ function registerTabViewHandlers() {
   });
 
   // Escudo DnD solo desde la ventana principal (no desde shells flotantes).
+  // En Linux no se crea: WaylandDataDrag está desactivado y la ventana
+  // transparente a pantalla completa no alarga el drag, pero puede comerse clics.
   ipcMain.handle('tab-views:external-drag-begin', (event) => {
     const win = senderWindow(event);
     const main = registry.getMain();
     if (!win || !main || win !== main) return { ok: false, reason: 'not-main' };
+    if (process.platform === 'linux') return { ok: true, skipped: true };
     return tabDragShield.begin(main);
   });
 
