@@ -199,7 +199,9 @@ const SettingsContent = ({
   // Escuchar evento para abrir pestañas específicas desde otros componentes
   useEffect(() => {
     const handleOpenSettingsTab = (e) => {
-      const { tab, subTab } = e.detail || {};
+      const detail = e.detail || {};
+      const tab = detail.mainTab || detail.tab;
+      const { subTab } = detail;
       if (!tab) return;
 
       const tabMap = {

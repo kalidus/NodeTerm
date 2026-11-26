@@ -1057,8 +1057,31 @@ export const useGlobalAppEvents = ({
 
   // 16. Abrir configuración como pestaña
   useEffect(() => {
+    const MAIN_TAB_ALIASES = {
+      security: 'seguridad',
+      users: 'usuarios',
+      sync: 'sincronizacion',
+      appearance: 'apariencia',
+      updates: 'actualizaciones',
+      about: 'informacion',
+      ai: 'clientes-ia',
+      general: 'general',
+      rdp: 'rdp',
+      apps: 'apps',
+      cygwin: 'apps',
+      'import-export': 'importar-exportar',
+      import: 'importar-exportar',
+      export: 'importar-exportar',
+      'importar-exportar': 'importar-exportar',
+      integrations: 'integraciones',
+      integraciones: 'integraciones'
+    };
+
     const handleOpenSettingsTab = (event) => {
-      const { mainTab, subTab } = event.detail || {};
+      const detail = event.detail || {};
+      const rawMainTab = detail.mainTab || detail.tab;
+      const mainTab = rawMainTab ? (MAIN_TAB_ALIASES[rawMainTab] || rawMainTab) : undefined;
+      const subTab = rawMainTab === 'cygwin' && !detail.subTab ? 'cygwin' : detail.subTab;
       const allTabs = getAllTabs();
       const existing = allTabs.find(t => t.type === 'settings');
 

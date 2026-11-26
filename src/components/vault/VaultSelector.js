@@ -470,7 +470,7 @@ const VaultSelector = ({
                 setRenameId(null);
                 window.dispatchEvent(
                   new CustomEvent('open-settings-tab', {
-                    detail: { tab: 'security', subTab: 'vaults' }
+                    detail: { mainTab: 'seguridad', subTab: 'vaults' }
                   })
                 );
               }}
