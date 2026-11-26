@@ -210,6 +210,8 @@ class SSHKnownHostsService {
   }
 
   async rewriteKnownHostsFile() {
+    this.ensureFilePath();
+    await fs.promises.mkdir(path.dirname(this.filePath), { recursive: true });
     await fs.promises.writeFile(this.filePath, this.serializeKnownHostsContent(), 'utf8');
   }
 
@@ -305,8 +307,10 @@ class SSHKnownHostsService {
         if (fs.existsSync(this.filePath)) {
           const content = fs.readFileSync(this.filePath, 'utf8');
           this.parseContent(content);
+          this.loaded = true;
         }
-        this.loaded = true;
+        // Si known_hosts no existe, no marcar loaded: ensureLoaded() debe
+        // crear el directorio ssh/ antes del primer append/write.
       } catch (_) { /* noop */ }
     }
     const aliases = this.getHostAliases(host, port);
