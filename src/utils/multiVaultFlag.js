@@ -7,19 +7,17 @@ export const MULTI_VAULT_FLAG_KEY = 'nodeterm_experimental_multi_vault';
 
 export function isMultiVaultEnabled() {
   try {
-    return localStorage.getItem(MULTI_VAULT_FLAG_KEY) === 'true';
+    const raw = localStorage.getItem(MULTI_VAULT_FLAG_KEY);
+    if (raw === null) return true;
+    return raw === 'true';
   } catch (_) {
-    return false;
+    return true;
   }
 }
 
 export function setMultiVaultEnabled(enabled) {
   try {
-    if (enabled) {
-      localStorage.setItem(MULTI_VAULT_FLAG_KEY, 'true');
-    } else {
-      localStorage.removeItem(MULTI_VAULT_FLAG_KEY);
-    }
+    localStorage.setItem(MULTI_VAULT_FLAG_KEY, enabled ? 'true' : 'false');
   } catch (_) {
     /* noop */
   }

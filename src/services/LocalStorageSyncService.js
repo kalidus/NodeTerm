@@ -16,7 +16,7 @@ import {
 } from '../shared/vault-shrink-guard';
 import { isTinyVaultPayload, VAULT_STAMPS_LS } from '../shared/vault-write';
 import { DEFAULT_VAULT_ID, isConnectionVaultStorageKey } from '../shared/vault-connection-trees';
-import { MULTI_VAULT_FLAG_KEY } from '../utils/multiVaultFlag';
+import { isMultiVaultEnabled, MULTI_VAULT_FLAG_KEY } from '../utils/multiVaultFlag';
 import {
     ACTIVE_CONNECTION_VAULT_KEY,
     VISIBLE_CONNECTION_VAULTS_KEY
@@ -419,7 +419,7 @@ class LocalStorageSyncService {
             if (writtenKeys.includes(MULTI_VAULT_FLAG_KEY)) {
                 window.dispatchEvent(
                     new CustomEvent('multi-vault-flag-changed', {
-                        detail: { enabled: localStorage.getItem(MULTI_VAULT_FLAG_KEY) === 'true' }
+                        detail: { enabled: isMultiVaultEnabled() }
                     })
                 );
             }

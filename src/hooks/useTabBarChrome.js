@@ -12,6 +12,7 @@ import NodeTermAppIcon from '../components/NodeTermAppIcon';
 import LauncherQuickActions from '../components/home/LauncherQuickActions';
 import LauncherEmbeddedSidebar from '../components/home/LauncherEmbeddedSidebar';
 import { STORAGE_KEYS } from '../utils/constants';
+import { isLauncherSidebarOpen } from '../utils/homeTabDefaults';
 import { LAUNCHER_SESSION_OPENED_EVENT } from '../utils/launcherSidebarBridge';
 import {
   buildDefaultTerminalOptions,
@@ -52,15 +53,7 @@ const LAUNCHER_OVERLAY_SELECTOR = [
   '[data-pc-section="mask"]'
 ].join(',');
 
-const readLauncherSidebarOpen = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN);
-    if (raw === null) return true;
-    return raw === 'true';
-  } catch {
-    return true;
-  }
-};
+const readLauncherSidebarOpen = () => isLauncherSidebarOpen();
 
 const writeLauncherSidebarOpen = (open) => {
   try {

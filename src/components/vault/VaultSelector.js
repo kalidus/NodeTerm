@@ -21,12 +21,16 @@ const VaultSelector = ({
   visibleVaultIds,
   onToggleVault,
   onRequestUnlock,
-  onRequestCreate
+  onRequestCreate,
+  masterKey = null,
+  needsUnlock = false,
+  needsMasterKeySetup = false
 }) => {
   const [open, setOpen] = useState(false);
   const [vaults, setVaults] = useState([]);
   const [defaultVaultName, setDefaultVaultName] = useState('Principal');
   const [enabled, setEnabled] = useState(() => isMultiVaultEnabled());
+  const [, setKeyringVersion] = useState(0);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [renameId, setRenameId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
@@ -55,9 +59,13 @@ const VaultSelector = ({
     refresh();
     const off = window.electron?.vaults?.onChanged?.(refresh);
     const onFlag = () => refresh();
+    const onKeyringChange = () => {
+      setKeyringVersion((v) => v + 1);
+      refresh();
+    };
     window.addEventListener('multi-vault-flag-changed', onFlag);
     window.addEventListener('extra-vaults-reload', onFlag);
-    const unsub = vaultKeyring.subscribe?.(onFlag);
+    const unsub = vaultKeyring.subscribe?.(onKeyringChange);
     return () => {
       off?.();
       unsub?.();
@@ -116,9 +124,22 @@ const VaultSelector = ({
     return `${visible.length} vaults`;
   })();
 
-  const anyLocked = visible.some(
-    (id) => id !== DEFAULT_VAULT_ID && !vaultKeyring.isUnlocked(id)
-  );
+  const principalLocked = !masterKey;
+  const lockedExtraVaults = vaults.filter((v) => !vaultKeyring.isUnlocked(v.id));
+  const lockedNames = [
+    ...(principalLocked ? [defaultVaultName] : []),
+    ...lockedExtraVaults.map((v) => v.name || v.id)
+  ];
+  const lockedCount = lockedNames.length;
+  const anyLocked = lockedCount > 0;
+
+  const tooltip = (() => {
+    if (!anyLocked) return `Vaults visibles: ${label}`;
+    if (lockedCount === 1) {
+      return `Vault bloqueado: ${lockedNames[0]} · Visibles: ${label}`;
+    }
+    return `${lockedCount} vaults bloqueados (${lockedNames.join(', ')}) · Visibles: ${label}`;
+  })();
 
   const openMenu = (e) => {
     e.preventDefault();
@@ -146,6 +167,15 @@ const VaultSelector = ({
 
   const handleToggle = (vaultId, currentlyChecked) => {
     if (renameId) return;
+    if (vaultId === DEFAULT_VAULT_ID && principalLocked) {
+      setOpen(false);
+      setRenameId(null);
+      const evt = needsMasterKeySetup && !needsUnlock
+        ? 'focus-master-key-setup'
+        : 'focus-vault-unlock';
+      window.dispatchEvent(new CustomEvent(evt));
+      return;
+    }
     const nextChecked = !currentlyChecked;
     if (
       nextChecked &&
@@ -181,6 +211,15 @@ const VaultSelector = ({
   const handleUnlock = (e, vaultId) => {
     e.preventDefault();
     e.stopPropagation();
+    if (vaultId === DEFAULT_VAULT_ID) {
+      setOpen(false);
+      setRenameId(null);
+      const evt = needsMasterKeySetup && !needsUnlock
+        ? 'focus-master-key-setup'
+        : 'focus-vault-unlock';
+      window.dispatchEvent(new CustomEvent(evt));
+      return;
+    }
     const meta = vaults.find((v) => v.id === vaultId);
     onRequestUnlock?.({
       id: vaultId,
@@ -299,10 +338,14 @@ const VaultSelector = ({
           </>
         ) : (
           <>
-            {canLock && isLocked ? (
+            {isLocked ? (
               <button
                 type="button"
-                title="Desbloquear"
+                title={
+                  vaultId === DEFAULT_VAULT_ID && needsMasterKeySetup && !needsUnlock
+                    ? 'Configurar clave maestra'
+                    : 'Desbloquear'
+                }
                 aria-label={`Desbloquear ${title}`}
                 onClick={(e) => handleUnlock(e, vaultId)}
                 className="title-bar-vault-menu-icon-btn is-lock"
@@ -365,8 +408,8 @@ const VaultSelector = ({
           ref={btnRef}
           type="button"
           className={chipClassName}
-          title={`Vaults visibles: ${label}`}
-          aria-label={`Vaults visibles: ${label}`}
+          title={tooltip}
+          aria-label={tooltip}
           aria-haspopup="menu"
           aria-expanded={open}
           onMouseDown={(e) => {
@@ -376,6 +419,9 @@ const VaultSelector = ({
           style={noDrag}
         >
           <VaultSafeIcon size={18} />
+          {anyLocked && (
+            <span className="title-bar-vault-lock-dot" aria-hidden="true" />
+          )}
         </button>
       </div>
       <div className="title-bar-action-sep" aria-hidden="true" />
@@ -392,7 +438,7 @@ const VaultSelector = ({
               ...noDrag
             }}
           >
-            {renderCheckRow(DEFAULT_VAULT_ID, defaultVaultName, false, false)}
+            {renderCheckRow(DEFAULT_VAULT_ID, defaultVaultName, principalLocked, false)}
 
             {vaults.map((v) => {
               const isLocked = !vaultKeyring.isUnlocked(v.id);

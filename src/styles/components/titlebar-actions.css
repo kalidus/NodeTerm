@@ -365,12 +365,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-bar-update-btn.is-ready i {
+  .title-bar-update-btn.is-ready i,
+  .title-bar-vault-selector.is-locked .title-bar-vault-lock-dot,
+  .title-bar-vault-selector.is-locked .title-bar-vault-lock-dot::after {
     animation: none;
   }
 }
 
-/* Vault selector: same chrome as .title-bar-icon-btn, locked hint only */
+/* Vault selector: same chrome as .title-bar-icon-btn, alerta visual si algún vault está bloqueado */
 
 .title-bar-vault-selector {
   opacity: 0.88;
@@ -387,9 +389,57 @@
   display: block;
 }
 
+.title-bar .title-bar-vault-selector.is-locked,
 .title-bar-vault-selector.is-locked {
-  color: color-mix(in srgb, #f0c674 70%, var(--ui-titlebar-text, #fff));
-  opacity: 0.95;
+  color: #f59e0b !important;
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 45%, transparent);
+  opacity: 1;
+}
+
+.title-bar .title-bar-vault-selector.is-locked:hover,
+.title-bar-vault-selector.is-locked:hover,
+.title-bar .title-bar-vault-selector.is-locked.is-active,
+.title-bar-vault-selector.is-locked.is-active {
+  background: color-mix(in srgb, #f59e0b 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 65%, transparent);
+}
+
+.title-bar-vault-lock-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 1.5px var(--ui-titlebar-accent, #1a1d24);
+  pointer-events: none;
+}
+
+.title-bar-vault-lock-dot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid #f59e0b;
+  opacity: 0;
+  animation: titlebar-vault-lock-pulse 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes titlebar-vault-lock-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
 }
 
 .title-bar-vault-menu {

@@ -3103,6 +3103,8 @@ const App = () => {
           setShowImportExportDialog={setShowImportExportDialog}
           setShowImportWizard={setShowImportWizard}
           masterKey={masterKey}
+          needsUnlock={needsUnlock}
+          needsMasterKeySetup={needsMasterKeySetup}
           secureStorage={secureStorage}
           setImportPreset={setImportPreset}
           openEditSSHDialog={openEditSSHDialog}

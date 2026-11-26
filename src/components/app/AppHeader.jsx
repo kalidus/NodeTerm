@@ -19,6 +19,8 @@ export const AppHeader = ({
   setShowImportExportDialog,
   setShowImportWizard,
   masterKey,
+  needsUnlock = false,
+  needsMasterKeySetup = false,
   secureStorage,
   setImportPreset,
   openEditSSHDialog,
@@ -130,6 +132,8 @@ export const AppHeader = ({
       onShowImportExportDialog={setShowImportExportDialog}
       onShowImportWizard={setShowImportWizard}
       masterKey={masterKey}
+      needsUnlock={needsUnlock}
+      needsMasterKeySetup={needsMasterKeySetup}
       secureStorage={secureStorage}
       onOpenImportWithSource={handleOpenImportWithSource}
       openEditSSHDialog={openEditSSHDialog}

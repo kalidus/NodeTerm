@@ -2319,7 +2319,7 @@ const ImportWizardDialog = ({
                                         </div>
                                     ))}
                                 </div>
-                                {localStorage.getItem('nodeterm_experimental_multi_vault') === 'true' &&
+                                {isMultiVaultEnabled() &&
                                     nodetermOptions.connections &&
                                     !importIsAllVaultsBackup && (
                                     <div

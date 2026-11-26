@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from './constants.js';
 import { getPlatformDefaultTerminalType } from './defaultLocalTerminal.js';
+import { MULTI_VAULT_FLAG_KEY } from './multiVaultFlag.js';
 
 /**
  * Terminal local por defecto según plataforma (misma lógica que SettingsDialog).
@@ -44,6 +45,20 @@ export function isSidebarStartCollapsed() {
 }
 
 /**
+ * Lee si la sidebar del panel Launcher (menú de pestañas) abre expandida.
+ * Por defecto false (minimizada/oculta) en primera instalación.
+ */
+export function isLauncherSidebarOpen() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN);
+    if (raw === null) return false;
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Aplica preferencias de homepage solo en primer arranque (claves ausentes).
  * No sobrescribe valores ya guardados por el usuario o importaciones.
  */
@@ -58,7 +73,9 @@ export function applyFirstRunHomeTabDefaults() {
     [STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL]: getDefaultLocalTerminalType(),
     [STORAGE_KEYS.LOCK_HOME_BUTTON]: 'true',
     [STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED]: 'true',
-    [STORAGE_KEYS.SIDEBAR_START_COLLAPSED]: 'true'
+    [STORAGE_KEYS.SIDEBAR_START_COLLAPSED]: 'true',
+    [STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN]: 'false',
+    [MULTI_VAULT_FLAG_KEY]: 'true'
   };
 
   try {

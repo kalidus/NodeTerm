@@ -183,6 +183,8 @@ const TitleBar = ({
   openEditRdpDialog,
   expandedKeys,
   masterKey,
+  needsUnlock = false,
+  needsMasterKeySetup = false,
   secureStorage,
   onToggleTitleBar,
   sidebarCollapsed = false,
@@ -732,6 +734,9 @@ const TitleBar = ({
           onToggleVault={onToggleVault}
           onRequestUnlock={onRequestUnlockVault}
           onRequestCreate={onRequestCreateVault}
+          masterKey={masterKey}
+          needsUnlock={needsUnlock}
+          needsMasterKeySetup={needsMasterKeySetup}
         />
 
         <div className="title-bar-action-group">

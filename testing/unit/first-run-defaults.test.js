@@ -23,6 +23,11 @@ function createMockLocalStorage() {
 
 async function loadHomeTabDefaults() {
   const { STORAGE_KEYS } = await import('../../src/utils/constants.js');
+  const {
+    MULTI_VAULT_FLAG_KEY,
+    isMultiVaultEnabled,
+    setMultiVaultEnabled
+  } = await import('../../src/utils/multiVaultFlag.js');
   const src = fs.readFileSync(
     path.join(__dirname, '../../src/utils/homeTabDefaults.js'),
     'utf8'
@@ -30,11 +35,14 @@ async function loadHomeTabDefaults() {
   const body = src
     .replace(/^import .*;$/gm, '')
     .replace(/export function /g, 'function ')
-    + '\nreturn { getDefaultLocalTerminalType, isHomeButtonLocked, isSidebarStartCollapsed, applyFirstRunHomeTabDefaults };';
-  const factory = new Function('STORAGE_KEYS', 'getPlatformDefaultTerminalType', body);
+    + '\nreturn { getDefaultLocalTerminalType, isHomeButtonLocked, isSidebarStartCollapsed, isLauncherSidebarOpen, applyFirstRunHomeTabDefaults };';
+  const factory = new Function('STORAGE_KEYS', 'getPlatformDefaultTerminalType', 'MULTI_VAULT_FLAG_KEY', body);
   return {
     STORAGE_KEYS,
-    ...factory(STORAGE_KEYS, () => 'linux-terminal')
+    MULTI_VAULT_FLAG_KEY,
+    isMultiVaultEnabled,
+    setMultiVaultEnabled,
+    ...factory(STORAGE_KEYS, () => 'linux-terminal', MULTI_VAULT_FLAG_KEY)
   };
 }
 
@@ -49,23 +57,42 @@ describe('Defaults de primera instalación (sidebar y Home)', () => {
     global.localStorage = prevLocalStorage;
   });
 
-  it('colapsa la sidebar por defecto en primera instalación sin sobrescribir preferencias guardadas', async () => {
+  it('colapsa la sidebar principal y la del launcher y activa vaults adicionales por defecto sin sobrescribir preferencias guardadas', async () => {
     const {
       STORAGE_KEYS,
+      MULTI_VAULT_FLAG_KEY,
       applyFirstRunHomeTabDefaults,
-      isSidebarStartCollapsed
+      isSidebarStartCollapsed,
+      isLauncherSidebarOpen,
+      isMultiVaultEnabled,
+      setMultiVaultEnabled
     } = await loadHomeTabDefaults();
 
     assert.strictEqual(isSidebarStartCollapsed(), true);
+    assert.strictEqual(isLauncherSidebarOpen(), false);
+    assert.strictEqual(isMultiVaultEnabled(), true);
 
     applyFirstRunHomeTabDefaults();
     assert.strictEqual(localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED), 'true');
     assert.strictEqual(isSidebarStartCollapsed(), true);
+    assert.strictEqual(localStorage.getItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN), 'false');
+    assert.strictEqual(isLauncherSidebarOpen(), false);
+    assert.strictEqual(localStorage.getItem(MULTI_VAULT_FLAG_KEY), 'true');
+    assert.strictEqual(isMultiVaultEnabled(), true);
 
     localStorage.setItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED, 'false');
+    localStorage.setItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN, 'true');
+    setMultiVaultEnabled(false);
+    assert.strictEqual(localStorage.getItem(MULTI_VAULT_FLAG_KEY), 'false');
+    assert.strictEqual(isMultiVaultEnabled(), false);
+
     applyFirstRunHomeTabDefaults();
     assert.strictEqual(localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED), 'false');
     assert.strictEqual(isSidebarStartCollapsed(), false);
+    assert.strictEqual(localStorage.getItem(STORAGE_KEYS.LAUNCHER_SIDEBAR_OPEN), 'true');
+    assert.strictEqual(isLauncherSidebarOpen(), true);
+    assert.strictEqual(localStorage.getItem(MULTI_VAULT_FLAG_KEY), 'false');
+    assert.strictEqual(isMultiVaultEnabled(), false);
   });
 
   it('muestra solo el panel de clave maestra y el terminal minimizado en primera instalación', async () => {
