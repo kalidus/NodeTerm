@@ -2511,19 +2511,28 @@ const App = () => {
       if (typeof loadNodes === 'function') loadNodes();
     };
 
+    const onFocusHomeAuth = () => {
+      setActiveGroupId(null);
+      setActiveTabIndex(0);
+    };
+
     window.addEventListener('request-unlock-extra-vault', onUnlockRequest);
     window.addEventListener('request-lock-extra-vault', onLockRequest);
     window.addEventListener('request-create-extra-vault', onCreateRequest);
     window.addEventListener('request-delete-extra-vault', onDeleteRequest);
     window.addEventListener('extra-vaults-reload', onReloadExtras);
+    window.addEventListener('focus-vault-unlock', onFocusHomeAuth);
+    window.addEventListener('focus-master-key-setup', onFocusHomeAuth);
     return () => {
       window.removeEventListener('request-unlock-extra-vault', onUnlockRequest);
       window.removeEventListener('request-lock-extra-vault', onLockRequest);
       window.removeEventListener('request-create-extra-vault', onCreateRequest);
       window.removeEventListener('request-delete-extra-vault', onDeleteRequest);
       window.removeEventListener('extra-vaults-reload', onReloadExtras);
+      window.removeEventListener('focus-vault-unlock', onFocusHomeAuth);
+      window.removeEventListener('focus-master-key-setup', onFocusHomeAuth);
     };
-  }, [loadNodes, switchActiveVault, toggleVisibleVault]);
+  }, [loadNodes, switchActiveVault, toggleVisibleVault, setActiveGroupId, setActiveTabIndex]);
 
   const handleExtraVaultUnlocked = useCallback(
     async (vaultId) => {

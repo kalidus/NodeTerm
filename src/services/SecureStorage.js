@@ -38,6 +38,19 @@ class SecureStorage {
   }
 
   /**
+   * Bloquea la sesión en memoria (limpia caché de clave y descifrado sin borrar datos en disco).
+   */
+  lockSession() {
+    this.masterKeyCache = null;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this._derivedKeyCache = createDerivedKeyCache();
+    this._storageDecryptCache = createStorageDecryptCache();
+  }
+
+  /**
    * Genera una huella digital estable del dispositivo
    * No depende de resolución de pantalla ni zona horaria para evitar bloqueos por monitores externos o DST
    */

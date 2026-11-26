@@ -561,6 +561,26 @@
   font-size: 11px;
 }
 
+.title-bar-vault-menu-icon-btn.is-lock {
+  color: #f59e0b;
+  opacity: 0.95;
+}
+
+.title-bar-vault-menu-icon-btn.is-lock:hover:not(:disabled) {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  opacity: 1;
+}
+
+.title-bar-vault-menu-icon-btn.is-unlock {
+  opacity: 0.58;
+}
+
+.title-bar-vault-menu-icon-btn.is-unlock:hover:not(:disabled) {
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  opacity: 1;
+}
+
 .title-bar-vault-menu-hover-actions {
   display: inline-flex;
   align-items: center;

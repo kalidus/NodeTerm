@@ -156,6 +156,39 @@ export function useVaultSession({ setIsAppReady, toast }) {
     });
   }, [toast]);
 
+  const handleLockMasterVault = useCallback(() => {
+    if (!masterKey) return;
+    writeConnectionDecryptCache({
+      dataStr: null,
+      key: null,
+      result: null,
+      migrated: null
+    });
+    try {
+      secureStorage?.lockSession?.();
+    } catch (_) {
+      /* noop */
+    }
+    setMasterKey(null);
+    setNeedsUnlock(true);
+    setNeedsMasterKeySetup(false);
+    window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+    window.dispatchEvent(new CustomEvent('password-vault-changed'));
+    window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+    toast.current?.show({
+      severity: 'info',
+      summary: 'Vault bloqueado',
+      detail: 'Vault principal bloqueado (las sesiones abiertas siguen activas).',
+      life: 3500
+    });
+  }, [masterKey, secureStorage, toast]);
+
+  useEffect(() => {
+    const onLockMaster = () => handleLockMasterVault();
+    window.addEventListener('request-lock-master-vault', onLockMaster);
+    return () => window.removeEventListener('request-lock-master-vault', onLockMaster);
+  }, [handleLockMasterVault]);
+
   useEffect(() => {
     const onWiped = () => handleVaultWipeSuccess();
     window.addEventListener('vault-data-wiped', onWiped);

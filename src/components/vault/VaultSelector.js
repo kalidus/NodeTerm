@@ -182,6 +182,8 @@ const VaultSelector = ({
       vaultId !== DEFAULT_VAULT_ID &&
       !vaultKeyring.isUnlocked(vaultId)
     ) {
+      setOpen(false);
+      setRenameId(null);
       const meta = vaults.find((v) => v.id === vaultId);
       onRequestUnlock?.({
         id: vaultId,
@@ -200,7 +202,10 @@ const VaultSelector = ({
   const handleLock = (e, vaultId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (vaultId === DEFAULT_VAULT_ID) return;
+    if (vaultId === DEFAULT_VAULT_ID) {
+      window.dispatchEvent(new CustomEvent('request-lock-master-vault'));
+      return;
+    }
     window.dispatchEvent(
       new CustomEvent('request-lock-extra-vault', {
         detail: { vaultId }
@@ -211,9 +216,9 @@ const VaultSelector = ({
   const handleUnlock = (e, vaultId) => {
     e.preventDefault();
     e.stopPropagation();
+    setOpen(false);
+    setRenameId(null);
     if (vaultId === DEFAULT_VAULT_ID) {
-      setOpen(false);
-      setRenameId(null);
       const evt = needsMasterKeySetup && !needsUnlock
         ? 'focus-master-key-setup'
         : 'focus-vault-unlock';
@@ -338,6 +343,17 @@ const VaultSelector = ({
           </>
         ) : (
           <>
+            <span className="title-bar-vault-menu-hover-actions">
+              <button
+                type="button"
+                title="Renombrar"
+                aria-label={`Renombrar ${title}`}
+                onClick={(e) => startRename(e, vaultId, title)}
+                className="title-bar-vault-menu-icon-btn"
+              >
+                <i className="pi pi-pencil" />
+              </button>
+            </span>
             {isLocked ? (
               <button
                 type="button"
@@ -352,29 +368,17 @@ const VaultSelector = ({
               >
                 <i className="pi pi-lock" />
               </button>
-            ) : null}
-            <span className="title-bar-vault-menu-hover-actions">
-              {canLock && !isLocked ? (
-                <button
-                  type="button"
-                  title="Bloquear"
-                  aria-label={`Bloquear ${title}`}
-                  onClick={(e) => handleLock(e, vaultId)}
-                  className="title-bar-vault-menu-icon-btn"
-                >
-                  <i className="pi pi-unlock" />
-                </button>
-              ) : null}
+            ) : canLock ? (
               <button
                 type="button"
-                title="Renombrar"
-                aria-label={`Renombrar ${title}`}
-                onClick={(e) => startRename(e, vaultId, title)}
-                className="title-bar-vault-menu-icon-btn"
+                title="Bloquear"
+                aria-label={`Bloquear ${title}`}
+                onClick={(e) => handleLock(e, vaultId)}
+                className="title-bar-vault-menu-icon-btn is-unlock"
               >
-                <i className="pi pi-pencil" />
+                <i className="pi pi-lock-open" />
               </button>
-            </span>
+            ) : null}
           </>
         )}
 
@@ -438,7 +442,7 @@ const VaultSelector = ({
               ...noDrag
             }}
           >
-            {renderCheckRow(DEFAULT_VAULT_ID, defaultVaultName, principalLocked, false)}
+            {renderCheckRow(DEFAULT_VAULT_ID, defaultVaultName, principalLocked, true)}
 
             {vaults.map((v) => {
               const isLocked = !vaultKeyring.isUnlocked(v.id);
