@@ -121,9 +121,27 @@ function verifyIronRdpVendor(rootPkg) {
   }
 
   const buildFiles = (rootPkg.build && rootPkg.build.files) || [];
-  const buildFilesJoined = buildFiles.map(String).join('\n');
-  if (!buildFilesJoined.includes('node-pty/build')) {
+  const buildFilesJoined = buildFiles.map((entry) => {
+    if (entry && typeof entry === 'object' && Array.isArray(entry.filter)) {
+      return entry.filter.join('\n');
+    }
+    return String(entry);
+  }).join('\n');
+  const ptyExclude = '!node_modules/node-pty/build/**';
+  const ptyInclude = 'node_modules/node-pty/build/Release/*.node';
+  const excludeAt = buildFilesJoined.indexOf(ptyExclude);
+  const includeAt = buildFilesJoined.indexOf(ptyInclude);
+  if (excludeAt === -1) {
     errors.push('build.files debe excluir node_modules/node-pty/build/** (artefactos nativos ~80+ MB)');
+  }
+  if (includeAt === -1) {
+    errors.push('build.files debe volver a incluir node_modules/node-pty/build/Release/*.node (Linux no tiene prebuild de pty.node)');
+  }
+  if (excludeAt !== -1 && includeAt !== -1 && includeAt < excludeAt) {
+    errors.push('la re-inclusión de pty.node debe ir después de la exclusión de node-pty/build/**');
+  }
+  if (!unpackStr.includes(ptyInclude)) {
+    errors.push('build.asarUnpack debe incluir node_modules/node-pty/build/Release/*.node');
   }
   if (!buildFilesJoined.includes('@xterm')) {
     errors.push('build.files debe excluir node_modules/@xterm/** (ya va en dist/)');

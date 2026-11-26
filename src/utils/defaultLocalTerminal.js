@@ -80,6 +80,8 @@ export function buildDefaultTerminalOptions({
   return options;
 }
 
+const WSL_LOCAL_TAB_TYPES = new Set(['wsl', 'ubuntu', 'debian', 'wsl-distro']);
+
 function looksLikeWslDistro(value) {
   if (!value || typeof value !== 'string') return false;
   const normalized = value.toLowerCase();
@@ -103,6 +105,50 @@ function inferWslCategory(value) {
   if (normalized.includes('ubuntu')) return 'ubuntu';
   if (normalized.includes('debian')) return 'debian';
   return 'wsl';
+}
+
+/**
+ * Perfil WSL guardado (p. ej. Ubuntu-24.04) que no debe abrir sesión en Linux/macOS.
+ * @param {string} platform
+ * @param {string|null|undefined} value
+ * @returns {boolean}
+ */
+export function isUnixWslDefault(platform, value) {
+  if (platform !== 'linux' && platform !== 'darwin') return false;
+  if (!value || typeof value !== 'string') return false;
+  return value === 'wsl' || looksLikeWslDistro(value);
+}
+
+function hostShellTitle(platform) {
+  return platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux';
+}
+
+/**
+ * Una pestaña restaurada de distro WSL pasa a ser el shell del host fuera de Windows.
+ * @param {object} tab
+ * @param {string} platform
+ * @returns {object}
+ */
+export function coerceRestoredLocalTab(tab, platform) {
+  if (!tab || (platform !== 'linux' && platform !== 'darwin')) return tab;
+  const type = tab.type || '';
+  const terminalType = tab.terminalType || '';
+  const wslType = WSL_LOCAL_TAB_TYPES.has(type) || WSL_LOCAL_TAB_TYPES.has(terminalType);
+  const wslTitle = isUnixWslDefault(platform, tab.title) &&
+    tab.title !== 'Terminal Linux' &&
+    tab.title !== 'Terminal macOS';
+  if (!wslType && !wslTitle) return tab;
+
+  const next = {
+    ...tab,
+    title: hostShellTitle(platform),
+    type: 'powershell'
+  };
+  delete next.distroInfo;
+  if (WSL_LOCAL_TAB_TYPES.has(next.terminalType)) {
+    next.terminalType = 'linux-terminal';
+  }
+  return next;
 }
 
 function findWslDistro(defaultTerminal, wslDistributions) {
@@ -137,6 +183,10 @@ export function resolveInitialTabFromDefault(defaultTerminal, context = {}) {
   });
 
   if (defaultTerminal) {
+    if (isUnixWslDefault(platform, defaultTerminal)) {
+      return base({ title: hostShellTitle(platform), type: 'powershell' });
+    }
+
     if (defaultTerminal.startsWith('docker-') || defaultTerminal === 'wsl') {
       return base({
         title: 'Windows PowerShell',

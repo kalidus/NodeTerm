@@ -159,6 +159,13 @@
       "!node_modules/node-pty/deps/**",
       "!node_modules/node-pty/**/*.test.js",
       "!node_modules/node-pty/build/**",
+      "node_modules/node-pty/build/Release/*.node",
+      {
+        "from": ".",
+        "filter": [
+          "node_modules/node-pty/build/Release/*.node"
+        ]
+      },
       "!node_modules/@primno/dpapi/build/**",
       "!node_modules/better-sqlite3/build/**/obj/**",
       "!node_modules/**/*.{obj,pdb,iobj,ipdb,exp,lib,ilk,tlog}",
@@ -169,7 +176,8 @@
       "binaries/**",
       "node_modules/ssh2-promise/**",
       "node_modules/ssh2/**",
-      "dist/*.wasm"
+      "dist/*.wasm",
+      "node_modules/node-pty/build/Release/*.node"
     ],
     "extraFiles": [
       "LICENSE",

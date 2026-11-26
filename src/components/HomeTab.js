@@ -9,6 +9,7 @@ import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
 import { getRecents, getFavorites, onUpdate, getRecentPasswords, subscribeRecents, recordRecentPassword } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
+import { isUnixWslDefault } from '../utils/defaultLocalTerminal';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import {
   persistHomeTabSetting,
@@ -1386,6 +1387,11 @@ const HomeTab = ({
         const platform = window.electron?.platform || 'unknown';
 
         if (defaultTerminal) {
+          if (isUnixWslDefault(platform, defaultTerminal)) {
+            setTerminalTitle(platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux');
+            return;
+          }
+
           const terminalTitles = {
             'powershell': 'Windows PowerShell',
             'claude': 'Claude Code',

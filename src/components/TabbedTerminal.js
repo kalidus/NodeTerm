@@ -26,6 +26,8 @@ import {
     resolveInitialTabFromDefault,
     resolveTabUpdateFromDefault,
     isExplicitNonWslDefault,
+    isUnixWslDefault,
+    coerceRestoredLocalTab,
     buildDefaultTerminalOptions,
     setDefaultLocalTerminal as persistDefaultLocalTerminal
 } from '../utils/defaultLocalTerminal';
@@ -175,11 +177,12 @@ const TabbedTerminal = forwardRef(({
             const activeTabIndex = normalizedTabs.findIndex(tab => tab.active);
             const initialTabIndex = activeTabIndex >= 0 ? activeTabIndex : 0;
             const initialTab = normalizedTabs[initialTabIndex] || normalizedTabs[0];
+            const platform = window.electron?.platform || 'unknown';
             const startupTabs = [
-                {
+                coerceRestoredLocalTab({
                     ...initialTab,
                     active: true
-                }
+                }, platform)
             ];
 
             return {
@@ -431,12 +434,13 @@ const TabbedTerminal = forwardRef(({
     const getDefaultTerminalType = () => {
         // Leer configuración de terminal por defecto
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+        const platform = window.electron?.platform || 'unknown';
         if (defaultTerminal) {
+            if (isUnixWslDefault(platform, defaultTerminal)) return 'linux-terminal';
             return defaultTerminal;
         }
 
         // Fallback a lógica anterior
-        const platform = window.electron?.platform || 'unknown';
         if (platform === 'linux' || platform === 'darwin') {
             return 'linux-terminal';
         }
