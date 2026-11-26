@@ -1,6 +1,6 @@
-import { STORAGE_KEYS } from './constants';
-import { SNAP_CONFIG } from './homeTabSnapping';
-import { ensureHomeWidgetLayout } from './homeWidgets';
+import { STORAGE_KEYS } from './constants.js';
+import { SNAP_CONFIG, MINIMIZED_PANEL_HEIGHT } from './homeTabSnapping.js';
+import { ensureHomeWidgetLayout } from './homeWidgets.js';
 
 const USER_PRESETS_KEY = 'nodeterm_home_user_presets';
 const MONITOR_LAYOUTS_KEY = 'nodeterm_home_monitor_layouts';
@@ -75,6 +75,92 @@ export function ensureRequiredHomeTerminal(layout) {
       visible: true
     }
   };
+}
+
+/**
+ * Coloca el panel de creación de clave maestra centrado en el canvas.
+ * Si el terminal está minimizado en la parte inferior, evita solaparlo.
+ */
+export function placeMasterKeySetupPanel(layout, canvasW = 1200, canvasH = 800) {
+  const w = canvasW > 100 ? canvasW : 1200;
+  const h = canvasH > 100 ? canvasH : 800;
+  const pad = SNAP_CONFIG.CANVAS_PAD;
+  const gap = SNAP_CONFIG.GAP;
+  const width = Math.min(540, Math.max(460, Math.floor(w * 0.4)));
+
+  const term = layout?.terminal;
+  const hasBottomMinimizedTerminal = Boolean(
+    term
+    && term.visible !== false
+    && term.isMinimized
+    && (Number(term.y) || 0) >= h * 0.6
+  );
+
+  let height;
+  let y;
+  if (hasBottomMinimizedTerminal) {
+    const termTop = Number(term.y) || (h - MINIMIZED_PANEL_HEIGHT - pad);
+    const availH = Math.max(520, termTop - gap);
+    const maxHeightAbove = Math.max(520, availH - pad);
+    height = Math.min(760, Math.max(520, Math.min(Math.floor(availH * 0.92), maxHeightAbove)));
+    y = Math.max(pad, Math.floor((availH - height) / 2));
+  } else {
+    height = Math.min(760, Math.max(620, Math.floor(h * 0.88)));
+    y = Math.max(pad, Math.floor((h - height) / 2));
+  }
+
+  return {
+    ...layout,
+    masterKey: {
+      ...(layout.masterKey || {}),
+      visible: true,
+      x: Math.max(pad, Math.floor((w - width) / 2)),
+      y,
+      width,
+      height,
+      minWidth: 420,
+      minHeight: 520,
+      zIndex: 28,
+      isMaximized: false,
+      isMinimized: false
+    }
+  };
+}
+
+/**
+ * Layout inicial para primera instalación:
+ * solo muestra el panel de creación de clave maestra (si aplica) y el terminal minimizado.
+ */
+export function buildFirstRunHomePanelsLayout(width = 1200, height = 800, { showMasterKey = true } = {}) {
+  const w = width > 100 ? width : 1200;
+  const h = height > 100 ? height : 800;
+  const pad = SNAP_CONFIG.CANVAS_PAD;
+  const termWidth = Math.max(380, w - pad * 2);
+  const termPreMinimizedHeight = Math.max(260, Math.floor((h - pad * 2) * 0.55));
+
+  let layout = ensureHomeWidgetLayout({
+    terminal: {
+      visible: true,
+      x: pad,
+      y: Math.max(pad, h - MINIMIZED_PANEL_HEIGHT - pad),
+      width: termWidth,
+      height: MINIMIZED_PANEL_HEIGHT,
+      preMinimizedHeight: termPreMinimizedHeight,
+      minWidth: 380,
+      minHeight: 200,
+      zIndex: 10,
+      isMaximized: false,
+      isMinimized: true
+    },
+    canvasWidth: w,
+    canvasHeight: h
+  }, w, h);
+
+  if (showMasterKey) {
+    layout = placeMasterKeySetupPanel(layout, w, h);
+  }
+
+  return ensureRequiredHomeTerminal(layout);
 }
 
 /**

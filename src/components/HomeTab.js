@@ -51,7 +51,9 @@ import {
   getMonitorLayoutsMap,
   saveLayoutForCurrentDisplay,
   saveLayoutForDisplay,
-  ensureRequiredHomeTerminal
+  ensureRequiredHomeTerminal,
+  placeMasterKeySetupPanel,
+  buildFirstRunHomePanelsLayout
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
 import { allocHomePanelZ } from '../utils/homePanelStack';
@@ -61,6 +63,13 @@ import { useHomeWallpaper } from '../utils/homeWallpaper';
 
 function layoutHasPanel(layout, panelId) {
   return !!(layout && layout[panelId] && typeof layout[panelId] === 'object');
+}
+
+function hasConfiguredPanels(layout) {
+  if (!layout || typeof layout !== 'object') return false;
+  return Object.entries(layout).some(
+    ([id, value]) => id !== 'canvasWidth' && id !== 'canvasHeight' && value && typeof value === 'object'
+  );
 }
 
 function monitorLayoutHasPanel(panelId) {
@@ -93,30 +102,6 @@ function placeIntroRecordingsPanel(layout, canvasW, canvasH) {
       minWidth: 280,
       minHeight: 180,
       zIndex: 30,
-      isMaximized: false,
-      isMinimized: false
-    }
-  };
-}
-
-function placeMasterKeySetupPanel(layout, canvasW, canvasH) {
-  const w = canvasW > 100 ? canvasW : 1200;
-  const h = canvasH > 100 ? canvasH : 800;
-  const pad = 16;
-  const width = Math.min(540, Math.max(460, Math.floor(w * 0.4)));
-  const height = Math.min(760, Math.max(620, Math.floor(h * 0.88)));
-  return {
-    ...layout,
-    masterKey: {
-      ...(layout.masterKey || {}),
-      visible: true,
-      x: Math.max(pad, Math.floor((w - width) / 2)),
-      y: Math.max(pad, Math.floor((h - height) / 2)),
-      width,
-      height,
-      minWidth: 420,
-      minHeight: 520,
-      zIndex: 28,
       isMaximized: false,
       isMinimized: false
     }
@@ -214,7 +199,8 @@ function buildRestoredPanelState(current, panelId) {
         ...current,
         height: getPanelRestoreHeight(panelId, current),
         isMinimized: false,
-        preMinimizedHeight: undefined
+        preMinimizedHeight: undefined,
+        zIndex: allocHomePanelZ()
       }
     : { ...current };
   return withRequiredTerminalVisible(restored, panelId);
@@ -582,14 +568,28 @@ const HomeTab = ({
 
   // Estado modular para paneles arrastrables y redimensionables con memoria por monitor
   const authoredLayoutRef = useRef(null);
+  const isFreshFirstRunLayoutRef = useRef(false);
   const [panelsLayout, setPanelsLayout] = useState(() => {
     try {
       const savedRaw = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
-      const defaults = computeDefaultPanelsLayout();
       const saved = savedRaw ? JSON.parse(savedRaw) : null;
+      const savedMonitorLayout = getLayoutForCurrentDisplay(null);
+      const hasSavedLayout = hasConfiguredPanels(saved) || hasConfiguredPanels(savedMonitorLayout);
+      if (!hasSavedLayout) {
+        isFreshFirstRunLayoutRef.current = true;
+        const firstRun = buildFirstRunHomePanelsLayout(
+          typeof window !== 'undefined' ? window.innerWidth : 1200,
+          typeof window !== 'undefined' ? window.innerHeight : 800,
+          { showMasterKey: Boolean(needsMasterKeySetup && !masterKey) }
+        );
+        authoredLayoutRef.current = firstRun;
+        return firstRun;
+      }
+
+      const defaults = computeDefaultPanelsLayout();
       const introduceRecordings = !layoutHasPanel(saved, 'recordings') && !monitorLayoutHasPanel('recordings');
       const base = saved ? { ...defaults, ...saved } : defaults;
-      const displayLayout = getLayoutForCurrentDisplay(base);
+      const displayLayout = savedMonitorLayout || base;
       const merged = preserveShowingPanels(base, { ...defaults, ...displayLayout });
       const canvas = getLayoutCanvasSize(merged)
         || getLayoutCanvasSize(saved)
@@ -607,7 +607,13 @@ const HomeTab = ({
     } catch (e) {
       console.warn('Failed to parse saved home panels layout:', e);
     }
-    const fallback = computeDefaultPanelsLayout();
+    const fallback = (needsMasterKeySetup && !masterKey)
+      ? buildFirstRunHomePanelsLayout(
+          typeof window !== 'undefined' ? window.innerWidth : 1200,
+          typeof window !== 'undefined' ? window.innerHeight : 800,
+          { showMasterKey: true }
+        )
+      : computeDefaultPanelsLayout();
     authoredLayoutRef.current = fallback;
     return fallback;
   });
@@ -703,6 +709,7 @@ const HomeTab = ({
   }), [containerWidth, containerHeight]);
 
   const commitAuthoredLayout = useCallback((layout) => {
+    isFreshFirstRunLayoutRef.current = false;
     const w = mainAreaRef.current?.offsetWidth || (containerWidth > 100 ? containerWidth : 0);
     const h = mainAreaRef.current?.offsetHeight || (containerHeight > 100 ? containerHeight : 0);
     const authored = attachCanvasSize(
@@ -915,7 +922,11 @@ const HomeTab = ({
           : buildRestoredPanelState(current, 'terminal');
 
         const next = ensureRequiredHomeTerminal({ ...prev, terminal: nextPanel });
-        const authored = commitAuthoredLayout(next);
+        const { width: w, height: h } = getCanvasSize();
+        const fitted = (w > 100 && h > 100 && !nextPanel.isMinimized)
+          ? clampPanelsToCanvas(next, w, h)
+          : next;
+        const authored = commitAuthoredLayout(fitted);
         if (nextPanel.isMinimized !== current.isMinimized) {
           setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
@@ -999,7 +1010,7 @@ const HomeTab = ({
         : next;
       return commitAuthoredLayout(fitted);
     });
-  }, [commitAuthoredLayout]);
+  }, [commitAuthoredLayout, getCanvasSize]);
 
   const handleClosePanel = useCallback((panelId) => {
     if (panelId === 'masterKey' && needsMasterKeySetup && !masterKey) {
@@ -1026,12 +1037,13 @@ const HomeTab = ({
       masterKeySetupDismissedRef.current = false;
       setPanelsLayout((prev) => {
         const cur = prev?.masterKey;
-        const needsResize = !cur?.visible
-          || Number(cur.width) < 460
-          || Number(cur.height) < 600;
-        if (cur?.visible && !needsResize) return prev;
         const w = mainAreaRef.current?.offsetWidth || prev.canvasWidth || 1200;
         const h = mainAreaRef.current?.offsetHeight || prev.canvasHeight || 800;
+        const minDesiredH = Math.min(600, Math.max(520, h - 96));
+        const needsResize = !cur?.visible
+          || Number(cur.width) < 460
+          || Number(cur.height) < minDesiredH;
+        if (cur?.visible && !needsResize) return prev;
         return commitAuthoredLayout(placeMasterKeySetupPanel(prev, w, h));
       });
     };
@@ -1158,13 +1170,17 @@ const HomeTab = ({
         ...prev,
         [panelId]: nextPanel
       });
-      const authored = commitAuthoredLayout(next);
+      const { width: w, height: h } = getCanvasSize();
+      const fitted = (w > 100 && h > 100 && !nextPanel.isMinimized)
+        ? clampPanelsToCanvas(next, w, h)
+        : next;
+      const authored = commitAuthoredLayout(fitted);
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 50);
       return authored;
     });
-  }, [commitAuthoredLayout]);
+  }, [commitAuthoredLayout, getCanvasSize]);
 
   const handleResetLayout = useCallback(() => {
     const { width: w, height: h } = getCanvasSize();
@@ -1294,6 +1310,19 @@ const HomeTab = ({
         || Math.abs(newH - prevH) > 4;
 
       if (sizeChanged) {
+        if (!hasRealPrev && isFreshFirstRunLayoutRef.current) {
+          isFreshFirstRunLayoutRef.current = false;
+          const exactFirstRun = buildFirstRunHomePanelsLayout(newW, newH, {
+            showMasterKey: Boolean(panelsLayoutRef.current?.masterKey?.visible)
+          });
+          authoredLayoutRef.current = exactFirstRun;
+          beginLayoutSync();
+          setPanelsLayout(exactFirstRun);
+          prevContainerSizeRef.current = { width: newW, height: newH, measured: true };
+          setContainerHeight(newH);
+          setContainerWidth(newW);
+          return;
+        }
         const authored = authoredLayoutRef.current;
         if (authored && !getLayoutCanvasSize(authored) && !hasRealPrev) {
           authoredLayoutRef.current = attachCanvasSize(authored, newW, newH);

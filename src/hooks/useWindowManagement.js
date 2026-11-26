@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
+import { isSidebarStartCollapsed } from '../utils/homeTabDefaults';
 
 const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
 
@@ -7,15 +8,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   // ============ ESTADOS DE VENTANA Y SIDEBAR ============
 
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
-      return saved ? JSON.parse(saved) : false; // Por defecto false (desplegada)
-    } catch (error) {
-      console.error('Error loading sidebar collapsed state from localStorage:', error);
-      return false; // Por defecto desplegada
-    }
-  });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => isSidebarStartCollapsed());
   // ============ REFERENCIAS ============
 
   // Ref para throttling del resize

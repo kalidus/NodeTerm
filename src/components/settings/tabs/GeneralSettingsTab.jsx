@@ -5,6 +5,7 @@ import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import { useTranslation } from '../../../i18n/hooks/useTranslation';
 import { STORAGE_KEYS } from '../../../utils/constants';
+import { isSidebarStartCollapsed } from '../../../utils/homeTabDefaults';
 import { persistSyncedSetting } from '../../../utils/persistSyncedSetting';
 import {
   getConnectionSearchShortcut,
@@ -48,14 +49,7 @@ const GeneralSettingsTab = ({
     }
   });
 
-  const [sidebarStartCollapsed, setSidebarStartCollapsed] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+  const [sidebarStartCollapsed, setSidebarStartCollapsed] = useState(() => isSidebarStartCollapsed());
 
   const [mainFrameHeaderStartCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
     try {

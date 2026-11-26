@@ -1,5 +1,5 @@
-import { STORAGE_KEYS } from './constants';
-import { getPlatformDefaultTerminalType } from './defaultLocalTerminal';
+import { STORAGE_KEYS } from './constants.js';
+import { getPlatformDefaultTerminalType } from './defaultLocalTerminal.js';
 
 /**
  * Terminal local por defecto según plataforma (misma lógica que SettingsDialog).
@@ -27,6 +27,23 @@ export function isHomeButtonLocked() {
 }
 
 /**
+ * Lee si la sidebar debe iniciar colapsada (por defecto true en primera instalación).
+ */
+export function isSidebarStartCollapsed() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
+    if (saved === null) return true;
+    try {
+      return JSON.parse(saved) === true;
+    } catch {
+      return saved === 'true';
+    }
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Aplica preferencias de homepage solo en primer arranque (claves ausentes).
  * No sobrescribe valores ya guardados por el usuario o importaciones.
  */
@@ -40,7 +57,8 @@ export function applyFirstRunHomeTabDefaults() {
     [STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE]: 'false',
     [STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL]: getDefaultLocalTerminalType(),
     [STORAGE_KEYS.LOCK_HOME_BUTTON]: 'true',
-    [STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED]: 'true'
+    [STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED]: 'true',
+    [STORAGE_KEYS.SIDEBAR_START_COLLAPSED]: 'true'
   };
 
   try {
