@@ -246,6 +246,45 @@ button.unlock-start-fresh:disabled {
   cursor: not-allowed;
 }
 
+/* Icono discreto "empezar de cero" (panel Home) */
+.mk-setup-start-fresh-icon {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.45rem;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mk-muted, #8aa4c8);
+  opacity: 0.18;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.mk-setup-start-fresh-icon .pi {
+  font-size: 0.72rem;
+}
+
+.mk-setup-start-fresh-icon:hover:not(:disabled),
+.mk-setup-start-fresh-icon:focus-visible {
+  opacity: 0.72;
+  color: var(--red-400, #f87171);
+  background: color-mix(in srgb, var(--red-400, #f87171) 10%, transparent);
+  outline: none;
+}
+
+.mk-setup-start-fresh-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.1;
+}
+
 /* Brand blocks */
 .unlock-brand {
   display: flex;
@@ -1835,6 +1874,14 @@ html[data-ui-lite-effects='true'] .unlock-screen-overlay--midnight::before {
   outline: 0;
   color: var(--mk-text);
   font-size: 0.9rem;
+}
+
+/* Anula el outline global morado de forms.css (input:focus !important) */
+.mk-setup-field input:focus,
+.mk-setup-field input:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 
 .mk-setup-field input::placeholder {

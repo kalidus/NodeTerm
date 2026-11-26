@@ -23,7 +23,6 @@ export default function HomeMasterKeySetupPanel({
         onSuccess={onSuccess}
         variant="panel"
         autoFocus={false}
-        showBrand
       />
     </div>
   );

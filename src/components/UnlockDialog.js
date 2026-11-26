@@ -3,7 +3,6 @@ import UnlockScreen from './unlock/UnlockScreen';
 import { loadUnlockStyle } from './unlock/unlockStyles';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { appConfirm } from './ui/AppConfirm';
-import appIcon from '../assets/app-icon.png';
 import '../styles/components/unlock-screen.css';
 
 /**
@@ -157,7 +156,7 @@ const UnlockDialog = ({
         <div className="mk-setup-card mk-setup-card--panel" role="region" aria-labelledby="mk-unlock-title">
           <div className="mk-setup-chip">
             <i className="pi pi-lock" aria-hidden="true" />
-            <span>ENCRYPTED AES-256</span>
+            <span>ENCRYPTED</span>
           </div>
 
           <div className="mk-setup-shield" aria-hidden="true">
@@ -248,15 +247,6 @@ const UnlockDialog = ({
                 </>
               )}
             </button>
-
-            <button
-              type="button"
-              className="unlock-cta-ghost unlock-start-fresh"
-              onClick={handleStartFresh}
-              disabled={busy}
-            >
-              {wiping ? '…' : 'Empezar de cero'}
-            </button>
           </div>
 
           <div className="mk-setup-trust">
@@ -277,7 +267,16 @@ const UnlockDialog = ({
             </div>
           </div>
 
-          <img src={appIcon} alt="" className="mk-setup-brand" aria-hidden="true" />
+          <button
+            type="button"
+            className="mk-setup-start-fresh-icon"
+            onClick={handleStartFresh}
+            disabled={busy}
+            title="Empezar de cero"
+            aria-label="Empezar de cero"
+          >
+            <i className={wiping ? 'pi pi-spin pi-spinner' : 'pi pi-trash'} aria-hidden="true" />
+          </button>
         </div>
       </div>
     );

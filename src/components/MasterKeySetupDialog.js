@@ -21,7 +21,6 @@ const MasterKeySetupDialog = ({ visible, onSuccess, secureStorage }) => {
         onSuccess={onSuccess}
         variant="overlay"
         autoFocus
-        showBrand
       />
     </div>
   );

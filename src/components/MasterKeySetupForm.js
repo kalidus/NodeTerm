@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import appIcon from '../assets/app-icon.png';
 import '../styles/components/unlock-screen.css';
 
 export const MIN_MASTER_KEY_LENGTH = 6;
@@ -36,8 +35,7 @@ export default function MasterKeySetupForm({
   secureStorage,
   onSuccess,
   variant = 'overlay',
-  autoFocus = true,
-  showBrand = true
+  autoFocus = true
 }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -175,7 +173,7 @@ export default function MasterKeySetupForm({
 
       <div className="mk-setup-chip">
         <i className="pi pi-lock" aria-hidden="true" />
-        <span>ENCRYPTED AES-256</span>
+        <span>ENCRYPTED</span>
       </div>
 
       <div className="mk-setup-shield" aria-hidden="true">
@@ -347,10 +345,6 @@ export default function MasterKeySetupForm({
           </div>
         </div>
       </div>
-
-      {(showBrand || variant === 'panel') ? (
-        <img src={appIcon} alt="" className="mk-setup-brand" aria-hidden="true" />
-      ) : null}
     </div>
   );
 }
