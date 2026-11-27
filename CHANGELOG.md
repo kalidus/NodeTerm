@@ -8,6 +8,30 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-11-27
+
+### Vaults
+- Bloquear y desbloquear cualquier vault desde el selector de la TitleBar.
+- Vaults adicionales activos por defecto; alerta en TitleBar; launcher de sidebar minimizada.
+- «Gestionar vaults» abre Seguridad > Vaults.
+
+### Home, desbloqueo y primer arranque
+- Primer arranque limpio: flujo de clave maestra, terminal minimizado y sidebar colapsada.
+- Desbloqueo no bloqueante en panel Home a pantalla completa (sidebar cifrada hasta unlock; terminal y pestañas usables).
+- Wipe completo del vault (sidecars + blobs) y creación de clave en Home sin bloquear la UI.
+- Panel de desbloqueo alineado al tema UI; chip ENCRYPTED más discreto y foco del campo sin outline violeta.
+
+### Linux y terminal local
+- Empaquetar `pty.node` en AppImage; no tratar perfiles Ubuntu sincronizados como WSL fuera de Windows.
+- Rebuild de `node-pty` para Electron en postinstall; no cargar WSL fuera de win32.
+- Detach de pestañas al salir del viewport en Wayland (drag HTML5).
+
+### SSH
+- Crear el directorio de `known_hosts` en el primer contacto (evita Host denied por ENOENT).
+
+### CI
+- GitHub Actions actualizado a runtimes Node 24 (actions v7).
+
 ## [1.8.1] - 2026-11-22
 
 ### Instalador más ligero (Windows)
